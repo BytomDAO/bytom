@@ -1,15 +1,12 @@
 package state
 
 import (
-	"math"
 	"math/big"
 	"reflect"
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
 
-	"github.com/bytom/bytom/consensus"
-	"github.com/bytom/bytom/consensus/difficulty"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/testutil"
@@ -30,59 +27,35 @@ func TestNewBlockNode(t *testing.T) {
 			blockHeader: &types.BlockHeader{
 				Height:    uint64(0),
 				Timestamp: 0,
-				Bits:      1000,
 			},
-			parentNode: &BlockNode{
-				WorkSum: &big.Int{},
-			},
+			parentNode: &BlockNode{},
 			wantBlockNode: &BlockNode{
-				Bits:    1000,
 				Hash:    testutil.MustDecodeHash("c144fc8cb72f8f2ae39a403cb7693d0b1f3e8b5ac83369afc708a29a737b01c1"),
-				Seed:    consensus.InitialSeed,
-				WorkSum: new(big.Int).SetInt64(0),
-				Parent: &BlockNode{
-					WorkSum: &big.Int{},
-				},
+				Parent: &BlockNode{},
 			},
 		},
 		{
 			blockHeader: &types.BlockHeader{
 				Height:    uint64(100),
 				Timestamp: 0,
-				Bits:      10000000000,
 			},
-			parentNode: &BlockNode{
-				WorkSum: new(big.Int).SetInt64(100),
-			},
+			parentNode: &BlockNode{},
 			wantBlockNode: &BlockNode{
-				Bits:    10000000000,
 				Hash:    testutil.MustDecodeHash("6b7ef2c572a1b88edadfafe06b2d1c218697d5b350895d73b00d1afc98a9fe0f"),
-				Seed:    consensus.InitialSeed,
 				Height:  uint64(100),
-				WorkSum: stringToBigInt("193956598387464313942329958138505708296934647681139973265423088790474254103", 10),
-				Parent: &BlockNode{
-					WorkSum: new(big.Int).SetInt64(100),
-				},
+				Parent: &BlockNode{},
 			},
 		},
 		{
 			blockHeader: &types.BlockHeader{
 				Height:    uint64(100),
 				Timestamp: 0,
-				Bits:      10000000000,
 			},
-			parentNode: &BlockNode{
-				WorkSum: new(big.Int).SetInt64(math.MaxInt64),
-			},
+			parentNode: &BlockNode{},
 			wantBlockNode: &BlockNode{
-				Bits:    10000000000,
 				Hash:    testutil.MustDecodeHash("6b7ef2c572a1b88edadfafe06b2d1c218697d5b350895d73b00d1afc98a9fe0f"),
-				Seed:    consensus.InitialSeed,
 				Height:  uint64(100),
-				WorkSum: stringToBigInt("193956598387464313942329958138505708296934647681139973274646460827329029810", 10),
-				Parent: &BlockNode{
-					WorkSum: new(big.Int).SetInt64(math.MaxInt64),
-				},
+				Parent: &BlockNode{},
 			},
 		},
 	}
@@ -148,98 +121,6 @@ func TestCalcPastMedianTime(t *testing.T) {
 		medianTime := parentNode.CalcPastMedianTime()
 		if medianTime != c.MedianTime {
 			t.Fatalf("calc median timestamp failed, index: %d, expected: %d, have: %d", idx, c.MedianTime, medianTime)
-		}
-	}
-}
-
-func TestCalcNextBits(t *testing.T) {
-	targetTimeSpan := uint64(consensus.BlocksPerRetarget * consensus.TargetSecondsPerBlock)
-	cases := []struct {
-		parentNode  *BlockNode
-		currentNode *BlockNode
-		bits        uint64
-	}{
-		{
-			currentNode: &BlockNode{
-				Height: 0,
-				Bits:   1000,
-			},
-			bits: 1000,
-		},
-		{
-			currentNode: &BlockNode{
-				Height: consensus.BlocksPerRetarget - 1,
-				Bits:   1000,
-			},
-			bits: 1000,
-		},
-		{
-			parentNode: &BlockNode{
-				Height:    0,
-				Timestamp: 0,
-			},
-			currentNode: &BlockNode{
-				Height:    consensus.BlocksPerRetarget,
-				Bits:      difficulty.BigToCompact(big.NewInt(1000)),
-				Timestamp: targetTimeSpan,
-			},
-			bits: difficulty.BigToCompact(big.NewInt(1000)),
-		},
-		{
-			parentNode: &BlockNode{
-				Height:    0,
-				Timestamp: 0,
-			},
-			currentNode: &BlockNode{
-				Height:    consensus.BlocksPerRetarget,
-				Bits:      difficulty.BigToCompact(big.NewInt(1000)),
-				Timestamp: targetTimeSpan * 2,
-			},
-			bits: difficulty.BigToCompact(big.NewInt(2000)),
-		},
-	}
-
-	for i, c := range cases {
-		c.currentNode.Parent = c.parentNode
-		bits := c.currentNode.CalcNextBits()
-		if bits != c.bits {
-			t.Fatalf("calc next bit failed, index: %d, expected: %d, have: %d", i, c.bits, bits)
-		}
-	}
-}
-
-func TestCalcNextSeed(t *testing.T) {
-	cases := []struct {
-		node *BlockNode
-		seed *bc.Hash
-	}{
-		{
-			node: &BlockNode{
-				Height: 0,
-			},
-			seed: consensus.InitialSeed,
-		},
-		{
-			node: &BlockNode{
-				Height: consensus.SeedPerRetarget - 1,
-				Seed:   &bc.Hash{V1: 100},
-			},
-			seed: &bc.Hash{V1: 100},
-		},
-		{
-			node: &BlockNode{
-				Height: consensus.SeedPerRetarget,
-				Seed:   &bc.Hash{V2: 200},
-				Hash:   bc.Hash{V3: 300},
-			},
-			seed: &bc.Hash{V3: 300},
-		},
-	}
-
-	for i, c := range cases {
-		seed := c.node.CalcNextSeed()
-		if *seed != *c.seed {
-			t.Fatalf("calc next seed failed, index: %d, expected: %v, have: %v", i, c.seed, seed)
 		}
 	}
 }

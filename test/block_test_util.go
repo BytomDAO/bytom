@@ -1,7 +1,6 @@
 package test
 
 import (
-	"github.com/bytom/bytom/mining/tensority"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
@@ -16,11 +15,6 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 	txEntries := []*bc.Tx{nil}
 
 	preBlockHeader := chain.BestBlockHeader()
-	preBlockHash := preBlockHeader.Hash()
-	nextBits, err := chain.CalcNextBits(&preBlockHash)
-	if err != nil {
-		return nil, err
-	}
 
 	b := &types.Block{
 		BlockHeader: types.BlockHeader{
@@ -29,7 +23,6 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 			PreviousBlockHash: preBlockHeader.Hash(),
 			Timestamp:         preBlockHeader.Timestamp + 1,
 			BlockCommitment:   types.BlockCommitment{},
-			Bits:              nextBits,
 		},
 		Transactions: []*types.Tx{nil},
 	}
@@ -77,26 +70,9 @@ func AppendBlocks(chain *protocol.Chain, num uint64) error {
 		if err != nil {
 			return err
 		}
-		if err := SolveAndUpdate(chain, block); err != nil {
+		if _, err := chain.ProcessBlock(block); err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-// SolveAndUpdate solve difficulty and update chain status
-func SolveAndUpdate(chain *protocol.Chain, block *types.Block) error {
-	seed, err := chain.CalcNextSeed(&block.PreviousBlockHash)
-	if err != nil {
-		return err
-	}
-	Solve(seed, block)
-	_, err = chain.ProcessBlock(block)
-	return err
-}
-
-// Solve simulate solve difficulty by add result to cache
-func Solve(seed *bc.Hash, block *types.Block) {
-	hash := block.BlockHeader.Hash()
-	tensority.AIHash.AddCache(&hash, seed, &bc.Hash{})
 }

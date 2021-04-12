@@ -37,7 +37,6 @@ func TestLoadBlockIndex(t *testing.T) {
 		}
 
 		for i := uint64(0); i < block.Height/32; i++ {
-			block.Nonce++
 			if err := store.SaveBlock(block); err != nil {
 				t.Fatal(err)
 			}
@@ -150,7 +149,8 @@ func TestSaveChainStatus(t *testing.T) {
 		},
 	}
 
-	if err := store.SaveChainStatus(node, view); err != nil {
+	contractView := state.NewContractViewpoint()
+	if err := store.SaveChainStatus(node, view, contractView); err != nil {
 		t.Fatal(err)
 	}
 

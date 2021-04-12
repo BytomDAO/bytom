@@ -1,5 +1,9 @@
 package vm
 
+import (
+	"github.com/holiman/uint256"
+)
+
 func opCheckOutput(vm *virtualMachine) error {
 	err := vm.applyCost(16)
 	if err != nil {
@@ -121,5 +125,6 @@ func opBlockHeight(vm *virtualMachine) error {
 	if vm.context.BlockHeight == nil {
 		return ErrContext
 	}
-	return vm.pushInt64(int64(*vm.context.BlockHeight), true)
+
+	return vm.pushBigInt(uint256.NewInt().SetUint64(*vm.context.BlockHeight), true)
 }

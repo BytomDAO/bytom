@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 
 	"github.com/bytom/bytom/consensus"
-	"github.com/bytom/bytom/consensus/difficulty"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
@@ -56,18 +55,13 @@ func blockNode(header *bc.BlockHeader) *state.BlockNode {
 		Height:            header.Height,
 		PreviousBlockHash: *header.PreviousBlockId,
 		Timestamp:         header.Timestamp,
-		Bits:              header.Bits,
-		Nonce:             header.Nonce,
 	}
 	return &state.BlockNode{
 		Parent:    nil,
 		Hash:      h.Hash(),
-		WorkSum:   difficulty.CalcWork(h.Bits),
 		Version:   h.Version,
 		Height:    h.Height,
 		Timestamp: h.Timestamp,
-		Nonce:     h.Nonce,
-		Bits:      h.Bits,
 	}
 }
 
@@ -372,7 +366,6 @@ func init() {
 				Height:            100,
 				PreviousBlockHash: testutil.MustDecodeHash("0ab29c0bd7bff3b3b7eb98802f8d5f8833884c86c0fb21559a65cc58dda99667"),
 				Timestamp:         1522908275,
-				Nonce:             0,
 			},
 			Transactions: []*types.Tx{
 				coinBaseTx(41250000000, "arbitrary block0"),
@@ -385,7 +378,6 @@ func init() {
 				Height:            101,
 				PreviousBlockHash: testutil.MustDecodeHash("0ab29c0bd7bff3b3b7eb98802f8d5f8833884c86c0fb21559a65cc58dda99667"),
 				Timestamp:         1522908275,
-				Nonce:             0,
 			},
 			Transactions: []*types.Tx{
 				coinBaseTx(41250000000, "arbitrary block1"),
@@ -401,7 +393,6 @@ func init() {
 				Height:            102,
 				PreviousBlockHash: testutil.MustDecodeHash("0ab29c0bd7bff3b3b7eb98802f8d5f8833884c86c0fb21559a65cc58dda99667"),
 				Timestamp:         1522908275,
-				Nonce:             0,
 			},
 			Transactions: []*types.Tx{
 				coinBaseTx(41250000000, "arbitrary block2"),
@@ -414,7 +405,6 @@ func init() {
 				Height:            102,
 				PreviousBlockHash: testutil.MustDecodeHash("0ab29c0bd7bff3b3b7eb98802f8d5f8833884c86c0fb21559a65cc58dda99667"),
 				Timestamp:         1522908275,
-				Nonce:             0,
 			},
 			Transactions: []*types.Tx{
 				coinBaseTx(41250000000, "arbitrary block3"),
@@ -427,7 +417,6 @@ func init() {
 				Height:            103,
 				PreviousBlockHash: testutil.MustDecodeHash("0ab29c0bd7bff3b3b7eb98802f8d5f8833884c86c0fb21559a65cc58dda99667"),
 				Timestamp:         1522908275,
-				Nonce:             0,
 			},
 			Transactions: []*types.Tx{
 				coinBaseTx(41250000000, "arbitrary block4"),
@@ -441,7 +430,6 @@ func init() {
 				Height:            104,
 				PreviousBlockHash: testutil.MustDecodeHash("0ab29c0bd7bff3b3b7eb98802f8d5f8833884c86c0fb21559a65cc58dda99667"),
 				Timestamp:         1522908275,
-				Nonce:             0,
 			},
 			Transactions: []*types.Tx{
 				coinBaseTx(41250000000, "arbitrary block5"),
@@ -453,7 +441,6 @@ func init() {
 				Height:            105,
 				PreviousBlockHash: testutil.MustDecodeHash("0ab29c0bd7bff3b3b7eb98802f8d5f8833884c86c0fb21559a65cc58dda99667"),
 				Timestamp:         1522908275,
-				Nonce:             0,
 			},
 			Transactions: []*types.Tx{
 				coinBaseTx(41250000000, "arbitrary block6"),
@@ -466,7 +453,6 @@ func init() {
 				Height:            106,
 				PreviousBlockHash: testutil.MustDecodeHash("0ab29c0bd7bff3b3b7eb98802f8d5f8833884c86c0fb21559a65cc58dda99667"),
 				Timestamp:         1522908275,
-				Nonce:             0,
 			},
 			Transactions: []*types.Tx{
 				coinBaseTx(41250000000, "arbitrary block7"),
@@ -478,7 +464,6 @@ func init() {
 				Height:            107,
 				PreviousBlockHash: testutil.MustDecodeHash("0ab29c0bd7bff3b3b7eb98802f8d5f8833884c86c0fb21559a65cc58dda99667"),
 				Timestamp:         1522908275,
-				Nonce:             0,
 			},
 			Transactions: []*types.Tx{
 				coinBaseTx(41250000000, "arbitrary block8"),
@@ -492,7 +477,6 @@ func init() {
 				Height:            108,
 				PreviousBlockHash: testutil.MustDecodeHash("0ab29c0bd7bff3b3b7eb98802f8d5f8833884c86c0fb21559a65cc58dda99667"),
 				Timestamp:         1522908275,
-				Nonce:             0,
 			},
 			Transactions: []*types.Tx{
 				coinBaseTx(41250000000, "arbitrary block9"),
@@ -506,7 +490,6 @@ func init() {
 				Height:            105,
 				PreviousBlockHash: testutil.MustDecodeHash("0ab29c0bd7bff3b3b7eb98802f8d5f8833884c86c0fb21559a65cc58dda99667"),
 				Timestamp:         1522908275,
-				Nonce:             0,
 			},
 			Transactions: []*types.Tx{
 				coinBaseTx(41250000000, "arbitrary block10"),
@@ -523,7 +506,6 @@ func init() {
 				Height:            105,
 				PreviousBlockHash: testutil.MustDecodeHash("0ab29c0bd7bff3b3b7eb98802f8d5f8833884c86c0fb21559a65cc58dda99667"),
 				Timestamp:         1522908275,
-				Nonce:             0,
 			},
 			Transactions: []*types.Tx{
 				coinBaseTx(41250000000, "arbitrary block11"),
@@ -539,7 +521,6 @@ func init() {
 				Height:            106,
 				PreviousBlockHash: testutil.MustDecodeHash("0ab29c0bd7bff3b3b7eb98802f8d5f8833884c86c0fb21559a65cc58dda99667"),
 				Timestamp:         1522908275,
-				Nonce:             0,
 			},
 			Transactions: []*types.Tx{
 				coinBaseTx(41250000000, "arbitrary block12"),
@@ -554,7 +535,6 @@ func init() {
 				Height:            107,
 				PreviousBlockHash: testutil.MustDecodeHash("0ab29c0bd7bff3b3b7eb98802f8d5f8833884c86c0fb21559a65cc58dda99667"),
 				Timestamp:         1522908275,
-				Nonce:             0,
 			},
 			Transactions: []*types.Tx{
 				coinBaseTx(41250000000, "arbitrary block13"),
@@ -568,7 +548,6 @@ func init() {
 				Height:            106,
 				PreviousBlockHash: testutil.MustDecodeHash("0ab29c0bd7bff3b3b7eb98802f8d5f8833884c86c0fb21559a65cc58dda99667"),
 				Timestamp:         1522908275,
-				Nonce:             0,
 			},
 			Transactions: []*types.Tx{
 				coinBaseTx(41250000000, "arbitrary block14"),

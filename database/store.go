@@ -57,6 +57,11 @@ func CalcBlockHeaderKey(height uint64, hash *bc.Hash) []byte {
 	return append(key, hash.Bytes()...)
 }
 
+// GetBlockHeader return the BlockHeader by given hash
+func (s *Store) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
+	return nil, nil
+}
+
 // GetBlock return the block by given hash
 func GetBlock(db dbm.DB, hash *bc.Hash) (*types.Block, error) {
 	bytez := db.Get(CalcBlockKey(hash))
@@ -178,9 +183,17 @@ func (s *Store) SaveBlock(block *types.Block) error {
 }
 
 // SaveChainStatus save the core's newest status && delete old status
-func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint) error {
+func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint, contractView *state.ContractViewpoint) error {
 	batch := s.db.NewBatch()
 	if err := saveUtxoView(batch, view); err != nil {
+		return err
+	}
+
+	if err := deleteContractView(s.db, batch, contractView); err != nil {
+		return err
+	}
+
+	if err := saveContractView(s.db, batch, contractView); err != nil {
 		return err
 	}
 
@@ -192,4 +205,13 @@ func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint
 	batch.Set(BlockStoreKey, bytes)
 	batch.Write()
 	return nil
+}
+
+func (s *Store) GetCheckpoint(*bc.Hash) (*state.Checkpoint, error) {
+	return nil, nil
+}
+
+// GetCheckpointsByHeight return all checkpoints of specified block height
+func (s *Store) GetCheckpointsByHeight(uint64) ([]*state.Checkpoint, error) {
+	return nil, nil
 }

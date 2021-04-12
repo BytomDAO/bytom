@@ -6,7 +6,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/config"
-	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
@@ -75,7 +74,21 @@ func (c *Chain) initChainStatus() error {
 	if err != nil {
 		return err
 	}
-	return c.store.SaveChainStatus(node, utxoView)
+
+	contractView := state.NewContractViewpoint()
+	return c.store.SaveChainStatus(node, utxoView, contractView)
+}
+
+// BestBlockHeight returns the last irreversible block header of the blockchain
+func (c *Chain) LastIrreversibleHeader() *types.BlockHeader {
+	// TODO: LastIrreversibleHeader
+	return nil
+}
+
+// ProcessBlockSignature process blockchain signature
+func (c *Chain) ProcessBlockSignature(signature, pubkey []byte, blockHash *bc.Hash) error {
+	// TODO: ProcessBlockSignature
+	return nil
 }
 
 // BestBlockHeight returns the current height of the blockchain.
@@ -103,31 +116,13 @@ func (c *Chain) InMainChain(hash bc.Hash) bool {
 	return c.index.InMainchain(hash)
 }
 
-// CalcNextSeed return the seed for the given block
-func (c *Chain) CalcNextSeed(preBlock *bc.Hash) (*bc.Hash, error) {
-	node := c.index.GetNode(preBlock)
-	if node == nil {
-		return nil, errors.New("can't find preblock in the blockindex")
-	}
-	return node.CalcNextSeed(), nil
-}
-
-// CalcNextBits return the seed for the given block
-func (c *Chain) CalcNextBits(preBlock *bc.Hash) (uint64, error) {
-	node := c.index.GetNode(preBlock)
-	if node == nil {
-		return 0, errors.New("can't find preblock in the blockindex")
-	}
-	return node.CalcNextBits(), nil
-}
-
 func (c *Chain) GetBlockIndex() *state.BlockIndex {
 	return c.index
 }
 
 // This function must be called with mu lock in above level
-func (c *Chain) setState(node *state.BlockNode, view *state.UtxoViewpoint) error {
-	if err := c.store.SaveChainStatus(node, view); err != nil {
+func (c *Chain) setState(node *state.BlockNode, view *state.UtxoViewpoint, contractView *state.ContractViewpoint) error {
+	if err := c.store.SaveChainStatus(node, view, contractView); err != nil {
 		return err
 	}
 

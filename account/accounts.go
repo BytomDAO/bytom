@@ -19,11 +19,11 @@ import (
 	"github.com/bytom/bytom/crypto"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/crypto/sha3pool"
+	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/vm/vmutil"
-	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 const (
@@ -541,15 +541,6 @@ func (m *Manager) GetLocalCtrlProgramByAddress(address string) (*CtrlProgram, er
 	return cp, json.Unmarshal(rawProgram, cp)
 }
 
-// GetMiningAddress will return the mining address
-func (m *Manager) GetMiningAddress() (string, error) {
-	cp, err := m.GetCoinbaseCtrlProgram()
-	if err != nil {
-		return "", err
-	}
-	return cp.Address, nil
-}
-
 // IsLocalControlProgram check is the input control program belong to local
 func (m *Manager) IsLocalControlProgram(prog []byte) bool {
 	var hash common.Hash
@@ -604,26 +595,6 @@ func (m *Manager) ListUnconfirmedUtxo(accountID string, isSmartContract bool) []
 // RemoveUnconfirmedUtxo remove utxos from the utxoKeeper
 func (m *Manager) RemoveUnconfirmedUtxo(hashes []*bc.Hash) {
 	m.utxoKeeper.RemoveUnconfirmedUtxo(hashes)
-}
-
-// SetMiningAddress will set the mining address
-func (m *Manager) SetMiningAddress(miningAddress string) (string, error) {
-	program, err := m.getProgramByAddress(miningAddress)
-	if err != nil {
-		return "", err
-	}
-
-	cp := &CtrlProgram{
-		Address:        miningAddress,
-		ControlProgram: program,
-	}
-	rawCP, err := json.Marshal(cp)
-	if err != nil {
-		return "", err
-	}
-
-	m.db.Set(miningAddressKey, rawCP)
-	return m.GetMiningAddress()
 }
 
 func (m *Manager) SetCoinbaseArbitrary(arbitrary []byte) {

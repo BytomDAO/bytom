@@ -5,7 +5,7 @@ import (
 	"net"
 
 	"github.com/bytom/bytom/errors"
-	"github.com/bytom/bytom/netsync"
+	"github.com/bytom/bytom/netsync/peers"
 	"github.com/bytom/bytom/p2p"
 	"github.com/bytom/bytom/version"
 )
@@ -20,7 +20,6 @@ type VersionInfo struct {
 type NetInfo struct {
 	Listening    bool         `json:"listening"`
 	Syncing      bool         `json:"syncing"`
-	Mining       bool         `json:"mining"`
 	PeerCount    int          `json:"peer_count"`
 	CurrentBlock uint64       `json:"current_block"`
 	HighestBlock uint64       `json:"highest_block"`
@@ -33,7 +32,6 @@ func (a *API) GetNodeInfo() *NetInfo {
 	info := &NetInfo{
 		Listening:    a.sync.IsListening(),
 		Syncing:      !a.sync.IsCaughtUp(),
-		Mining:       a.cpuMiner.IsMining(),
 		PeerCount:    a.sync.PeerCount(),
 		CurrentBlock: a.chain.BestBlockHeight(),
 		NetWorkID:    a.sync.GetNetwork(),
@@ -53,7 +51,7 @@ func (a *API) GetNodeInfo() *NetInfo {
 }
 
 // return the currently connected peers with net address
-func (a *API) getPeerInfoByAddr(addr string) *netsync.PeerInfo {
+func (a *API) getPeerInfoByAddr(addr string) *peers.PeerInfo {
 	peerInfos := a.sync.GetPeerInfos()
 	for _, peerInfo := range peerInfos {
 		if peerInfo.RemoteAddr == addr {
@@ -69,7 +67,7 @@ func (a *API) disconnectPeerById(peerID string) error {
 }
 
 // connect peer b y net address
-func (a *API) connectPeerByIpAndPort(ip string, port uint16) (*netsync.PeerInfo, error) {
+func (a *API) connectPeerByIpAndPort(ip string, port uint16) (*peers.PeerInfo, error) {
 	netIp := net.ParseIP(ip)
 	if netIp == nil {
 		return nil, errors.New("invalid ip address")
@@ -90,17 +88,6 @@ func (a *API) connectPeerByIpAndPort(ip string, port uint16) (*netsync.PeerInfo,
 // getNetInfo return network information
 func (a *API) getNetInfo() Response {
 	return NewSuccessResponse(a.GetNodeInfo())
-}
-
-// isMining return is in mining or not
-func (a *API) isMining() Response {
-	IsMining := map[string]bool{"is_mining": a.IsMining()}
-	return NewSuccessResponse(IsMining)
-}
-
-// IsMining return mining status
-func (a *API) IsMining() bool {
-	return a.cpuMiner.IsMining()
 }
 
 // return the peers of current node

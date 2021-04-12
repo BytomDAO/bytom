@@ -98,6 +98,9 @@ var testTxs = []*types.Tx{
 
 type mockStore struct{}
 
+func (s *mockStore) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error)     { return nil, nil }
+func (s *mockStore) GetCheckpoint(hash *bc.Hash) (*state.Checkpoint, error)       { return nil, nil }
+func (s *mockStore) GetCheckpointsByHeight(u uint64) ([]*state.Checkpoint, error) { return nil, nil }
 func (s *mockStore) BlockExist(hash *bc.Hash) bool                                { return false }
 func (s *mockStore) GetBlock(*bc.Hash) (*types.Block, error)                      { return nil, nil }
 func (s *mockStore) GetStoreStatus() *BlockStoreState                             { return nil }
@@ -105,7 +108,9 @@ func (s *mockStore) GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error   
 func (s *mockStore) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)                 { return nil, nil }
 func (s *mockStore) LoadBlockIndex(uint64) (*state.BlockIndex, error)             { return nil, nil }
 func (s *mockStore) SaveBlock(*types.Block) error                                 { return nil }
-func (s *mockStore) SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint) error { return nil }
+func (s *mockStore) SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint, *state.ContractViewpoint) error {
+	return nil
+}
 
 func TestAddOrphan(t *testing.T) {
 	cases := []struct {
@@ -603,10 +608,10 @@ func (s *mockStore1) GetTransactionsUtxo(utxoView *state.UtxoViewpoint, tx []*bc
 	}
 	return nil
 }
-func (s *mockStore1) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)                 { return nil, nil }
-func (s *mockStore1) LoadBlockIndex(uint64) (*state.BlockIndex, error)             { return nil, nil }
-func (s *mockStore1) SaveBlock(*types.Block) error                                 { return nil }
-func (s *mockStore1) SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint) error { return nil }
+func (s *mockStore1) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)        { return nil, nil }
+func (s *mockStore1) LoadBlockIndex(uint64) (*state.BlockIndex, error)    { return nil, nil }
+func (s *mockStore1) SaveBlock(*types.Block, *bc.TransactionStatus) error { return nil }
+func (s *mockStore1) SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint, *state.ContractViewpoint) error { return nil}
 
 func TestProcessTransaction(t *testing.T) {
 	txPool := &TxPool{

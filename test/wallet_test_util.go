@@ -183,7 +183,7 @@ func (ctx *walletTestContext) createAccount(name string, keys []string, quorum i
 }
 
 func (ctx *walletTestContext) update(block *types.Block) error {
-	if err := SolveAndUpdate(ctx.Chain, block); err != nil {
+	if _, err := ctx.Chain.ProcessBlock(block); err != nil {
 		return err
 	}
 	if err := ctx.Wallet.AttachBlock(block); err != nil {

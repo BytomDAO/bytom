@@ -292,7 +292,8 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 		for k, v := range c.before {
 			utxoViewpoint0.Entries[k] = v
 		}
-		if err := store.SaveChainStatus(node, utxoViewpoint0); err != nil {
+		contractView := state.NewContractViewpoint()
+		if err := store.SaveChainStatus(node, utxoViewpoint0, contractView); err != nil {
 			t.Error(err)
 		}
 
@@ -314,7 +315,7 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 				t.Error(err)
 			}
 		}
-		if err := store.SaveChainStatus(node, utxoViewpoint); err != nil {
+		if err := store.SaveChainStatus(node, utxoViewpoint, contractView); err != nil {
 			t.Error(err)
 		}
 
