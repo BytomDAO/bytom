@@ -168,7 +168,7 @@ func TestGetRelatedTxAndStatus(t *testing.T) {
 		VerifyStatus: []*bc.TxVerifyResult{{StatusFail: true}, {StatusFail: false}, {StatusFail: false}},
 	}
 	peer.AddFilterAddresses([][]byte{[]byte("spendProgram1"), []byte("outProgram3")})
-	gotTxs, gotStatus := peer.getRelatedTxAndStatus(txs, txStatuses)
+	gotTxs, gotStatus := peer.getRelatedTxs(txs, txStatuses)
 	if len(gotTxs) != 2 {
 		t.Error("TestGetRelatedTxAndStatus txs size error")
 	}

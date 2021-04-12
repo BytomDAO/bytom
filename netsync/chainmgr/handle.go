@@ -226,14 +226,7 @@ func (m *Manager) handleGetMerkleBlockMsg(peer *peers.Peer, msg *msgs.GetMerkleB
 		return
 	}
 
-	blockHash := block.Hash()
-	txStatus, err := m.chain.GetTransactionStatus(&blockHash)
-	if err != nil {
-		log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on handleGetMerkleBlockMsg get transaction status")
-		return
-	}
-
-	ok, err := peer.SendMerkleBlock(block, txStatus)
+	ok, err := peer.SendMerkleBlock(block)
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on handleGetMerkleBlockMsg sentMerkleBlock")
 		return

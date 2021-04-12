@@ -185,16 +185,14 @@ func (p *Peer) GetPeerInfo() *PeerInfo {
 	}
 }
 
-func (p *Peer) getRelatedTxAndStatus(txs []*types.Tx, txStatuses *bc.TransactionStatus) ([]*types.Tx, []*bc.TxVerifyResult) {
+func (p *Peer) getRelatedTxs(txs []*types.Tx) ([]*types.Tx) {
 	var relatedTxs []*types.Tx
-	var relatedStatuses []*bc.TxVerifyResult
-	for i, tx := range txs {
+	for _, tx := range txs {
 		if p.isRelatedTx(tx) {
 			relatedTxs = append(relatedTxs, tx)
-			relatedStatuses = append(relatedStatuses, txStatuses.VerifyStatus[i])
 		}
 	}
-	return relatedTxs, relatedStatuses
+	return relatedTxs
 }
 
 func (p *Peer) isRelatedTx(tx *types.Tx) bool {
@@ -296,21 +294,16 @@ func (p *Peer) SendHeaders(headers []*types.BlockHeader) (bool, error) {
 	return ok, nil
 }
 
-func (p *Peer) SendMerkleBlock(block *types.Block, txStatuses *bc.TransactionStatus) (bool, error) {
+func (p *Peer) SendMerkleBlock(block *types.Block) (bool, error) {
 	msg := msgs.NewMerkleBlockMessage()
 	if err := msg.SetRawBlockHeader(block.BlockHeader); err != nil {
 		return false, err
 	}
 
-	relatedTxs, relatedStatuses := p.getRelatedTxAndStatus(block.Transactions, txStatuses)
+	relatedTxs := p.getRelatedTxs(block.Transactions)
 
 	txHashes, txFlags := types.GetTxMerkleTreeProof(block.Transactions, relatedTxs)
 	if err := msg.SetTxInfo(txHashes, txFlags, relatedTxs); err != nil {
-		return false, nil
-	}
-
-	statusHashes := types.GetStatusMerkleTreeProof(txStatuses.VerifyStatus, txFlags)
-	if err := msg.SetStatusInfo(statusHashes, relatedStatuses); err != nil {
 		return false, nil
 	}
 
