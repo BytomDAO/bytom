@@ -15,6 +15,7 @@ import (
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/test/mock"
+	"github.com/bytom/bytom/testcontrol"
 	"github.com/bytom/bytom/testutil"
 )
 
@@ -107,6 +108,10 @@ func TestCheckSyncType(t *testing.T) {
 }
 
 func TestRegularBlockSync(t *testing.T) {
+	if testcontrol.IgnoreTestTemporary {
+		return
+	}
+
 	baseChain := mockBlocks(nil, 50)
 	chainX := append(baseChain, mockBlocks(baseChain[50], 60)...)
 	chainY := append(baseChain, mockBlocks(baseChain[50], 70)...)
@@ -210,6 +215,10 @@ func TestRegularBlockSync(t *testing.T) {
 }
 
 func TestRequireBlock(t *testing.T) {
+	if testcontrol.IgnoreTestTemporary {
+		return
+	}
+
 	tmp, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatalf("failed to create temporary data folder: %v", err)
@@ -277,6 +286,10 @@ func TestRequireBlock(t *testing.T) {
 }
 
 func TestSendMerkleBlock(t *testing.T) {
+	if testcontrol.IgnoreTestTemporary {
+		return
+	}
+
 	tmp, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatalf("failed to create temporary data folder: %v", err)
@@ -378,6 +391,10 @@ func TestSendMerkleBlock(t *testing.T) {
 }
 
 func TestLocateBlocks(t *testing.T) {
+	if testcontrol.IgnoreTestTemporary {
+		return
+	}
+
 	maxNumOfBlocksPerMsg = 5
 	blocks := mockBlocks(nil, 100)
 	cases := []struct {
@@ -431,6 +448,10 @@ func TestLocateBlocks(t *testing.T) {
 }
 
 func TestLocateHeaders(t *testing.T) {
+	if testcontrol.IgnoreTestTemporary {
+		return
+	}
+
 	defer func() {
 		maxNumOfHeadersPerMsg = 1000
 	}()

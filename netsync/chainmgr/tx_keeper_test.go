@@ -10,6 +10,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 
 	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/testcontrol"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/protocol"
 	core "github.com/bytom/bytom/protocol"
@@ -56,6 +57,10 @@ func (m *mempool) IsDust(tx *types.Tx) bool {
 }
 
 func TestSyncMempool(t *testing.T) {
+	if testcontrol.IgnoreTestTemporary {
+		return
+	}
+
 	tmpDir, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatalf("failed to create temporary data folder: %v", err)
@@ -118,6 +123,10 @@ out:
 }
 
 func TestBroadcastTxsLoop(t *testing.T) {
+	if testcontrol.IgnoreTestTemporary {
+		return
+	}
+
 	tmpDir, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatalf("failed to create temporary data folder: %v", err)
