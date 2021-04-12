@@ -1,0 +1,26 @@
+version: 1.0.0.{build}
+
+platform: x64
+
+branches:
+  only:
+    - master
+
+clone_folder: c:\gopath\src\github.com\zondax\ledger-cosmos-go
+
+environment:
+  GOPATH: c:\gopath
+
+install:
+  - choco install -y mingw
+  - echo %PATH%
+  - echo %GOPATH%
+  - set PATH=%GOPATH%\bin;c:\go\bin;C:\tools\mingw64\bin;%PATH%
+  - go version
+  - go env
+  - go get -v -u github.com/golang/dep/cmd/dep
+  - dep ensure -v
+
+build_script:
+  - go build -x ./common ./cosmos ./tendermint
+  - go test ./common
