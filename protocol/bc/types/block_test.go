@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/bytom/bytom/consensus"
-	"github.com/bytom/bytom/testcontrol"
 	"github.com/bytom/bytom/encoding/blockchain"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/testutil"
@@ -16,10 +15,6 @@ import (
 )
 
 func TestBlock(t *testing.T) {
-	if testcontrol.CHXTest {
-		return
-	}
-
 	cases := []struct {
 		block *Block
 		hex   string
@@ -43,7 +38,7 @@ func TestBlock(t *testing.T) {
 				"0000000000000000000000000000000000000000000000000000000000000000", // transactions merkle root
 				"00", // num transactions
 			}, ""),
-			hash: testutil.MustDecodeHash("b49f31a684930887df56357edb3bb51c5fa07930bc4dd00ddf73a5a13c2e635e"),
+			hash: testutil.MustDecodeHash("42e74d130e5ab27e8a71b90e7de8c8e00ecfa77456070202ab8509f7b0ab49ae"),
 		},
 		{
 			block: &Block{
@@ -94,8 +89,9 @@ func TestBlock(t *testing.T) {
 				"07018e0502012a00056e6f6e6365a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf92c30f380f6173736574446566696e6974696f6e010f69737375616e636550726f6772616d020a617267756d656e7473310a617267756d656e74733201540152fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff92c30f03010c7370656e6450726f6772616d17020a617267756d656e7473330a617267756d656e747334010129a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf92c30f01047472756500",
 				"07010001010b020961726269747261727900020129ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff92c30f01047472756500012affffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff92c30f010566616c736500",
 			}, ""),
-			hash: testutil.MustDecodeHash("83bf5d5908c5046ab6a0c47bab3c9d54dd0583c26c51fa0c85231ac83b799cd6"),
+			hash: testutil.MustDecodeHash("6076fc8a96b08a4842f4bdc805606e9775ce6dbe4e371e88c70b75ea4283e942"),
 		},
+
 	}
 
 	for i, test := range cases {
