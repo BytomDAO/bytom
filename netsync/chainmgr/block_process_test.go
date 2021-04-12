@@ -8,14 +8,14 @@ import (
 	"time"
 
 	dbm "github.com/bytom/bytom/database/leveldb"
-	"github.com/bytom/bytom/testcontrol"
 	"github.com/bytom/bytom/netsync/peers"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/test/mock"
+	"github.com/bytom/bytom/testcontrol"
 )
 
 func TestBlockProcess(t *testing.T) {
-	if testcontrol.CHXTest {
+	if testcontrol.IgnoreTestTemporary {
 		return
 	}
 
