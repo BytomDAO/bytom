@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/testcontrol"
 	"github.com/bytom/bytom/database"
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/protocol"
@@ -18,6 +19,10 @@ import (
 )
 
 func TestProcessBlock(t *testing.T) {
+	if testcontrol.CHXTest {
+		return
+	}
+
 	cases := []*processBlockTestCase{
 		{
 			desc: "process a invalid block",

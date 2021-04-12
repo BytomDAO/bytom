@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/testcontrol"
 	"github.com/bytom/bytom/encoding/blockchain"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/testutil"
@@ -15,6 +16,10 @@ import (
 )
 
 func TestBlock(t *testing.T) {
+	if testcontrol.CHXTest {
+		return
+	}
+
 	cases := []struct {
 		block *Block
 		hex   string

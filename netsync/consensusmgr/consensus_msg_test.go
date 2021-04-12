@@ -8,6 +8,7 @@ import (
 	"github.com/tendermint/go-wire"
 
 	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/testcontrol"
 	"github.com/bytom/bytom/protocol/bc/types"
 )
 
@@ -103,6 +104,10 @@ var testBlock = &types.Block{
 }
 
 func TestBlockProposeMsg(t *testing.T) {
+	if testcontrol.CHXTest {
+		return
+	}
+
 	blockMsg, err := NewBlockProposeMsg(testBlock)
 	if err != nil {
 		t.Fatalf("create new mine block msg err:%s", err)

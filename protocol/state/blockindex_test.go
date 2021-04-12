@@ -8,6 +8,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 
 	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/testcontrol"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/testutil"
 )
@@ -18,6 +19,10 @@ func stringToBigInt(s string, base int) *big.Int {
 }
 
 func TestNewBlockNode(t *testing.T) {
+	if testcontrol.CHXTest {
+		return
+	}
+
 	cases := []struct {
 		blockHeader   *types.BlockHeader
 		parentNode    *BlockNode
