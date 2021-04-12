@@ -143,9 +143,21 @@ func (c *Casper) ProcessBlock(block *types.Block) error {
 		return nil
 	}
 
+	checkpoint, err := c.applyBlockToCheckpoint(block)
+	if err != nil {
+		return errors.Wrap(err, "apply block to checkpoint")
+	}
+
+	for range block.Transactions {
+		// process the votes and mortgages
+	}
+	return c.store.SaveCheckpoints(checkpoint)
+}
+
+func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, error) {
 	node, err := c.tree.nodeByHash(block.PreviousBlockHash)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	checkpoint := node.checkpoint
@@ -165,11 +177,7 @@ func (c *Casper) ProcessBlock(block *types.Block) error {
 
 	checkpoint.Height = block.Height
 	checkpoint.Hash = block.Hash()
-
-	for range block.Transactions {
-		// process the votes and mortgages
-	}
-	return c.store.SaveCheckpoints(checkpoint)
+	return checkpoint, nil
 }
 
 func (c *Casper) verifyVerification(v *Verification) error {
