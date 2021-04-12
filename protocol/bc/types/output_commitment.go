@@ -16,13 +16,6 @@ type OutputCommitment struct {
 	ControlProgram []byte
 }
 
-func (oc *OutputCommitment) writeExtensibleString(w io.Writer, assetVersion uint64) error {
-	_, err := blockchain.WriteExtensibleString(w, nil, func(w io.Writer) error {
-		return oc.writeTo(w, assetVersion)
-	})
-	return err
-}
-
 func (oc *OutputCommitment) writeTo(w io.Writer, assetVersion uint64) (err error) {
 	if assetVersion == 1 {
 		if _, err = oc.AssetAmount.WriteTo(w); err != nil {
@@ -36,12 +29,6 @@ func (oc *OutputCommitment) writeTo(w io.Writer, assetVersion uint64) (err error
 		}
 	}
 	return errors.Wrap(err, "writing suffix")
-}
-
-func (oc *OutputCommitment) readExtensibleString(r *blockchain.Reader, assetVersion uint64) ([]byte, error) {
-	return blockchain.ReadExtensibleString(r, func(reader *blockchain.Reader) error {
-		return oc.readFrom(reader, assetVersion)
-	})
 }
 
 func (oc *OutputCommitment) readFrom(r *blockchain.Reader, assetVersion uint64) (err error) {

@@ -3,6 +3,7 @@ package types
 import (
 	"bytes"
 	"encoding/hex"
+	"io"
 	"testing"
 
 	"github.com/bytom/bytom/encoding/blockchain"
@@ -56,4 +57,17 @@ func TestReadWriteOutputCommitment(t *testing.T) {
 			t.Errorf("got:%v, want:%v", *oc, *c.oc)
 		}
 	}
+}
+
+func (oc *OutputCommitment) readExtensibleString(r *blockchain.Reader, assetVersion uint64) ([]byte, error) {
+	return blockchain.ReadExtensibleString(r, func(reader *blockchain.Reader) error {
+		return oc.readFrom(reader, assetVersion)
+	})
+}
+
+func (oc *OutputCommitment) writeExtensibleString(w io.Writer, assetVersion uint64) error {
+	_, err := blockchain.WriteExtensibleString(w, nil, func(w io.Writer) error {
+		return oc.writeTo(w, assetVersion)
+	})
+	return err
 }
