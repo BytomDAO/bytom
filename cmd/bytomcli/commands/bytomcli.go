@@ -167,9 +167,6 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(getTransactionFeedCmd)
 	BytomcliCmd.AddCommand(updateTransactionFeedCmd)
 
-	BytomcliCmd.AddCommand(isMiningCmd)
-	BytomcliCmd.AddCommand(setMiningCmd)
-
 	BytomcliCmd.AddCommand(netInfoCmd)
 	BytomcliCmd.AddCommand(gasRateCmd)
 

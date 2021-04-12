@@ -19,14 +19,11 @@ const approxNodesPerDay = 24 * 24
 // BlockNode represents a block within the block chain and is primarily used to
 // aid in selecting the best chain to be the main chain.
 type BlockNode struct {
-	Parent *BlockNode // parent is the parent block for this node.
-	Hash   bc.Hash    // hash of the block.
-	Seed   *bc.Hash   // seed hash of the block
-
+	Parent                 *BlockNode // parent is the parent block for this node.
+	Hash                   bc.Hash    // hash of the block.
 	Version                uint64
 	Height                 uint64
 	Timestamp              uint64
-	Nonce                  uint64
 	TransactionsMerkleRoot bc.Hash
 	TransactionStatusHash  bc.Hash
 }
@@ -42,16 +39,10 @@ func NewBlockNode(bh *types.BlockHeader, parent *BlockNode) (*BlockNode, error) 
 		Version:                bh.Version,
 		Height:                 bh.Height,
 		Timestamp:              bh.Timestamp,
-		Nonce:                  bh.Nonce,
 		TransactionsMerkleRoot: bh.TransactionsMerkleRoot,
 		TransactionStatusHash:  bh.TransactionStatusHash,
 	}
 
-	if bh.Height == 0 {
-		node.Seed = consensus.InitialSeed
-	} else {
-		node.Seed = parent.CalcNextSeed()
-	}
 	return node, nil
 }
 
@@ -66,7 +57,6 @@ func (node *BlockNode) BlockHeader() *types.BlockHeader {
 		Height:            node.Height,
 		PreviousBlockHash: previousBlockHash,
 		Timestamp:         node.Timestamp,
-		Nonce:             node.Nonce,
 		BlockCommitment: types.BlockCommitment{
 			TransactionsMerkleRoot: node.TransactionsMerkleRoot,
 			TransactionStatusHash:  node.TransactionStatusHash,
@@ -84,17 +74,6 @@ func (node *BlockNode) CalcPastMedianTime() uint64 {
 
 	sort.Sort(common.TimeSorter(timestamps))
 	return timestamps[len(timestamps)/2]
-}
-
-// CalcNextSeed calculate the seed for next block
-func (node *BlockNode) CalcNextSeed() *bc.Hash {
-	if node.Height == 0 {
-		return consensus.InitialSeed
-	}
-	if node.Height%consensus.SeedPerRetarget == 0 {
-		return &node.Hash
-	}
-	return node.Seed
 }
 
 // BlockIndex is the struct for help chain trace block chain as tree

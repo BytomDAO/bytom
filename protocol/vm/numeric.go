@@ -88,7 +88,7 @@ func op2Div(vm *virtualMachine) error {
 		return err
 	}
 
-	return vm.pushBigInt(n.Rsh(n,1), true)
+	return vm.pushBigInt(n.Rsh(n, 1), true)
 }
 
 func opNegate(vm *virtualMachine) error {
@@ -204,19 +204,22 @@ func opMul(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	y, err := vm.popInt64(true)
+
+	y, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	x, err := vm.popInt64(true)
+
+	x, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	res, ok := checked.MulInt64(x, y)
-	if !ok {
+
+	if overflow := x.MulOverflow(x, y); overflow || x.Sign() < 0 {
 		return ErrRange
 	}
-	return vm.pushInt64(res, true)
+
+	return vm.pushBigInt(x, true)
 }
 
 func opDiv(vm *virtualMachine) error {
@@ -224,22 +227,22 @@ func opDiv(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	y, err := vm.popInt64(true)
+
+	y, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	x, err := vm.popInt64(true)
+
+	x, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	if y == 0 {
+
+	if y.IsZero() {
 		return ErrDivZero
 	}
-	res, ok := checked.DivInt64(x, y)
-	if !ok {
-		return ErrRange
-	}
-	return vm.pushInt64(res, true)
+
+	return vm.pushBigInt(x.Div(x, y), true)
 }
 
 func opMod(vm *virtualMachine) error {
@@ -247,30 +250,22 @@ func opMod(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	y, err := vm.popInt64(true)
+
+	y, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	x, err := vm.popInt64(true)
+
+	x, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	if y == 0 {
+
+	if y.IsZero() {
 		return ErrDivZero
 	}
 
-	res, ok := checked.ModInt64(x, y)
-	if !ok {
-		return ErrRange
-	}
-
-	// Go's modulus operator produces the wrong result for mixed-sign
-	// operands
-	if res != 0 && (x >= 0) != (y >= 0) {
-		res += y
-	}
-
-	return vm.pushInt64(res, true)
+	return vm.pushBigInt(x.Mod(x, y), true)
 }
 
 func opLshift(vm *virtualMachine) error {
@@ -278,27 +273,27 @@ func opLshift(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	y, err := vm.popInt64(true)
+
+	y, err := vm.popBigInt(true)
 	if err != nil {
 		return err
-	}
-	if y < 0 {
-		return ErrBadValue
-	}
-	x, err := vm.popInt64(true)
-	if err != nil {
-		return err
-	}
-	if x == 0 || y == 0 {
-		return vm.pushInt64(x, true)
 	}
 
-	res, ok := checked.LshiftInt64(x, y)
-	if !ok {
+	x, err := vm.popBigInt(true)
+	if err != nil {
+		return err
+	}
+
+	if y.LtUint64(256) {
+		x.Lsh(x, uint(y.Uint64()))
+	} else {
+		x.Clear()
+	}
+
+	if x.Sign() < 0 {
 		return ErrRange
 	}
-
-	return vm.pushInt64(res, true)
+	return vm.pushBigInt(x, true)
 }
 
 func opRshift(vm *virtualMachine) error {
@@ -306,18 +301,24 @@ func opRshift(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	y, err := vm.popInt64(true)
+
+	y, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	x, err := vm.popInt64(true)
+
+	x, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	if y < 0 {
-		return ErrBadValue
+
+	if y.LtUint64(256) {
+		x.Rsh(x, uint(y.Uint64()))
+	} else {
+		x.Clear()
 	}
-	return vm.pushInt64(x>>uint64(y), true)
+
+	return vm.pushBigInt(x, true)
 }
 
 func opBoolAnd(vm *virtualMachine) error {
@@ -370,15 +371,18 @@ func opNumEqualVerify(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	y, err := vm.popInt64(true)
+
+	y, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	x, err := vm.popInt64(true)
+
+	x, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	if x == y {
+
+	if x.Eq(y) {
 		return nil
 	}
 	return ErrVerifyFailed
@@ -440,18 +444,21 @@ func opMin(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	y, err := vm.popInt64(true)
+
+	y, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	x, err := vm.popInt64(true)
+
+	x, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	if x > y {
-		x = y
+
+	if x.Cmp(y) > 0 {
+		return vm.pushBigInt(y, true)
 	}
-	return vm.pushInt64(x, true)
+	return vm.pushBigInt(x, true)
 }
 
 func opMax(vm *virtualMachine) error {
@@ -459,18 +466,21 @@ func opMax(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	y, err := vm.popInt64(true)
+
+	y, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	x, err := vm.popInt64(true)
+
+	x, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	if x < y {
-		x = y
+
+	if x.Cmp(y) < 0 {
+		return vm.pushBigInt(y, true)
 	}
-	return vm.pushInt64(x, true)
+	return vm.pushBigInt(x, true)
 }
 
 func opWithin(vm *virtualMachine) error {
@@ -478,17 +488,20 @@ func opWithin(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	max, err := vm.popInt64(true)
+	max, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	min, err := vm.popInt64(true)
+
+	min, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	x, err := vm.popInt64(true)
+
+	x, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	return vm.pushBool(x >= min && x < max, true)
+
+	return vm.pushBool(x.Cmp(min) >= 0 && x.Cmp(max) < 0, true)
 }

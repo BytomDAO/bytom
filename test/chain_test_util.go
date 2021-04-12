@@ -8,13 +8,13 @@ import (
 	"github.com/bytom/bytom/blockchain/txbuilder"
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/database"
+	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/vm"
 	"github.com/golang/protobuf/proto"
-	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 const utxoPrefix = "UT:"
@@ -249,7 +249,7 @@ func (cfg *chainTestConfig) Run() error {
 		if err != nil {
 			return err
 		}
-		err = SolveAndUpdate(ctx.Chain, block)
+		_, err = ctx.Chain.ProcessBlock(block)
 		if err != nil && blk.Invalid {
 			continue
 		}
@@ -297,5 +297,6 @@ func isSpent(hash *bc.Hash, block *types.Block) bool {
 			}
 		}
 	}
+
 	return false
 }

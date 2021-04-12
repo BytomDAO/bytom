@@ -21,9 +21,10 @@ var (
 // Casper is BFT based proof of stack consensus algorithm, it provides safety and liveness in theory,
 // it's design mainly refers to https://github.com/ethereum/research/blob/master/papers/casper-basics/casper_basics.pdf
 type Casper struct {
-	mu    sync.RWMutex
-	tree  *treeNode
-	store protocol.Store
+	mu               sync.RWMutex
+	tree             *treeNode
+	rollbackNotifyCh chan bc.Hash
+	store            protocol.Store
 }
 
 // Best chain return the chain containing the justified checkpoint of the largest height
@@ -65,14 +66,24 @@ func (c *Casper) AuthVerification(v *Verification) error {
 		return err
 	}
 
-	source, err := c.store.GetCheckpoint(&v.SourceHash)
-	if err != nil {
-		// the synchronization block is later than the arrival of the verification message
-		return err
-	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	target, err := c.store.GetCheckpoint(&v.TargetHash)
 	if err != nil {
+		return err
+	}
+
+	// root of tree is the last finalized checkpoint
+	if target.Height < c.tree.checkpoint.Height {
+		// discard the verification message which height of target less than height of last finalized checkpoint
+		// is for simplify check the vote within the span of its other votes
+		return nil
+	}
+
+	source, err := c.store.GetCheckpoint(&v.SourceHash)
+	if err != nil {
+		// the synchronization block is later than the arrival of the verification message
 		return err
 	}
 
@@ -80,35 +91,38 @@ func (c *Casper) AuthVerification(v *Verification) error {
 		return errVoteToGrowingCheckpoint
 	}
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	if !target.ContainsValidator(v.PubKey) {
 		return errPubKeyIsNotValidator
 	}
 
-	if err := c.verifySameHeight(v); err != nil {
-		return err
-	}
-
-	if err := c.verifySpanHeight(v); err != nil {
+	if err := c.verifyVerification(v); err != nil {
 		return err
 	}
 
 	supLink := target.AddSupLink(v.SourceHeight, v.SourceHash, v.PubKey)
 	if source.Status == state.Justified && supLink.Confirmed() {
-		target.Status = state.Justified
-		source.Status = state.Finalized
-		// must notify chain when rollback
-		if err := c.pruneTree(source.Hash); err != nil {
-			return err
+		c.setJustified(target)
+		// must direct child
+		if target.PrevHash == source.Hash {
+			if err := c.setFinalized(source); err != nil {
+				return err
+			}
 		}
 	}
-	return nil
+	return c.store.SaveCheckpoints(source, target)
 }
 
-func (c *Casper) pruneTree(rootHash bc.Hash) error {
-	newRoot, err := c.tree.nodeByHash(rootHash)
+func (c *Casper) setJustified(checkpoint *state.Checkpoint) {
+	_, oldBestHash := c.BestChain()
+	checkpoint.Status = state.Justified
+	if _, bestHash := c.BestChain(); bestHash != oldBestHash {
+		c.rollbackNotifyCh <- bestHash
+	}
+}
+
+func (c *Casper) setFinalized(checkpoint *state.Checkpoint) error {
+	checkpoint.Status = state.Finalized
+	newRoot, err := c.tree.nodeByHash(checkpoint.Hash)
 	if err != nil {
 		return err
 	}
@@ -120,21 +134,35 @@ func (c *Casper) pruneTree(rootHash bc.Hash) error {
 // ProcessBlock used to receive a new block from upper layer, it provides idempotence
 // and parse the vote and mortgage from the transactions, then save to the checkpoint
 // the tree of checkpoint will grow with the arrival of new blocks
-func (c *Casper) ProcessBlock(block *types.Block) (*state.Checkpoint, error) {
+func (c *Casper) ProcessBlock(block *types.Block) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	prevHash := block.PreviousBlockHash
-	node, err := c.tree.nodeByHash(prevHash)
+	if _, err := c.tree.nodeByHash(block.Hash()); err == nil {
+		// already processed
+		return nil
+	}
+
+	checkpoint, err := c.applyBlockToCheckpoint(block)
+	if err != nil {
+		return errors.Wrap(err, "apply block to checkpoint")
+	}
+
+	for range block.Transactions {
+		// process the votes and mortgages
+	}
+	return c.store.SaveCheckpoints(checkpoint)
+}
+
+func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, error) {
+	node, err := c.tree.nodeByHash(block.PreviousBlockHash)
 	if err != nil {
 		return nil, err
 	}
 
 	checkpoint := node.checkpoint
-
 	if mod := block.Height % state.BlocksOfEpoch; mod == 1 {
 		parent := checkpoint
-
 		checkpoint = &state.Checkpoint{
 			PrevHash:       parent.Hash,
 			StartTimestamp: block.Timestamp,
@@ -149,11 +177,15 @@ func (c *Casper) ProcessBlock(block *types.Block) (*state.Checkpoint, error) {
 
 	checkpoint.Height = block.Height
 	checkpoint.Hash = block.Hash()
-
-	for range block.Transactions {
-		// process the votes and mortgages
-	}
 	return checkpoint, nil
+}
+
+func (c *Casper) verifyVerification(v *Verification) error {
+	if err := c.verifySameHeight(v); err != nil {
+		return err
+	}
+
+	return c.verifySpanHeight(v)
 }
 
 // a validator must not publish two distinct votes for the same target height
@@ -175,15 +207,19 @@ func (c *Casper) verifySameHeight(v *Verification) error {
 
 // a validator must not vote within the span of its other votes.
 func (c *Casper) verifySpanHeight(v *Verification) error {
-	// It is best to scan all checkpoints from leveldb
 	if c.tree.findOnlyOne(func(c *state.Checkpoint) bool {
-		if c.Height <= v.TargetHeight {
-			return false
+		if c.Height < v.TargetHeight {
+			for _, supLink := range c.SupLinks {
+				if supLink.PubKeys[v.PubKey] && supLink.SourceHeight > v.SourceHeight {
+					return true
+				}
+			}
 		}
-
-		for _, supLink := range c.SupLinks {
-			if supLink.PubKeys[v.PubKey] && supLink.SourceHeight < v.SourceHeight {
-				return true
+		if c.Height > v.TargetHeight {
+			for _, supLink := range c.SupLinks {
+				if supLink.PubKeys[v.PubKey] && supLink.SourceHeight < v.SourceHeight {
+					return true
+				}
 			}
 		}
 		return false
@@ -196,7 +232,7 @@ func (c *Casper) verifySpanHeight(v *Verification) error {
 // justifiedHeight is the max justified height of checkpoint from node to root
 func chainOfMaxJustifiedHeight(node *treeNode, justifiedHeight uint64) (uint64, bc.Hash, uint64) {
 	checkpoint := node.checkpoint
-	if checkpoint.Status == state.Justified || checkpoint.Status == state.Finalized {
+	if checkpoint.Status == state.Justified {
 		justifiedHeight = checkpoint.Height
 	}
 

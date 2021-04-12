@@ -405,10 +405,8 @@ func TestStackUnderflow(t *testing.T) {
 					if err != ErrDataStackUnderflow {
 						t.Errorf("err = %v, want ErrStackUnderflow", err)
 					}
-
 				})
 			}
-
 		})
 	}
 }
