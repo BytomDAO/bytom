@@ -1,14 +1,12 @@
 package integration
 
 import (
-	"encoding/hex"
 	"fmt"
-	"testing"
 	"time"
+	"testing"
 
 	"github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/consensus"
-	"github.com/bytom/bytom/testcontrol"
 	"github.com/bytom/bytom/database"
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/protocol"
@@ -19,10 +17,6 @@ import (
 )
 
 func TestProcessBlock(t *testing.T) {
-	if testcontrol.CHXTest {
-		return
-	}
-
 	cases := []*processBlockTestCase{
 		{
 			desc: "process a invalid block",
@@ -652,7 +646,7 @@ func init() {
 						Height:            1,
 						Version:           1,
 						Timestamp:         1556431597,
-						PreviousBlockHash: testutil.MustDecodeHash("0338dfe9a4520f35458996c780511b1a68fae687b7b4a6755a21557ae454fe9f"),
+						PreviousBlockHash: testutil.MustDecodeHash("6f62777fab457d134aa55d29197ea5874988627d8777f6a14ed032a2f06dcc2f"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -676,7 +670,7 @@ func init() {
 						Height:            1,
 						Version:           1,
 						Timestamp:         1556431697,
-						PreviousBlockHash: testutil.MustDecodeHash("0338dfe9a4520f35458996c780511b1a68fae687b7b4a6755a21557ae454fe9f"),
+						PreviousBlockHash: testutil.MustDecodeHash("6f62777fab457d134aa55d29197ea5874988627d8777f6a14ed032a2f06dcc2f"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -703,7 +697,7 @@ func init() {
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431604,
-						PreviousBlockHash: testutil.MustDecodeHash("0a16d096ffcdd2d08a65bf2d184bb68e8145736561ac16c30863f593dfea2b59"),
+						PreviousBlockHash: testutil.MustDecodeHash("0311998e27abc1c2f5cc1f86b1aca5e7dd3ca65d63359e0c7539c40207923e10"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -728,7 +722,7 @@ func init() {
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431604,
-						PreviousBlockHash: testutil.MustDecodeHash("0a16d096ffcdd2d08a65bf2d184bb68e8145736561ac16c30863f593dfea2b59"),
+						PreviousBlockHash: testutil.MustDecodeHash("0311998e27abc1c2f5cc1f86b1aca5e7dd3ca65d63359e0c7539c40207923e10"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -771,7 +765,7 @@ func init() {
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431607,
-						PreviousBlockHash: testutil.MustDecodeHash("0a16d096ffcdd2d08a65bf2d184bb68e8145736561ac16c30863f593dfea2b59"),
+						PreviousBlockHash: testutil.MustDecodeHash("0311998e27abc1c2f5cc1f86b1aca5e7dd3ca65d63359e0c7539c40207923e10"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -814,7 +808,7 @@ func init() {
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431607,
-						PreviousBlockHash: testutil.MustDecodeHash("0a16d096ffcdd2d08a65bf2d184bb68e8145736561ac16c30863f593dfea2b59"),
+						PreviousBlockHash: testutil.MustDecodeHash("0311998e27abc1c2f5cc1f86b1aca5e7dd3ca65d63359e0c7539c40207923e10"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -865,7 +859,7 @@ func init() {
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431607,
-						PreviousBlockHash: testutil.MustDecodeHash("0a16d096ffcdd2d08a65bf2d184bb68e8145736561ac16c30863f593dfea2b59"),
+						PreviousBlockHash: testutil.MustDecodeHash("0311998e27abc1c2f5cc1f86b1aca5e7dd3ca65d63359e0c7539c40207923e10"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -918,7 +912,7 @@ func init() {
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431607,
-						PreviousBlockHash: testutil.MustDecodeHash("0a16d096ffcdd2d08a65bf2d184bb68e8145736561ac16c30863f593dfea2b59"),
+						PreviousBlockHash: testutil.MustDecodeHash("0311998e27abc1c2f5cc1f86b1aca5e7dd3ca65d63359e0c7539c40207923e10"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -971,7 +965,7 @@ func init() {
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431607,
-						PreviousBlockHash: testutil.MustDecodeHash("0a16d096ffcdd2d08a65bf2d184bb68e8145736561ac16c30863f593dfea2b59"),
+						PreviousBlockHash: testutil.MustDecodeHash("0311998e27abc1c2f5cc1f86b1aca5e7dd3ca65d63359e0c7539c40207923e10"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -1027,7 +1021,7 @@ func init() {
 						Height:            3,
 						Version:           1,
 						Timestamp:         1556431640,
-						PreviousBlockHash: testutil.MustDecodeHash("0b8cf0d5229da038db83b64e42837585ce240f5b271abd6df11eed196e552061"),
+						PreviousBlockHash: testutil.MustDecodeHash("d96091fb7784af594980012cadb05ad717d45603eab2b2105a2735ae5bb3aca3"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -1052,7 +1046,7 @@ func init() {
 						Height:            3,
 						Version:           1,
 						Timestamp:         1556431640,
-						PreviousBlockHash: testutil.MustDecodeHash("86f70faa935bedebfaedcd7a04026da9322e95717172273a1243030ea4e4d393"),
+						PreviousBlockHash: testutil.MustDecodeHash("222356873e67eacf3fa38ddb736c467471c8aa91f65686d28a96f7d39f8278e7"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -1079,8 +1073,6 @@ func init() {
 func createStoreItems(mainChainIndexes []int, attachBlocks []*attachBlock, extralItem ...*storeItem) storeItems {
 	var items storeItems
 	for _, item := range extralItem {
-		//todo:
-		fmt.Println("want extraItem:", hex.EncodeToString(item.key))
 		items = append(items, item)
 	}
 
@@ -1096,17 +1088,10 @@ func createStoreItems(mainChainIndexes []int, attachBlocks []*attachBlock, extra
 			key: database.CalcBlockKey(&blockHash),
 			val: block,
 		})
-		//todo:
-		fmt.Println("block-height:", block.Height)
-		fmt.Println("want CalcBlockKey:", hex.EncodeToString(database.CalcBlockKey(&blockHash)))
-
 		items = append(items, &storeItem{
 			key: database.CalcBlockHeaderKey(block.Height, &blockHash),
 			val: block.BlockHeader,
 		})
-		//todo:
-		fmt.Println("want CalcBlockHeaderKey:", hex.EncodeToString(database.CalcBlockHeaderKey(block.Height, &blockHash)))
-
 		if _, ok := mainChainIndexMap[i]; !ok {
 			continue
 		}
@@ -1118,10 +1103,6 @@ func createStoreItems(mainChainIndexes []int, attachBlocks []*attachBlock, extra
 			}
 
 			for _, input := range tx.Inputs {
-				//if statusFail && input.AssetID() != *consensus.BTMAssetID {
-				//	continue
-				//}
-
 				if _, ok := input.TypedInput.(*types.SpendInput); !ok {
 					continue
 				}
@@ -1130,23 +1111,12 @@ func createStoreItems(mainChainIndexes []int, attachBlocks []*attachBlock, extra
 					panic(err)
 				}
 				index := spendUTXO(spendOutputID, items, block.Height)
-
-				//todo: 怀疑多删除了一项
-				fmt.Println("delete item:", hex.EncodeToString(items[index].key))
 				items = append(items[0:index], items[index+1:]...)
 			}
 			for j, output := range tx.Outputs {
-				//if statusFail && *tx.Outputs[j].AssetId != *consensus.BTMAssetID {
-				//	continue
-				//}
-
 				if output.ControlProgram[0] == 0x6a {
 					continue
 				}
-
-				//todo:加入
-				fmt.Println("add item:", hex.EncodeToString(database.CalcUtxoKey(tx.Tx.ResultIds[j])))
-
 				items = append(items, &storeItem{key: database.CalcUtxoKey(tx.Tx.ResultIds[j]),
 					val: &storage.UtxoEntry{IsCoinBase: i == 0, BlockHeight: block.Height, Spent: false},
 				})
