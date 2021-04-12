@@ -8,7 +8,6 @@ import (
 	"github.com/davecgh/go-spew/spew"
 
 	"github.com/bytom/bytom/protocol/bc"
-	"github.com/bytom/bytom/testcontrol"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/testutil"
 )
@@ -19,10 +18,6 @@ func stringToBigInt(s string, base int) *big.Int {
 }
 
 func TestNewBlockNode(t *testing.T) {
-	if testcontrol.CHXTest {
-		return
-	}
-
 	cases := []struct {
 		blockHeader   *types.BlockHeader
 		parentNode    *BlockNode
@@ -35,7 +30,7 @@ func TestNewBlockNode(t *testing.T) {
 			},
 			parentNode: &BlockNode{},
 			wantBlockNode: &BlockNode{
-				Hash:    testutil.MustDecodeHash("c144fc8cb72f8f2ae39a403cb7693d0b1f3e8b5ac83369afc708a29a737b01c1"),
+				Hash:    testutil.MustDecodeHash("4e88a20cc3809a5f344d500cf0fd83bec9af89f6858c71cf2e5e46bb6ba904c3"),
 				Parent: &BlockNode{},
 			},
 		},
@@ -46,7 +41,7 @@ func TestNewBlockNode(t *testing.T) {
 			},
 			parentNode: &BlockNode{},
 			wantBlockNode: &BlockNode{
-				Hash:    testutil.MustDecodeHash("6b7ef2c572a1b88edadfafe06b2d1c218697d5b350895d73b00d1afc98a9fe0f"),
+				Hash:    testutil.MustDecodeHash("387f6a7a6f0560410d83cde6f723aae6d86ef85c1cd835af89531ea4b648ddc6"),
 				Height:  uint64(100),
 				Parent: &BlockNode{},
 			},
@@ -58,7 +53,7 @@ func TestNewBlockNode(t *testing.T) {
 			},
 			parentNode: &BlockNode{},
 			wantBlockNode: &BlockNode{
-				Hash:    testutil.MustDecodeHash("6b7ef2c572a1b88edadfafe06b2d1c218697d5b350895d73b00d1afc98a9fe0f"),
+				Hash:    testutil.MustDecodeHash("387f6a7a6f0560410d83cde6f723aae6d86ef85c1cd835af89531ea4b648ddc6"),
 				Height:  uint64(100),
 				Parent: &BlockNode{},
 			},
