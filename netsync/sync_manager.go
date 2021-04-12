@@ -39,8 +39,8 @@ type ConsensusMgr interface {
 
 // Switch is the interface for p2p switch.
 type Switch interface {
-	Start() (bool, error)
-	Stop() bool
+	Start() error
+	Stop() error
 	IsListening() bool
 	DialPeerWithAddress(addr *p2p.NetAddress) error
 	Peers() *p2p.PeerSet
@@ -79,7 +79,7 @@ func NewSyncManager(config *config.Config, chain *protocol.Chain, txPool *protoc
 
 // Start message sync manager service.
 func (sm *SyncManager) Start() error {
-	if _, err := sm.sw.Start(); err != nil {
+	if err := sm.sw.Start(); err != nil {
 		logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed start switch")
 		return err
 	}
