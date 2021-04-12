@@ -20,6 +20,7 @@ type Store interface {
 
 	GetCheckpoint(*bc.Hash) (*state.Checkpoint, error)
 	GetCheckpointsByHeight(uint64) ([]*state.Checkpoint, error)
+	SaveCheckpoints(...*state.Checkpoint) error
 
 	LoadBlockIndex(uint64) (*state.BlockIndex, error)
 	SaveBlock(*types.Block, *bc.TransactionStatus) error
