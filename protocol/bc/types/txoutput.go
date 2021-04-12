@@ -60,25 +60,16 @@ func (to *TxOutput) readFrom(r *blockchain.Reader) (err error) {
 		return errors.Wrap(err, "reading asset version")
 	}
 
-	var outType [1]byte
-	if _, err = io.ReadFull(r, outType[:]); err != nil {
-		return errors.Wrap(err, "reading output type")
+
+	typedOutput, err := parseTypedOutput(r)
+	if err != nil {
+		return errors.Wrap(err, "parse typedOutput")
 	}
 
-	var out TypedOutput
-	switch outType[0] {
-	case OriginalOutputType:
-		out = new(originalTxOutput)
-	case VoteOutputType:
-		out = new(VoteOutput)
-		to.TypedOutput = out
-	default:
-		return fmt.Errorf("unsupported output type %d", outType[0])
-	}
-	to.TypedOutput = out
+	to.TypedOutput = typedOutput
 
 	if to.CommitmentSuffix, err = blockchain.ReadExtensibleString(r, func(reader *blockchain.Reader) error {
-		if err := out.readFrom(reader); err != nil {
+		if err := to.TypedOutput.readFrom(reader); err != nil {
 			return err
 		}
 
@@ -90,6 +81,25 @@ func (to *TxOutput) readFrom(r *blockchain.Reader) (err error) {
 	// read and ignore the (empty) output witness
 	_, err = blockchain.ReadVarstr31(r)
 	return errors.Wrap(err, "reading output witness")
+}
+
+var outputTypeMap = map[uint8]func() TypedOutput{
+	OriginalOutputType: func() TypedOutput { return &originalTxOutput{} },
+	VoteOutputType:     func() TypedOutput { return &VoteOutput{} },
+}
+
+func parseTypedOutput(r *blockchain.Reader) (TypedOutput, error) {
+	var outType [1]byte
+	if _, err := io.ReadFull(r, outType[:]); err != nil {
+		return nil, errors.Wrap(err, "reading output type")
+	}
+
+	newOutFun, ok := outputTypeMap[outType[0]]
+	if !ok {
+		return nil, fmt.Errorf("unsupported output type %d", outType[0])
+	}
+
+	return newOutFun(), nil
 }
 
 func (to *TxOutput) writeTo(w io.Writer) error {
