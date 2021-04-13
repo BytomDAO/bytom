@@ -66,8 +66,7 @@ func (p *Peer) Moniker() string {
 // OnStart implements BaseService.
 func (p *Peer) OnStart() error {
 	p.BaseService.OnStart()
-	_, err := p.mconn.Start()
-	return err
+	return p.mconn.Start()
 }
 
 // OnStop implements BaseService.
@@ -81,7 +80,7 @@ func newPeer(pc *peerConn, nodeInfo *NodeInfo, reactorsByCh map[byte]Reactor, ch
 	p := &Peer{
 		peerConn: pc,
 		NodeInfo: nodeInfo,
-		Key:      nodeInfo.PubKey.KeyString(),
+		Key:      nodeInfo.PubKey.String(),
 		isLAN:    isLAN,
 	}
 	p.mconn = createMConnection(pc.conn, p, reactorsByCh, chDescs, onPeerError, pc.config.MConfig)
@@ -153,22 +152,34 @@ func (pc *peerConn) HandshakeTimeout(ourNodeInfo *NodeInfo, timeout time.Duratio
 	}
 
 	var peerNodeInfo = new(NodeInfo)
-	var err1, err2 error
-	cmn.Parallel(
-		func() {
-			var n int
-			wire.WriteBinary(ourNodeInfo, pc.conn, &n, &err1)
-		},
-		func() {
-			var n int
-			wire.ReadBinary(peerNodeInfo, pc.conn, maxNodeInfoSize, &n, &err2)
-			log.WithFields(log.Fields{"module": logModule, "address": pc.conn.RemoteAddr().String()}).Info("Peer handshake")
-		})
-	if err1 != nil {
-		return peerNodeInfo, errors.Wrap(err1, "Error during handshake/write")
+	writeTask := func(i int) (val interface{}, err error, about bool) {
+		var n int
+		wire.WriteBinary(ourNodeInfo, pc.conn, &n, &err)
+		return nil, err, false
 	}
-	if err2 != nil {
-		return peerNodeInfo, errors.Wrap(err2, "Error during handshake/read")
+
+	readTask := func(i int) (val interface{}, err error, about bool) {
+		var n int
+		wire.ReadBinary(peerNodeInfo, pc.conn, maxNodeInfoSize, &n, &err)
+		return nil, err, false
+
+	}
+	cmn.Parallel(writeTask, readTask)
+
+	// In parallel, handle reads and writes
+	trs, ok := cmn.Parallel(writeTask, readTask)
+	if !ok {
+		return nil, errors.New("Parallel task run failed")
+	}
+	for i := 0; i < 2; i++ {
+		res, ok := trs.LatestResult(i)
+		if !ok {
+			return nil, fmt.Errorf("Task %d did not complete", i)
+		}
+
+		if res.Error != nil {
+			return nil, errors.Wrap(res.Error, fmt.Sprintf("Task %d got error", i))
+		}
 	}
 
 	// Remove deadline

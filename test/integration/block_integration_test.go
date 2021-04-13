@@ -51,7 +51,7 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0031")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
 							},
 						}),
 					},
@@ -75,7 +75,7 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0031")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("00143d05e891b165b165afefa2e861e83a9745f80d8c")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("00143d05e891b165b165afefa2e861e83a9745f80d8c")),
 							},
 						}),
 					},
@@ -103,7 +103,7 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0032")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
 							},
 						}),
 					},
@@ -129,7 +129,7 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0032")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
 							},
 						}),
 						types.NewTx(types.TxData{
@@ -147,7 +147,7 @@ func init() {
 								),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("00143d05e891b165b165afefa2e861e83a9745f80d8c")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("00143d05e891b165b165afefa2e861e83a9745f80d8c")),
 							},
 						}),
 					},
@@ -173,7 +173,7 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0032")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
 							},
 						}),
 						types.NewTx(types.TxData{
@@ -191,7 +191,7 @@ func init() {
 								),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("6a")), // retire
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("6a")), // retire
 							},
 						}),
 					},
@@ -217,7 +217,7 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0032")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
 							},
 						}),
 						types.NewTx(types.TxData{
@@ -242,8 +242,8 @@ func init() {
 								),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
-								types.NewTxOutput(testutil.MustDecodeAsset("641ccb49dd38df9921a55e020d40a2323589c36ab5557f8a249ee01cc09d1836"), 10000000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(testutil.MustDecodeAsset("641ccb49dd38df9921a55e020d40a2323589c36ab5557f8a249ee01cc09d1836"), 10000000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
 							},
 						}),
 					},
@@ -269,7 +269,7 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0032")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
 							},
 						}),
 						types.NewTx(types.TxData{
@@ -295,8 +295,8 @@ func init() {
 								),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
-								types.NewTxOutput(testutil.MustDecodeAsset("641ccb49dd38df9921a55e020d40a2323589c36ab5557f8a249ee01cc09d1836"), 10000000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(testutil.MustDecodeAsset("641ccb49dd38df9921a55e020d40a2323589c36ab5557f8a249ee01cc09d1836"), 10000000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
 							},
 						}),
 					},
@@ -322,7 +322,7 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0032")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
 							},
 						}),
 						types.NewTx(types.TxData{
@@ -349,8 +349,8 @@ func init() {
 								),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
-								types.NewTxOutput(testutil.MustDecodeAsset("641ccb49dd38df9921a55e020d40a2323589c36ab5557f8a249ee01cc09d1836"), 10000000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(testutil.MustDecodeAsset("641ccb49dd38df9921a55e020d40a2323589c36ab5557f8a249ee01cc09d1836"), 10000000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
 							},
 						}),
 					},
@@ -376,7 +376,7 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0032")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
 							},
 						}),
 						types.NewTx(types.TxData{
@@ -404,8 +404,8 @@ func init() {
 								),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
-								types.NewTxOutput(testutil.MustDecodeAsset("641ccb49dd38df9921a55e020d40a2323589c36ab5557f8a249ee01cc09d1836"), 10000000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(testutil.MustDecodeAsset("641ccb49dd38df9921a55e020d40a2323589c36ab5557f8a249ee01cc09d1836"), 10000000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
 							},
 						}),
 					},
@@ -432,7 +432,7 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0033")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
 							},
 						}),
 					},
@@ -457,7 +457,7 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0033")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
 							},
 						}),
 					},

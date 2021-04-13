@@ -38,7 +38,7 @@ func (m *mempool) GetTransactions() []*core.TxDesc {
 					txInput,
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, uint64(i), []byte{0x6a}),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, uint64(i), []byte{0x6a}),
 				},
 				SerializedSize: 1000,
 			},

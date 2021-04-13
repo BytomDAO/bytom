@@ -73,7 +73,7 @@ func Connect2Switches(switches []*Switch, i, j int) {
 
 func startSwitches(switches []*Switch) error {
 	for _, s := range switches {
-		_, err := s.Start() // start switch and reactors
+		err := s.Start() // start switch and reactors
 		if err != nil {
 			return err
 		}

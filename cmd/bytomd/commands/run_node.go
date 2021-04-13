@@ -81,7 +81,7 @@ func runNode(cmd *cobra.Command, args []string) error {
 
 	// Create & start node
 	n := node.NewNode(config)
-	if _, err := n.Start(); err != nil {
+	if err := n.Start(); err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Fatal("failed to start node")
 	}
 

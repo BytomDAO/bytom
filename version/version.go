@@ -57,10 +57,11 @@ func init() {
 	if GitCommit != "" {
 		Version += "+" + GitCommit[:8]
 	}
+
 	Status = &UpdateStatus{
 		maxVerSeen:    Version,
 		notified:      false,
-		seedSet:       set.New(),
+		seedSet:       set.New(set.ThreadSafe).(*set.Set),
 		versionStatus: noUpdate,
 	}
 }

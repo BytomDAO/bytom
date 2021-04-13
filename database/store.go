@@ -240,3 +240,8 @@ func (s *Store) GetCheckpoint(*bc.Hash) (*state.Checkpoint, error) {
 func (s *Store) GetCheckpointsByHeight(uint64) ([]*state.Checkpoint, error) {
 	return nil, nil
 }
+
+// SaveCheckpoints bulk save multiple checkpoint
+func (s *Store) SaveCheckpoints(...*state.Checkpoint) error {
+	return nil
+}

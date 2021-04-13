@@ -17,11 +17,11 @@ func TestCheckOutput(t *testing.T) {
 			types.NewIssuanceInput(nil, 6, []byte("issueprog"), nil, nil),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("wrongprog")),
-			types.NewTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("controlprog")),
-			types.NewTxOutput(bc.NewAssetID([32]byte{2}), 8, []byte("controlprog")),
-			types.NewTxOutput(bc.NewAssetID([32]byte{2}), 7, []byte("controlprog")),
-			types.NewTxOutput(bc.NewAssetID([32]byte{2}), 7, []byte("controlprog")),
+			types.NewOriginalTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("wrongprog")),
+			types.NewOriginalTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("controlprog")),
+			types.NewOriginalTxOutput(bc.NewAssetID([32]byte{2}), 8, []byte("controlprog")),
+			types.NewOriginalTxOutput(bc.NewAssetID([32]byte{2}), 7, []byte("controlprog")),
+			types.NewOriginalTxOutput(bc.NewAssetID([32]byte{2}), 7, []byte("controlprog")),
 		},
 	})
 

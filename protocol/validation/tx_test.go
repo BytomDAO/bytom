@@ -237,7 +237,7 @@ func TestOverflow(t *testing.T) {
 		}
 
 		for _, amount := range outputs {
-			txOutput := types.NewTxOutput(*consensus.BTMAssetID, amount, ctrlProgram)
+			txOutput := types.NewOriginalTxOutput(*consensus.BTMAssetID, amount, ctrlProgram)
 			txOutputs = append(txOutputs, txOutput)
 		}
 
@@ -323,7 +323,7 @@ func TestTxValidation(t *testing.T) {
 
 	addCoinbase := func(assetID *bc.AssetID, amount uint64, arbitrary []byte) {
 		coinbase := bc.NewCoinbase(arbitrary)
-		txOutput := types.NewTxOutput(*assetID, amount, []byte{byte(vm.OP_TRUE)})
+		txOutput := types.NewOriginalTxOutput(*assetID, amount, []byte{byte(vm.OP_TRUE)})
 		muxID := getMuxID(tx)
 		coinbase.SetDestination(muxID, &txOutput.AssetAmount, uint64(len(mux.Sources)))
 		coinbaseID := bc.EntryID(coinbase)
@@ -701,7 +701,7 @@ func TestCoinbase(t *testing.T) {
 			types.NewCoinbaseInput(nil),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(*consensus.BTMAssetID, 888, cp),
+			types.NewOriginalTxOutput(*consensus.BTMAssetID, 888, cp),
 		},
 	})
 
@@ -731,7 +731,7 @@ func TestCoinbase(t *testing.T) {
 							types.NewCoinbaseInput(nil),
 						},
 						Outputs: []*types.TxOutput{
-							types.NewTxOutput(*consensus.BTMAssetID, 888, cp),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 888, cp),
 						},
 					}),
 				},
@@ -752,8 +752,8 @@ func TestCoinbase(t *testing.T) {
 							types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp),
 						},
 						Outputs: []*types.TxOutput{
-							types.NewTxOutput(*consensus.BTMAssetID, 888, cp),
-							types.NewTxOutput(*consensus.BTMAssetID, 90000000, cp),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 888, cp),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 90000000, cp),
 						},
 					}),
 				},
@@ -774,8 +774,8 @@ func TestCoinbase(t *testing.T) {
 							types.NewCoinbaseInput(nil),
 						},
 						Outputs: []*types.TxOutput{
-							types.NewTxOutput(*consensus.BTMAssetID, 888, cp),
-							types.NewTxOutput(*consensus.BTMAssetID, 90000000, cp),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 888, cp),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 90000000, cp),
 						},
 					}),
 				},
@@ -795,8 +795,8 @@ func TestCoinbase(t *testing.T) {
 							types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp),
 						},
 						Outputs: []*types.TxOutput{
-							types.NewTxOutput(*consensus.BTMAssetID, 888, cp),
-							types.NewTxOutput(*consensus.BTMAssetID, 90000000, cp),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 888, cp),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 90000000, cp),
 						},
 					}),
 				},
@@ -816,8 +816,8 @@ func TestCoinbase(t *testing.T) {
 							types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, retire),
 						},
 						Outputs: []*types.TxOutput{
-							types.NewTxOutput(*consensus.BTMAssetID, 888, cp),
-							types.NewTxOutput(*consensus.BTMAssetID, 90000000, cp),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 888, cp),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 90000000, cp),
 						},
 					}),
 				},
@@ -841,7 +841,7 @@ func TestCoinbase(t *testing.T) {
 }
 
 func TestRuleAA(t *testing.T) {
-	testData := "070100040161015f9bc47dda88eee18c7433340c16e054cabee4318a8d638e873be19e979df81dc7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0e3f9f5c80e01011600147c7662d92bd5e77454736f94731c60a6e9cbc69f6302404a17a5995b8163ee448719b462a5694b22a35522dd9883333fd462cc3d0aabf049445c5cbb911a40e1906a5bea99b23b1a79e215eeb1a818d8b1dd27e06f3004200530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce9940160015ee334d4fe18398f0232d2aca7050388ce4ee5ae82c8148d7f0cea748438b65135ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ace6842001011600147c7662d92bd5e77454736f94731c60a6e9cbc69f6302404a17a5995b8163ee448719b462a5694b22a35522dd9883333fd462cc3d0aabf049445c5cbb911a40e1906a5bea99b23b1a79e215eeb1a818d8b1dd27e06f3004200530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce9940161015f9bc47dda88eee18c7433340c16e054cabee4318a8d638e873be19e979df81dc7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0e3f9f5c80e01011600147c7662d92bd5e77454736f94731c60a6e9cbc69f63024062c29b20941e7f762c3afae232f61d8dac1c544825931e391408c6715c408ef69f494a1b3b61ce380ddee0c8b18ecac2b46ef96a62eebb6ec40f9f545410870a200530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce9940160015ee334d4fe18398f0232d2aca7050388ce4ee5ae82c8148d7f0cea748438b65135ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ace6842001011600147c7662d92bd5e77454736f94731c60a6e9cbc69f630240e443d66c75b4d5fa71676d60b0b067e6941f06349f31e5f73a7d51a73f5797632b2e01e8584cd1c8730dc16df075866b0c796bd7870182e2da4b37188208fe02200530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce99402013effffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa08ba3fae80e01160014aac0345165045e612b3d7363f39a372bead80ce700013effffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe08fe0fae80e01160014aac0345165045e612b3d7363f39a372bead80ce700"
+	testData := "070100040161015f9bc47dda88eee18c7433340c16e054cabee4318a8d638e873be19e979df81dc7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0e3f9f5c80e01011600147c7662d92bd5e77454736f94731c60a6e9cbc69f6302404a17a5995b8163ee448719b462a5694b22a35522dd9883333fd462cc3d0aabf049445c5cbb911a40e1906a5bea99b23b1a79e215eeb1a818d8b1dd27e06f3004200530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce9940160015ee334d4fe18398f0232d2aca7050388ce4ee5ae82c8148d7f0cea748438b65135ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ace6842001011600147c7662d92bd5e77454736f94731c60a6e9cbc69f6302404a17a5995b8163ee448719b462a5694b22a35522dd9883333fd462cc3d0aabf049445c5cbb911a40e1906a5bea99b23b1a79e215eeb1a818d8b1dd27e06f3004200530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce9940161015f9bc47dda88eee18c7433340c16e054cabee4318a8d638e873be19e979df81dc7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0e3f9f5c80e01011600147c7662d92bd5e77454736f94731c60a6e9cbc69f63024062c29b20941e7f762c3afae232f61d8dac1c544825931e391408c6715c408ef69f494a1b3b61ce380ddee0c8b18ecac2b46ef96a62eebb6ec40f9f545410870a200530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce9940160015ee334d4fe18398f0232d2aca7050388ce4ee5ae82c8148d7f0cea748438b65135ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ace6842001011600147c7662d92bd5e77454736f94731c60a6e9cbc69f630240e443d66c75b4d5fa71676d60b0b067e6941f06349f31e5f73a7d51a73f5797632b2e01e8584cd1c8730dc16df075866b0c796bd7870182e2da4b37188208fe02200530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce9940201003effffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa08ba3fae80e01160014aac0345165045e612b3d7363f39a372bead80ce70001003effffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe08fe0fae80e01160014aac0345165045e612b3d7363f39a372bead80ce700"
 	tx := types.Tx{}
 	if err := tx.UnmarshalText([]byte(testData)); err != nil {
 		t.Errorf("fail on unmarshal txData: %s", err)
@@ -922,7 +922,7 @@ func TestTimeRange(t *testing.T) {
 			mockGasTxInput(),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(*consensus.BTMAssetID, 1, []byte{0x6a}),
+			types.NewOriginalTxOutput(*consensus.BTMAssetID, 1, []byte{0x6a}),
 		},
 	})
 
@@ -1124,8 +1124,8 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 		}
 
 		result.txOutputs = []*types.TxOutput{
-			types.NewTxOutput(result.assetID, 25, cp1),
-			types.NewTxOutput(result.assetID, 45, cp2),
+			types.NewOriginalTxOutput(result.assetID, 25, cp1),
+			types.NewOriginalTxOutput(result.assetID, 45, cp2),
 		}
 	}
 

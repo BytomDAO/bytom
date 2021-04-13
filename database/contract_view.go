@@ -17,9 +17,14 @@ func CalcContractKey(hash [32]byte) []byte {
 
 func saveContractView(db dbm.DB, batch dbm.Batch, view *state.ContractViewpoint) error {
 	for hash, value := range view.AttachEntries {
-		// contract exist, overwriting is forbidden
-		if db.Get(CalcContractKey(hash)) == nil {
+		data := db.Get(CalcContractKey(hash))
+		// contract is not exist
+		if data == nil {
 			// key:"c:sha256(program.Code)" value:"txID+program.Code"
+			batch.Set(CalcContractKey(hash), value)
+		}
+		// contract is deleted in the same batch
+		if v, ok := view.DetachEntries[hash]; ok && bytes.Equal(data, v) {
 			batch.Set(CalcContractKey(hash), value)
 		}
 	}

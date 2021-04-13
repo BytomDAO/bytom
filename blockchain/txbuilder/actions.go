@@ -59,7 +59,7 @@ func (a *controlAddressAction) Build(ctx context.Context, b *TemplateBuilder) er
 		return err
 	}
 
-	out := types.NewTxOutput(*a.AssetId, a.Amount, program)
+	out := types.NewOriginalTxOutput(*a.AssetId, a.Amount, program)
 	return b.AddOutput(out)
 }
 
@@ -94,7 +94,7 @@ func (a *controlProgramAction) Build(ctx context.Context, b *TemplateBuilder) er
 		return MissingFieldsError(missing...)
 	}
 
-	out := types.NewTxOutput(*a.AssetId, a.Amount, a.Program)
+	out := types.NewOriginalTxOutput(*a.AssetId, a.Amount, a.Program)
 	return b.AddOutput(out)
 }
 
@@ -130,7 +130,7 @@ func (a *retireAction) Build(ctx context.Context, b *TemplateBuilder) error {
 	if err != nil {
 		return err
 	}
-	out := types.NewTxOutput(*a.AssetId, a.Amount, program)
+	out := types.NewOriginalTxOutput(*a.AssetId, a.Amount, program)
 	return b.AddOutput(out)
 }
 

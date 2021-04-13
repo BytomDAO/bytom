@@ -23,7 +23,7 @@ var testTxs = []*types.Tx{
 			types.NewSpendInput(nil, bc.NewHash([32]byte{0x01}), *consensus.BTMAssetID, 1, 1, []byte{0x51}),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(*consensus.BTMAssetID, 1, []byte{0x6a}),
+			types.NewOriginalTxOutput(*consensus.BTMAssetID, 1, []byte{0x6a}),
 		},
 	}),
 	//tx1
@@ -33,7 +33,7 @@ var testTxs = []*types.Tx{
 			types.NewSpendInput(nil, bc.NewHash([32]byte{0x01}), *consensus.BTMAssetID, 1, 1, []byte{0x51}),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(*consensus.BTMAssetID, 1, []byte{0x6b}),
+			types.NewOriginalTxOutput(*consensus.BTMAssetID, 1, []byte{0x6b}),
 		},
 	}),
 	//tx2
@@ -45,8 +45,8 @@ var testTxs = []*types.Tx{
 			types.NewSpendInput(nil, bc.NewHash([32]byte{0x02}), bc.NewAssetID([32]byte{0xa1}), 4, 1, []byte{0x51}),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(*consensus.BTMAssetID, 1, []byte{0x6b}),
-			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 4, []byte{0x61}),
+			types.NewOriginalTxOutput(*consensus.BTMAssetID, 1, []byte{0x6b}),
+			types.NewOriginalTxOutput(bc.NewAssetID([32]byte{0xa1}), 4, []byte{0x61}),
 		},
 	}),
 	//tx3
@@ -56,8 +56,8 @@ var testTxs = []*types.Tx{
 			types.NewSpendInput(nil, testutil.MustDecodeHash("dbea684b5c5153ed7729669a53d6c59574f26015a3e1eb2a0e8a1c645425a764"), bc.NewAssetID([32]byte{0xa1}), 4, 1, []byte{0x61}),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 3, []byte{0x62}),
-			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 1, []byte{0x63}),
+			types.NewOriginalTxOutput(bc.NewAssetID([32]byte{0xa1}), 3, []byte{0x62}),
+			types.NewOriginalTxOutput(bc.NewAssetID([32]byte{0xa1}), 1, []byte{0x63}),
 		},
 	}),
 	//tx4
@@ -67,8 +67,8 @@ var testTxs = []*types.Tx{
 			types.NewSpendInput(nil, testutil.MustDecodeHash("d84d0be0fd08e7341f2d127749bb0d0844d4560f53bd54861cee9981fd922cad"), bc.NewAssetID([32]byte{0xa1}), 3, 0, []byte{0x62}),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 2, []byte{0x64}),
-			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 1, []byte{0x65}),
+			types.NewOriginalTxOutput(bc.NewAssetID([32]byte{0xa1}), 2, []byte{0x64}),
+			types.NewOriginalTxOutput(bc.NewAssetID([32]byte{0xa1}), 1, []byte{0x65}),
 		},
 	}),
 	//tx5
@@ -78,7 +78,7 @@ var testTxs = []*types.Tx{
 			types.NewSpendInput(nil, bc.NewHash([32]byte{0x01}), *consensus.BTMAssetID, 1, 1, []byte{0x51}),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(*consensus.BTMAssetID, 0, []byte{0x51}),
+			types.NewOriginalTxOutput(*consensus.BTMAssetID, 0, []byte{0x51}),
 		},
 	}),
 	//tx6
@@ -89,8 +89,8 @@ var testTxs = []*types.Tx{
 			types.NewSpendInput(nil, testutil.MustDecodeHash("d84d0be0fd08e7341f2d127749bb0d0844d4560f53bd54861cee9981fd922cad"), bc.NewAssetID([32]byte{0xa1}), 3, 0, []byte{0x62}),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(*consensus.BTMAssetID, 2, []byte{0x51}),
-			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 0, []byte{0x65}),
+			types.NewOriginalTxOutput(*consensus.BTMAssetID, 2, []byte{0x51}),
+			types.NewOriginalTxOutput(bc.NewAssetID([32]byte{0xa1}), 0, []byte{0x65}),
 		},
 	}),
 }
@@ -103,6 +103,7 @@ func (s *mockStore) SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint, *sta
 func (s *mockStore) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error)     { return nil, nil }
 func (s *mockStore) GetCheckpoint(hash *bc.Hash) (*state.Checkpoint, error)       { return nil, nil }
 func (s *mockStore) GetCheckpointsByHeight(u uint64) ([]*state.Checkpoint, error) { return nil, nil }
+func (s *mockStore) SaveCheckpoints(...*state.Checkpoint) error                   { return nil }
 func (s *mockStore) BlockExist(hash *bc.Hash) bool                                { return false }
 func (s *mockStore) GetBlock(*bc.Hash) (*types.Block, error)                      { return nil, nil }
 func (s *mockStore) GetStoreStatus() *BlockStoreState                             { return nil }
@@ -602,6 +603,7 @@ func (s *mockStore1) SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint, *st
 func (s *mockStore1) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error)     { return nil, nil }
 func (s *mockStore1) GetCheckpoint(hash *bc.Hash) (*state.Checkpoint, error)       { return nil, nil }
 func (s *mockStore1) GetCheckpointsByHeight(u uint64) ([]*state.Checkpoint, error) { return nil, nil }
+func (s *mockStore1) SaveCheckpoints(...*state.Checkpoint) error                   { return nil }
 func (s *mockStore1) BlockExist(hash *bc.Hash) bool                                { return false }
 func (s *mockStore1) GetBlock(*bc.Hash) (*types.Block, error)                      { return nil, nil }
 func (s *mockStore1) GetStoreStatus() *BlockStoreState                             { return nil }
