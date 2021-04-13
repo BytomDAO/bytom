@@ -244,8 +244,7 @@ func (c *MConnection) flush() {
 func (c *MConnection) _recover() {
 	if r := recover(); r != nil {
 		stack := debug.Stack()
-		err := cmn.StackError{r, stack}
-		c.stopForError(err)
+		c.stopForError(fmt.Sprintf("Error: %v\nStack: %s", r, stack))
 	}
 }
 

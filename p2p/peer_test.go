@@ -25,8 +25,8 @@ func TestPeerBasic(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = p.Start()
-	if err != nil {
+
+	if err = p.Start(); err != nil {
 		t.Fatal(err)
 	}
 	defer p.Stop()
@@ -45,8 +45,7 @@ func TestPeerSend(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = p.Start()
-	if err != nil {
+	if err = p.Start(); err != nil {
 		t.Fatal(err)
 	}
 

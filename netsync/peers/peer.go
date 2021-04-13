@@ -94,10 +94,10 @@ func newPeer(basePeer BasePeer) *Peer {
 	return &Peer{
 		BasePeer:        basePeer,
 		services:        basePeer.ServiceFlag(),
-		knownTxs:        set.New(),
-		knownBlocks:     set.New(),
-		knownSignatures: set.New(),
-		filterAdds:      set.New(),
+		knownTxs:        set.New(set.ThreadSafe).(*set.Set),
+		knownBlocks:     set.New(set.ThreadSafe).(*set.Set),
+		knownSignatures: set.New(set.ThreadSafe).(*set.Set),
+		filterAdds:      set.New(set.ThreadSafe).(*set.Set),
 	}
 }
 

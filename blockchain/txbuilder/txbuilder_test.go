@@ -35,7 +35,7 @@ func (t testAction) Build(ctx context.Context, b *TemplateBuilder) error {
 	if err != nil {
 		return err
 	}
-	return b.AddOutput(types.NewTxOutput(*t.AssetId, t.Amount, []byte("change")))
+	return b.AddOutput(types.NewOriginalTxOutput(*t.AssetId, t.Amount, []byte("change")))
 }
 
 func (t testAction) ActionType() string {
@@ -72,8 +72,8 @@ func TestBuild(t *testing.T) {
 				types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), assetID1, 5, 0, nil),
 			},
 			Outputs: []*types.TxOutput{
-				types.NewTxOutput(assetID2, 6, []byte("dest")),
-				types.NewTxOutput(assetID1, 5, []byte("change")),
+				types.NewOriginalTxOutput(assetID2, 6, []byte("dest")),
+				types.NewOriginalTxOutput(assetID1, 5, []byte("change")),
 			},
 		}),
 		SigningInstructions: []*SigningInstruction{{
@@ -112,7 +112,7 @@ func TestSignatureWitnessMaterialize(t *testing.T) {
 			types.NewIssuanceInput([]byte{1}, 100, issuanceProg, nil, nil),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(assetID, 100, outscript),
+			types.NewOriginalTxOutput(assetID, 100, outscript),
 		},
 	})
 
@@ -201,7 +201,7 @@ func TestCheckBlankCheck(t *testing.T) {
 	}, {
 		tx: &types.TxData{
 			Inputs:  []*types.TxInput{types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil)},
-			Outputs: []*types.TxOutput{types.NewTxOutput(bc.AssetID{}, 3, nil)},
+			Outputs: []*types.TxOutput{types.NewOriginalTxOutput(bc.AssetID{}, 3, nil)},
 		},
 		want: ErrBlankCheck,
 	}, {
@@ -210,15 +210,15 @@ func TestCheckBlankCheck(t *testing.T) {
 				types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil),
 				types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.NewAssetID([32]byte{1}), 5, 0, nil),
 			},
-			Outputs: []*types.TxOutput{types.NewTxOutput(bc.AssetID{}, 5, nil)},
+			Outputs: []*types.TxOutput{types.NewOriginalTxOutput(bc.AssetID{}, 5, nil)},
 		},
 		want: ErrBlankCheck,
 	}, {
 		tx: &types.TxData{
 			Inputs: []*types.TxInput{types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil)},
 			Outputs: []*types.TxOutput{
-				types.NewTxOutput(bc.AssetID{}, math.MaxInt64, nil),
-				types.NewTxOutput(bc.AssetID{}, 7, nil),
+				types.NewOriginalTxOutput(bc.AssetID{}, math.MaxInt64, nil),
+				types.NewOriginalTxOutput(bc.AssetID{}, 7, nil),
 			},
 		},
 		want: ErrBadAmount,
@@ -233,18 +233,18 @@ func TestCheckBlankCheck(t *testing.T) {
 	}, {
 		tx: &types.TxData{
 			Inputs:  []*types.TxInput{types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil)},
-			Outputs: []*types.TxOutput{types.NewTxOutput(bc.AssetID{}, 5, nil)},
+			Outputs: []*types.TxOutput{types.NewOriginalTxOutput(bc.AssetID{}, 5, nil)},
 		},
 		want: nil,
 	}, {
 		tx: &types.TxData{
-			Outputs: []*types.TxOutput{types.NewTxOutput(bc.AssetID{}, 5, nil)},
+			Outputs: []*types.TxOutput{types.NewOriginalTxOutput(bc.AssetID{}, 5, nil)},
 		},
 		want: nil,
 	}, {
 		tx: &types.TxData{
 			Inputs:  []*types.TxInput{types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil)},
-			Outputs: []*types.TxOutput{types.NewTxOutput(bc.NewAssetID([32]byte{1}), 5, nil)},
+			Outputs: []*types.TxOutput{types.NewOriginalTxOutput(bc.NewAssetID([32]byte{1}), 5, nil)},
 		},
 		want: nil,
 	}}
@@ -299,7 +299,7 @@ func TestCreateTxByUtxo(t *testing.T) {
 			types.NewSpendInput(nil, utxo.SourceID, utxo.AssetID, utxo.Amount, utxo.SourcePos, utxo.ControlProgram),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(*consensus.BTMAssetID, 10000000000, recvProg),
+			types.NewOriginalTxOutput(*consensus.BTMAssetID, 10000000000, recvProg),
 		},
 	})
 
