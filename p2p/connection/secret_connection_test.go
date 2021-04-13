@@ -103,7 +103,7 @@ func TestSecretConnectionReadWrite(t *testing.T) {
 	// A helper that will run with (fooConn, fooWrites, fooReads) and vice versa
 	genNodeRunner := func(nodeConn dummyConn, nodeWrites []string, nodeReads *[]string) func(int) (interface{}, error, bool) {
 		return func(i int) (val interface{}, err error, about bool) {
-			// Node handskae
+			// Node handshake
 			nodePrvKey := crypto.GenPrivKeyEd25519()
 			nodeSecretConn, err := MakeSecretConnection(nodeConn, nodePrvKey)
 			if err != nil {
