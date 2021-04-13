@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"time"
@@ -242,46 +243,59 @@ func signChallenge(challenge *[32]byte, locPrivKey crypto.PrivKeyEd25519) (signa
 
 func shareAuthSignature(sc *SecretConnection, pubKey crypto.PubKeyEd25519, signature crypto.SignatureEd25519) (*authSigMessage, error) {
 	var recvMsg authSigMessage
-	var err1, err2 error
 
-	cmn.Parallel(
-		func() {
-			msgBytes := wire.BinaryBytes(authSigMessage{pubKey.Wrap(), signature.Wrap()})
-			_, err1 = sc.Write(msgBytes)
-		},
-		func() {
-			readBuffer := make([]byte, authSigMsgSize)
-			_, err2 = io.ReadFull(sc, readBuffer)
-			if err2 != nil {
-				return
-			}
-			n := int(0) // not used.
-			recvMsg = wire.ReadBinary(authSigMessage{}, bytes.NewBuffer(readBuffer), authSigMsgSize, &n, &err2).(authSigMessage)
-		},
-	)
+	wTask := func(i int) (res interface{}, err error, abort bool) {
+		msgBytes := wire.BinaryBytes(authSigMessage{pubKey.Wrap(), signature.Wrap()})
+		_, err = sc.Write(msgBytes)
+		return nil, err, false
+	}
 
-	if err1 != nil {
-		return nil, err1
+	rTask := func(i int) (res interface{}, err error, abort bool) {
+		readBuffer := make([]byte, authSigMsgSize)
+		_, err = io.ReadFull(sc, readBuffer)
+		if err != nil {
+			return nil, err, false
+		}
+
+		n := int(0) // not used.
+		recvMsg = wire.ReadBinary(authSigMessage{}, bytes.NewBuffer(readBuffer), authSigMsgSize, &n, &err).(authSigMessage)
+		return nil, err, false
 	}
-	if err2 != nil {
-		return nil, err2
+
+	trs, ok := cmn.Parallel(wTask, rTask)
+	if !ok {
+		return nil, errors.New("Parallel task run failed")
 	}
+
+	for i := 0; i < 2; i++ {
+		res, ok := trs.LatestResult(i)
+		if !ok {
+			return nil, fmt.Errorf("Task %d did not complete", i)
+		}
+
+		if res.Error != nil {
+			return nil, fmt.Errorf("Task %d should not has error but god %v", i, res.Error)
+		}
+	}
+
 	return &recvMsg, nil
 }
 
 func shareEphPubKey(conn io.ReadWriteCloser, locEphPub *[32]byte) (remEphPub *[32]byte, err error) {
 	var err1, err2 error
-
 	cmn.Parallel(
-		func() {
-			_, err1 = conn.Write(locEphPub[:])
+		func(i int) (res interface{}, err error, abort bool) {
+			_, err = conn.Write(locEphPub[:])
+			return nil, err, false
 		},
-		func() {
+		func(i int) (res interface{}, err error, abort bool) {
 			remEphPub = new([32]byte)
-			_, err2 = io.ReadFull(conn, remEphPub[:])
+			_, err = io.ReadFull(conn, remEphPub[:])
+			return nil, err, false
 		},
 	)
 
+	// TODO:
 	if err1 != nil {
 		return nil, err1
 	}
