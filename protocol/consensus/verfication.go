@@ -2,12 +2,12 @@ package consensus
 
 import (
 	"bytes"
-	"crypto/ed25519"
 	"encoding/binary"
 	"encoding/hex"
 
 	"github.com/bytom/bytom/crypto/sha3pool"
 	"github.com/bytom/bytom/protocol/bc"
+	"golang.org/x/crypto/ed25519"
 )
 
 // Verification represent a verification message for the block
@@ -87,4 +87,3 @@ func sha3Hash(message []byte) ([]byte, error) {
 
 	return hash.Bytes(), nil
 }
-
