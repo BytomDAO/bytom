@@ -42,8 +42,8 @@ type Chain interface {
 // Switch is the interface for network layer
 type Switch interface {
 	AddReactor(name string, reactor p2p.Reactor) p2p.Reactor
-	Start() (bool, error)
-	Stop() bool
+	Start() error
+	Stop() error
 	IsListening() bool
 	DialPeerWithAddress(addr *p2p.NetAddress) error
 	Peers() *p2p.PeerSet

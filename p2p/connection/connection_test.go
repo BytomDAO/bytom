@@ -32,8 +32,7 @@ func TestMConnectionSend(t *testing.T) {
 	defer client.Close()
 
 	mconn := createMConnection(client)
-	_, err := mconn.Start()
-	require.Nil(err)
+	require.Nil(mconn.Start())
 	defer mconn.Stop()
 
 	msg := "Ant-Man"
@@ -67,13 +66,11 @@ func TestMConnectionReceive(t *testing.T) {
 		errorsCh <- r
 	}
 	mconn1 := createMConnectionWithCallbacks(client, onReceive, onError)
-	_, err := mconn1.Start()
-	require.Nil(err)
+	require.Nil(mconn1.Start())
 	defer mconn1.Stop()
 
 	mconn2 := createMConnection(server)
-	_, err = mconn2.Start()
-	require.Nil(err)
+	require.Nil(mconn2.Start())
 	defer mconn2.Stop()
 
 	msg := "Cyclops"
@@ -105,8 +102,7 @@ func TestMConnectionStopsAndReturnsError(t *testing.T) {
 		errorsCh <- r
 	}
 	mconn := createMConnectionWithCallbacks(client, onReceive, onError)
-	_, err := mconn.Start()
-	require.Nil(err)
+	require.Nil(mconn.Start())
 	defer mconn.Stop()
 
 	client.Close()

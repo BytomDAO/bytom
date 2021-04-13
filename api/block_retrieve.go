@@ -224,7 +224,7 @@ func (a *API) getMerkleProof(ins MerkleBlockReq) Response {
 }
 
 func getMatchedTx(txs []*types.Tx, filterTxIDs []chainjson.HexBytes) []*types.Tx {
-	txIDSet := set.New()
+	txIDSet := set.New(set.ThreadSafe)
 	for _, txID := range filterTxIDs {
 		hash := hexBytesToHash(txID)
 		txIDSet.Add(hash.String())
