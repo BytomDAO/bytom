@@ -117,6 +117,9 @@ benchmark:
 functional-tests:
 	@go test -timeout=5m -tags="functional" ./test 
 
-ci: test functional-tests
+protocol-tests:
+	@go test ./protocol/...
+
+ci: protocol-tests
 
 .PHONY: all target release-all clean test benchmark
