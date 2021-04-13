@@ -15,27 +15,27 @@ var txs = []*types.Tx{
 	types.NewTx(types.TxData{
 		SerializedSize: uint64(52),
 		Inputs:         []*types.TxInput{types.NewCoinbaseInput([]byte{0x01})},
-		Outputs:        []*types.TxOutput{types.NewTxOutput(*consensus.BTMAssetID, 5000, nil)},
+		Outputs:        []*types.TxOutput{types.NewOriginalTxOutput(*consensus.BTMAssetID, 5000, nil)},
 	}),
 	types.NewTx(types.TxData{
 		SerializedSize: uint64(53),
 		Inputs:         []*types.TxInput{types.NewCoinbaseInput([]byte{0x01, 0x02})},
-		Outputs:        []*types.TxOutput{types.NewTxOutput(*consensus.BTMAssetID, 5000, nil)},
+		Outputs:        []*types.TxOutput{types.NewOriginalTxOutput(*consensus.BTMAssetID, 5000, nil)},
 	}),
 	types.NewTx(types.TxData{
 		SerializedSize: uint64(54),
 		Inputs:         []*types.TxInput{types.NewCoinbaseInput([]byte{0x01, 0x02, 0x03})},
-		Outputs:        []*types.TxOutput{types.NewTxOutput(*consensus.BTMAssetID, 5000, nil)},
+		Outputs:        []*types.TxOutput{types.NewOriginalTxOutput(*consensus.BTMAssetID, 5000, nil)},
 	}),
 	types.NewTx(types.TxData{
 		SerializedSize: uint64(54),
 		Inputs:         []*types.TxInput{types.NewCoinbaseInput([]byte{0x01, 0x02, 0x03})},
-		Outputs:        []*types.TxOutput{types.NewTxOutput(*consensus.BTMAssetID, 2000, nil)},
+		Outputs:        []*types.TxOutput{types.NewOriginalTxOutput(*consensus.BTMAssetID, 2000, nil)},
 	}),
 	types.NewTx(types.TxData{
 		SerializedSize: uint64(54),
 		Inputs:         []*types.TxInput{types.NewCoinbaseInput([]byte{0x01, 0x02, 0x03})},
-		Outputs:        []*types.TxOutput{types.NewTxOutput(*consensus.BTMAssetID, 10000, nil)},
+		Outputs:        []*types.TxOutput{types.NewOriginalTxOutput(*consensus.BTMAssetID, 10000, nil)},
 	}),
 }
 

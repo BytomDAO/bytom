@@ -220,7 +220,7 @@ func mockTxs(txCount int) ([]*types.Tx, []*bc.Tx) {
 		tx := types.NewTx(types.TxData{
 			Version: 1,
 			Inputs:  []*types.TxInput{types.NewSpendInput(nil, bc.Hash{V0: i + 1}, assetID, i, i, trueProg)},
-			Outputs: []*types.TxOutput{types.NewTxOutput(assetID, 1, trueProg)},
+			Outputs: []*types.TxOutput{types.NewOriginalTxOutput(assetID, 1, trueProg)},
 		})
 		txs = append(txs, tx)
 		bcTxs = append(bcTxs, tx.Tx)

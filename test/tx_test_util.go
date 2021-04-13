@@ -212,7 +212,7 @@ func (g *TxGenerator) AddTxOutput(accountAlias, assetAlias string, amount uint64
 	if err != nil {
 		return err
 	}
-	out := types.NewTxOutput(*assetAmount.AssetId, assetAmount.Amount, controlProgram.ControlProgram)
+	out := types.NewOriginalTxOutput(*assetAmount.AssetId, assetAmount.Amount, controlProgram.ControlProgram)
 	return g.Builder.AddOutput(out)
 }
 
@@ -223,7 +223,7 @@ func (g *TxGenerator) AddRetirement(assetAlias string, amount uint64) error {
 		return err
 	}
 	retirementProgram := []byte{byte(vm.OP_FAIL)}
-	out := types.NewTxOutput(*assetAmount.AssetId, assetAmount.Amount, retirementProgram)
+	out := types.NewOriginalTxOutput(*assetAmount.AssetId, assetAmount.Amount, retirementProgram)
 	return g.Builder.AddOutput(out)
 }
 
@@ -362,7 +362,7 @@ func CreateCoinbaseTx(controlProgram []byte, height, txsFee uint64) (*types.Tx, 
 	if err := builder.AddInput(types.NewCoinbaseInput([]byte(fmt.Sprint(height))), &txbuilder.SigningInstruction{}); err != nil {
 		return nil, err
 	}
-	if err := builder.AddOutput(types.NewTxOutput(*consensus.BTMAssetID, coinbaseValue, controlProgram)); err != nil {
+	if err := builder.AddOutput(types.NewOriginalTxOutput(*consensus.BTMAssetID, coinbaseValue, controlProgram)); err != nil {
 		return nil, err
 	}
 
@@ -392,7 +392,7 @@ func CreateTxFromTx(baseTx *types.Tx, outputIndex uint64, outputAmount uint64, c
 		AssetVersion: assetVersion,
 		TypedInput:   spendInput,
 	}
-	output := types.NewTxOutput(*consensus.BTMAssetID, outputAmount, ctrlProgram)
+	output := types.NewOriginalTxOutput(*consensus.BTMAssetID, outputAmount, ctrlProgram)
 	builder := txbuilder.NewBuilder(time.Now())
 	if err := builder.AddInput(txInput, &txbuilder.SigningInstruction{}); err != nil {
 		return nil, err
