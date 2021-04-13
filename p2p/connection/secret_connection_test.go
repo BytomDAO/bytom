@@ -161,7 +161,6 @@ func TestSecretConnectionReadWrite(t *testing.T) {
 			return
 		}
 	}
-
 	// Run foo & bar in parallel
 	cmn.Parallel(
 		genNodeRunner(fooConn, fooWrites, &fooReads),
