@@ -34,9 +34,9 @@ func makeDummyConnPair() (fooConn, barConn dummyConn) {
 func makeSecretConnPair(tb testing.TB) (fooSecConn, barSecConn *SecretConnection) {
 	fooConn, barConn := makeDummyConnPair()
 	fooPrvKey := crypto.GenPrivKeyEd25519()
-	fooPubKey := fooPrvKey.PubKey().Bytes()
+	fooPubKey := fooPrvKey.PubKey().Unwrap().(crypto.PubKeyEd25519)
 	barPrvKey := crypto.GenPrivKeyEd25519()
-	barPubKey := barPrvKey.PubKey().Bytes()
+	barPubKey := barPrvKey.PubKey().Unwrap().(crypto.PubKeyEd25519)
 
 	fooSecConnTask := func(i int) (val interface{}, err error, abort bool) {
 		fooSecConn, err = MakeSecretConnection(fooConn, fooPrvKey)
@@ -46,7 +46,7 @@ func makeSecretConnPair(tb testing.TB) (fooSecConn, barSecConn *SecretConnection
 
 		remotePubBytes := fooSecConn.RemotePubKey()
 		if !bytes.Equal(remotePubBytes[:], barPubKey[:]) {
-			return nil, fmt.Errorf("Unexpected fooSecConn.RemotePubKey.  Expected %v, got %v", barPubKey, fooSecConn.RemotePubKey()), false
+			return nil, fmt.Errorf("Unexpected fooSecConn.RemotePubKey.  Expected %v, got %v", barPubKey, remotePubBytes), false
 		}
 
 		return nil, nil, false
@@ -59,8 +59,8 @@ func makeSecretConnPair(tb testing.TB) (fooSecConn, barSecConn *SecretConnection
 		}
 
 		remotePubBytes := barSecConn.RemotePubKey()
-		if bytes.Equal(remotePubBytes[:], fooPubKey[:]) {
-			return nil, fmt.Errorf("Unexpected barSecConn.RemotePubKey.  Expected %v, got %v", fooPubKey, barSecConn.RemotePubKey()), false
+		if !bytes.Equal(remotePubBytes[:], fooPubKey[:]) {
+			return nil, fmt.Errorf("Unexpected barSecConn.RemotePubKey.  Expected %v, got %v", fooPubKey, remotePubBytes), false
 		}
 		return nil, nil, false
 	}

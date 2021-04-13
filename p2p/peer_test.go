@@ -131,7 +131,7 @@ func (rp *remotePeer) accept(l net.Listener) {
 		}
 
 		_, err = pc.HandshakeTimeout(&NodeInfo{
-			PubKey:     rp.PrivKey.PubKey().(crypto.PubKeyEd25519),
+			PubKey:     rp.PrivKey.PubKey().Unwrap().(crypto.PubKeyEd25519),
 			Moniker:    "remote_peer",
 			Network:    rp.Config.ChainID,
 			Version:    version.Version,
@@ -167,7 +167,7 @@ func (ip *inboundPeer) dial(addr *NetAddress) {
 	}
 
 	_, err = pc.HandshakeTimeout(&NodeInfo{
-		PubKey:     ip.PrivKey.PubKey().(crypto.PubKeyEd25519),
+		PubKey:     ip.PrivKey.PubKey().Unwrap().(crypto.PubKeyEd25519),
 		Moniker:    "remote_peer",
 		Network:    ip.config.ChainID,
 		Version:    version.Version,

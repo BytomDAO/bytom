@@ -125,7 +125,7 @@ func newSwitch(config *cfg.Config, discv discv, lanDiscv lanDiscv, l Listener, p
 		nodePrivKey:  priv,
 		discv:        discv,
 		lanDiscv:     lanDiscv,
-		nodeInfo:     NewNodeInfo(config, priv.PubKey().(crypto.PubKeyEd25519), listenAddr),
+		nodeInfo:     NewNodeInfo(config, priv.PubKey().Unwrap().(crypto.PubKeyEd25519), listenAddr),
 		security:     security.NewSecurity(config),
 	}
 
