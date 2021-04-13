@@ -12,15 +12,15 @@ import (
 var testBlocks = []*types.Block{
 	{BlockHeader: types.BlockHeader{
 		PreviousBlockHash: bc.Hash{V0: 1},
-		Nonce:             0,
+		Timestamp: 0,
 	}},
 	{BlockHeader: types.BlockHeader{
 		PreviousBlockHash: bc.Hash{V0: 1},
-		Nonce:             1,
+		Timestamp: 1,
 	}},
 	{BlockHeader: types.BlockHeader{
 		PreviousBlockHash: bc.Hash{V0: 2},
-		Nonce:             3,
+		Timestamp: 3,
 	}},
 }
 
@@ -86,7 +86,7 @@ func TestDeleteLRU(t *testing.T) {
 	for i, c := range cases {
 		c.before.deleteLRU()
 		if !testutil.DeepEqual(c.before, c.after) {
-			t.Errorf("case %d: got %v want %v", i, c.before, c.after)
+			t.Errorf("case %d:\n got %v\n want %v", i, c.before, c.after)
 		}
 	}
 }

@@ -84,26 +84,9 @@ func AppendBlocks(chain *protocol.Chain, num uint64) error {
 		if err != nil {
 			return err
 		}
-		if err := SolveAndUpdate(chain, block); err != nil {
+		if _, err := chain.ProcessBlock(block); err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-// SolveAndUpdate solve difficulty and update chain status
-func SolveAndUpdate(chain *protocol.Chain, block *types.Block) error {
-	seed, err := chain.CalcNextSeed(&block.PreviousBlockHash)
-	if err != nil {
-		return err
-	}
-	Solve(seed, block)
-	_, err = chain.ProcessBlock(block)
-	return err
-}
-
-// Solve simulate solve difficulty by add result to cache
-func Solve(seed *bc.Hash, block *types.Block) {
-	// hash := block.BlockHeader.Hash()
-	// tensority.AIHash.AddCache(&hash, seed, &bc.Hash{})
 }

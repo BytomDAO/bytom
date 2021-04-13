@@ -22,7 +22,7 @@ func GenesisTx() *types.Tx {
 			types.NewCoinbaseInput([]byte("Information is power. -- Jan/11/2013. Computing is power. -- Apr/24/2018.")),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(*consensus.BTMAssetID, consensus.InitialBlockSubsidy, contract),
+			types.NewOriginalTxOutput(*consensus.BTMAssetID, consensus.InitialBlockSubsidy, contract),
 		},
 	}
 	return types.NewTx(txData)
@@ -48,7 +48,6 @@ func mainNetGenesisBlock() *types.Block {
 		BlockHeader: types.BlockHeader{
 			Version:   1,
 			Height:    0,
-			Nonce:     9253507043297,
 			Timestamp: 1524549600,
 			BlockCommitment: types.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
@@ -80,7 +79,6 @@ func testNetGenesisBlock() *types.Block {
 		BlockHeader: types.BlockHeader{
 			Version:   1,
 			Height:    0,
-			Nonce:     9253507043297,
 			Timestamp: 1528945000,
 			BlockCommitment: types.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
@@ -112,7 +110,6 @@ func soloNetGenesisBlock() *types.Block {
 		BlockHeader: types.BlockHeader{
 			Version:   1,
 			Height:    0,
-			Nonce:     9253507043297,
 			Timestamp: 1528945000,
 			BlockCommitment: types.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,

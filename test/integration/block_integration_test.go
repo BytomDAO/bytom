@@ -2,7 +2,6 @@ package integration
 
 import (
 	"testing"
-
 	"time"
 
 	"github.com/bytom/bytom/config"
@@ -26,6 +25,7 @@ type attachBlock struct {
 func init() {
 	consensus.ActiveNetParams = consensus.SoloNetParams
 
+	// height => block
 	blockMap = map[int][]*attachBlock{
 		0: {
 			{
@@ -40,8 +40,7 @@ func init() {
 						Height:            1,
 						Version:           1,
 						Timestamp:         1556431597,
-						Nonce:             5,
-						PreviousBlockHash: testutil.MustDecodeHash("ce4fe9431cd0225b3a811f8f8ec922f2b07a921bb12a8dddae9a85540072c770"),
+						PreviousBlockHash: testutil.MustDecodeHash("cd7eaf7ea23d7099b2ff3968cf2f54850d7673c3e1519dc205e986421c7738a6"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -52,7 +51,7 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0031")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
 							},
 						}),
 					},
@@ -65,8 +64,7 @@ func init() {
 						Height:            1,
 						Version:           1,
 						Timestamp:         1556431697,
-						Nonce:             36,
-						PreviousBlockHash: testutil.MustDecodeHash("ce4fe9431cd0225b3a811f8f8ec922f2b07a921bb12a8dddae9a85540072c770"),
+						PreviousBlockHash: testutil.MustDecodeHash("cd7eaf7ea23d7099b2ff3968cf2f54850d7673c3e1519dc205e986421c7738a6"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -77,7 +75,7 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0031")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("00143d05e891b165b165afefa2e861e83a9745f80d8c")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("00143d05e891b165b165afefa2e861e83a9745f80d8c")),
 							},
 						}),
 					},
@@ -87,14 +85,14 @@ func init() {
 		},
 		2: {
 			// only has coinbase transaction
+			// the previous block blockMap[1][0]
 			{
 				block: &types.Block{
 					BlockHeader: types.BlockHeader{
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431604,
-						Nonce:             0,
-						PreviousBlockHash: testutil.MustDecodeHash("2eaf7f40b0a0d4a5025f3d5d9b8589d3db1634f7b55089ca59253a9c587266b2"),
+						PreviousBlockHash: testutil.MustDecodeHash("4691aff4f2f6d9bb0d19c85933b6c8101dfecf43b2b000714ad2066cac843fd7"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -105,7 +103,7 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0032")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
 							},
 						}),
 					},
@@ -113,14 +111,14 @@ func init() {
 				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}},
 			},
 			// with spend btm transaction
+			// the previous block  blockMap[1][0]
 			{
 				block: &types.Block{
 					BlockHeader: types.BlockHeader{
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431604,
-						Nonce:             12,
-						PreviousBlockHash: testutil.MustDecodeHash("2eaf7f40b0a0d4a5025f3d5d9b8589d3db1634f7b55089ca59253a9c587266b2"),
+						PreviousBlockHash: testutil.MustDecodeHash("4691aff4f2f6d9bb0d19c85933b6c8101dfecf43b2b000714ad2066cac843fd7"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -131,7 +129,7 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0032")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
 							},
 						}),
 						types.NewTx(types.TxData{
@@ -149,7 +147,7 @@ func init() {
 								),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("00143d05e891b165b165afefa2e861e83a9745f80d8c")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("00143d05e891b165b165afefa2e861e83a9745f80d8c")),
 							},
 						}),
 					},
@@ -157,14 +155,14 @@ func init() {
 				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}, {StatusFail: false}},
 			},
 			// with btm retire transaction
+			// the previous block  blockMap[1][0]
 			{
 				block: &types.Block{
 					BlockHeader: types.BlockHeader{
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431607,
-						Nonce:             4,
-						PreviousBlockHash: testutil.MustDecodeHash("2eaf7f40b0a0d4a5025f3d5d9b8589d3db1634f7b55089ca59253a9c587266b2"),
+						PreviousBlockHash: testutil.MustDecodeHash("4691aff4f2f6d9bb0d19c85933b6c8101dfecf43b2b000714ad2066cac843fd7"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -175,7 +173,7 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0032")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
 							},
 						}),
 						types.NewTx(types.TxData{
@@ -193,7 +191,7 @@ func init() {
 								),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("6a")), // retire
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("6a")), // retire
 							},
 						}),
 					},
@@ -201,14 +199,14 @@ func init() {
 				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}, {StatusFail: false}},
 			},
 			// with issuance transaction
+			// the previous block  blockMap[1][0]
 			{
 				block: &types.Block{
 					BlockHeader: types.BlockHeader{
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431607,
-						Nonce:             17,
-						PreviousBlockHash: testutil.MustDecodeHash("2eaf7f40b0a0d4a5025f3d5d9b8589d3db1634f7b55089ca59253a9c587266b2"),
+						PreviousBlockHash: testutil.MustDecodeHash("4691aff4f2f6d9bb0d19c85933b6c8101dfecf43b2b000714ad2066cac843fd7"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -219,7 +217,7 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0032")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
 							},
 						}),
 						types.NewTx(types.TxData{
@@ -244,8 +242,8 @@ func init() {
 								),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
-								types.NewTxOutput(testutil.MustDecodeAsset("641ccb49dd38df9921a55e020d40a2323589c36ab5557f8a249ee01cc09d1836"), 10000000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(testutil.MustDecodeAsset("641ccb49dd38df9921a55e020d40a2323589c36ab5557f8a249ee01cc09d1836"), 10000000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
 							},
 						}),
 					},
@@ -253,14 +251,14 @@ func init() {
 				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}, {StatusFail: false}},
 			},
 			// with issuance transaction but status fail is true
+			// the previous block  blockMap[1][0]
 			{
 				block: &types.Block{
 					BlockHeader: types.BlockHeader{
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431607,
-						Nonce:             4,
-						PreviousBlockHash: testutil.MustDecodeHash("2eaf7f40b0a0d4a5025f3d5d9b8589d3db1634f7b55089ca59253a9c587266b2"),
+						PreviousBlockHash: testutil.MustDecodeHash("4691aff4f2f6d9bb0d19c85933b6c8101dfecf43b2b000714ad2066cac843fd7"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -271,7 +269,7 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0032")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
 							},
 						}),
 						types.NewTx(types.TxData{
@@ -297,8 +295,8 @@ func init() {
 								),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
-								types.NewTxOutput(testutil.MustDecodeAsset("641ccb49dd38df9921a55e020d40a2323589c36ab5557f8a249ee01cc09d1836"), 10000000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(testutil.MustDecodeAsset("641ccb49dd38df9921a55e020d40a2323589c36ab5557f8a249ee01cc09d1836"), 10000000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
 							},
 						}),
 					},
@@ -306,14 +304,14 @@ func init() {
 				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}, {StatusFail: true}},
 			},
 			// with non btm transaction
+			// the previous block  blockMap[1][0]
 			{
 				block: &types.Block{
 					BlockHeader: types.BlockHeader{
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431607,
-						Nonce:             4,
-						PreviousBlockHash: testutil.MustDecodeHash("2eaf7f40b0a0d4a5025f3d5d9b8589d3db1634f7b55089ca59253a9c587266b2"),
+						PreviousBlockHash: testutil.MustDecodeHash("4691aff4f2f6d9bb0d19c85933b6c8101dfecf43b2b000714ad2066cac843fd7"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -324,7 +322,7 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0032")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
 							},
 						}),
 						types.NewTx(types.TxData{
@@ -351,8 +349,8 @@ func init() {
 								),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
-								types.NewTxOutput(testutil.MustDecodeAsset("641ccb49dd38df9921a55e020d40a2323589c36ab5557f8a249ee01cc09d1836"), 10000000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(testutil.MustDecodeAsset("641ccb49dd38df9921a55e020d40a2323589c36ab5557f8a249ee01cc09d1836"), 10000000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
 							},
 						}),
 					},
@@ -360,14 +358,14 @@ func init() {
 				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}, {StatusFail: false}},
 			},
 			// with non btm transaction but status fail is true
+			// the previous block  blockMap[1][0]
 			{
 				block: &types.Block{
 					BlockHeader: types.BlockHeader{
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431607,
-						Nonce:             12,
-						PreviousBlockHash: testutil.MustDecodeHash("2eaf7f40b0a0d4a5025f3d5d9b8589d3db1634f7b55089ca59253a9c587266b2"),
+						PreviousBlockHash: testutil.MustDecodeHash("4691aff4f2f6d9bb0d19c85933b6c8101dfecf43b2b000714ad2066cac843fd7"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -378,7 +376,7 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0032")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
 							},
 						}),
 						types.NewTx(types.TxData{
@@ -406,8 +404,8 @@ func init() {
 								),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
-								types.NewTxOutput(testutil.MustDecodeAsset("641ccb49dd38df9921a55e020d40a2323589c36ab5557f8a249ee01cc09d1836"), 10000000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(testutil.MustDecodeAsset("641ccb49dd38df9921a55e020d40a2323589c36ab5557f8a249ee01cc09d1836"), 10000000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
 							},
 						}),
 					},
@@ -423,8 +421,7 @@ func init() {
 						Height:            3,
 						Version:           1,
 						Timestamp:         1556431640,
-						Nonce:             0,
-						PreviousBlockHash: testutil.MustDecodeHash("09c6064f4f1e7325440c45df03e97f97dbfbb66033315a384308256038af6c30"),
+						PreviousBlockHash: testutil.MustDecodeHash("e8d37fd75137d6e634cacb1656f780fab967ae4c1c98fa26a215a878d48e5ab0"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -435,7 +432,7 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0033")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
 							},
 						}),
 					},
@@ -449,8 +446,7 @@ func init() {
 						Height:            3,
 						Version:           1,
 						Timestamp:         1556431640,
-						Nonce:             5,
-						PreviousBlockHash: testutil.MustDecodeHash("33f56264283cc12e3b232068caa13c1fd052c21b231a94e8c0a40bac25629f88"),
+						PreviousBlockHash: testutil.MustDecodeHash("24f2c89193fc750d325145da1f0c574cceadef09751095220039c91836357d6e"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -461,7 +457,7 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0033")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
 							},
 						}),
 					},

@@ -75,7 +75,7 @@ func TestCheckCoinbaseAmount(t *testing.T) {
 			txs: []*types.Tx{
 				types.NewTx(types.TxData{
 					Inputs:  []*types.TxInput{types.NewCoinbaseInput(nil)},
-					Outputs: []*types.TxOutput{types.NewTxOutput(*consensus.BTMAssetID, 5000, nil)},
+					Outputs: []*types.TxOutput{types.NewOriginalTxOutput(*consensus.BTMAssetID, 5000, nil)},
 				}),
 			},
 			amount: 5000,
@@ -85,7 +85,7 @@ func TestCheckCoinbaseAmount(t *testing.T) {
 			txs: []*types.Tx{
 				types.NewTx(types.TxData{
 					Inputs:  []*types.TxInput{types.NewCoinbaseInput(nil)},
-					Outputs: []*types.TxOutput{types.NewTxOutput(*consensus.BTMAssetID, 5000, nil)},
+					Outputs: []*types.TxOutput{types.NewOriginalTxOutput(*consensus.BTMAssetID, 5000, nil)},
 				}),
 			},
 			amount: 6000,
@@ -135,19 +135,6 @@ func TestValidateBlockHeader(t *testing.T) {
 			err: errMisorderedBlockHeight,
 		},
 		{
-			desc: "the difficulty of the block is not equals to the next difficulty of parent block (blocktest#1008)",
-			block: &bc.Block{BlockHeader: &bc.BlockHeader{
-				Version: 1,
-				Height:  20,
-				Bits:    0,
-			}},
-			parent: &state.BlockNode{
-				Version: 1,
-				Height:  19,
-			},
-			err: errBadBits,
-		},
-		{
 			desc: "the prev block hash not equals to the hash of parent (blocktest#1004)",
 			block: &bc.Block{BlockHeader: &bc.BlockHeader{
 				Version:         1,
@@ -176,7 +163,6 @@ func TestValidateBlockHeader(t *testing.T) {
 				Height:    0,
 				Timestamp: 1523352600,
 				Hash:      bc.Hash{V0: 0},
-				Seed:      &bc.Hash{V1: 1},
 			},
 			err: nil,
 		},
@@ -246,7 +232,6 @@ func TestValidateBlock(t *testing.T) {
 					Height:           1,
 					Timestamp:        1523352601,
 					PreviousBlockId:  &bc.Hash{V0: 0},
-					Bits:             2305843009214532812,
 					TransactionsRoot: &bc.Hash{V0: 1},
 				},
 				Transactions: []*bc.Tx{
@@ -254,7 +239,7 @@ func TestValidateBlock(t *testing.T) {
 						Version:        1,
 						SerializedSize: 1,
 						Inputs:         []*types.TxInput{types.NewCoinbaseInput(nil)},
-						Outputs:        []*types.TxOutput{types.NewTxOutput(*consensus.BTMAssetID, 41250000000, cp)},
+						Outputs:        []*types.TxOutput{types.NewOriginalTxOutput(*consensus.BTMAssetID, 41250000000, cp)},
 					}),
 				},
 			},
@@ -263,7 +248,6 @@ func TestValidateBlock(t *testing.T) {
 				Height:    0,
 				Timestamp: 1523352600,
 				Hash:      bc.Hash{V0: 0},
-				Seed:      &bc.Hash{V1: 1},
 			},
 			err: errMismatchedMerkleRoot,
 		},
@@ -276,7 +260,6 @@ func TestValidateBlock(t *testing.T) {
 					Height:                1,
 					Timestamp:             1523352601,
 					PreviousBlockId:       &bc.Hash{V0: 0},
-					Bits:                  2305843009214532812,
 					TransactionsRoot:      &bc.Hash{V0: 6294987741126419124, V1: 12520373106916389157, V2: 5040806596198303681, V3: 1151748423853876189},
 					TransactionStatusHash: &bc.Hash{V0: 1},
 				},
@@ -285,7 +268,7 @@ func TestValidateBlock(t *testing.T) {
 						Version:        1,
 						SerializedSize: 1,
 						Inputs:         []*types.TxInput{types.NewCoinbaseInput(nil)},
-						Outputs:        []*types.TxOutput{types.NewTxOutput(*consensus.BTMAssetID, 41250000000, cp)},
+						Outputs:        []*types.TxOutput{types.NewOriginalTxOutput(*consensus.BTMAssetID, 41250000000, cp)},
 					}),
 				},
 			},
@@ -294,7 +277,6 @@ func TestValidateBlock(t *testing.T) {
 				Height:    0,
 				Timestamp: 1523352600,
 				Hash:      bc.Hash{V0: 0},
-				Seed:      &bc.Hash{V1: 1},
 			},
 			err: errMismatchedMerkleRoot,
 		},
@@ -313,13 +295,13 @@ func TestValidateBlock(t *testing.T) {
 						Version:        1,
 						SerializedSize: 1,
 						Inputs:         []*types.TxInput{types.NewCoinbaseInput(nil)},
-						Outputs:        []*types.TxOutput{types.NewTxOutput(*consensus.BTMAssetID, 41250000000, cp)},
+						Outputs:        []*types.TxOutput{types.NewOriginalTxOutput(*consensus.BTMAssetID, 41250000000, cp)},
 					}),
 					types.MapTx(&types.TxData{
 						Version:        1,
 						SerializedSize: 1,
 						Inputs:         []*types.TxInput{types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp)},
-						Outputs:        []*types.TxOutput{types.NewTxOutput(*consensus.BTMAssetID, 90000000, cp)},
+						Outputs:        []*types.TxOutput{types.NewOriginalTxOutput(*consensus.BTMAssetID, 90000000, cp)},
 					}),
 				},
 			},
@@ -328,7 +310,6 @@ func TestValidateBlock(t *testing.T) {
 				Height:    0,
 				Timestamp: 1523352600,
 				Hash:      bc.Hash{V0: 0},
-				Seed:      &bc.Hash{V1: 1},
 			},
 			err: ErrWrongCoinbaseTransaction,
 		},
@@ -344,13 +325,13 @@ func TestValidateBlock(t *testing.T) {
 
 // TestGasOverBlockLimit check if the gas of the block has the max limit (blocktest#1012)
 func TestGasOverBlockLimit(t *testing.T) {
+
 	cp, _ := vmutil.DefaultCoinbaseProgram()
 	parent := &state.BlockNode{
 		Version:   1,
 		Height:    0,
 		Timestamp: 1523352600,
 		Hash:      bc.Hash{V0: 0},
-		Seed:      &bc.Hash{V1: 1},
 	}
 	block := &bc.Block{
 		ID: bc.Hash{V0: 1},
@@ -359,7 +340,6 @@ func TestGasOverBlockLimit(t *testing.T) {
 			Height:           1,
 			Timestamp:        1523352601,
 			PreviousBlockId:  &bc.Hash{V0: 0},
-			Bits:             2305843009214532812,
 			TransactionsRoot: &bc.Hash{V0: 1},
 		},
 		Transactions: []*bc.Tx{
@@ -367,7 +347,7 @@ func TestGasOverBlockLimit(t *testing.T) {
 				Version:        1,
 				SerializedSize: 1,
 				Inputs:         []*types.TxInput{types.NewCoinbaseInput(nil)},
-				Outputs:        []*types.TxOutput{types.NewTxOutput(*consensus.BTMAssetID, 41250000000, cp)},
+				Outputs:        []*types.TxOutput{types.NewOriginalTxOutput(*consensus.BTMAssetID, 41250000000, cp)},
 			}),
 		},
 	}
@@ -380,7 +360,7 @@ func TestGasOverBlockLimit(t *testing.T) {
 				types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 10000000000, 0, cp),
 			},
 			Outputs: []*types.TxOutput{
-				types.NewTxOutput(*consensus.BTMAssetID, 9000000000, cp),
+				types.NewOriginalTxOutput(*consensus.BTMAssetID, 9000000000, cp),
 			},
 		}))
 	}
@@ -392,13 +372,13 @@ func TestGasOverBlockLimit(t *testing.T) {
 
 // TestSetTransactionStatus verify the transaction status is set correctly (blocktest#1010)
 func TestSetTransactionStatus(t *testing.T) {
+
 	cp, _ := vmutil.DefaultCoinbaseProgram()
 	parent := &state.BlockNode{
 		Version:   1,
 		Height:    0,
 		Timestamp: 1523352600,
 		Hash:      bc.Hash{V0: 0},
-		Seed:      &bc.Hash{V1: 1},
 	}
 	block := &bc.Block{
 		ID: bc.Hash{V0: 1},
@@ -407,7 +387,6 @@ func TestSetTransactionStatus(t *testing.T) {
 			Height:                1,
 			Timestamp:             1523352601,
 			PreviousBlockId:       &bc.Hash{V0: 0},
-			Bits:                  2305843009214532812,
 			TransactionsRoot:      &bc.Hash{V0: 3413931728524254295, V1: 300490676707850231, V2: 1886132055969225110, V3: 10216139531293906088},
 			TransactionStatusHash: &bc.Hash{V0: 8682965660674182538, V1: 8424137560837623409, V2: 6979974817894224946, V3: 4673809519342015041},
 		},
@@ -416,7 +395,7 @@ func TestSetTransactionStatus(t *testing.T) {
 				Version:        1,
 				SerializedSize: 1,
 				Inputs:         []*types.TxInput{types.NewCoinbaseInput(nil)},
-				Outputs:        []*types.TxOutput{types.NewTxOutput(*consensus.BTMAssetID, 41449998224, cp)},
+				Outputs:        []*types.TxOutput{types.NewOriginalTxOutput(*consensus.BTMAssetID, 41449998224, cp)},
 			}),
 			types.MapTx(&types.TxData{
 				Version:        1,
@@ -426,8 +405,8 @@ func TestSetTransactionStatus(t *testing.T) {
 					types.NewSpendInput([][]byte{}, *newHash(8), bc.AssetID{V0: 1}, 1000, 0, []byte{byte(vm.OP_FALSE)}),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 888, cp),
-					types.NewTxOutput(bc.AssetID{V0: 1}, 1000, cp),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 888, cp),
+					types.NewOriginalTxOutput(bc.AssetID{V0: 1}, 1000, cp),
 				},
 			}),
 			types.MapTx(&types.TxData{
@@ -437,7 +416,7 @@ func TestSetTransactionStatus(t *testing.T) {
 					types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 888, cp),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 888, cp),
 				},
 			}),
 		},

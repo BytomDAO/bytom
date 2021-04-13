@@ -22,11 +22,6 @@ const (
 	baseSubsidy                = uint64(41250000000)
 	InitialBlockSubsidy        = uint64(140700041250000000)
 
-	// config for pow mining
-	BlocksPerRetarget     = uint64(2016)
-	TargetSecondsPerBlock = uint64(150)
-	SeedPerRetarget       = uint64(256)
-
 	// MaxTimeOffsetSeconds is the maximum number of seconds a block time is allowed to be ahead of the current time
 	MaxTimeOffsetSeconds = uint64(60 * 60)
 	MedianTimeBlocks     = 11

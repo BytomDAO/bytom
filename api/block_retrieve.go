@@ -47,7 +47,6 @@ type GetBlockResp struct {
 	Height                 uint64     `json:"height"`
 	PreviousBlockHash      *bc.Hash   `json:"previous_block_hash"`
 	Timestamp              uint64     `json:"timestamp"`
-	Nonce                  uint64     `json:"nonce"`
 	TransactionsMerkleRoot *bc.Hash   `json:"transaction_merkle_root"`
 	TransactionStatusHash  *bc.Hash   `json:"transaction_status_hash"`
 	Transactions           []*BlockTx `json:"transactions"`
@@ -74,7 +73,6 @@ func (a *API) getBlock(ins BlockReq) Response {
 		Height:                 block.Height,
 		PreviousBlockHash:      &block.PreviousBlockHash,
 		Timestamp:              block.Timestamp,
-		Nonce:                  block.Nonce,
 		TransactionsMerkleRoot: &block.TransactionsMerkleRoot,
 		TransactionStatusHash:  &block.TransactionStatusHash,
 		Transactions:           []*BlockTx{},

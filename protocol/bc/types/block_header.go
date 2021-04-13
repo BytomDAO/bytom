@@ -18,7 +18,6 @@ type BlockHeader struct {
 	Height            uint64  // The height of the block.
 	PreviousBlockHash bc.Hash // The hash of the previous block.
 	Timestamp         uint64  // The time of the block in seconds.
-	Nonce             uint64  // Nonce used to generate the block.
 	BlockCommitment
 }
 
@@ -85,9 +84,6 @@ func (bh *BlockHeader) readFrom(r *blockchain.Reader) (serflag uint8, err error)
 	if _, err = blockchain.ReadExtensibleString(r, bh.BlockCommitment.readFrom); err != nil {
 		return 0, err
 	}
-	if bh.Nonce, err = blockchain.ReadVarint63(r); err != nil {
-		return 0, err
-	}
 
 	return
 }
@@ -116,9 +112,6 @@ func (bh *BlockHeader) writeTo(w io.Writer, serflags uint8) (err error) {
 		return err
 	}
 	if _, err = blockchain.WriteExtensibleString(w, nil, bh.BlockCommitment.writeTo); err != nil {
-		return err
-	}
-	if _, err = blockchain.WriteVarint63(w, bh.Nonce); err != nil {
 		return err
 	}
 
