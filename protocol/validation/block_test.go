@@ -9,7 +9,6 @@ import (
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
-	"github.com/bytom/bytom/protocol/vm"
 	"github.com/bytom/bytom/protocol/vm/vmutil"
 )
 
@@ -256,12 +255,11 @@ func TestValidateBlock(t *testing.T) {
 			block: &bc.Block{
 				ID: bc.Hash{V0: 1},
 				BlockHeader: &bc.BlockHeader{
-					Version:               1,
-					Height:                1,
-					Timestamp:             1523352601,
-					PreviousBlockId:       &bc.Hash{V0: 0},
-					TransactionsRoot:      &bc.Hash{V0: 6294987741126419124, V1: 12520373106916389157, V2: 5040806596198303681, V3: 1151748423853876189},
-					TransactionStatusHash: &bc.Hash{V0: 1},
+					Version:          1,
+					Height:           1,
+					Timestamp:        1523352601,
+					PreviousBlockId:  &bc.Hash{V0: 0},
+					TransactionsRoot: &bc.Hash{V0: 6294987741126419124, V1: 12520373106916389157, V2: 5040806596198303681, V3: 1151748423853876189},
 				},
 				Transactions: []*bc.Tx{
 					types.MapTx(&types.TxData{
@@ -367,74 +365,5 @@ func TestGasOverBlockLimit(t *testing.T) {
 
 	if err := ValidateBlock(block, parent); err != errOverBlockLimit {
 		t.Errorf("got error %s, want %s", err, errOverBlockLimit)
-	}
-}
-
-// TestSetTransactionStatus verify the transaction status is set correctly (blocktest#1010)
-func TestSetTransactionStatus(t *testing.T) {
-
-	cp, _ := vmutil.DefaultCoinbaseProgram()
-	parent := &state.BlockNode{
-		Version:   1,
-		Height:    0,
-		Timestamp: 1523352600,
-		Hash:      bc.Hash{V0: 0},
-	}
-	block := &bc.Block{
-		ID: bc.Hash{V0: 1},
-		BlockHeader: &bc.BlockHeader{
-			Version:               1,
-			Height:                1,
-			Timestamp:             1523352601,
-			PreviousBlockId:       &bc.Hash{V0: 0},
-			TransactionsRoot:      &bc.Hash{V0: 3413931728524254295, V1: 300490676707850231, V2: 1886132055969225110, V3: 10216139531293906088},
-			TransactionStatusHash: &bc.Hash{V0: 8682965660674182538, V1: 8424137560837623409, V2: 6979974817894224946, V3: 4673809519342015041},
-		},
-		Transactions: []*bc.Tx{
-			types.MapTx(&types.TxData{
-				Version:        1,
-				SerializedSize: 1,
-				Inputs:         []*types.TxInput{types.NewCoinbaseInput(nil)},
-				Outputs:        []*types.TxOutput{types.NewOriginalTxOutput(*consensus.BTMAssetID, 41449998224, cp)},
-			}),
-			types.MapTx(&types.TxData{
-				Version:        1,
-				SerializedSize: 1,
-				Inputs: []*types.TxInput{
-					types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp),
-					types.NewSpendInput([][]byte{}, *newHash(8), bc.AssetID{V0: 1}, 1000, 0, []byte{byte(vm.OP_FALSE)}),
-				},
-				Outputs: []*types.TxOutput{
-					types.NewOriginalTxOutput(*consensus.BTMAssetID, 888, cp),
-					types.NewOriginalTxOutput(bc.AssetID{V0: 1}, 1000, cp),
-				},
-			}),
-			types.MapTx(&types.TxData{
-				Version:        1,
-				SerializedSize: 1,
-				Inputs: []*types.TxInput{
-					types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp),
-				},
-				Outputs: []*types.TxOutput{
-					types.NewOriginalTxOutput(*consensus.BTMAssetID, 888, cp),
-				},
-			}),
-		},
-	}
-
-	if err := ValidateBlock(block, parent); err != nil {
-		t.Fatal(err)
-	}
-
-	expectTxStatuses := []bool{false, true, false}
-	txStatuses := block.GetTransactionStatus().VerifyStatus
-	if len(expectTxStatuses) != len(txStatuses) {
-		t.Error("the size of expect tx status is not equals to size of got tx status")
-	}
-
-	for i, status := range txStatuses {
-		if expectTxStatuses[i] != status.StatusFail {
-			t.Errorf("got tx status: %v, expect tx status: %v\n", status.StatusFail, expectTxStatuses[i])
-		}
 	}
 }

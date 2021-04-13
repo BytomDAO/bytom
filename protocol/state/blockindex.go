@@ -25,7 +25,6 @@ type BlockNode struct {
 	Height                 uint64
 	Timestamp              uint64
 	TransactionsMerkleRoot bc.Hash
-	TransactionStatusHash  bc.Hash
 }
 
 func NewBlockNode(bh *types.BlockHeader, parent *BlockNode) (*BlockNode, error) {
@@ -40,7 +39,6 @@ func NewBlockNode(bh *types.BlockHeader, parent *BlockNode) (*BlockNode, error) 
 		Height:                 bh.Height,
 		Timestamp:              bh.Timestamp,
 		TransactionsMerkleRoot: bh.TransactionsMerkleRoot,
-		TransactionStatusHash:  bh.TransactionStatusHash,
 	}
 
 	return node, nil
@@ -59,7 +57,6 @@ func (node *BlockNode) BlockHeader() *types.BlockHeader {
 		Timestamp:         node.Timestamp,
 		BlockCommitment: types.BlockCommitment{
 			TransactionsMerkleRoot: node.TransactionsMerkleRoot,
-			TransactionStatusHash:  node.TransactionStatusHash,
 		},
 	}
 }

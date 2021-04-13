@@ -98,7 +98,6 @@ var testBlock = &types.Block{
 		Timestamp: 1528945000,
 		BlockCommitment: types.BlockCommitment{
 			TransactionsMerkleRoot: bc.Hash{V0: uint64(0x11)},
-			TransactionStatusHash:  bc.Hash{V0: uint64(0x55)},
 		},
 	},
 }
@@ -118,7 +117,7 @@ func TestBlockProposeMsg(t *testing.T) {
 		t.Errorf("block msg test err: got %s\nwant %s", spew.Sdump(gotBlock.BlockHeader), spew.Sdump(testBlock.BlockHeader))
 	}
 
-	wantString := "{block_height: 0, block_hash: f59514e2541488a38bc2667940bc2c24027e4a3a371d884b55570d036997bb57}"
+	wantString := "{block_height: 0, block_hash: 3ce98dfffbd0e10c318f167696603b23173b3ec86e7868c8fa65be76edefc67e}"
 	if blockMsg.String() != wantString {
 		t.Errorf("block msg test err. got:%s want:%s", blockMsg.String(), wantString)
 	}

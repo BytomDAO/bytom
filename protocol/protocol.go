@@ -60,20 +60,13 @@ func NewChainWithOrphanManage(store Store, txPool *TxPool, manage *OrphanManage)
 
 func (c *Chain) initChainStatus() error {
 	genesisBlock := config.GenesisBlock()
-	txStatus := bc.NewTransactionStatus()
-	for i := range genesisBlock.Transactions {
-		if err := txStatus.SetStatus(i, false); err != nil {
-			return err
-		}
-	}
-
-	if err := c.store.SaveBlock(genesisBlock, txStatus); err != nil {
+	if err := c.store.SaveBlock(genesisBlock); err != nil {
 		return err
 	}
 
 	utxoView := state.NewUtxoViewpoint()
 	bcBlock := types.MapBlock(genesisBlock)
-	if err := utxoView.ApplyBlock(bcBlock, txStatus); err != nil {
+	if err := utxoView.ApplyBlock(bcBlock); err != nil {
 		return err
 	}
 

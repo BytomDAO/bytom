@@ -43,20 +43,6 @@ func (ctx *chainTestContext) validateStatus(block *types.Block) error {
 		return fmt.Errorf("chain status error")
 	}
 
-	// validate tx status
-	txStatus, err := ctx.Chain.GetTransactionStatus(&blockHash)
-	if err != nil {
-		return err
-	}
-
-	txStatusMerkleRoot, err := types.TxStatusMerkleRoot(txStatus.VerifyStatus)
-	if err != nil {
-		return err
-	}
-
-	if txStatusMerkleRoot != block.TransactionStatusHash {
-		return fmt.Errorf("tx status error")
-	}
 	return nil
 }
 

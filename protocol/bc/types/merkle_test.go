@@ -93,7 +93,7 @@ func TestMerkleRootRealTx(t *testing.T) {
 
 	var txs []*bc.Tx
 	for _, rawTx := range rawTxs {
-		tx := Tx{}		
+		tx := Tx{}
 		if err := tx.UnmarshalText([]byte(rawTx)); err != nil {
 			t.Fatal(err)
 		}
@@ -239,55 +239,6 @@ func TestTxMerkleProof(t *testing.T) {
 			ids = append(ids, &tx.ID)
 		}
 		if !ValidateTxMerkleTreeProof(proofHashes, flags, ids, root) {
-			t.Error("Merkle tree validate fail")
-		}
-	}
-}
-
-func TestStatusMerkleProof(t *testing.T) {
-	cases := []struct {
-		statusCount    int
-		relatedIndexes []int
-		flags          []uint8
-		expectHashLen  int
-	}{
-		{
-			statusCount:    10,
-			relatedIndexes: []int{0, 3, 7, 8},
-			flags:          []uint8{1, 1, 1, 1, 2, 0, 1, 0, 2, 1, 0, 1, 0, 2, 1, 2, 0},
-			expectHashLen:  9,
-		},
-		{
-			statusCount:    10,
-			relatedIndexes: []int{},
-			flags:          []uint8{0},
-			expectHashLen:  1,
-		},
-		{
-			statusCount:    1,
-			relatedIndexes: []int{0},
-			flags:          []uint8{2},
-			expectHashLen:  1,
-		},
-		{
-			statusCount:    19,
-			relatedIndexes: []int{1, 3, 5, 7, 11, 15},
-			flags:          []uint8{1, 1, 1, 1, 1, 0, 2, 1, 0, 2, 1, 1, 0, 2, 1, 0, 2, 1, 1, 0, 1, 0, 2, 1, 0, 1, 0, 2, 0},
-			expectHashLen:  15,
-		},
-	}
-	for _, c := range cases {
-		statuses := mockStatuses(c.statusCount)
-		var relatedStatuses []*bc.TxVerifyResult
-		for _, index := range c.relatedIndexes {
-			relatedStatuses = append(relatedStatuses, statuses[index])
-		}
-		hashes := GetStatusMerkleTreeProof(statuses, c.flags)
-		if len(hashes) != c.expectHashLen {
-			t.Error("The length proof hashes is not equals expect length")
-		}
-		root, _ := TxStatusMerkleRoot(statuses)
-		if !ValidateStatusMerkleTreeProof(hashes, c.flags, relatedStatuses, root) {
 			t.Error("Merkle tree validate fail")
 		}
 	}

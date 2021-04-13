@@ -7,11 +7,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/davecgh/go-spew/spew"
+
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/encoding/blockchain"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/testutil"
-	"github.com/davecgh/go-spew/spew"
 )
 
 func TestBlock(t *testing.T) {
@@ -34,12 +35,11 @@ func TestBlock(t *testing.T) {
 				"01", // block height
 				"0000000000000000000000000000000000000000000000000000000000000000", // prev block hash
 				"00", // timestamp
-				"40", // commitment extensible field length
+				"20", // commitment extensible field length
 				"0000000000000000000000000000000000000000000000000000000000000000", // transactions merkle root
-				"0000000000000000000000000000000000000000000000000000000000000000", // tx status hash
 				"00", // num transactions
 			}, ""),
-			hash: testutil.MustDecodeHash("ba63a0f8e9a7e5f93e3ec7ce49f07276c065bdf75e270984d9390bee0b3de027"),
+			hash: testutil.MustDecodeHash("42e74d130e5ab27e8a71b90e7de8c8e00ecfa77456070202ab8509f7b0ab49ae"),
 		},
 		{
 			block: &Block{
@@ -49,7 +49,6 @@ func TestBlock(t *testing.T) {
 					PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
 					Timestamp:         1522908275,
 					BlockCommitment: BlockCommitment{
-						TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
 						TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 					},
 				},
@@ -85,15 +84,15 @@ func TestBlock(t *testing.T) {
 				"eab01a", // block height
 				"c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0", // prev block hash
 				"f3f896d605", // timestamp
-				"40",         // commitment extensible field length
+				"20",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
-				"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
-				"02", // num transactions
+				"02",                 // num transactions
 				"07018e0502012a00056e6f6e6365a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf92c30f380f6173736574446566696e6974696f6e010f69737375616e636550726f6772616d020a617267756d656e7473310a617267756d656e74733201540152fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff92c30f03010c7370656e6450726f6772616d17020a617267756d656e7473330a617267756d656e74733401010029a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf92c30f01047472756500",
 				"07010001010b02096172626974726172790002010029ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff92c30f0104747275650001002affffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff92c30f010566616c736500",
 			}, ""),
-			hash: testutil.MustDecodeHash("fca0cfd96604b0b28e4a16286974db155d0bbd42dd729d2e2ba058d09a963016"),
+			hash: testutil.MustDecodeHash("6076fc8a96b08a4842f4bdc805606e9775ce6dbe4e371e88c70b75ea4283e942"),
 		},
+
 	}
 
 	for i, test := range cases {
@@ -144,7 +143,6 @@ func TestReadFrom(t *testing.T) {
 					Timestamp:         1553496788,
 					BlockCommitment: BlockCommitment{
 						TransactionsMerkleRoot: testutil.MustDecodeHash("35a2d11158f47a5c5267630b2b6cf9e9a5f79a598085a2572a68defeb8013ad2"),
-						TransactionStatusHash:  testutil.MustDecodeHash("6978a65b4ee5b6f4914fe5c05000459a803ecf59132604e5d334d64249c5e50a"),
 					},
 				},
 				Transactions: []*Tx{

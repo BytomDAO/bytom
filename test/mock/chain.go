@@ -2,8 +2,6 @@ package mock
 
 import (
 	"errors"
-	"math/rand"
-
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 )
@@ -75,27 +73,6 @@ func (c *Chain) GetHeaderByHeight(height uint64) (*types.BlockHeader, error) {
 		return nil, errors.New("can't find block")
 	}
 	return &block.BlockHeader, nil
-}
-
-func (c *Chain) GetTransactionStatus(hash *bc.Hash) (*bc.TransactionStatus, error) {
-	block, err := c.GetBlockByHash(hash)
-	if err != nil {
-		return nil, errors.New("can't find block by hash")
-	}
-	txCount := len(block.Transactions)
-	var statuses []*bc.TxVerifyResult
-	rand.Seed(int64(block.Height))
-	for i := 0; i < txCount; i++ {
-		status := &bc.TxVerifyResult{}
-		if fail := rand.Intn(2); fail == 0 {
-			status.StatusFail = true
-		} else {
-			status.StatusFail = false
-		}
-		statuses = append(statuses, status)
-	}
-	txStatus := &bc.TransactionStatus{VerifyStatus: statuses}
-	return txStatus, nil
 }
 
 func (c *Chain) InMainChain(hash bc.Hash) bool {

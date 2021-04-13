@@ -120,8 +120,8 @@ type TxSummary struct {
 }
 
 // indexTransactions saves all annotated transactions to the database.
-func (w *Wallet) indexTransactions(batch dbm.Batch, b *types.Block, txStatus *bc.TransactionStatus) error {
-	annotatedTxs := w.filterAccountTxs(b, txStatus)
+func (w *Wallet) indexTransactions(batch dbm.Batch, b *types.Block) error {
+	annotatedTxs := w.filterAccountTxs(b)
 	saveExternalAssetDefinition(b, w.DB)
 	annotateTxsAccount(annotatedTxs, w.DB)
 
@@ -152,18 +152,17 @@ func (w *Wallet) indexTransactions(batch dbm.Batch, b *types.Block, txStatus *bc
 }
 
 // filterAccountTxs related and build the fully annotated transactions.
-func (w *Wallet) filterAccountTxs(b *types.Block, txStatus *bc.TransactionStatus) []*query.AnnotatedTx {
+func (w *Wallet) filterAccountTxs(b *types.Block) []*query.AnnotatedTx {
 	annotatedTxs := make([]*query.AnnotatedTx, 0, len(b.Transactions))
 
 transactionLoop:
 	for pos, tx := range b.Transactions {
-		statusFail, _ := txStatus.GetStatus(pos)
 		for _, v := range tx.Outputs {
 			var hash [32]byte
 			sha3pool.Sum256(hash[:], v.ControlProgram)
 
 			if bytes := w.DB.Get(account.ContractKey(hash)); bytes != nil {
-				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
+				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, pos))
 				continue transactionLoop
 			}
 		}
@@ -174,7 +173,7 @@ transactionLoop:
 				continue
 			}
 			if bytes := w.DB.Get(account.StandardUTXOKey(outid)); bytes != nil {
-				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
+				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, pos))
 				continue transactionLoop
 			}
 		}
@@ -222,18 +221,8 @@ func (w *Wallet) getGlobalTxByTxID(txID string) (*query.AnnotatedTx, error) {
 		return nil, err
 	}
 
-	txStatus, err := w.chain.GetTransactionStatus(blockHash)
-	if err != nil {
-		return nil, err
-	}
-
-	statusFail, err := txStatus.GetStatus(int(pos))
-	if err != nil {
-		return nil, err
-	}
-
 	tx := block.Transactions[int(pos)]
-	return w.buildAnnotatedTransaction(tx, block, statusFail, int(pos)), nil
+	return w.buildAnnotatedTransaction(tx, block, int(pos)), nil
 }
 
 // GetTransactionsSummary get transactions summary

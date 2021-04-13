@@ -1,7 +1,6 @@
 // +build functional
 
 package test
-
 import (
 	"os"
 	"testing"

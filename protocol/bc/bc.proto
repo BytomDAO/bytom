@@ -54,8 +54,6 @@ message BlockHeader {
   Hash              previous_block_id       = 3;
   uint64            timestamp               = 4;
   Hash              transactions_root       = 5;
-  Hash              transaction_status_hash = 6;
-  TransactionStatus transaction_status      = 7;
 }
 
 message TxHeader {

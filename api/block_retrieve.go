@@ -23,14 +23,13 @@ func (a *API) getBlockCount() Response {
 
 // BlockTx is the tx struct for getBlock func
 type BlockTx struct {
-	ID         bc.Hash                  `json:"id"`
-	Version    uint64                   `json:"version"`
-	Size       uint64                   `json:"size"`
-	TimeRange  uint64                   `json:"time_range"`
-	Inputs     []*query.AnnotatedInput  `json:"inputs"`
-	Outputs    []*query.AnnotatedOutput `json:"outputs"`
-	StatusFail bool                     `json:"status_fail"`
-	MuxID      bc.Hash                  `json:"mux_id"`
+	ID        bc.Hash                  `json:"id"`
+	Version   uint64                   `json:"version"`
+	Size      uint64                   `json:"size"`
+	TimeRange uint64                   `json:"time_range"`
+	Inputs    []*query.AnnotatedInput  `json:"inputs"`
+	Outputs   []*query.AnnotatedOutput `json:"outputs"`
+	MuxID     bc.Hash                  `json:"mux_id"`
 }
 
 // BlockReq is used to handle getBlock req
@@ -48,7 +47,6 @@ type GetBlockResp struct {
 	PreviousBlockHash      *bc.Hash   `json:"previous_block_hash"`
 	Timestamp              uint64     `json:"timestamp"`
 	TransactionsMerkleRoot *bc.Hash   `json:"transaction_merkle_root"`
-	TransactionStatusHash  *bc.Hash   `json:"transaction_status_hash"`
 	Transactions           []*BlockTx `json:"transactions"`
 }
 
@@ -60,7 +58,6 @@ func (a *API) getBlock(ins BlockReq) Response {
 	}
 
 	blockHash := block.Hash()
-	txStatus, err := a.chain.GetTransactionStatus(&blockHash)
 	rawBlock, err := block.MarshalText()
 	if err != nil {
 		return NewErrorResponse(err)
@@ -74,11 +71,10 @@ func (a *API) getBlock(ins BlockReq) Response {
 		PreviousBlockHash:      &block.PreviousBlockHash,
 		Timestamp:              block.Timestamp,
 		TransactionsMerkleRoot: &block.TransactionsMerkleRoot,
-		TransactionStatusHash:  &block.TransactionStatusHash,
 		Transactions:           []*BlockTx{},
 	}
 
-	for i, orig := range block.Transactions {
+	for _, orig := range block.Transactions {
 		tx := &BlockTx{
 			ID:        orig.ID,
 			Version:   orig.Version,
@@ -86,10 +82,6 @@ func (a *API) getBlock(ins BlockReq) Response {
 			TimeRange: orig.TimeRange,
 			Inputs:    []*query.AnnotatedInput{},
 			Outputs:   []*query.AnnotatedOutput{},
-		}
-		tx.StatusFail, err = txStatus.GetStatus(i)
-		if err != nil {
-			return NewSuccessResponse(resp)
 		}
 
 		resOutID := orig.ResultIds[0]
@@ -114,8 +106,7 @@ func (a *API) getBlock(ins BlockReq) Response {
 
 // GetRawBlockResp is resp struct for getRawBlock API
 type GetRawBlockResp struct {
-	RawBlock          *types.Block          `json:"raw_block"`
-	TransactionStatus *bc.TransactionStatus `json:"transaction_status"`
+	RawBlock *types.Block `json:"raw_block"`
 }
 
 func (a *API) getRawBlock(ins BlockReq) Response {
@@ -124,15 +115,8 @@ func (a *API) getRawBlock(ins BlockReq) Response {
 		return NewErrorResponse(err)
 	}
 
-	blockHash := block.Hash()
-	txStatus, err := a.chain.GetTransactionStatus(&blockHash)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
 	resp := GetRawBlockResp{
-		RawBlock:          block,
-		TransactionStatus: txStatus,
+		RawBlock: block,
 	}
 	return NewSuccessResponse(resp)
 }
@@ -181,7 +165,6 @@ type MerkleBlockReq struct {
 type GetMerkleBlockResp struct {
 	BlockHeader  types.BlockHeader `json:"block_header"`
 	TxHashes     []*bc.Hash        `json:"tx_hashes"`
-	StatusHashes []*bc.Hash        `json:"status_hashes"`
 	Flags        []uint32          `json:"flags"`
 	MatchedTxIDs []*bc.Hash        `json:"matched_tx_ids"`
 }
@@ -205,18 +188,9 @@ func (a *API) getMerkleProof(ins MerkleBlockReq) Response {
 		flags[i] = uint32(flag)
 	}
 
-	blockHash := block.Hash()
-	statuses, err := a.chain.GetTransactionStatus(&blockHash)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	statusHashes := types.GetStatusMerkleTreeProof(statuses.VerifyStatus, compactFlags)
-
 	resp := &GetMerkleBlockResp{
 		BlockHeader:  block.BlockHeader,
 		TxHashes:     hashes,
-		StatusHashes: statusHashes,
 		Flags:        flags,
 		MatchedTxIDs: matchedTxIDs,
 	}

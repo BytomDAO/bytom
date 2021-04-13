@@ -75,15 +75,11 @@ func (c *Chain) calcReorganizeNodes(node *state.BlockNode) ([]*state.BlockNode, 
 
 func (c *Chain) connectBlock(block *types.Block) (err error) {
 	bcBlock := types.MapBlock(block)
-	if bcBlock.TransactionStatus, err = c.store.GetTransactionStatus(&bcBlock.ID); err != nil {
-		return err
-	}
-
 	utxoView := state.NewUtxoViewpoint()
 	if err := c.store.GetTransactionsUtxo(utxoView, bcBlock.Transactions); err != nil {
 		return err
 	}
-	if err := utxoView.ApplyBlock(bcBlock, bcBlock.TransactionStatus); err != nil {
+	if err := utxoView.ApplyBlock(bcBlock); err != nil {
 		return err
 	}
 
@@ -119,11 +115,8 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 		if err := c.store.GetTransactionsUtxo(utxoView, detachBlock.Transactions); err != nil {
 			return err
 		}
-		txStatus, err := c.GetTransactionStatus(&detachBlock.ID)
-		if err != nil {
-			return err
-		}
-		if err := utxoView.DetachBlock(detachBlock, txStatus); err != nil {
+
+		if err := utxoView.DetachBlock(detachBlock); err != nil {
 			return err
 		}
 
@@ -148,11 +141,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 		if err := c.store.GetTransactionsUtxo(utxoView, attachBlock.Transactions); err != nil {
 			return err
 		}
-		txStatus, err := c.GetTransactionStatus(&attachBlock.ID)
-		if err != nil {
-			return err
-		}
-		if err := utxoView.ApplyBlock(attachBlock, txStatus); err != nil {
+		if err := utxoView.ApplyBlock(attachBlock); err != nil {
 			return err
 		}
 
@@ -203,7 +192,8 @@ func (c *Chain) saveBlock(block *types.Block) error {
 	if err := validation.ValidateBlock(bcBlock, parent); err != nil {
 		return errors.Sub(ErrBadBlock, err)
 	}
-	if err := c.store.SaveBlock(block, bcBlock.TransactionStatus); err != nil {
+
+	if err := c.store.SaveBlock(block); err != nil {
 		return err
 	}
 

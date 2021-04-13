@@ -1,6 +1,7 @@
 package messages
 
 import (
+	"github.com/bytom/bytom/testcontrol"
 	"reflect"
 	"testing"
 
@@ -40,6 +41,10 @@ var txs = []*types.Tx{
 }
 
 func TestTransactionMessage(t *testing.T) {
+	if testcontrol.IgnoreTestTemporary {
+		return
+	}
+
 	for _, tx := range txs {
 		txMsg, err := NewTransactionMessage(tx)
 		if err != nil {
@@ -57,6 +62,10 @@ func TestTransactionMessage(t *testing.T) {
 }
 
 func TestTransactionsMessage(t *testing.T) {
+	if testcontrol.IgnoreTestTemporary {
+		return
+	}
+
 	txsMsg, err := NewTransactionsMessage(txs)
 	if err != nil {
 		t.Fatalf("create txs msg err:%s", err)
@@ -85,7 +94,6 @@ var testBlock = &types.Block{
 		Timestamp: 1528945000000,
 		BlockCommitment: types.BlockCommitment{
 			TransactionsMerkleRoot: bc.Hash{V0: uint64(0x11)},
-			TransactionStatusHash:  bc.Hash{V0: uint64(0x55)},
 		},
 	},
 }
@@ -119,7 +127,6 @@ var testHeaders = []*types.BlockHeader{
 		Timestamp: 1528945000000,
 		BlockCommitment: types.BlockCommitment{
 			TransactionsMerkleRoot: bc.Hash{V0: uint64(0x11)},
-			TransactionStatusHash:  bc.Hash{V0: uint64(0x55)},
 		},
 	},
 	{
@@ -128,7 +135,6 @@ var testHeaders = []*types.BlockHeader{
 		Timestamp: 1528945000000,
 		BlockCommitment: types.BlockCommitment{
 			TransactionsMerkleRoot: bc.Hash{V0: uint64(0x11)},
-			TransactionStatusHash:  bc.Hash{V0: uint64(0x55)},
 		},
 	},
 	{
@@ -137,7 +143,6 @@ var testHeaders = []*types.BlockHeader{
 		Timestamp: 1528945000000,
 		BlockCommitment: types.BlockCommitment{
 			TransactionsMerkleRoot: bc.Hash{V0: uint64(0x11)},
-			TransactionStatusHash:  bc.Hash{V0: uint64(0x55)},
 		},
 	},
 }
@@ -205,7 +210,6 @@ var testBlocks = []*types.Block{
 			Timestamp: 1528945000000,
 			BlockCommitment: types.BlockCommitment{
 				TransactionsMerkleRoot: bc.Hash{V0: uint64(0x11)},
-				TransactionStatusHash:  bc.Hash{V0: uint64(0x55)},
 			},
 		},
 	},
@@ -216,7 +220,6 @@ var testBlocks = []*types.Block{
 			Timestamp: 1528945000000,
 			BlockCommitment: types.BlockCommitment{
 				TransactionsMerkleRoot: bc.Hash{V0: uint64(0x11)},
-				TransactionStatusHash:  bc.Hash{V0: uint64(0x55)},
 			},
 		},
 	},

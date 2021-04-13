@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytom/bytom/testcontrol"
 	"github.com/bytom/bytom/consensus"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/errors"
@@ -71,6 +72,10 @@ func TestBlockLocator(t *testing.T) {
 }
 
 func TestFastBlockSync(t *testing.T) {
+	if testcontrol.IgnoreTestTemporary {
+		return
+	}
+
 	tmp, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatalf("failed to create temporary data folder: %v", err)
