@@ -98,7 +98,6 @@ Flags:
   -h, --help                             help for node
       --log_file string                  Log output file (default "log")
       --log_level string                 Select log level(debug, info, warn, error or fatal)
-      --mining                           Enable mining
       --p2p.dial_timeout int             Set dial timeout (default 3)
       --p2p.handshake_timeout int        Set handshake timeout (default 30)
       --p2p.keep_dial string             Peers addresses try keeping connecting to, separated by ',' (for example "1.1.1.1:46657;2.2.2.2:46658")

@@ -360,9 +360,9 @@ func mockTxData(utxos []*account.UTXO, testAccount *account.Account) (*txbuilder
 
 		out := &types.TxOutput{}
 		if utxo.AssetID == *consensus.BTMAssetID {
-			out = types.NewTxOutput(utxo.AssetID, 100, utxo.ControlProgram, nil)
+			out = types.NewOriginalTxOutput(utxo.AssetID, 100, utxo.ControlProgram, nil)
 		} else {
-			out = types.NewTxOutput(utxo.AssetID, utxo.Amount, utxo.ControlProgram, nil)
+			out = types.NewOriginalTxOutput(utxo.AssetID, utxo.Amount, utxo.ControlProgram, nil)
 		}
 		tplBuilder.AddOutput(out)
 	}
@@ -389,7 +389,6 @@ func mockSingleBlock(tx *types.Tx) *types.Block {
 		BlockHeader: types.BlockHeader{
 			Version: 1,
 			Height:  1,
-			Bits:    2305843009230471167,
 		},
 		Transactions: []*types.Tx{config.GenesisTx(), tx},
 	}

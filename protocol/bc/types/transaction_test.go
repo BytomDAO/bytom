@@ -48,7 +48,7 @@ func TestTransaction(t *testing.T) {
 					NewSpendInput([][]byte{[]byte("arguments3"), []byte("arguments4")}, testutil.MustDecodeHash("fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409"), *consensus.BTMAssetID, 254354, 3, []byte("spendProgram"), []byte("stateData")),
 				},
 				Outputs: []*TxOutput{
-					NewTxOutput(testutil.MustDecodeAsset("a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf"), 254354, []byte("true"), []byte("stateData")),
+					NewOriginalTxOutput(testutil.MustDecodeAsset("a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf"), 254354, []byte("true"), []byte("stateData")),
 				},
 			}),
 			hex: strings.Join([]string{
@@ -115,8 +115,8 @@ func TestTransaction(t *testing.T) {
 					NewCoinbaseInput([]byte("arbitrary")),
 				},
 				Outputs: []*TxOutput{
-					NewTxOutput(*consensus.BTMAssetID, 254354, []byte("true"), []byte("stateData")),
-					NewTxOutput(*consensus.BTMAssetID, 254354, []byte("false"), []byte("stateData")),
+					NewOriginalTxOutput(*consensus.BTMAssetID, 254354, []byte("true"), []byte("stateData")),
+					NewOriginalTxOutput(*consensus.BTMAssetID, 254354, []byte("false"), []byte("stateData")),
 				},
 			}),
 			hex: strings.Join([]string{
@@ -193,7 +193,7 @@ func TestTransaction(t *testing.T) {
 
 func TestTransactionTrailingGarbage(t *testing.T) {
 	// validTxHex is a valid tx, we don't care what's inside as long as it's valid
-	validTxHex := `07010001012b00030a0908916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380a094a58d1d09000101010103010203010129000000000000000000000000000000000000000000000000000000000000000080a094a58d1d01010100`
+	validTxHex := `07010001012b00030a0908916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380a094a58d1d0900010101010301020301010029000000000000000000000000000000000000000000000000000000000000000080a094a58d1d01010100`
 	validTx := Tx{}
 	if err := validTx.UnmarshalText([]byte(validTxHex)); err != nil {
 		t.Fatal(err)
@@ -247,7 +247,7 @@ func TestInvalidIssuance(t *testing.T) {
 }
 
 func TestFuzzUnknownAssetVersion(t *testing.T) {
-	rawTx := `07010001012b00030a0908916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380a094a58d1d09000101010103010203010129000000000000000000000000000000000000000000000000000000000000000080a094a58d1d01010100`
+	rawTx := `07010001012b00030a0908916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380a094a58d1d0900010101010301020301010029000000000000000000000000000000000000000000000000000000000000000080a094a58d1d01010100`
 	want := Tx{}
 	if err := want.UnmarshalText([]byte(rawTx)); err != nil {
 		t.Fatal(err)
@@ -285,7 +285,7 @@ func BenchmarkTxWriteToTrue200(b *testing.B) {
 	tx := &Tx{}
 	for i := 0; i < 200; i++ {
 		tx.Inputs = append(tx.Inputs, NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil, nil))
-		tx.Outputs = append(tx.Outputs, NewTxOutput(bc.AssetID{}, 0, nil, nil))
+		tx.Outputs = append(tx.Outputs, NewOriginalTxOutput(bc.AssetID{}, 0, nil, nil))
 	}
 	for i := 0; i < b.N; i++ {
 		tx.writeTo(ioutil.Discard, 0)
@@ -296,7 +296,7 @@ func BenchmarkTxWriteToFalse200(b *testing.B) {
 	tx := &Tx{}
 	for i := 0; i < 200; i++ {
 		tx.Inputs = append(tx.Inputs, NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil, nil))
-		tx.Outputs = append(tx.Outputs, NewTxOutput(bc.AssetID{}, 0, nil, nil))
+		tx.Outputs = append(tx.Outputs, NewOriginalTxOutput(bc.AssetID{}, 0, nil, nil))
 	}
 	for i := 0; i < b.N; i++ {
 		tx.writeTo(ioutil.Discard, serRequired)
@@ -320,7 +320,7 @@ func BenchmarkTxInputWriteToFalse(b *testing.B) {
 }
 
 func BenchmarkTxOutputWriteToTrue(b *testing.B) {
-	output := NewTxOutput(bc.AssetID{}, 0, nil, nil)
+	output := NewOriginalTxOutput(bc.AssetID{}, 0, nil, nil)
 	ew := errors.NewWriter(ioutil.Discard)
 	for i := 0; i < b.N; i++ {
 		output.writeTo(ew)
@@ -328,7 +328,7 @@ func BenchmarkTxOutputWriteToTrue(b *testing.B) {
 }
 
 func BenchmarkTxOutputWriteToFalse(b *testing.B) {
-	output := NewTxOutput(bc.AssetID{}, 0, nil, nil)
+	output := NewOriginalTxOutput(bc.AssetID{}, 0, nil, nil)
 	ew := errors.NewWriter(ioutil.Discard)
 	for i := 0; i < b.N; i++ {
 		output.writeTo(ew)

@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/bytom/bytom/accesstoken"
-	"github.com/bytom/bytom/errors"
 	dbm "github.com/bytom/bytom/database/leveldb"
+	"github.com/bytom/bytom/errors"
 )
 
 func TestAuthenticate(t *testing.T) {

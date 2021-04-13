@@ -59,7 +59,7 @@ func MockTx(utxo *account.UTXO, testAccount *account.Account) (*txbuilder.Templa
 	if err := b.AddInput(txInput, sigInst); err != nil {
 		return nil, nil, err
 	}
-	out := types.NewTxOutput(*consensus.BTMAssetID, 100, []byte{byte(vm.OP_FAIL)}, nil)
+	out := types.NewOriginalTxOutput(*consensus.BTMAssetID, 100, []byte{byte(vm.OP_FAIL)}, nil)
 	if err := b.AddOutput(out); err != nil {
 		return nil, nil, err
 	}

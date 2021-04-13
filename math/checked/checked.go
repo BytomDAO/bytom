@@ -7,6 +7,9 @@ package checked
 import (
 	"errors"
 	"math"
+	"math/big"
+
+	"github.com/holiman/uint256"
 )
 
 var ErrOverflow = errors.New("arithmetic overflow")
@@ -265,4 +268,20 @@ func LshiftUint32(a, b uint32) (result uint32, ok bool) {
 		return 0, false
 	}
 	return a << uint(b), true
+}
+
+// NewUInt256 returns uint256
+// with an integer overflow check.
+func NewUInt256(a string) (num *uint256.Int, ok bool) {
+	bigIntNum, ok := new(big.Int).SetString(a, 10)
+	if !ok {
+		return nil, false
+	}
+
+	uint256Num, overflow := uint256.FromBig(bigIntNum)
+	if overflow {
+		return nil, false
+	}
+
+	return uint256Num, true
 }

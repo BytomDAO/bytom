@@ -9,13 +9,13 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/common"
 
+	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
-	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 const logModule = "leveldb"
@@ -60,6 +60,11 @@ func CalcBlockHeaderKey(height uint64, hash *bc.Hash) []byte {
 
 func CalcTxStatusKey(hash *bc.Hash) []byte {
 	return append(TxStatusPrefix, hash.Bytes()...)
+}
+
+// GetBlockHeader return the BlockHeader by given hash
+func (s *Store) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
+	return nil, nil
 }
 
 // GetBlock return the block by given hash
@@ -203,9 +208,17 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 }
 
 // SaveChainStatus save the core's newest status && delete old status
-func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint) error {
+func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint, contractView *state.ContractViewpoint) error {
 	batch := s.db.NewBatch()
 	if err := saveUtxoView(batch, view); err != nil {
+		return err
+	}
+
+	if err := deleteContractView(s.db, batch, contractView); err != nil {
+		return err
+	}
+
+	if err := saveContractView(s.db, batch, contractView); err != nil {
 		return err
 	}
 
@@ -216,5 +229,19 @@ func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint
 
 	batch.Set(BlockStoreKey, bytes)
 	batch.Write()
+	return nil
+}
+
+func (s *Store) GetCheckpoint(*bc.Hash) (*state.Checkpoint, error) {
+	return nil, nil
+}
+
+// GetCheckpointsByHeight return all checkpoints of specified block height
+func (s *Store) GetCheckpointsByHeight(uint64) ([]*state.Checkpoint, error) {
+	return nil, nil
+}
+
+// SaveCheckpoints bulk save multiple checkpoint
+func (s *Store) SaveCheckpoints(...*state.Checkpoint) error {
 	return nil
 }

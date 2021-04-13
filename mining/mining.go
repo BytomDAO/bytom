@@ -47,7 +47,7 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 	if err = builder.AddInput(types.NewCoinbaseInput(arbitrary), &txbuilder.SigningInstruction{}); err != nil {
 		return nil, err
 	}
-	if err = builder.AddOutput(types.NewTxOutput(*consensus.BTMAssetID, amount, script, nil)); err != nil {
+	if err = builder.AddOutput(types.NewOriginalTxOutput(*consensus.BTMAssetID, amount, script, nil)); err != nil {
 		return nil, err
 	}
 	_, txData, err := builder.Build()

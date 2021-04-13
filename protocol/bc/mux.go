@@ -10,7 +10,6 @@ func (Mux) typ() string { return "mux1" }
 func (m *Mux) writeForHash(w io.Writer) {
 	mustWriteForHash(w, m.Sources)
 	mustWriteForHash(w, m.Program)
-	mustWriteForHash(w, m.StateData)
 }
 
 // NewMux creates a new Mux.

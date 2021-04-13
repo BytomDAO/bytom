@@ -8,6 +8,11 @@ import (
 	"github.com/bytom/bytom/protocol/bc/types"
 )
 
+var (
+	ErrFoundHeaderByHash   = errors.New("can't find header by hash")
+	ErrFoundHeaderByHeight = errors.New("can't find header by height")
+)
+
 type Chain struct {
 	bestBlockHeader *types.BlockHeader
 	heightMap       map[uint64]*types.Block
@@ -22,6 +27,10 @@ func NewChain() *Chain {
 		blockMap:    map[bc.Hash]*types.Block{},
 		prevOrphans: make(map[bc.Hash]*types.Block),
 	}
+}
+
+func (c *Chain) LastIrreversibleHeader() *types.BlockHeader {
+	return nil
 }
 
 func (c *Chain) BestBlockHeader() *types.BlockHeader {

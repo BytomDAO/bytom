@@ -9,6 +9,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 )
 
@@ -24,7 +25,13 @@ var (
 	ErrDuplicateSubscribe = errors.New("event: subscribe duplicate type")
 )
 
-type NewMinedBlockEvent struct{ Block types.Block }
+type NewProposedBlockEvent struct{ Block types.Block }
+
+type BlockSignatureEvent struct {
+	BlockHash bc.Hash
+	Signature []byte
+	XPub      []byte
+}
 
 // TypeMuxEvent is a time-tagged notification pushed to subscribers.
 type TypeMuxEvent struct {

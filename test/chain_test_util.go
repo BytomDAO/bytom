@@ -208,7 +208,7 @@ func (t *ctTransaction) createTransaction(ctx *chainTestContext, txs []*types.Tx
 	}
 
 	for _, amount := range t.Outputs {
-		output := types.NewTxOutput(*consensus.BTMAssetID, amount, []byte{byte(vm.OP_TRUE)}, nil)
+		output := types.NewOriginalTxOutput(*consensus.BTMAssetID, amount, []byte{byte(vm.OP_TRUE)}, nil)
 		if err := builder.AddOutput(output); err != nil {
 			return nil, err
 		}
@@ -249,7 +249,7 @@ func (cfg *chainTestConfig) Run() error {
 		if err != nil {
 			return err
 		}
-		err = SolveAndUpdate(ctx.Chain, block)
+		_, err = ctx.Chain.ProcessBlock(block)
 		if err != nil && blk.Invalid {
 			continue
 		}
@@ -297,5 +297,6 @@ func isSpent(hash *bc.Hash, block *types.Block) bool {
 			}
 		}
 	}
+
 	return false
 }

@@ -2,13 +2,11 @@ package state
 
 import (
 	"errors"
-	"math/big"
 	"sort"
 	"sync"
 
 	"github.com/bytom/bytom/common"
 	"github.com/bytom/bytom/consensus"
-	"github.com/bytom/bytom/consensus/difficulty"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/testutil"
@@ -21,16 +19,11 @@ const approxNodesPerDay = 24 * 24
 // BlockNode represents a block within the block chain and is primarily used to
 // aid in selecting the best chain to be the main chain.
 type BlockNode struct {
-	Parent  *BlockNode // parent is the parent block for this node.
-	Hash    bc.Hash    // hash of the block.
-	Seed    *bc.Hash   // seed hash of the block
-	WorkSum *big.Int   // total amount of work in the chain up to
-
+	Parent                 *BlockNode // parent is the parent block for this node.
+	Hash                   bc.Hash    // hash of the block.
 	Version                uint64
 	Height                 uint64
 	Timestamp              uint64
-	Nonce                  uint64
-	Bits                   uint64
 	TransactionsMerkleRoot bc.Hash
 	TransactionStatusHash  bc.Hash
 }
@@ -41,24 +34,15 @@ func NewBlockNode(bh *types.BlockHeader, parent *BlockNode) (*BlockNode, error) 
 	}
 
 	node := &BlockNode{
-		Parent:    parent,
-		Hash:      bh.Hash(),
-		WorkSum:   difficulty.CalcWork(bh.Bits),
-		Version:   bh.Version,
-		Height:    bh.Height,
-		Timestamp: bh.Timestamp,
-		Nonce:     bh.Nonce,
-		Bits:      bh.Bits,
+		Parent:                 parent,
+		Hash:                   bh.Hash(),
+		Version:                bh.Version,
+		Height:                 bh.Height,
+		Timestamp:              bh.Timestamp,
 		TransactionsMerkleRoot: bh.TransactionsMerkleRoot,
 		TransactionStatusHash:  bh.TransactionStatusHash,
 	}
 
-	if bh.Height == 0 {
-		node.Seed = consensus.InitialSeed
-	} else {
-		node.Seed = parent.CalcNextSeed()
-		node.WorkSum = node.WorkSum.Add(parent.WorkSum, node.WorkSum)
-	}
 	return node, nil
 }
 
@@ -73,8 +57,6 @@ func (node *BlockNode) BlockHeader() *types.BlockHeader {
 		Height:            node.Height,
 		PreviousBlockHash: previousBlockHash,
 		Timestamp:         node.Timestamp,
-		Nonce:             node.Nonce,
-		Bits:              node.Bits,
 		BlockCommitment: types.BlockCommitment{
 			TransactionsMerkleRoot: node.TransactionsMerkleRoot,
 			TransactionStatusHash:  node.TransactionStatusHash,
@@ -92,30 +74,6 @@ func (node *BlockNode) CalcPastMedianTime() uint64 {
 
 	sort.Sort(common.TimeSorter(timestamps))
 	return timestamps[len(timestamps)/2]
-}
-
-// CalcNextBits calculate the bits for next block
-func (node *BlockNode) CalcNextBits() uint64 {
-	if node.Height%consensus.BlocksPerRetarget != 0 || node.Height == 0 {
-		return node.Bits
-	}
-
-	compareNode := node.Parent
-	for compareNode.Height%consensus.BlocksPerRetarget != 0 {
-		compareNode = compareNode.Parent
-	}
-	return difficulty.CalcNextRequiredDifficulty(node.BlockHeader(), compareNode.BlockHeader())
-}
-
-// CalcNextSeed calculate the seed for next block
-func (node *BlockNode) CalcNextSeed() *bc.Hash {
-	if node.Height == 0 {
-		return consensus.InitialSeed
-	}
-	if node.Height%consensus.SeedPerRetarget == 0 {
-		return &node.Hash
-	}
-	return node.Seed
 }
 
 // BlockIndex is the struct for help chain trace block chain as tree
