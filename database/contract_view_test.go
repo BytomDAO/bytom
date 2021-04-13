@@ -6,6 +6,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/google/uuid"
+
 	"github.com/bytom/bytom/crypto/sha3pool"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/protocol/bc"
@@ -13,6 +15,7 @@ import (
 )
 
 var (
+	dir     string
 	testDB  dbm.DB
 	program []byte
 	hash    [32]byte
@@ -21,7 +24,8 @@ var (
 )
 
 func init() {
-	testDB = dbm.NewDB("testdb", "leveldb", "temp")
+	dir = uuid.New().String()
+	testDB = dbm.NewDB("testdb", "leveldb", dir)
 	contract := "6a4c04626372704c01014c2820e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c0"
 	program, _ = hex.DecodeString(contract)
 	sha3pool.Sum256(hash[:], program)
@@ -67,7 +71,7 @@ func assertDBContractData(txID *bc.Hash, t *testing.T) {
 }
 
 func TestRollback(t *testing.T) {
-	defer os.RemoveAll("temp")
+	defer os.RemoveAll(dir)
 
 	contractView := state.NewContractViewpoint()
 	// rollback
@@ -83,7 +87,7 @@ func TestRollback(t *testing.T) {
 }
 
 func TestRollbackAndRegisterAgain(t *testing.T) {
-	defer os.RemoveAll("temp")
+	defer os.RemoveAll(dir)
 
 	contractView := state.NewContractViewpoint()
 	// rollback
@@ -97,23 +101,8 @@ func TestRollbackAndRegisterAgain(t *testing.T) {
 	assertDBContractData(txID1, t)
 }
 
-func TestRollbackAndRegisterByAnotherTx(t *testing.T) {
-	defer os.RemoveAll("temp")
-
-	contractView := state.NewContractViewpoint()
-	// rollback
-	contractView.DetachEntries[hash] = append(txID1.Bytes(), program...)
-	// register by another transaction
-	contractView.AttachEntries[hash] = append(txID2.Bytes(), program...)
-	if err := setContractView(contractView); err != nil {
-		t.Errorf("set contract view failed")
-	}
-
-	assertDBContractData(txID2, t)
-}
-
 func TestRepeatRegisterAndRollback(t *testing.T) {
-	defer os.RemoveAll("temp")
+	defer os.RemoveAll(dir)
 
 	// repeat register
 	contractView := state.NewContractViewpoint()
@@ -132,4 +121,19 @@ func TestRepeatRegisterAndRollback(t *testing.T) {
 	}
 
 	assertDBContractData(txID1, t)
+}
+
+func TestRollbackAndRegisterByAnotherTx(t *testing.T) {
+	defer os.RemoveAll(dir)
+
+	contractView := state.NewContractViewpoint()
+	// rollback
+	contractView.DetachEntries[hash] = append(txID1.Bytes(), program...)
+	// register by another transaction
+	contractView.AttachEntries[hash] = append(txID2.Bytes(), program...)
+	if err := setContractView(contractView); err != nil {
+		t.Errorf("set contract view failed")
+	}
+
+	assertDBContractData(txID2, t)
 }
