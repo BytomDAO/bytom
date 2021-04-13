@@ -53,14 +53,14 @@ func makeSecretConnPair(tb testing.TB) (fooSecConn, barSecConn *SecretConnection
 	}
 
 	barSecConnTask := func(i int) (val interface{}, err error, about bool) {
-		barSecConn, err = MakeSecretConnection(barConn, fooPrvKey)
+		barSecConn, err = MakeSecretConnection(barConn, barPrvKey)
 		if err != nil {
 			return nil, err, false
 		}
 
-		remotePubBytes := fooSecConn.RemotePubKey()
+		remotePubBytes := barSecConn.RemotePubKey()
 		if bytes.Equal(remotePubBytes[:], fooPubKey[:]) {
-			return nil, fmt.Errorf("Unexpected barSecConn.RemotePubKey.  Expected %v, got %v", barPubKey, fooSecConn.RemotePubKey()), false
+			return nil, fmt.Errorf("Unexpected barSecConn.RemotePubKey.  Expected %v, got %v", fooPubKey, barSecConn.RemotePubKey()), false
 		}
 		return nil, nil, false
 	}
