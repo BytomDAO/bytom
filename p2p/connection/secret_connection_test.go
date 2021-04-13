@@ -107,7 +107,6 @@ func TestSecretConnectionReadWrite(t *testing.T) {
 			nodePrvKey := crypto.GenPrivKeyEd25519()
 			nodeSecretConn, err := MakeSecretConnection(nodeConn, nodePrvKey)
 			if err != nil {
-				// t.Errorf("Failed to establish SecretConnection for node: %v", err)
 				return nil, err, false
 			}
 
