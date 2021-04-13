@@ -48,7 +48,11 @@ func (oc *OutputCommitment) readFrom(r *blockchain.Reader, assetVersion uint64) 
 			return fmt.Errorf("unrecognized VM version %d for asset version 1", oc.VMVersion)
 		}
 		oc.ControlProgram, err = blockchain.ReadVarstr31(r)
-		return errors.Wrap(err, "reading control program")
+		if err != nil {
+			return errors.Wrap(err, "reading control program")
+		}
+		oc.StateData, err = blockchain.ReadVarstr31(r)
+		return errors.Wrap(err, "reading state data")
 	}
 	return nil
 }

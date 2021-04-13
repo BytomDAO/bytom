@@ -83,7 +83,6 @@ message Mux {
   Program                   program              = 2;
   repeated ValueDestination witness_destinations = 3; // outputs, retirements, and muxes
   repeated bytes            witness_arguments    = 4;
-  StateData                 state_data           = 5;
 }
 
 message Coinbase {
