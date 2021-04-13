@@ -299,15 +299,6 @@ func TestAddTransaction(t *testing.T) {
 			t.Errorf("case %d: pool: got %v want %v", i, c.before.pool, c.after.pool)
 		}
 		if !testutil.DeepEqual(c.before.utxo, c.after.utxo) {
-			fmt.Println("before utxos")
-			for hash, txType := range c.before.utxo {
-				fmt.Println(hash.String(), ":", txType)
-			}
-
-			fmt.Println("after utxos")
-			for hash, txType := range c.after.utxo {
-				fmt.Println(hash.String(), ":", txType.String())
-			}
 			t.Errorf("case %d: utxo: got %v want %v", i, c.before.utxo, c.after.utxo)
 		}
 	}

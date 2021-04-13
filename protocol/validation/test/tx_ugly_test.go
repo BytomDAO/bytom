@@ -128,7 +128,6 @@ func TestValidateUglyTx(t *testing.T) {
 				Outputs: []*types.TxOutput{},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "input output unbalance",
@@ -153,7 +152,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "input output unbalance",
@@ -179,7 +177,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "input output unbalance",
@@ -205,7 +202,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "input output unbalance",
@@ -231,7 +227,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "input output unbalance",
@@ -257,7 +252,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "input output unbalance",
@@ -283,7 +277,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "input output unbalance",
@@ -304,7 +297,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "input output unbalance",
@@ -326,7 +318,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "input output unbalance",
@@ -348,7 +339,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "input output unbalance",
@@ -370,7 +360,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "input output unbalance",
@@ -392,7 +381,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "input output unbalance",
@@ -414,7 +402,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "input output unbalance",
@@ -432,7 +419,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "input output unbalance",
@@ -450,7 +436,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "input output unbalance",
@@ -463,7 +448,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "overflow",
@@ -484,7 +468,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "overflow",
@@ -509,7 +492,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "overflow",
@@ -544,7 +526,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "overflow",
@@ -573,7 +554,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "overflow",
@@ -591,7 +571,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "overflow",
@@ -609,7 +588,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "overflow",
@@ -631,7 +609,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "overflow",
@@ -653,7 +630,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "overflow",
@@ -673,7 +649,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "verify signature fail",
@@ -691,7 +666,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "verify signature fail",
@@ -709,7 +683,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "verify signature fail",
@@ -731,7 +704,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "verify signature fail",
@@ -753,7 +725,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "verify signature fail",
@@ -780,7 +751,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "verify signature fail",
@@ -807,7 +777,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "double spend",
@@ -828,7 +797,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 		{
 			category: "double spend",
@@ -855,7 +823,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			
 		},
 	}
 

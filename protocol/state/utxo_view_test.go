@@ -395,12 +395,10 @@ func TestDetachBlock(t *testing.T) {
 			continue
 		}
 		if !testutil.DeepEqual(c.inputView, c.fetchView) {
-			fmt.Println("inputView")
 			for hash, entry := range c.inputView.Entries {
 				fmt.Println(hash.String(), ":", entry.String())
 			}
 
-			fmt.Println("fetchView")
 			for hash, entry := range c.fetchView.Entries {
 				fmt.Println(hash.String(), ":", entry.String())
 			}
