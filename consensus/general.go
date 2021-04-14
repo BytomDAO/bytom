@@ -73,7 +73,21 @@ func IsBech32SegwitPrefix(prefix string, params *Params) bool {
 	return prefix == params.Bech32HRPSegwit+"1"
 }
 
-// Checkpoint identifies a known good point in the block chain.  Using
+type DPOSConfig struct {
+	BlockTimeInterval uint64 // milliseconds, the block time interval for producing a block
+	BlockNumEachNode  uint64
+}
+
+// Checkpoint identifies a known gofor {
+//		select {
+//		case <-bp.quit:
+//			return
+//		case <-ticker.C:
+//		}
+//		if err := bp.Propose(); err != nil {
+//			return
+//		}
+//	}od point in the block chain.  Using
 // checkpoints allows a few optimizations for old blocks during initial download
 // and also prevents forks from old blocks.
 type Checkpoint struct {
@@ -93,6 +107,8 @@ type Params struct {
 	// as one method to discover peers.
 	DNSSeeds    []string
 	Checkpoints []Checkpoint
+
+	DPOSConfig
 }
 
 // ActiveNetParams is ...
