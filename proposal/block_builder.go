@@ -42,25 +42,21 @@ func (bd *BlockBuilder) Build(timeStamp uint64) (*types.Block, error) {
 		Transactions: []*types.Tx{nil},
 	}
 
-	txStatus, err := bd.applyTransactions(block)
+	err := bd.applyTransactions(block)
 	if err != nil {
 		return nil, err
 	}
-	err = bd.finalize(block, txStatus)
+	err = bd.finalize(block)
 	if err != nil {
 		return nil, err
 	}
 	return block, nil
 }
 
-func (bd *BlockBuilder) applyTransactions(block *types.Block) (txStatus *bc.TransactionStatus, err error) {
+func (bd *BlockBuilder) applyTransactions(block *types.Block) (err error) {
 	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: block.Height}}
 
 	view := state.NewUtxoViewpoint()
-	txStatus = bc.NewTransactionStatus()
-	if err := txStatus.SetStatus(0, false); err != nil {
-		return
-	}
 	gasUsed := uint64(0)
 	txFee := uint64(0)
 
@@ -69,7 +65,6 @@ func (bd *BlockBuilder) applyTransactions(block *types.Block) (txStatus *bc.Tran
 	sort.Sort(byTime(txs))
 	for _, txDesc := range txs {
 		tx := txDesc.Tx.Tx
-		gasOnlyTx := false
 
 		if err := bd.chain.GetTransactionsUtxo(view, []*bc.Tx{tx}); err != nil {
 			removeTransactionForError(txPool, &tx.ID, err)
@@ -82,20 +77,15 @@ func (bd *BlockBuilder) applyTransactions(block *types.Block) (txStatus *bc.Tran
 				removeTransactionForError(txPool, &tx.ID, err)
 				continue
 			}
-			gasOnlyTx = true
 		}
 
 		if gasUsed+uint64(gasStatus.GasUsed) > consensusConfig.MaxBlockGas {
 			break
 		}
 
-		if err := view.ApplyTransaction(bcBlock, tx, gasOnlyTx); err != nil {
+		if err := view.ApplyTransaction(bcBlock, tx); err != nil {
 			removeTransactionForError(txPool, &tx.ID, err)
 			continue
-		}
-
-		if err := txStatus.SetStatus(len(block.Transactions), gasOnlyTx); err != nil {
-			return nil, err
 		}
 
 		block.Transactions = append(block.Transactions, txDesc.Tx)
@@ -106,12 +96,12 @@ func (bd *BlockBuilder) applyTransactions(block *types.Block) (txStatus *bc.Tran
 	// create coinbase transaction
 	block.Transactions[0], err = createCoinbaseTx(bd.accountManager, txFee, block.Height)
 	if err != nil {
-		return nil, errors.Wrap(err, "fail on createCoinbaseTx")
+		return errors.Wrap(err, "fail on createCoinbaseTx")
 	}
-	return
+	return nil
 }
 
-func (bd *BlockBuilder) finalize(block *types.Block, txStatus *bc.TransactionStatus) error {
+func (bd *BlockBuilder) finalize(block *types.Block) error {
 	var err error
 	var txEntries []*bc.Tx
 	for _, tx := range block.Transactions {
@@ -122,7 +112,6 @@ func (bd *BlockBuilder) finalize(block *types.Block, txStatus *bc.TransactionSta
 		return err
 	}
 
-	block.BlockHeader.BlockCommitment.TransactionStatusHash, err = types.TxStatusMerkleRoot(txStatus.VerifyStatus)
 	return err
 }
 
@@ -154,7 +143,18 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 	if err = builder.AddInput(types.NewCoinbaseInput(arbitrary), &txbuilder.SigningInstruction{}); err != nil {
 		return nil, err
 	}
-	if err = builder.AddOutput(types.NewTxOutput(*consensusConfig.BTMAssetID, amount, script)); err != nil {
+	// TODO: calculate block reward
+	if err = builder.AddOutput(&types.TxOutput{
+		AssetVersion: 1,
+		OutputCommitment: types.OutputCommitment{
+			AssetAmount: bc.AssetAmount{
+				AssetId: consensusConfig.BTMAssetID,
+				Amount:  amount,
+			},
+			VMVersion:      1,
+			ControlProgram: script,
+		},
+	}); err != nil {
 		return nil, err
 	}
 	_, txData, err := builder.Build()
