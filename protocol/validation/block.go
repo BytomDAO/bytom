@@ -76,7 +76,7 @@ func ValidateBlockHeader(b *bc.Block, parent *state.BlockNode) error {
 }
 
 // ValidateBlock validates a block and the transactions within.
-func ValidateBlock(b *bc.Block, parent *state.BlockNode) error {
+func ValidateBlock(b *bc.Block, parent *state.BlockNode, converter ProgramConverterFunc) error {
 	startTime := time.Now()
 	if err := ValidateBlockHeader(b, parent); err != nil {
 		return err
@@ -84,7 +84,7 @@ func ValidateBlock(b *bc.Block, parent *state.BlockNode) error {
 
 	blockGasSum := uint64(0)
 	coinbaseAmount := consensus.BlockSubsidy(b.BlockHeader.Height)
-	validateResults := ValidateTxs(b.Transactions, b)
+	validateResults := ValidateTxs(b.Transactions, b, converter)
 	for i, validateResult := range validateResults {
 		if validateResult.err != nil {
 			return errors.Wrapf(validateResult.err, "validate of transaction %d of %d, gas_valid:%v", i, len(b.Transactions), validateResult.gasStatus.GasValid)

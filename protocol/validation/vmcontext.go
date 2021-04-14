@@ -65,7 +65,7 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 
 	result := &vm.Context{
 		VMVersion: prog.VmVersion,
-		Code:      witnessProgram(prog.Code),
+		Code:      convertProgram(prog.Code, vs.converter),
 		Arguments: args,
 
 		EntryID: entryID.Bytes(),
@@ -85,7 +85,7 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 	return result
 }
 
-func witnessProgram(prog []byte) []byte {
+func convertProgram(prog []byte, converter ProgramConverterFunc) []byte {
 	if segwit.IsP2WPKHScript(prog) {
 		if witnessProg, err := segwit.ConvertP2PKHSigProgram([]byte(prog)); err == nil {
 			return witnessProg
@@ -93,6 +93,10 @@ func witnessProgram(prog []byte) []byte {
 	} else if segwit.IsP2WSHScript(prog) {
 		if witnessProg, err := segwit.ConvertP2SHProgram([]byte(prog)); err == nil {
 			return witnessProg
+		}
+	} else if segwit.IsCallBCRPScript(prog) {
+		if contractProg, err := converter(prog); err == nil {
+			return contractProg
 		}
 	}
 	return prog

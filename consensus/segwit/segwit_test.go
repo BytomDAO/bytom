@@ -163,3 +163,43 @@ func TestIsBCRPScript(t *testing.T) {
 		}
 	}
 }
+
+func TestIsCallBCRPScript(t *testing.T) {
+	tests := []struct {
+		program  string
+		expected bool
+	}{
+		{
+			program:  "",
+			expected: false,
+		},
+		{
+			program:  "6a4c04626372704c01014c2820e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c0",
+			expected: false,
+		},
+		{
+			program:  "00204e4f02d43bf50171f7f25d046b7f016002da410fc00d2e8902e7b170c98cf946",
+			expected: false,
+		},
+		{
+			program:  "514c204e4f02d43bf50171f7f25d046b7f016002da410fc00d2e8902e7b170c98cf946",
+			expected: false,
+		},
+		{
+			program:  "51204e4f02d43bf50171f7f25d046b7f016002da410fc00d2e8902e7b170c98cf946",
+			expected: true,
+		},
+	}
+
+	for i, test := range tests {
+		program, err := hex.DecodeString(test.program)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expected := IsCallBCRPScript(program)
+		if expected != test.expected {
+			t.Errorf("TestIsCallBCRPScript #%d failed: got %v want %v", i, expected, test.expected)
+		}
+	}
+}

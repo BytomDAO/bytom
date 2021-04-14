@@ -95,6 +95,25 @@ func IsBCRPScript(prog []byte) bool {
 	return true
 }
 
+// IsCallBCRPScript checks if a control program is call contract registered by bytom contract register protocol
+// call BCRP script format: OP_1 + OP_DATA_32 + SHA3-256(contract)
+func IsCallBCRPScript(prog []byte) bool {
+	insts, err := vm.ParseProgram(prog)
+	if err != nil {
+		return false
+	}
+
+	if len(insts) != 2 {
+		return false
+	}
+
+	if insts[0].Op != vm.OP_1 {
+		return false
+	}
+
+	return insts[1].Op == vm.OP_DATA_32 && len(insts[1].Data) == consensus.BCRPContractHashDataSize
+}
+
 func ConvertP2PKHSigProgram(prog []byte) ([]byte, error) {
 	insts, err := vm.ParseProgram(prog)
 	if err != nil {

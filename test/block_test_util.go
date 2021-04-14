@@ -29,7 +29,7 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 
 	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: preBlockHeader.Height + 1}}
 	for _, tx := range txs {
-		gasStatus, err := validation.ValidateTx(tx.Tx, bcBlock)
+		gasStatus, err := validation.ValidateTx(tx.Tx, bcBlock, chain.ProgramConverter)
 		if err != nil {
 			continue
 		}
