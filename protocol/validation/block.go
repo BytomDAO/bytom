@@ -68,6 +68,7 @@ func ValidateBlockHeader(b *bc.Block, parent *state.BlockNode) error {
 	if parent.Hash != *b.PreviousBlockId {
 		return errors.WithDetailf(errMismatchedBlock, "previous block ID %x, current block wants %x", parent.Hash.Bytes(), b.PreviousBlockId.Bytes())
 	}
+
 	if err := checkBlockTime(b, parent); err != nil {
 		return err
 	}
@@ -83,15 +84,10 @@ func ValidateBlock(b *bc.Block, parent *state.BlockNode) error {
 
 	blockGasSum := uint64(0)
 	coinbaseAmount := consensus.BlockSubsidy(b.BlockHeader.Height)
-	b.TransactionStatus = bc.NewTransactionStatus()
 	validateResults := ValidateTxs(b.Transactions, b)
 	for i, validateResult := range validateResults {
-		if !validateResult.gasStatus.GasValid {
-			return errors.Wrapf(validateResult.err, "validate of transaction %d of %d", i, len(b.Transactions))
-		}
-
-		if err := b.TransactionStatus.SetStatus(i, validateResult.err != nil); err != nil {
-			return err
+		if validateResult.err != nil {
+			return errors.Wrapf(validateResult.err, "validate of transaction %d of %d, gas_valid:%v", i, len(b.Transactions), validateResult.gasStatus.GasValid)
 		}
 
 		coinbaseAmount += validateResult.gasStatus.BTMValue
@@ -110,14 +106,6 @@ func ValidateBlock(b *bc.Block, parent *state.BlockNode) error {
 	}
 	if txMerkleRoot != *b.TransactionsRoot {
 		return errors.WithDetailf(errMismatchedMerkleRoot, "transaction id merkle root")
-	}
-
-	txStatusHash, err := types.TxStatusMerkleRoot(b.TransactionStatus.VerifyStatus)
-	if err != nil {
-		return errors.Wrap(err, "computing transaction status merkle root")
-	}
-	if txStatusHash != *b.TransactionStatusHash {
-		return errors.WithDetailf(errMismatchedMerkleRoot, "transaction status merkle root")
 	}
 
 	log.WithFields(log.Fields{

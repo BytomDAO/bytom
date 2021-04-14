@@ -30,15 +30,6 @@ func GenesisTx() *types.Tx {
 
 func mainNetGenesisBlock() *types.Block {
 	tx := GenesisTx()
-	txStatus := bc.NewTransactionStatus()
-	if err := txStatus.SetStatus(0, false); err != nil {
-		log.Panicf(err.Error())
-	}
-	txStatusHash, err := types.TxStatusMerkleRoot(txStatus.VerifyStatus)
-	if err != nil {
-		log.Panicf("fail on calc genesis tx status merkle root")
-	}
-
 	merkleRoot, err := types.TxMerkleRoot([]*bc.Tx{tx.Tx})
 	if err != nil {
 		log.Panicf("fail on calc genesis tx merkel root")
@@ -51,7 +42,6 @@ func mainNetGenesisBlock() *types.Block {
 			Timestamp: 1524549600,
 			BlockCommitment: types.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
-				TransactionStatusHash:  txStatusHash,
 			},
 		},
 		Transactions: []*types.Tx{tx},
@@ -61,15 +51,6 @@ func mainNetGenesisBlock() *types.Block {
 
 func testNetGenesisBlock() *types.Block {
 	tx := GenesisTx()
-	txStatus := bc.NewTransactionStatus()
-	if err := txStatus.SetStatus(0, false); err != nil {
-		log.Panicf(err.Error())
-	}
-	txStatusHash, err := types.TxStatusMerkleRoot(txStatus.VerifyStatus)
-	if err != nil {
-		log.Panicf("fail on calc genesis tx status merkle root")
-	}
-
 	merkleRoot, err := types.TxMerkleRoot([]*bc.Tx{tx.Tx})
 	if err != nil {
 		log.Panicf("fail on calc genesis tx merkel root")
@@ -82,7 +63,6 @@ func testNetGenesisBlock() *types.Block {
 			Timestamp: 1528945000,
 			BlockCommitment: types.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
-				TransactionStatusHash:  txStatusHash,
 			},
 		},
 		Transactions: []*types.Tx{tx},
@@ -92,15 +72,6 @@ func testNetGenesisBlock() *types.Block {
 
 func soloNetGenesisBlock() *types.Block {
 	tx := GenesisTx()
-	txStatus := bc.NewTransactionStatus()
-	if err := txStatus.SetStatus(0, false); err != nil {
-		log.Panicf(err.Error())
-	}
-	txStatusHash, err := types.TxStatusMerkleRoot(txStatus.VerifyStatus)
-	if err != nil {
-		log.Panicf("fail on calc genesis tx status merkle root")
-	}
-
 	merkleRoot, err := types.TxMerkleRoot([]*bc.Tx{tx.Tx})
 	if err != nil {
 		log.Panicf("fail on calc genesis tx merkel root")
@@ -113,7 +84,6 @@ func soloNetGenesisBlock() *types.Block {
 			Timestamp: 1528945000,
 			BlockCommitment: types.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
-				TransactionStatusHash:  txStatusHash,
 			},
 		},
 		Transactions: []*types.Tx{tx},

@@ -30,7 +30,7 @@ func TestNewBlockNode(t *testing.T) {
 			},
 			parentNode: &BlockNode{},
 			wantBlockNode: &BlockNode{
-				Hash:   testutil.MustDecodeHash("39dee75363127a2857f554d2ad2706eb876407a2e09fbe0338683ca4ad4c2f90"),
+				Hash:    testutil.MustDecodeHash("4e88a20cc3809a5f344d500cf0fd83bec9af89f6858c71cf2e5e46bb6ba904c3"),
 				Parent: &BlockNode{},
 			},
 		},
@@ -41,8 +41,8 @@ func TestNewBlockNode(t *testing.T) {
 			},
 			parentNode: &BlockNode{},
 			wantBlockNode: &BlockNode{
-				Hash:   testutil.MustDecodeHash("7b23bfb7e3f44022822cecb168f788bca03f9c953ab110e6f6d49e34fdeb4db5"),
-				Height: uint64(100),
+				Hash:    testutil.MustDecodeHash("387f6a7a6f0560410d83cde6f723aae6d86ef85c1cd835af89531ea4b648ddc6"),
+				Height:  uint64(100),
 				Parent: &BlockNode{},
 			},
 		},
@@ -53,8 +53,8 @@ func TestNewBlockNode(t *testing.T) {
 			},
 			parentNode: &BlockNode{},
 			wantBlockNode: &BlockNode{
-				Hash:   testutil.MustDecodeHash("7b23bfb7e3f44022822cecb168f788bca03f9c953ab110e6f6d49e34fdeb4db5"),
-				Height: uint64(100),
+				Hash:    testutil.MustDecodeHash("387f6a7a6f0560410d83cde6f723aae6d86ef85c1cd835af89531ea4b648ddc6"),
+				Height:  uint64(100),
 				Parent: &BlockNode{},
 			},
 		},

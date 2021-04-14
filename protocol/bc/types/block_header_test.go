@@ -21,7 +21,6 @@ func TestBlockHeader(t *testing.T) {
 		PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
 		Timestamp:         1522908275,
 		BlockCommitment: BlockCommitment{
-			TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
 			TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 		},
 	}
@@ -32,9 +31,8 @@ func TestBlockHeader(t *testing.T) {
 		"eab01a", // block height
 		"c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0", // prev block hash
 		"f3f896d605", // timestamp
-		"40",         // commitment extensible field length
+		"20",         // commitment extensible field length
 		"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
-		"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
 	}, "")
 
 	gotHex := testutil.Serialize(t, blockHeader)
@@ -71,7 +69,6 @@ func TestMarshalBlockHeader(t *testing.T) {
 				Timestamp:         1528945000,
 				BlockCommitment: BlockCommitment{
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
-					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
 				},
 			},
 			wantHex: strings.Join([]string{
@@ -80,9 +77,8 @@ func TestMarshalBlockHeader(t *testing.T) {
 				"904e", // block height
 				"c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0", // prev block hash
 				"e8b287d905", // timestamp
-				"40",         // commitment extensible field length
+				"20",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
-				"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
 			}, ""),
 		},
 		{
@@ -93,7 +89,6 @@ func TestMarshalBlockHeader(t *testing.T) {
 				Timestamp:         1528945000,
 				BlockCommitment: BlockCommitment{
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
-					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
 				},
 			},
 			wantError: blockchain.ErrRange,
@@ -106,7 +101,6 @@ func TestMarshalBlockHeader(t *testing.T) {
 				Timestamp:         9223372036854775808, // Timestamp > MaxInt64(9223372036854775807)
 				BlockCommitment: BlockCommitment{
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
-					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
 				},
 			},
 			wantError: blockchain.ErrRange,
@@ -124,9 +118,8 @@ func TestMarshalBlockHeader(t *testing.T) {
 				"ffffffffffffffff7f", // block height
 				"c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0", // prev block hash
 				"e8b287d905", // timestamp
-				"40",         // commitment extensible field length
+				"20",         // commitment extensible field length
 				"0000000000000000000000000000000000000000000000000000000000000000", // transactions merkle root
-				"0000000000000000000000000000000000000000000000000000000000000000", // tx status hash
 			}, ""),
 		},
 	}
@@ -167,9 +160,8 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				"904e", // block height
 				"c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0", // prev block hash
 				"e8b287d905", // timestamp
-				"40",         // commitment extensible field length
+				"20",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
-				"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
 			}, ""),
 			wantBlockHeader: &BlockHeader{
 				Version:           1,
@@ -178,7 +170,6 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				Timestamp:         1528945000,
 				BlockCommitment: BlockCommitment{
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
-					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
 				},
 			},
 		},
@@ -189,9 +180,8 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				"904e", // block height
 				"c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0", // prev block hash
 				"e8b287d905", // timestamp
-				"40",         // commitment extensible field length
+				"20",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
-				"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
 			}, ""),
 			wantBlockHeader: &BlockHeader{
 				Version:           1,
@@ -200,7 +190,6 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				Timestamp:         1528945000,
 				BlockCommitment: BlockCommitment{
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
-					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
 				},
 			},
 		},
@@ -211,9 +200,8 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				"904e", // block height
 				"c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0", // prev block hash
 				"e8b287d905", // timestamp
-				"40",         // commitment extensible field length
+				"20",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
-				"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
 			}, ""),
 			wantError: fmt.Errorf("unsupported serialization flags 0x02"),
 		},
@@ -224,9 +212,8 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				"908", // block height (error with odd length)
 				"c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0", // prev block hash
 				"e8b287d905", // timestamp
-				"40",         // commitment extensible field length
+				"20",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
-				"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
 			}, ""),
 			wantError: hex.ErrLength,
 		},
@@ -237,9 +224,8 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				"ffffffffffffffffff", // block height
 				"c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0", // prev block hash
 				"e8b287d905", // timestamp
-				"40",         // commitment extensible field length
+				"20",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
-				"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
 			}, ""),
 			wantError: errors.New("binary: varint overflows a 64-bit integer"),
 		},
@@ -250,9 +236,8 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				"ffffffffffffffff7f", // block height
 				"c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0", // prev block hash
 				"e8b287d905", // timestamp
-				"40",         // commitment extensible field length
+				"20",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
-				"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
 			}, ""),
 			wantBlockHeader: &BlockHeader{
 				Version:           1,
@@ -261,7 +246,6 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				Timestamp:         1528945000,
 				BlockCommitment: BlockCommitment{
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
-					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
 				},
 			},
 		},

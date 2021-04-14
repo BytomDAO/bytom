@@ -2,7 +2,6 @@ package state
 
 import (
 	"errors"
-
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/protocol/bc"
@@ -20,14 +19,11 @@ func NewUtxoViewpoint() *UtxoViewpoint {
 	}
 }
 
-func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx, statusFail bool) error {
+func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx) error {
 	for _, prevout := range tx.SpentOutputIDs {
-		spentOutput, err := tx.Output(prevout)
+		_, err := tx.Output(prevout)
 		if err != nil {
 			return err
-		}
-		if statusFail && *spentOutput.Source.Value.AssetId != *consensus.BTMAssetID {
-			continue
 		}
 
 		entry, ok := view.Entries[prevout]
@@ -44,12 +40,9 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx, statusFa
 	}
 
 	for _, id := range tx.TxHeader.ResultIds {
-		output, err := tx.Output(*id)
+		_, err := tx.Output(*id)
 		if err != nil {
 			// error due to it's a retirement, utxo doesn't care this output type so skip it
-			continue
-		}
-		if statusFail && *output.Source.Value.AssetId != *consensus.BTMAssetID {
 			continue
 		}
 
@@ -62,13 +55,9 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx, statusFa
 	return nil
 }
 
-func (view *UtxoViewpoint) ApplyBlock(block *bc.Block, txStatus *bc.TransactionStatus) error {
-	for i, tx := range block.Transactions {
-		statusFail, err := txStatus.GetStatus(i)
-		if err != nil {
-			return err
-		}
-		if err := view.ApplyTransaction(block, tx, statusFail); err != nil {
+func (view *UtxoViewpoint) ApplyBlock(block *bc.Block) error {
+	for _, tx := range block.Transactions {
+		if err := view.ApplyTransaction(block, tx); err != nil {
 			return err
 		}
 	}
@@ -80,14 +69,11 @@ func (view *UtxoViewpoint) CanSpend(hash *bc.Hash) bool {
 	return entry != nil && !entry.Spent
 }
 
-func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
+func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx) error {
 	for _, prevout := range tx.SpentOutputIDs {
-		spentOutput, err := tx.Output(prevout)
+		_, err := tx.Output(prevout)
 		if err != nil {
 			return err
-		}
-		if statusFail && *spentOutput.Source.Value.AssetId != *consensus.BTMAssetID {
-			continue
 		}
 
 		entry, ok := view.Entries[prevout]
@@ -102,12 +88,9 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 	}
 
 	for _, id := range tx.TxHeader.ResultIds {
-		output, err := tx.Output(*id)
+		_, err := tx.Output(*id)
 		if err != nil {
 			// error due to it's a retirement, utxo doesn't care this output type so skip it
-			continue
-		}
-		if statusFail && *output.Source.Value.AssetId != *consensus.BTMAssetID {
 			continue
 		}
 
@@ -116,13 +99,9 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 	return nil
 }
 
-func (view *UtxoViewpoint) DetachBlock(block *bc.Block, txStatus *bc.TransactionStatus) error {
+func (view *UtxoViewpoint) DetachBlock(block *bc.Block) error {
 	for i := len(block.Transactions) - 1; i >= 0; i-- {
-		statusFail, err := txStatus.GetStatus(i)
-		if err != nil {
-			return err
-		}
-		if err := view.DetachTransaction(block.Transactions[i], statusFail); err != nil {
+		if err := view.DetachTransaction(block.Transactions[i]); err != nil {
 			return err
 		}
 	}

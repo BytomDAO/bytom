@@ -146,7 +146,7 @@ func isValidJSON(b []byte) bool {
 	return err == nil
 }
 
-func (w *Wallet) buildAnnotatedTransaction(orig *types.Tx, b *types.Block, statusFail bool, indexInBlock int) *query.AnnotatedTx {
+func (w *Wallet) buildAnnotatedTransaction(orig *types.Tx, b *types.Block, indexInBlock int) *query.AnnotatedTx {
 	tx := &query.AnnotatedTx{
 		ID:                     orig.ID,
 		Timestamp:              b.Timestamp,
@@ -156,7 +156,6 @@ func (w *Wallet) buildAnnotatedTransaction(orig *types.Tx, b *types.Block, statu
 		BlockTransactionsCount: uint32(len(b.Transactions)),
 		Inputs:                 make([]*query.AnnotatedInput, 0, len(orig.Inputs)),
 		Outputs:                make([]*query.AnnotatedOutput, 0, len(orig.Outputs)),
-		StatusFail:             statusFail,
 		Size:                   orig.SerializedSize,
 	}
 	for i := range orig.Inputs {

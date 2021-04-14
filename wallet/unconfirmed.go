@@ -39,7 +39,7 @@ func (w *Wallet) AddUnconfirmedTx(txD *protocol.TxDesc) {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("wallet fail on saveUnconfirmedTx")
 	}
 
-	utxos := txOutToUtxos(txD.Tx, txD.StatusFail, 0)
+	utxos := txOutToUtxos(txD.Tx, 0)
 	utxos = w.filterAccountUtxo(utxos)
 	w.AccountMgr.AddUnconfirmedUtxo(utxos)
 }

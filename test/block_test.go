@@ -1,17 +1,16 @@
 // +build functional
 
 package test
-
 import (
 	"os"
 	"testing"
 	"time"
 
 	"github.com/bytom/bytom/consensus"
+	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/vm"
-	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 func TestBlockHeader(t *testing.T) {
@@ -29,8 +28,6 @@ func TestBlockHeader(t *testing.T) {
 		prevHeight func() uint64
 		timestamp  func() uint64
 		prevHash   func() *bc.Hash
-		bits       func() uint64
-		solve      bool
 		valid      bool
 	}{
 		{
@@ -39,8 +36,6 @@ func TestBlockHeader(t *testing.T) {
 			prevHeight: chain.BestBlockHeight,
 			timestamp:  func() uint64 { return chain.BestBlockHeader().Timestamp + 1 },
 			prevHash:   chain.BestBlockHash,
-			bits:       func() uint64 { return chain.BestBlockHeader().Bits },
-			solve:      true,
 			valid:      true,
 		},
 		{
@@ -49,8 +44,6 @@ func TestBlockHeader(t *testing.T) {
 			prevHeight: func() uint64 { return chain.BestBlockHeight() + 1 },
 			timestamp:  func() uint64 { return chain.BestBlockHeader().Timestamp + 1 },
 			prevHash:   chain.BestBlockHash,
-			bits:       func() uint64 { return chain.BestBlockHeader().Bits },
-			solve:      true,
 			valid:      false,
 		},
 		{
@@ -59,18 +52,6 @@ func TestBlockHeader(t *testing.T) {
 			prevHeight: chain.BestBlockHeight,
 			timestamp:  func() uint64 { return chain.BestBlockHeader().Timestamp + 1 },
 			prevHash:   func() *bc.Hash { hash := genesisHeader.Hash(); return &hash },
-			bits:       func() uint64 { return chain.BestBlockHeader().Bits },
-			solve:      true,
-			valid:      false,
-		},
-		{
-			desc:       "invalid bits",
-			version:    func() uint64 { return chain.BestBlockHeader().Version },
-			prevHeight: chain.BestBlockHeight,
-			timestamp:  func() uint64 { return chain.BestBlockHeader().Timestamp + 1 },
-			prevHash:   chain.BestBlockHash,
-			bits:       func() uint64 { return chain.BestBlockHeader().Bits + 100 },
-			solve:      true,
 			valid:      false,
 		},
 		{
@@ -79,8 +60,6 @@ func TestBlockHeader(t *testing.T) {
 			prevHeight: chain.BestBlockHeight,
 			timestamp:  func() uint64 { return uint64(time.Now().Unix()) + consensus.MaxTimeOffsetSeconds + 60 },
 			prevHash:   chain.BestBlockHash,
-			bits:       func() uint64 { return chain.BestBlockHeader().Bits },
-			solve:      true,
 			valid:      false,
 		},
 		{
@@ -89,8 +68,6 @@ func TestBlockHeader(t *testing.T) {
 			prevHeight: chain.BestBlockHeight,
 			timestamp:  func() uint64 { return chain.BestBlockHeader().Timestamp + 3 },
 			prevHash:   chain.BestBlockHash,
-			bits:       func() uint64 { return chain.BestBlockHeader().Bits },
-			solve:      true,
 			valid:      true,
 		},
 		{
@@ -99,8 +76,6 @@ func TestBlockHeader(t *testing.T) {
 			prevHeight: chain.BestBlockHeight,
 			timestamp:  func() uint64 { return chain.BestBlockHeader().Timestamp - 1 },
 			prevHash:   chain.BestBlockHash,
-			bits:       func() uint64 { return chain.BestBlockHeader().Bits },
-			solve:      true,
 			valid:      true,
 		},
 		{
@@ -109,8 +84,6 @@ func TestBlockHeader(t *testing.T) {
 			prevHeight: chain.BestBlockHeight,
 			timestamp:  func() uint64 { return genesisHeader.Timestamp },
 			prevHash:   chain.BestBlockHash,
-			bits:       func() uint64 { return chain.BestBlockHeader().Bits },
-			solve:      true,
 			valid:      false,
 		},
 	}
@@ -125,15 +98,10 @@ func TestBlockHeader(t *testing.T) {
 		block.Height = c.prevHeight() + 1
 		block.Timestamp = c.timestamp()
 		block.PreviousBlockHash = *c.prevHash()
-		block.Bits = c.bits()
-		seed, err := chain.CalcNextSeed(&block.PreviousBlockHash)
 		if err != nil && c.valid {
 			t.Fatal(err)
 		}
 
-		if c.solve {
-			Solve(seed, block)
-		}
 		_, err = chain.ProcessBlock(block)
 		result := err == nil
 		if result != c.valid {
@@ -180,7 +148,7 @@ func TestMaxBlockGas(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := SolveAndUpdate(chain, block); err == nil {
+	if _, err := chain.ProcessBlock(block); err == nil {
 		t.Fatalf("test max block gas failed")
 	}
 }

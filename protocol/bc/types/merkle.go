@@ -210,19 +210,6 @@ func GetTxMerkleTreeProof(txs []*Tx, relatedTxs []*Tx) ([]*bc.Hash, []uint8) {
 	return getMerkleTreeProof(rawDatas, relatedRawDatas)
 }
 
-// GetStatusMerkleTreeProof return a proof of merkle tree, which used to proof the status of transaction is valid
-func GetStatusMerkleTreeProof(statuses []*bc.TxVerifyResult, flags []uint8) []*bc.Hash {
-	var rawDatas []merkleNode
-	for _, status := range statuses {
-		rawDatas = append(rawDatas, status)
-	}
-	flagList := list.New()
-	for _, flag := range flags {
-		flagList.PushBack(flag)
-	}
-	return getMerkleTreeProofByFlags(rawDatas, flagList)
-}
-
 // getMerkleRootByProof caculate the merkle root hash according to the proof
 func getMerkleRootByProof(hashList *list.List, flagList *list.List, merkleHashes *list.List) bc.Hash {
 	if flagList.Len() == 0 || hashList.Len() == 0 {
@@ -299,24 +286,6 @@ func ValidateTxMerkleTreeProof(hashes []*bc.Hash, flags []uint8, relatedHashes [
 		relatedNodes = append(relatedNodes, hash)
 	}
 	return validateMerkleTreeProof(hashes, flags, relatedNodes, merkleRoot)
-}
-
-// ValidateStatusMerkleTreeProof validate the merkle tree of transaction status
-func ValidateStatusMerkleTreeProof(hashes []*bc.Hash, flags []uint8, relatedStatus []*bc.TxVerifyResult, merkleRoot bc.Hash) bool {
-	var relatedNodes []merkleNode
-	for _, result := range relatedStatus {
-		relatedNodes = append(relatedNodes, result)
-	}
-	return validateMerkleTreeProof(hashes, flags, relatedNodes, merkleRoot)
-}
-
-// TxStatusMerkleRoot creates a merkle tree from a slice of bc.TxVerifyResult
-func TxStatusMerkleRoot(tvrs []*bc.TxVerifyResult) (root bc.Hash, err error) {
-	nodes := []merkleNode{}
-	for _, tvr := range tvrs {
-		nodes = append(nodes, tvr)
-	}
-	return merkleRoot(nodes)
 }
 
 // TxMerkleRoot creates a merkle tree from a slice of transactions

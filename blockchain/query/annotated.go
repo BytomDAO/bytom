@@ -18,7 +18,6 @@ type AnnotatedTx struct {
 	BlockTransactionsCount uint32             `json:"block_transactions_count,omitempty"`
 	Inputs                 []*AnnotatedInput  `json:"inputs"`
 	Outputs                []*AnnotatedOutput `json:"outputs"`
-	StatusFail             bool               `json:"status_fail"`
 	Size                   uint64             `json:"size"`
 }
 

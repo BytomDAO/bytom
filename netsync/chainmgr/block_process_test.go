@@ -11,9 +11,14 @@ import (
 	"github.com/bytom/bytom/netsync/peers"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/test/mock"
+	"github.com/bytom/bytom/testcontrol"
 )
 
 func TestBlockProcess(t *testing.T) {
+	if testcontrol.IgnoreTestTemporary {
+		return
+	}
+
 	tmp, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatal(err)

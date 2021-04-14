@@ -1,8 +1,9 @@
 package integration
 
 import (
-	"testing"
+	"fmt"
 	"time"
+	"testing"
 
 	"github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/consensus"
@@ -25,7 +26,6 @@ type attachBlock struct {
 func init() {
 	consensus.ActiveNetParams = consensus.SoloNetParams
 
-	// height => block
 	blockMap = map[int][]*attachBlock{
 		0: {
 			{
@@ -33,6 +33,7 @@ func init() {
 				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}},
 			},
 		},
+		// 0 号的hash不会变
 		1: {
 			{
 				block: &types.Block{
@@ -40,7 +41,7 @@ func init() {
 						Height:            1,
 						Version:           1,
 						Timestamp:         1556431597,
-						PreviousBlockHash: testutil.MustDecodeHash("cd7eaf7ea23d7099b2ff3968cf2f54850d7673c3e1519dc205e986421c7738a6"),
+						PreviousBlockHash: testutil.MustDecodeHash("6f62777fab457d134aa55d29197ea5874988627d8777f6a14ed032a2f06dcc2f"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -64,7 +65,7 @@ func init() {
 						Height:            1,
 						Version:           1,
 						Timestamp:         1556431697,
-						PreviousBlockHash: testutil.MustDecodeHash("cd7eaf7ea23d7099b2ff3968cf2f54850d7673c3e1519dc205e986421c7738a6"),
+						PreviousBlockHash: testutil.MustDecodeHash("6f62777fab457d134aa55d29197ea5874988627d8777f6a14ed032a2f06dcc2f"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -84,15 +85,14 @@ func init() {
 			},
 		},
 		2: {
-			// only has coinbase transaction
-			// the previous block blockMap[1][0]
+			//the below blocks's previous block is blockMap[1][0]
 			{
 				block: &types.Block{
 					BlockHeader: types.BlockHeader{
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431604,
-						PreviousBlockHash: testutil.MustDecodeHash("4691aff4f2f6d9bb0d19c85933b6c8101dfecf43b2b000714ad2066cac843fd7"),
+						PreviousBlockHash: testutil.MustDecodeHash("0311998e27abc1c2f5cc1f86b1aca5e7dd3ca65d63359e0c7539c40207923e10"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -111,14 +111,13 @@ func init() {
 				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}},
 			},
 			// with spend btm transaction
-			// the previous block  blockMap[1][0]
 			{
 				block: &types.Block{
 					BlockHeader: types.BlockHeader{
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431604,
-						PreviousBlockHash: testutil.MustDecodeHash("4691aff4f2f6d9bb0d19c85933b6c8101dfecf43b2b000714ad2066cac843fd7"),
+						PreviousBlockHash: testutil.MustDecodeHash("0311998e27abc1c2f5cc1f86b1aca5e7dd3ca65d63359e0c7539c40207923e10"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -156,14 +155,13 @@ func init() {
 				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}, {StatusFail: false}},
 			},
 			// with btm retire transaction
-			// the previous block  blockMap[1][0]
 			{
 				block: &types.Block{
 					BlockHeader: types.BlockHeader{
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431607,
-						PreviousBlockHash: testutil.MustDecodeHash("4691aff4f2f6d9bb0d19c85933b6c8101dfecf43b2b000714ad2066cac843fd7"),
+						PreviousBlockHash: testutil.MustDecodeHash("0311998e27abc1c2f5cc1f86b1aca5e7dd3ca65d63359e0c7539c40207923e10"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -201,14 +199,13 @@ func init() {
 				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}, {StatusFail: false}},
 			},
 			// with issuance transaction
-			// the previous block  blockMap[1][0]
 			{
 				block: &types.Block{
 					BlockHeader: types.BlockHeader{
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431607,
-						PreviousBlockHash: testutil.MustDecodeHash("4691aff4f2f6d9bb0d19c85933b6c8101dfecf43b2b000714ad2066cac843fd7"),
+						PreviousBlockHash: testutil.MustDecodeHash("0311998e27abc1c2f5cc1f86b1aca5e7dd3ca65d63359e0c7539c40207923e10"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -254,14 +251,13 @@ func init() {
 				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}, {StatusFail: false}},
 			},
 			// with issuance transaction but status fail is true
-			// the previous block  blockMap[1][0]
 			{
 				block: &types.Block{
 					BlockHeader: types.BlockHeader{
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431607,
-						PreviousBlockHash: testutil.MustDecodeHash("4691aff4f2f6d9bb0d19c85933b6c8101dfecf43b2b000714ad2066cac843fd7"),
+						PreviousBlockHash: testutil.MustDecodeHash("0311998e27abc1c2f5cc1f86b1aca5e7dd3ca65d63359e0c7539c40207923e10"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -305,17 +301,17 @@ func init() {
 						}),
 					},
 				},
+				//看下这个变量什么时候会用到。
 				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}, {StatusFail: true}},
 			},
 			// with non btm transaction
-			// the previous block  blockMap[1][0]
 			{
 				block: &types.Block{
 					BlockHeader: types.BlockHeader{
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431607,
-						PreviousBlockHash: testutil.MustDecodeHash("4691aff4f2f6d9bb0d19c85933b6c8101dfecf43b2b000714ad2066cac843fd7"),
+						PreviousBlockHash: testutil.MustDecodeHash("0311998e27abc1c2f5cc1f86b1aca5e7dd3ca65d63359e0c7539c40207923e10"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -364,14 +360,13 @@ func init() {
 				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}, {StatusFail: false}},
 			},
 			// with non btm transaction but status fail is true
-			// the previous block  blockMap[1][0]
 			{
 				block: &types.Block{
 					BlockHeader: types.BlockHeader{
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431607,
-						PreviousBlockHash: testutil.MustDecodeHash("4691aff4f2f6d9bb0d19c85933b6c8101dfecf43b2b000714ad2066cac843fd7"),
+						PreviousBlockHash: testutil.MustDecodeHash("0311998e27abc1c2f5cc1f86b1aca5e7dd3ca65d63359e0c7539c40207923e10"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -429,7 +424,7 @@ func init() {
 						Height:            3,
 						Version:           1,
 						Timestamp:         1556431640,
-						PreviousBlockHash: testutil.MustDecodeHash("e8d37fd75137d6e634cacb1656f780fab967ae4c1c98fa26a215a878d48e5ab0"),
+						PreviousBlockHash: testutil.MustDecodeHash("d96091fb7784af594980012cadb05ad717d45603eab2b2105a2735ae5bb3aca3"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -454,7 +449,7 @@ func init() {
 						Height:            3,
 						Version:           1,
 						Timestamp:         1556431640,
-						PreviousBlockHash: testutil.MustDecodeHash("24f2c89193fc750d325145da1f0c574cceadef09751095220039c91836357d6e"),
+						PreviousBlockHash: testutil.MustDecodeHash("222356873e67eacf3fa38ddb736c467471c8aa91f65686d28a96f7d39f8278e7"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -667,7 +662,7 @@ func TestProcessBlock(t *testing.T) {
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}),
-			wantStore: createStoreItems([]int{0, 1, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][4]}, &storeItem{
+			wantStore: createStoreItems([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}),
@@ -675,17 +670,15 @@ func TestProcessBlock(t *testing.T) {
 				map[bc.Hash]*state.BlockNode{
 					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
 					blockMap[1][0].block.Hash(): mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][4].block.Hash(): mustCreateBlockNode(&blockMap[2][4].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
 				},
 				[]*state.BlockNode{
 					mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
 					mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[2][4].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
 				},
 			),
 			wantOrphanManage: protocol.NewOrphanManage(),
 			wantIsOrphan:     false,
-			wantError:        false,
+			wantError:        true,
 		},
 		{
 			desc:     "attach a block with non btm transaction",
@@ -730,7 +723,7 @@ func TestProcessBlock(t *testing.T) {
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}),
-			wantStore: createStoreItems([]int{0, 1, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][6]}, &storeItem{
+			wantStore: createStoreItems([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("be164edbce8bcd1d890c1164541b8418fdcb257499757d3b88561bca06e97e29"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}, &storeItem{
@@ -741,17 +734,15 @@ func TestProcessBlock(t *testing.T) {
 				map[bc.Hash]*state.BlockNode{
 					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
 					blockMap[1][0].block.Hash(): mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][6].block.Hash(): mustCreateBlockNode(&blockMap[2][6].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
 				},
 				[]*state.BlockNode{
 					mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
 					mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[2][6].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
 				},
 			),
 			wantOrphanManage: protocol.NewOrphanManage(),
 			wantIsOrphan:     false,
-			wantError:        false,
+			wantError:        true,
 		},
 		{
 			desc:      "rollback a block only has coinbase transaction",
@@ -842,28 +833,11 @@ func TestProcessBlock(t *testing.T) {
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}),
-			wantStore: createStoreItems([]int{0, 1, 2, 4}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][4], blockMap[3][0]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 0, Spent: false},
-			}),
-			wantBlockIndex: state.NewBlockIndexWithData(
-				map[bc.Hash]*state.BlockNode{
-					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					blockMap[1][0].block.Hash(): mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][0].block.Hash(): mustCreateBlockNode(&blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][4].block.Hash(): mustCreateBlockNode(&blockMap[2][4].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[3][0].block.Hash(): mustCreateBlockNode(&blockMap[3][0].block.BlockHeader, &blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-				[]*state.BlockNode{
-					mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[3][0].block.BlockHeader, &blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-			),
+			wantStore:        nil,
+			wantBlockIndex:   nil,
 			wantOrphanManage: protocol.NewOrphanManage(),
 			wantIsOrphan:     false,
-			wantError:        false,
+			wantError:        true,
 		},
 		{
 			desc:     "rollback a block has spend non btm",
@@ -911,31 +885,11 @@ func TestProcessBlock(t *testing.T) {
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("be164edbce8bcd1d890c1164541b8418fdcb257499757d3b88561bca06e97e29"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}),
-			wantStore: createStoreItems([]int{0, 1, 2, 4}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][6], blockMap[3][0]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 0, Spent: false},
-			}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("be164edbce8bcd1d890c1164541b8418fdcb257499757d3b88561bca06e97e29"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}),
-			wantBlockIndex: state.NewBlockIndexWithData(
-				map[bc.Hash]*state.BlockNode{
-					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					blockMap[1][0].block.Hash(): mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][0].block.Hash(): mustCreateBlockNode(&blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][6].block.Hash(): mustCreateBlockNode(&blockMap[2][6].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[3][0].block.Hash(): mustCreateBlockNode(&blockMap[3][0].block.BlockHeader, &blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-				[]*state.BlockNode{
-					mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[3][0].block.BlockHeader, &blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-			),
+			wantStore:        nil,
+			wantBlockIndex:   nil,
 			wantOrphanManage: protocol.NewOrphanManage(),
 			wantIsOrphan:     false,
-			wantError:        false,
+			wantError:        true,
 		},
 		{
 			desc:      "rollback a block only has coinbase tx, and from orphan manage",
@@ -1117,9 +1071,9 @@ func TestProcessBlock(t *testing.T) {
 		},
 	}
 
-	for _, c := range cases {
+	for i, c := range cases {
 		if err := c.Run(); err != nil {
-			panic(err)
+			panic(fmt.Sprintf("tesecase:%d, error:%s", i, err.Error()))
 		}
 	}
 }
@@ -1142,27 +1096,21 @@ func createStoreItems(mainChainIndexes []int, attachBlocks []*attachBlock, extra
 			key: database.CalcBlockKey(&blockHash),
 			val: block,
 		})
-
-		items = append(items, &storeItem{
-			key: database.CalcTxStatusKey(&blockHash),
-			val: &bc.TransactionStatus{Version: 1, VerifyStatus: attachBlock.verifyResult},
-		})
 		items = append(items, &storeItem{
 			key: database.CalcBlockHeaderKey(block.Height, &blockHash),
 			val: block.BlockHeader,
 		})
-
 		if _, ok := mainChainIndexMap[i]; !ok {
 			continue
 		}
 
 		for i, tx := range block.Transactions {
 			statusFail := attachBlock.verifyResult[i].StatusFail
-			for _, input := range tx.Inputs {
-				if statusFail && input.AssetID() != *consensus.BTMAssetID {
-					continue
-				}
+			if statusFail {
+				continue
+			}
 
+			for _, input := range tx.Inputs {
 				if _, ok := input.TypedInput.(*types.SpendInput); !ok {
 					continue
 				}
@@ -1174,9 +1122,6 @@ func createStoreItems(mainChainIndexes []int, attachBlocks []*attachBlock, extra
 				items = append(items[0:index], items[index+1:]...)
 			}
 			for j, output := range tx.Outputs {
-				if statusFail && *tx.Outputs[j].AssetId != *consensus.BTMAssetID {
-					continue
-				}
 				if output.ControlProgram[0] == 0x6a {
 					continue
 				}
@@ -1221,17 +1166,11 @@ func mustPostProcessBlock() {
 
 func mustCalcMerkleRootHash(attachBlock *attachBlock) {
 	bcBlock := types.MapBlock(attachBlock.block)
-	txStatusHash, err := types.TxStatusMerkleRoot(attachBlock.verifyResult)
-	if err != nil {
-		panic("fail on calc genesis tx status merkle root")
-	}
-
 	merkleRoot, err := types.TxMerkleRoot(bcBlock.Transactions)
 	if err != nil {
 		panic("fail on calc genesis tx merkel root")
 	}
 
-	attachBlock.block.TransactionStatusHash = txStatusHash
 	attachBlock.block.TransactionsMerkleRoot = merkleRoot
 }
 

@@ -189,13 +189,12 @@ func (a *API) getUnconfirmedTx(ctx context.Context, filter struct {
 	}
 
 	tx := &BlockTx{
-		ID:         txDesc.Tx.ID,
-		Version:    txDesc.Tx.Version,
-		Size:       txDesc.Tx.SerializedSize,
-		TimeRange:  txDesc.Tx.TimeRange,
-		Inputs:     []*query.AnnotatedInput{},
-		Outputs:    []*query.AnnotatedOutput{},
-		StatusFail: txDesc.StatusFail,
+		ID:        txDesc.Tx.ID,
+		Version:   txDesc.Tx.Version,
+		Size:      txDesc.Tx.SerializedSize,
+		TimeRange: txDesc.Tx.TimeRange,
+		Inputs:    []*query.AnnotatedInput{},
+		Outputs:   []*query.AnnotatedOutput{},
 	}
 
 	resOutID := txDesc.Tx.ResultIds[0]

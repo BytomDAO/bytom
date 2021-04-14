@@ -13,10 +13,6 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 	gasUsed := uint64(0)
 	txsFee := uint64(0)
 	txEntries := []*bc.Tx{nil}
-	txStatus := bc.NewTransactionStatus()
-	if err := txStatus.SetStatus(0, false); err != nil {
-		return nil, err
-	}
 
 	preBlockHeader := chain.BestBlockHeader()
 
@@ -33,16 +29,11 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 
 	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: preBlockHeader.Height + 1}}
 	for _, tx := range txs {
-		gasOnlyTx := false
 		gasStatus, err := validation.ValidateTx(tx.Tx, bcBlock)
 		if err != nil {
-			if !gasStatus.GasValid {
-				continue
-			}
-			gasOnlyTx = true
+			continue
 		}
 
-		txStatus.SetStatus(len(b.Transactions), gasOnlyTx)
 		b.Transactions = append(b.Transactions, tx)
 		txEntries = append(txEntries, tx.Tx)
 		gasUsed += uint64(gasStatus.GasUsed)
@@ -57,11 +48,6 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 	b.Transactions[0] = coinbaseTx
 	txEntries[0] = coinbaseTx.Tx
 	b.TransactionsMerkleRoot, err = types.TxMerkleRoot(txEntries)
-	if err != nil {
-		return nil, err
-	}
-
-	b.TransactionStatusHash, err = types.TxStatusMerkleRoot(txStatus.VerifyStatus)
 	return b, err
 }
 
