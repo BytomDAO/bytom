@@ -22,7 +22,7 @@ import (
 
 const logModule = "proposal"
 
-func NewBlock(chain *protocol.Chain, casper *consensus.Casper, accountManager *account.Manager, timestamp uint64) (*types.Block, error) {
+func NewBlockTemplate(chain *protocol.Chain, casper *consensus.Casper, accountManager *account.Manager, timestamp uint64) (*types.Block, error) {
 	builder := NewBlockBuilder(chain, casper, accountManager)
 	return builder.Build(timestamp)
 }
@@ -59,10 +59,12 @@ func (bd *BlockBuilder) Build(timeStamp uint64) (*types.Block, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = bd.finalize(block)
+	err = bd.calculateBlockCommitment(block)
 	if err != nil {
 		return nil, err
 	}
+	//TODO: sign block header
+
 	return block, nil
 }
 
@@ -111,10 +113,11 @@ func (bd *BlockBuilder) applyTransactions(block *types.Block) (err error) {
 	if err != nil {
 		return errors.Wrap(err, "fail on createCoinbaseTx")
 	}
+
 	return nil
 }
 
-func (bd *BlockBuilder) finalize(block *types.Block) error {
+func (bd *BlockBuilder) calculateBlockCommitment(block *types.Block) error {
 	var err error
 	var txEntries []*bc.Tx
 	for _, tx := range block.Transactions {
