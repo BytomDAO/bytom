@@ -41,7 +41,7 @@ func TestTransaction(t *testing.T) {
 		{
 			tx: NewTx(TxData{
 				Version:        1,
-				SerializedSize: uint64(281),
+				SerializedSize: uint64(282),
 				TimeRange:      654,
 				Inputs: []*TxInput{
 					NewIssuanceInput([]byte("nonce"), 254354, []byte("issuanceProgram"), [][]byte{[]byte("arguments1"), []byte("arguments2")}, []byte("assetDefinition")),
@@ -95,7 +95,8 @@ func TestTransaction(t *testing.T) {
 				"617267756d656e747334",     // input 1: second argument data
 				"01",                       // outputs count
 				"01",                       // output 0: asset version
-				"33",                       // output 0: serialization length
+				"00",
+				"33", // output 0: serialization length
 				"a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf", // output 0: assetID
 				"92c30f",             // output 0: amount
 				"01",                 // output 0: version
@@ -105,12 +106,12 @@ func TestTransaction(t *testing.T) {
 				"737461746544617461", // output 0: state data
 				"00",                 // output 0: witness length
 			}, ""),
-			hash: testutil.MustDecodeHash("f092239201b05245be05f2593a0b91d2b87f289bc56fecb95b4265d53b66941b"),
+			hash: testutil.MustDecodeHash("99a5bb58af6aada96e415a22c6c71df8bad25b0ad5a3c27f6f9c8f9b3b42df60"),
 		},
 		{
 			tx: NewTx(TxData{
 				Version:        1,
-				SerializedSize: uint64(128),
+				SerializedSize: uint64(130),
 				Inputs: []*TxInput{
 					NewCoinbaseInput([]byte("arbitrary")),
 				},
@@ -143,6 +144,7 @@ func TestTransaction(t *testing.T) {
 				"00",                 // output 0: witness length
 				"01",                 // output 1: asset version
 				"34",                 // output 1: serialization length
+				"00",
 				"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // output 1: assetID
 				"92c30f",             // output 1: amount
 				"01",                 // output 1: version
@@ -152,7 +154,7 @@ func TestTransaction(t *testing.T) {
 				"737461746544617461", // output 0: state data
 				"00",                 // output 1: witness length
 			}, ""),
-			hash: testutil.MustDecodeHash("e56d98bf5c5087fbd522f51015ee71e8aac32643b65f9809be121281fdcc70d2"),
+			hash: testutil.MustDecodeHash("c64bc6d935436156e6da9592ff8e8e29e8fd93af5ed0447de822361112997cf5"),
 		},
 	}
 	for i, test := range cases {
