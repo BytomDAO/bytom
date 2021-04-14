@@ -164,11 +164,9 @@ func TestGetRelatedTxAndStatus(t *testing.T) {
 			},
 		}),
 	}
-	txStatuses := &bc.TransactionStatus{
-		VerifyStatus: []*bc.TxVerifyResult{{StatusFail: true}, {StatusFail: false}, {StatusFail: false}},
-	}
+
 	peer.AddFilterAddresses([][]byte{[]byte("spendProgram1"), []byte("outProgram3")})
-	gotTxs, gotStatus := peer.getRelatedTxAndStatus(txs, txStatuses)
+	gotTxs  := peer.getRelatedTxs(txs)
 	if len(gotTxs) != 2 {
 		t.Error("TestGetRelatedTxAndStatus txs size error")
 	}
@@ -179,10 +177,6 @@ func TestGetRelatedTxAndStatus(t *testing.T) {
 
 	if !reflect.DeepEqual(*gotTxs[1].Tx, *txs[2].Tx) {
 		t.Errorf("txs msg test err: got %s\nwant %s", spew.Sdump(gotTxs[1].Tx), spew.Sdump(txs[2].Tx))
-	}
-
-	if gotStatus[0].StatusFail != true || gotStatus[1].StatusFail != false {
-		t.Error("TestGetRelatedTxAndStatus txs status error")
 	}
 }
 

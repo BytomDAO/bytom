@@ -205,6 +205,7 @@ func TestGetAccountUtxos(t *testing.T) {
 	}
 }
 
+//because can not pass by btm2.0 branch
 func TestFilterAccountUtxo(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
@@ -345,7 +346,6 @@ func TestFilterAccountUtxo(t *testing.T) {
 			}
 			testDB.Set(key, data)
 		}
-
 		gotUtxos := w.filterAccountUtxo(c.input)
 		sort.Slice(gotUtxos[:], func(i, j int) bool {
 			return gotUtxos[i].Amount < gotUtxos[j].Amount
@@ -446,8 +446,6 @@ func TestTxInToUtxos(t *testing.T) {
 		{
 			tx: types.NewTx(types.TxData{
 				Inputs: []*types.TxInput{
-					types.NewSpendInput([][]byte{}, bc.Hash{V0: 1}, bc.AssetID{V0: 1}, 1, 1, []byte{0x51}),
-					types.NewSpendInput([][]byte{}, bc.Hash{V0: 2}, bc.AssetID{V0: 1}, 3, 2, []byte{0x52}),
 					types.NewSpendInput([][]byte{}, bc.Hash{V0: 3}, *consensus.BTMAssetID, 5, 3, []byte{0x53}),
 					types.NewSpendInput([][]byte{}, bc.Hash{V0: 4}, *consensus.BTMAssetID, 7, 4, []byte{0x54}),
 				},
@@ -479,7 +477,7 @@ func TestTxInToUtxos(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		if gotUtxos := txInToUtxos(c.tx, c.statusFail); !testutil.DeepEqual(gotUtxos, c.wantUtxos) {
+		if gotUtxos := txInToUtxos(c.tx); !testutil.DeepEqual(gotUtxos, c.wantUtxos) {
 			for k, v := range gotUtxos {
 				data, _ := json.Marshal(v)
 				fmt.Println(k, string(data))
@@ -590,6 +588,22 @@ func TestTxOutToUtxos(t *testing.T) {
 			vaildHeight: 0,
 			wantUtxos: []*account.UTXO{
 				&account.UTXO{
+					OutputID:       bc.NewHash([32]byte{0xff, 0xcd, 0xc4, 0xdc, 0xe8, 0x7e, 0xce, 0x93, 0x4b, 0x14, 0x2b, 0x2b, 0x84, 0xf2, 0x4d, 0x8, 0xca, 0x9f, 0xb, 0x97, 0xa3, 0xe, 0x38, 0x5a, 0xb0, 0xa7, 0x1e, 0x8f, 0x22, 0x55, 0xa6, 0x19}),
+					AssetID:        bc.AssetID{V0: 1},
+					Amount:         2,
+					ControlProgram: []byte{0x51},
+					SourceID:       bc.NewHash([32]byte{0x39, 0x4f, 0x89, 0xd4, 0xdc, 0x26, 0xb9, 0x57, 0x91, 0x2f, 0xe9, 0x7f, 0xba, 0x51, 0x68, 0xcf, 0xe4, 0xae, 0xc, 0xef, 0x79, 0x56, 0xa0, 0x45, 0xda, 0x27, 0xdc, 0x69, 0xd8, 0xef, 0x32, 0x61}),
+					SourcePos:      0,
+				},
+				&account.UTXO{
+					OutputID:       bc.NewHash([32]byte{0x89, 0xcd, 0x38, 0x92, 0x6f, 0xee, 0xc6, 0x10, 0xae, 0x61, 0xef, 0x62, 0x70, 0x88, 0x94, 0x7c, 0x26, 0xaa, 0xfb, 0x5, 0xa2, 0xa, 0x63, 0x9d, 0x21, 0x22, 0xc, 0xe3, 0xc2, 0xe5, 0xf9, 0xbf}),
+					AssetID:        bc.AssetID{V0: 1},
+					Amount:         3,
+					ControlProgram: []byte{0x52},
+					SourceID:       bc.NewHash([32]byte{0x39, 0x4f, 0x89, 0xd4, 0xdc, 0x26, 0xb9, 0x57, 0x91, 0x2f, 0xe9, 0x7f, 0xba, 0x51, 0x68, 0xcf, 0xe4, 0xae, 0xc, 0xef, 0x79, 0x56, 0xa0, 0x45, 0xda, 0x27, 0xdc, 0x69, 0xd8, 0xef, 0x32, 0x61}),
+					SourcePos:      1,
+				},
+				&account.UTXO{
 					OutputID:       bc.NewHash([32]byte{0xcf, 0xb9, 0xeb, 0xa3, 0xc8, 0xe8, 0xf1, 0x5a, 0x5c, 0x70, 0xf8, 0x9e, 0x7d, 0x9e, 0xf7, 0xb2, 0x66, 0x42, 0x8c, 0x97, 0x8e, 0xc2, 0x4d, 0x4b, 0x28, 0x57, 0xa7, 0x61, 0x1c, 0xf1, 0xea, 0x9d}),
 					AssetID:        *consensus.BTMAssetID,
 					Amount:         2,
@@ -610,8 +624,18 @@ func TestTxOutToUtxos(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		if gotUtxos := txOutToUtxos(c.tx, c.statusFail, c.vaildHeight); !testutil.DeepEqual(gotUtxos, c.wantUtxos) {
+		if gotUtxos := txOutToUtxos(c.tx, c.vaildHeight); !testutil.DeepEqual(gotUtxos, c.wantUtxos) {
+			for k, v := range gotUtxos {
+
+				data, _ := json.Marshal(v)
+				fmt.Println("got:", k, string(data))
+			}
+			for k, v := range c.wantUtxos {
+				data, _ := json.Marshal(v)
+				fmt.Println("want:", k, string(data))
+			}
 			t.Errorf("case %d: got %v want %v", i, gotUtxos, c.wantUtxos)
 		}
 	}
 }
+

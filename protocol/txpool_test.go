@@ -97,9 +97,6 @@ var testTxs = []*types.Tx{
 
 type mockStore struct{}
 
-func (s *mockStore) SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint, *state.ContractViewpoint) error {
-	return nil
-}
 func (s *mockStore) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error)     { return nil, nil }
 func (s *mockStore) GetCheckpoint(hash *bc.Hash) (*state.Checkpoint, error)       { return nil, nil }
 func (s *mockStore) GetCheckpointsByHeight(u uint64) ([]*state.Checkpoint, error) { return nil, nil }
@@ -107,11 +104,13 @@ func (s *mockStore) SaveCheckpoints(...*state.Checkpoint) error                 
 func (s *mockStore) BlockExist(hash *bc.Hash) bool                                { return false }
 func (s *mockStore) GetBlock(*bc.Hash) (*types.Block, error)                      { return nil, nil }
 func (s *mockStore) GetStoreStatus() *BlockStoreState                             { return nil }
-func (s *mockStore) GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error) { return nil, nil }
 func (s *mockStore) GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error     { return nil }
 func (s *mockStore) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)                 { return nil, nil }
 func (s *mockStore) LoadBlockIndex(uint64) (*state.BlockIndex, error)             { return nil, nil }
-func (s *mockStore) SaveBlock(*types.Block, *bc.TransactionStatus) error          { return nil }
+func (s *mockStore) SaveBlock(*types.Block) error                                 { return nil }
+func (s *mockStore) SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint, *state.ContractViewpoint) error {
+	return nil
+}
 
 func TestAddOrphan(t *testing.T) {
 	cases := []struct {
@@ -256,8 +255,7 @@ func TestAddTransaction(t *testing.T) {
 			after: &TxPool{
 				pool: map[bc.Hash]*TxDesc{
 					testTxs[2].ID: {
-						Tx:         testTxs[2],
-						StatusFail: false,
+						Tx: testTxs[2],
 					},
 				},
 				utxo: map[bc.Hash]*types.Tx{
@@ -266,8 +264,7 @@ func TestAddTransaction(t *testing.T) {
 				},
 			},
 			addTx: &TxDesc{
-				Tx:         testTxs[2],
-				StatusFail: false,
+				Tx: testTxs[2],
 			},
 		},
 		{
@@ -279,17 +276,16 @@ func TestAddTransaction(t *testing.T) {
 			after: &TxPool{
 				pool: map[bc.Hash]*TxDesc{
 					testTxs[2].ID: {
-						Tx:         testTxs[2],
-						StatusFail: true,
+						Tx: testTxs[2],
 					},
 				},
 				utxo: map[bc.Hash]*types.Tx{
 					*testTxs[2].ResultIds[0]: testTxs[2],
+					*testTxs[2].ResultIds[1]: testTxs[2],
 				},
 			},
 			addTx: &TxDesc{
-				Tx:         testTxs[2],
-				StatusFail: true,
+				Tx: testTxs[2],
 			},
 		},
 	}
@@ -300,10 +296,10 @@ func TestAddTransaction(t *testing.T) {
 			txD.Added = time.Time{}
 		}
 		if !testutil.DeepEqual(c.before.pool, c.after.pool) {
-			t.Errorf("case %d: got %v want %v", i, c.before.pool, c.after.pool)
+			t.Errorf("case %d: pool: got %v want %v", i, c.before.pool, c.after.pool)
 		}
 		if !testutil.DeepEqual(c.before.utxo, c.after.utxo) {
-			t.Errorf("case %d: got %v want %v", i, c.before.utxo, c.after.utxo)
+			t.Errorf("case %d: utxo: got %v want %v", i, c.before.utxo, c.after.utxo)
 		}
 	}
 }
@@ -401,8 +397,7 @@ func TestProcessOrphans(t *testing.T) {
 			after: &TxPool{
 				pool: map[bc.Hash]*TxDesc{
 					testTxs[3].ID: {
-						Tx:         testTxs[3],
-						StatusFail: false,
+						Tx: testTxs[3],
 					},
 				},
 				utxo: map[bc.Hash]*types.Tx{
@@ -452,12 +447,10 @@ func TestProcessOrphans(t *testing.T) {
 			after: &TxPool{
 				pool: map[bc.Hash]*TxDesc{
 					testTxs[3].ID: {
-						Tx:         testTxs[3],
-						StatusFail: false,
+						Tx: testTxs[3],
 					},
 					testTxs[4].ID: {
-						Tx:         testTxs[4],
-						StatusFail: false,
+						Tx: testTxs[4],
 					},
 				},
 				utxo: map[bc.Hash]*types.Tx{
@@ -597,9 +590,6 @@ func TestRemoveOrphan(t *testing.T) {
 
 type mockStore1 struct{}
 
-func (s *mockStore1) SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint, *state.ContractViewpoint) error {
-	return nil
-}
 func (s *mockStore1) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error)     { return nil, nil }
 func (s *mockStore1) GetCheckpoint(hash *bc.Hash) (*state.Checkpoint, error)       { return nil, nil }
 func (s *mockStore1) GetCheckpointsByHeight(u uint64) ([]*state.Checkpoint, error) { return nil, nil }
@@ -616,7 +606,8 @@ func (s *mockStore1) GetTransactionsUtxo(utxoView *state.UtxoViewpoint, tx []*bc
 }
 func (s *mockStore1) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)        { return nil, nil }
 func (s *mockStore1) LoadBlockIndex(uint64) (*state.BlockIndex, error)    { return nil, nil }
-func (s *mockStore1) SaveBlock(*types.Block, *bc.TransactionStatus) error { return nil }
+func (s *mockStore1) SaveBlock(*types.Block) error { return nil }
+func (s *mockStore1) SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint, *state.ContractViewpoint) error { return nil}
 
 func TestProcessTransaction(t *testing.T) {
 	txPool := &TxPool{
@@ -635,32 +626,28 @@ func TestProcessTransaction(t *testing.T) {
 		{
 			want: &TxPool{},
 			addTx: &TxDesc{
-				Tx:         testTxs[3],
-				StatusFail: false,
+				Tx: testTxs[3],
 			},
 		},
 		//Dust tx
 		{
 			want: &TxPool{},
 			addTx: &TxDesc{
-				Tx:         testTxs[4],
-				StatusFail: false,
+				Tx: testTxs[4],
 			},
 		},
 		//Dust tx
 		{
 			want: &TxPool{},
 			addTx: &TxDesc{
-				Tx:         testTxs[5],
-				StatusFail: false,
+				Tx: testTxs[5],
 			},
 		},
 		//Dust tx
 		{
 			want: &TxPool{},
 			addTx: &TxDesc{
-				Tx:         testTxs[6],
-				StatusFail: false,
+				Tx: testTxs[6],
 			},
 		},
 		//normal tx
@@ -668,9 +655,8 @@ func TestProcessTransaction(t *testing.T) {
 			want: &TxPool{
 				pool: map[bc.Hash]*TxDesc{
 					testTxs[2].ID: {
-						Tx:         testTxs[2],
-						StatusFail: false,
-						Weight:     150,
+						Tx:     testTxs[2],
+						Weight: 150,
 					},
 				},
 				utxo: map[bc.Hash]*types.Tx{
@@ -679,14 +665,13 @@ func TestProcessTransaction(t *testing.T) {
 				},
 			},
 			addTx: &TxDesc{
-				Tx:         testTxs[2],
-				StatusFail: false,
+				Tx: testTxs[2],
 			},
 		},
 	}
 
 	for i, c := range cases {
-		txPool.ProcessTransaction(c.addTx.Tx, c.addTx.StatusFail, 0, 0)
+		txPool.ProcessTransaction(c.addTx.Tx, 0, 0)
 		for _, txD := range txPool.pool {
 			txD.Added = time.Time{}
 		}

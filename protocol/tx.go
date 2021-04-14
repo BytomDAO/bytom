@@ -13,11 +13,6 @@ import (
 // ErrBadTx is returned for transactions failing validation
 var ErrBadTx = errors.New("invalid transaction")
 
-// GetTransactionStatus return the transaction status of give block
-func (c *Chain) GetTransactionStatus(hash *bc.Hash) (*bc.TransactionStatus, error) {
-	return c.store.GetTransactionStatus(hash)
-}
-
 // GetTransactionsUtxo return all the utxos that related to the txs' inputs
 func (c *Chain) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) error {
 	return c.store.GetTransactionsUtxo(view, txs)
@@ -38,14 +33,11 @@ func (c *Chain) ValidateTx(tx *types.Tx) (bool, error) {
 
 	bh := c.BestBlockHeader()
 	gasStatus, err := validation.ValidateTx(tx.Tx, types.MapBlock(&types.Block{BlockHeader: *bh}))
-	if !gasStatus.GasValid {
+	if err != nil {
+		log.WithFields(log.Fields{"module": logModule, "tx_id": tx.Tx.ID.String(), "error": err}).Info("transaction status fail")
 		c.txPool.AddErrCache(&tx.ID, err)
 		return false, err
 	}
 
-	if err != nil {
-		log.WithFields(log.Fields{"module": logModule, "tx_id": tx.Tx.ID.String(), "error": err}).Info("transaction status fail")
-	}
-
-	return c.txPool.ProcessTransaction(tx, err != nil, bh.Height, gasStatus.BTMValue)
+	return c.txPool.ProcessTransaction(tx, bh.Height, gasStatus.BTMValue)
 }

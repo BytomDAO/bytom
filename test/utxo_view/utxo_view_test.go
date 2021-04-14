@@ -4,8 +4,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/bytom/bytom/testutil"
-
 	"github.com/golang/protobuf/proto"
 
 	"github.com/bytom/bytom/database"
@@ -14,6 +12,7 @@ import (
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
+	"github.com/bytom/bytom/testutil"
 )
 
 func TestAttachOrDetachBlocks(t *testing.T) {
@@ -224,128 +223,6 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 			},
 		},
 		{
-			desc: "detach block 5, attach block 2. Other asset deals failed.",
-			before: map[bc.Hash]*storage.UtxoEntry{
-				*newTx(mockBlocks[5].Transactions[0]).OutputHash(0): storage.NewUtxoEntry(true, mockBlocks[5].Height, false),
-				*newTx(mockBlocks[5].Transactions[1]).OutputHash(0): storage.NewUtxoEntry(false, mockBlocks[5].Height, false),
-				*newTx(mockBlocks[5].Transactions[1]).OutputHash(1): storage.NewUtxoEntry(false, mockBlocks[5].Height, false),
-
-				*newTx(mockBlocks[6].Transactions[0]).OutputHash(0):      storage.NewUtxoEntry(true, mockBlocks[6].Height, false),
-				*newTx(mockBlocks[6].Transactions[1]).OutputHash(0):      storage.NewUtxoEntry(false, mockBlocks[6].Height, false),
-				*newTx(mockBlocks[6].Transactions[1]).OutputHash(1):      storage.NewUtxoEntry(false, mockBlocks[6].Height, false),
-				newTx(mockBlocks[6].Transactions[1]).getSpentOutputID(1): storage.NewUtxoEntry(false, mockBlocks[6].Height-1, false),
-
-				*newTx(mockBlocks[6].Transactions[2]).OutputHash(0):      storage.NewUtxoEntry(false, mockBlocks[6].Height, false),
-				*newTx(mockBlocks[6].Transactions[2]).OutputHash(1):      storage.NewUtxoEntry(false, mockBlocks[6].Height, false),
-				newTx(mockBlocks[6].Transactions[2]).getSpentOutputID(1): storage.NewUtxoEntry(false, mockBlocks[6].Height-1, false),
-
-				*newTx(mockBlocks[7].Transactions[0]).OutputHash(0):      storage.NewUtxoEntry(true, mockBlocks[7].Height, false),
-				*newTx(mockBlocks[7].Transactions[1]).OutputHash(0):      storage.NewUtxoEntry(false, mockBlocks[7].Height, false),
-				*newTx(mockBlocks[7].Transactions[1]).OutputHash(1):      storage.NewUtxoEntry(false, mockBlocks[7].Height, false),
-				newTx(mockBlocks[7].Transactions[1]).getSpentOutputID(1): storage.NewUtxoEntry(false, mockBlocks[7].Height-1, false),
-
-				*newTx(mockBlocks[8].Transactions[0]).OutputHash(0):      storage.NewUtxoEntry(true, mockBlocks[8].Height, false),
-				*newTx(mockBlocks[8].Transactions[1]).OutputHash(0):      storage.NewUtxoEntry(false, mockBlocks[8].Height, false),
-				*newTx(mockBlocks[8].Transactions[1]).OutputHash(1):      storage.NewUtxoEntry(false, mockBlocks[8].Height, false),
-				newTx(mockBlocks[8].Transactions[1]).getSpentOutputID(1): storage.NewUtxoEntry(false, mockBlocks[8].Height-1, false),
-
-				*newTx(mockBlocks[8].Transactions[2]).OutputHash(0): storage.NewUtxoEntry(false, mockBlocks[8].Height, false),
-				*newTx(mockBlocks[8].Transactions[2]).OutputHash(1): storage.NewUtxoEntry(false, mockBlocks[8].Height, false),
-				*newTx(mockBlocks[8].Transactions[3]).OutputHash(0): storage.NewUtxoEntry(false, mockBlocks[8].Height, false),
-				*newTx(mockBlocks[8].Transactions[3]).OutputHash(1): storage.NewUtxoEntry(false, mockBlocks[8].Height, false),
-
-				*newTx(mockBlocks[9].Transactions[0]).OutputHash(0): storage.NewUtxoEntry(true, mockBlocks[9].Height, false),
-				*newTx(mockBlocks[9].Transactions[1]).OutputHash(0): storage.NewUtxoEntry(false, mockBlocks[9].Height, false),
-				*newTx(mockBlocks[9].Transactions[1]).OutputHash(1): storage.NewUtxoEntry(false, mockBlocks[9].Height, false),
-			},
-			want: map[bc.Hash]*storage.UtxoEntry{
-
-				*newTx(mockBlocks[10].Transactions[0]).OutputHash(0): storage.NewUtxoEntry(true, mockBlocks[10].Height, false),
-				*newTx(mockBlocks[10].Transactions[1]).OutputHash(0): storage.NewUtxoEntry(false, mockBlocks[10].Height, false),
-				*newTx(mockBlocks[10].Transactions[1]).OutputHash(1): storage.NewUtxoEntry(false, mockBlocks[10].Height, false),
-
-				*newTx(mockBlocks[10].Transactions[2]).OutputHash(0): storage.NewUtxoEntry(false, mockBlocks[10].Height, false),
-				*newTx(mockBlocks[10].Transactions[2]).OutputHash(1): storage.NewUtxoEntry(false, mockBlocks[10].Height, false),
-				*newTx(mockBlocks[10].Transactions[2]).OutputHash(2): storage.NewUtxoEntry(false, mockBlocks[10].Height, false),
-				*newTx(mockBlocks[10].Transactions[2]).OutputHash(3): storage.NewUtxoEntry(false, mockBlocks[10].Height, false),
-
-				*newTx(mockBlocks[10].Transactions[3]).OutputHash(0): storage.NewUtxoEntry(false, mockBlocks[10].Height, false),
-				*newTx(mockBlocks[10].Transactions[3]).OutputHash(1): storage.NewUtxoEntry(false, mockBlocks[10].Height, false),
-				*newTx(mockBlocks[10].Transactions[3]).OutputHash(2): storage.NewUtxoEntry(false, mockBlocks[10].Height, false),
-				*newTx(mockBlocks[10].Transactions[3]).OutputHash(3): storage.NewUtxoEntry(false, mockBlocks[10].Height, false),
-
-				*newTx(mockBlocks[10].Transactions[4]).OutputHash(0): storage.NewUtxoEntry(false, mockBlocks[10].Height, false),
-				*newTx(mockBlocks[10].Transactions[4]).OutputHash(1): storage.NewUtxoEntry(false, mockBlocks[10].Height, false),
-				*newTx(mockBlocks[10].Transactions[4]).OutputHash(2): storage.NewUtxoEntry(false, mockBlocks[10].Height, false),
-				*newTx(mockBlocks[10].Transactions[4]).OutputHash(3): storage.NewUtxoEntry(false, mockBlocks[10].Height, false),
-				*newTx(mockBlocks[10].Transactions[5]).OutputHash(0): storage.NewUtxoEntry(false, mockBlocks[10].Height, false),
-				*newTx(mockBlocks[10].Transactions[5]).OutputHash(1): storage.NewUtxoEntry(false, mockBlocks[10].Height, false),
-				*newTx(mockBlocks[10].Transactions[5]).OutputHash(2): storage.NewUtxoEntry(false, mockBlocks[10].Height, false),
-				*newTx(mockBlocks[10].Transactions[5]).OutputHash(3): storage.NewUtxoEntry(false, mockBlocks[10].Height, false),
-
-				*newTx(mockBlocks[11].Transactions[0]).OutputHash(0): storage.NewUtxoEntry(true, mockBlocks[11].Height, false),
-				*newTx(mockBlocks[11].Transactions[1]).OutputHash(0): storage.NewUtxoEntry(false, mockBlocks[11].Height, false),
-				*newTx(mockBlocks[11].Transactions[1]).OutputHash(1): storage.NewUtxoEntry(false, mockBlocks[11].Height, false),
-				*newTx(mockBlocks[11].Transactions[2]).OutputHash(0): storage.NewUtxoEntry(false, mockBlocks[11].Height, false),
-				*newTx(mockBlocks[11].Transactions[2]).OutputHash(1): storage.NewUtxoEntry(false, mockBlocks[11].Height, false),
-				*newTx(mockBlocks[11].Transactions[3]).OutputHash(0): storage.NewUtxoEntry(false, mockBlocks[11].Height, false),
-				*newTx(mockBlocks[11].Transactions[3]).OutputHash(1): storage.NewUtxoEntry(false, mockBlocks[11].Height, false),
-			},
-			attachBlock: []*bc.Block{
-				types.MapBlock(&mockBlocks[10].Block),
-				types.MapBlock(&mockBlocks[11].Block),
-			},
-			detachBlock: []*bc.Block{
-				types.MapBlock(&mockBlocks[9].Block),
-				types.MapBlock(&mockBlocks[8].Block),
-				types.MapBlock(&mockBlocks[7].Block),
-				types.MapBlock(&mockBlocks[6].Block),
-				types.MapBlock(&mockBlocks[5].Block),
-			},
-			attachTxStatus: []*bc.TransactionStatus{
-				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-				}},
-				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-				}},
-			},
-			detachTxStatus: []*bc.TransactionStatus{
-				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-				}},
-				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: true},
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-				}},
-				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: true},
-				}},
-				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: true},
-					&bc.TxVerifyResult{StatusFail: true},
-				}},
-				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-				}},
-			},
-		},
-		{
 			desc: "detach block 2, attach block 1. Chain trading",
 			before: map[bc.Hash]*storage.UtxoEntry{
 				// coinbase tx
@@ -406,34 +283,35 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 	}
 	node := blockNode(types.MapBlock(&mockBlocks[0].Block).BlockHeader)
 	defer os.RemoveAll("temp")
+
 	for index, c := range cases {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
 		store := database.NewStore(testDB)
 
-		utxoViewpoint := state.NewUtxoViewpoint()
+		utxoViewpoint0 := state.NewUtxoViewpoint()
 		for k, v := range c.before {
-			utxoViewpoint.Entries[k] = v
+			utxoViewpoint0.Entries[k] = v
 		}
 		contractView := state.NewContractViewpoint()
-		if err := store.SaveChainStatus(node, utxoViewpoint, contractView); err != nil {
+		if err := store.SaveChainStatus(node, utxoViewpoint0, contractView); err != nil {
 			t.Error(err)
 		}
 
-		utxoViewpoint = state.NewUtxoViewpoint()
-		for index, block := range c.detachBlock {
+		utxoViewpoint := state.NewUtxoViewpoint()
+		for _, block := range c.detachBlock {
 			if err := store.GetTransactionsUtxo(utxoViewpoint, block.Transactions); err != nil {
 				t.Error(err)
 			}
-			if err := utxoViewpoint.DetachBlock(block, c.detachTxStatus[index]); err != nil {
+			if err := utxoViewpoint.DetachBlock(block); err != nil {
 				t.Error(err)
 			}
 		}
 
-		for index, block := range c.attachBlock {
+		for _, block := range c.attachBlock {
 			if err := store.GetTransactionsUtxo(utxoViewpoint, block.Transactions); err != nil {
 				t.Error(err)
 			}
-			if err := utxoViewpoint.ApplyBlock(block, c.attachTxStatus[index]); err != nil {
+			if err := utxoViewpoint.ApplyBlock(block); err != nil {
 				t.Error(err)
 			}
 		}
@@ -463,6 +341,7 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 		if !testutil.DeepEqual(want, result) {
 			t.Errorf("case [%d] fail. want: %v, result: %v", index, want, result)
 		}
+
 		testDB.Close()
 		os.RemoveAll("temp")
 	}

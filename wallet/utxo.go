@@ -2,7 +2,6 @@ package wallet
 
 import (
 	"encoding/json"
-
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/account"
@@ -11,7 +10,6 @@ import (
 	"github.com/bytom/bytom/crypto/sha3pool"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/errors"
-	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 )
 
@@ -44,16 +42,10 @@ func (w *Wallet) GetAccountUtxos(accountID string, id string, unconfirmed, isSma
 	return accountUtxos
 }
 
-func (w *Wallet) attachUtxos(batch dbm.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
+func (w *Wallet) attachUtxos(batch dbm.Batch, b *types.Block) {
 	for txIndex, tx := range b.Transactions {
-		statusFail, err := txStatus.GetStatus(txIndex)
-		if err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("attachUtxos fail on get tx status")
-			continue
-		}
-
 		//hand update the transaction input utxos
-		inputUtxos := txInToUtxos(tx, statusFail)
+		inputUtxos := txInToUtxos(tx)
 		for _, inputUtxo := range inputUtxos {
 			if segwit.IsP2WScript(inputUtxo.ControlProgram) {
 				batch.Delete(account.StandardUTXOKey(inputUtxo.OutputID))
@@ -67,7 +59,7 @@ func (w *Wallet) attachUtxos(batch dbm.Batch, b *types.Block, txStatus *bc.Trans
 		if txIndex == 0 {
 			validHeight = b.Height + consensus.CoinbasePendingBlockNumber
 		}
-		outputUtxos := txOutToUtxos(tx, statusFail, validHeight)
+		outputUtxos := txOutToUtxos(tx, validHeight)
 		utxos := w.filterAccountUtxo(outputUtxos)
 		if err := batchSaveUtxos(utxos, batch); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("attachUtxos fail on batchSaveUtxos")
@@ -75,7 +67,7 @@ func (w *Wallet) attachUtxos(batch dbm.Batch, b *types.Block, txStatus *bc.Trans
 	}
 }
 
-func (w *Wallet) detachUtxos(batch dbm.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
+func (w *Wallet) detachUtxos(batch dbm.Batch, b *types.Block) {
 	for txIndex := len(b.Transactions) - 1; txIndex >= 0; txIndex-- {
 		tx := b.Transactions[txIndex]
 		for j := range tx.Outputs {
@@ -91,13 +83,7 @@ func (w *Wallet) detachUtxos(batch dbm.Batch, b *types.Block, txStatus *bc.Trans
 			}
 		}
 
-		statusFail, err := txStatus.GetStatus(txIndex)
-		if err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("detachUtxos fail on get tx status")
-			continue
-		}
-
-		inputUtxos := txInToUtxos(tx, statusFail)
+		inputUtxos := txInToUtxos(tx)
 		utxos := w.filterAccountUtxo(inputUtxos)
 		if err := batchSaveUtxos(utxos, batch); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("detachUtxos fail on batchSaveUtxos")
@@ -159,7 +145,7 @@ func batchSaveUtxos(utxos []*account.UTXO, batch dbm.Batch) error {
 	return nil
 }
 
-func txInToUtxos(tx *types.Tx, statusFail bool) []*account.UTXO {
+func txInToUtxos(tx *types.Tx) []*account.UTXO {
 	utxos := []*account.UTXO{}
 	for _, inpID := range tx.Tx.InputIDs {
 		sp, err := tx.Spend(inpID)
@@ -170,10 +156,6 @@ func txInToUtxos(tx *types.Tx, statusFail bool) []*account.UTXO {
 		resOut, err := tx.Output(*sp.SpentOutputId)
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("txInToUtxos fail on get resOut")
-			continue
-		}
-
-		if statusFail && *resOut.Source.Value.AssetId != *consensus.BTMAssetID {
 			continue
 		}
 
@@ -189,7 +171,7 @@ func txInToUtxos(tx *types.Tx, statusFail bool) []*account.UTXO {
 	return utxos
 }
 
-func txOutToUtxos(tx *types.Tx, statusFail bool, vaildHeight uint64) []*account.UTXO {
+func txOutToUtxos(tx *types.Tx, vaildHeight uint64) []*account.UTXO {
 	utxos := []*account.UTXO{}
 	for i, out := range tx.Outputs {
 		bcOut, err := tx.Output(*tx.ResultIds[i])
@@ -197,11 +179,7 @@ func txOutToUtxos(tx *types.Tx, statusFail bool, vaildHeight uint64) []*account.
 			continue
 		}
 
-		if statusFail && *out.AssetAmount.AssetId != *consensus.BTMAssetID {
-			continue
-		}
-
-		utxos = append(utxos, &account.UTXO{
+		utxo := &account.UTXO{
 			OutputID:       *tx.OutputID(i),
 			AssetID:        *out.AssetAmount.AssetId,
 			Amount:         out.Amount,
@@ -209,7 +187,8 @@ func txOutToUtxos(tx *types.Tx, statusFail bool, vaildHeight uint64) []*account.
 			SourceID:       *bcOut.Source.Ref,
 			SourcePos:      bcOut.Source.Position,
 			ValidHeight:    vaildHeight,
-		})
+		}
+		utxos = append(utxos, utxo)
 	}
 	return utxos
 }

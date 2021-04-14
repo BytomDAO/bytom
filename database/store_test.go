@@ -20,9 +20,7 @@ func TestLoadBlockIndex(t *testing.T) {
 	store := NewStore(testDB)
 
 	block := config.GenesisBlock()
-	txStatus := bc.NewTransactionStatus()
-
-	if err := store.SaveBlock(block, txStatus); err != nil {
+	if err := store.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
 
@@ -30,7 +28,7 @@ func TestLoadBlockIndex(t *testing.T) {
 		preHash := block.Hash()
 		block.PreviousBlockHash = preHash
 		block.Height++
-		if err := store.SaveBlock(block, txStatus); err != nil {
+		if err := store.SaveBlock(block); err != nil {
 			t.Fatal(err)
 		}
 
@@ -39,7 +37,7 @@ func TestLoadBlockIndex(t *testing.T) {
 		}
 
 		for i := uint64(0); i < block.Height/32; i++ {
-			if err := store.SaveBlock(block, txStatus); err != nil {
+			if err := store.SaveBlock(block); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -76,10 +74,8 @@ func TestLoadBlockIndexBestHeight(t *testing.T) {
 
 	for _, c := range cases {
 		block := config.GenesisBlock()
-		txStatus := bc.NewTransactionStatus()
-
 		for i := uint64(0); i < c.blockBestHeight; i++ {
-			if err := store.SaveBlock(block, txStatus); err != nil {
+			if err := store.SaveBlock(block); err != nil {
 				t.Fatal(err)
 			}
 
@@ -108,12 +104,11 @@ func TestLoadBlockIndexEquals(t *testing.T) {
 	store := NewStore(testDB)
 
 	block := config.GenesisBlock()
-	txStatus := bc.NewTransactionStatus()
 	expectBlockIndex := state.NewBlockIndex()
 	var parent *state.BlockNode
 
 	for block.Height <= 100 {
-		if err := store.SaveBlock(block, txStatus); err != nil {
+		if err := store.SaveBlock(block); err != nil {
 			t.Fatal(err)
 		}
 
@@ -186,8 +181,7 @@ func TestSaveBlock(t *testing.T) {
 	store := NewStore(testDB)
 
 	block := config.GenesisBlock()
-	status := &bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{{StatusFail: true}}}
-	if err := store.SaveBlock(block, status); err != nil {
+	if err := store.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
 
@@ -201,15 +195,6 @@ func TestSaveBlock(t *testing.T) {
 	gotBlock.Transactions[0].SerializedSize = 0
 	if !testutil.DeepEqual(block, gotBlock) {
 		t.Errorf("got block:%v, expect block:%v", gotBlock, block)
-	}
-
-	gotStatus, err := store.GetTransactionStatus(&blockHash)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !testutil.DeepEqual(status, gotStatus) {
-		t.Errorf("got status:%v, expect status:%v", gotStatus, status)
 	}
 
 	data := store.db.Get(CalcBlockHeaderKey(block.Height, &blockHash))

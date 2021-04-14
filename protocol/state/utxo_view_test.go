@@ -1,6 +1,7 @@
 package state
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/bytom/bytom/consensus"
@@ -47,9 +48,7 @@ func TestApplyBlock(t *testing.T) {
 		{
 			// can't find prevout in tx entries
 			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					TransactionStatus: bc.NewTransactionStatus(),
-				},
+				BlockHeader: &bc.BlockHeader{},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						SpentOutputIDs: []bc.Hash{
@@ -69,9 +68,7 @@ func TestApplyBlock(t *testing.T) {
 		},
 		{
 			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					TransactionStatus: bc.NewTransactionStatus(),
-				},
+				BlockHeader: &bc.BlockHeader{},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						SpentOutputIDs: []bc.Hash{
@@ -87,9 +84,7 @@ func TestApplyBlock(t *testing.T) {
 		},
 		{
 			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					TransactionStatus: bc.NewTransactionStatus(),
-				},
+				BlockHeader: &bc.BlockHeader{},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						SpentOutputIDs: []bc.Hash{
@@ -108,9 +103,7 @@ func TestApplyBlock(t *testing.T) {
 		},
 		{
 			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					TransactionStatus: bc.NewTransactionStatus(),
-				},
+				BlockHeader: &bc.BlockHeader{},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						TxHeader: &bc.TxHeader{
@@ -139,7 +132,6 @@ func TestApplyBlock(t *testing.T) {
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
 					Height:            101,
-					TransactionStatus: bc.NewTransactionStatus(),
 				},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
@@ -169,7 +161,6 @@ func TestApplyBlock(t *testing.T) {
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
 					Height:            0,
-					TransactionStatus: bc.NewTransactionStatus(),
 				},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
@@ -198,9 +189,7 @@ func TestApplyBlock(t *testing.T) {
 		{
 			// output will be store
 			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					TransactionStatus: bc.NewTransactionStatus(),
-				},
+				BlockHeader: &bc.BlockHeader{},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						TxHeader: &bc.TxHeader{
@@ -222,11 +211,9 @@ func TestApplyBlock(t *testing.T) {
 			err: false,
 		},
 		{
-			// apply gas only tx, non-btm asset spent input will not be spent
+			// non-btm asset spent input will be spent
 			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					TransactionStatus: bc.NewTransactionStatus(),
-				},
+				BlockHeader: &bc.BlockHeader{},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						TxHeader: &bc.TxHeader{
@@ -249,18 +236,15 @@ func TestApplyBlock(t *testing.T) {
 			fetchView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
 					bc.Hash{V1: 0}: storage.NewUtxoEntry(false, 0, true),
-					bc.Hash{V1: 1}: storage.NewUtxoEntry(false, 0, false),
+					bc.Hash{V1: 1}: storage.NewUtxoEntry(false, 0, true),
 				},
 			},
-			gasOnlyTx: true,
 			err:       false,
 		},
 		{
 			// apply gas only tx, non-btm asset spent output will not be store
 			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					TransactionStatus: bc.NewTransactionStatus(),
-				},
+				BlockHeader: &bc.BlockHeader{},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						TxHeader: &bc.TxHeader{
@@ -278,16 +262,15 @@ func TestApplyBlock(t *testing.T) {
 			fetchView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
 					bc.Hash{V1: 0}: storage.NewUtxoEntry(true, 0, false),
+					bc.Hash{V1: 1}: storage.NewUtxoEntry(true, 0, false),
 				},
 			},
-			gasOnlyTx: true,
 			err:       false,
 		},
 	}
 
 	for i, c := range cases {
-		c.block.TransactionStatus.SetStatus(0, c.gasOnlyTx)
-		if err := c.inputView.ApplyBlock(c.block, c.block.TransactionStatus); c.err != (err != nil) {
+		if err := c.inputView.ApplyBlock(c.block); c.err != (err != nil) {
 			t.Errorf("case #%d want err = %v, get err = %v", i, c.err, err)
 		}
 		if c.err {
@@ -309,9 +292,7 @@ func TestDetachBlock(t *testing.T) {
 	}{
 		{
 			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					TransactionStatus: bc.NewTransactionStatus(),
-				},
+				BlockHeader: &bc.BlockHeader{},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						TxHeader: &bc.TxHeader{
@@ -334,9 +315,7 @@ func TestDetachBlock(t *testing.T) {
 		},
 		{
 			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					TransactionStatus: bc.NewTransactionStatus(),
-				},
+				BlockHeader: &bc.BlockHeader{},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						TxHeader: &bc.TxHeader{
@@ -359,9 +338,7 @@ func TestDetachBlock(t *testing.T) {
 		},
 		{
 			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					TransactionStatus: bc.NewTransactionStatus(),
-				},
+				BlockHeader: &bc.BlockHeader{},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						TxHeader: &bc.TxHeader{
@@ -383,9 +360,7 @@ func TestDetachBlock(t *testing.T) {
 		},
 		{
 			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					TransactionStatus: bc.NewTransactionStatus(),
-				},
+				BlockHeader: &bc.BlockHeader{},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						TxHeader: &bc.TxHeader{
@@ -410,77 +385,24 @@ func TestDetachBlock(t *testing.T) {
 			},
 			err: false,
 		},
-		{
-			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					TransactionStatus: bc.NewTransactionStatus(),
-				},
-				Transactions: []*bc.Tx{
-					&bc.Tx{
-						TxHeader: &bc.TxHeader{
-							ResultIds: []*bc.Hash{},
-						},
-						SpentOutputIDs: []bc.Hash{
-							bc.Hash{V1: 0},
-							bc.Hash{V1: 1},
-						},
-						Entries: gasOnlyTxEntry,
-					},
-				},
-			},
-			inputView: &UtxoViewpoint{
-				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V1: 0}: storage.NewUtxoEntry(false, 0, true),
-					bc.Hash{V1: 1}: storage.NewUtxoEntry(false, 0, true),
-				},
-			},
-			fetchView: &UtxoViewpoint{
-				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V1: 0}: storage.NewUtxoEntry(false, 0, false),
-					bc.Hash{V1: 1}: storage.NewUtxoEntry(false, 0, true),
-				},
-			},
-			gasOnlyTx: true,
-			err:       false,
-		},
-		{
-			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					TransactionStatus: bc.NewTransactionStatus(),
-				},
-				Transactions: []*bc.Tx{
-					&bc.Tx{
-						TxHeader: &bc.TxHeader{
-							ResultIds: []*bc.Hash{
-								&bc.Hash{V1: 0},
-								&bc.Hash{V1: 1},
-							},
-						},
-						SpentOutputIDs: []bc.Hash{},
-						Entries:        gasOnlyTxEntry,
-					},
-				},
-			},
-			inputView: NewUtxoViewpoint(),
-			fetchView: &UtxoViewpoint{
-				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V1: 0}: storage.NewUtxoEntry(false, 0, true),
-				},
-			},
-			gasOnlyTx: true,
-			err:       false,
-		},
 	}
 
 	for i, c := range cases {
-		c.block.TransactionStatus.SetStatus(0, c.gasOnlyTx)
-		if err := c.inputView.DetachBlock(c.block, c.block.TransactionStatus); c.err != (err != nil) {
+		if err := c.inputView.DetachBlock(c.block); c.err != (err != nil) {
 			t.Errorf("case %d want err = %v, get err = %v", i, c.err, err)
 		}
 		if c.err {
 			continue
 		}
 		if !testutil.DeepEqual(c.inputView, c.fetchView) {
+			for hash, entry := range c.inputView.Entries {
+				fmt.Println(hash.String(), ":", entry.String())
+			}
+
+			for hash, entry := range c.fetchView.Entries {
+				fmt.Println(hash.String(), ":", entry.String())
+			}
+
 			t.Errorf("test case %d, want %v, get %v", i, c.fetchView, c.inputView)
 		}
 	}
