@@ -22,6 +22,19 @@ import (
 
 const logModule = "proposal"
 
+func NewBlock(chain *protocol.Chain, casper *consensus.Casper, accountManager *account.Manager, timestamp uint64) (*types.Block, error) {
+	builder := NewBlockBuilder(chain, casper, accountManager)
+	return builder.Build(timestamp)
+}
+
+func NewBlockBuilder(chain *protocol.Chain, casper *consensus.Casper, accountManager *account.Manager) *BlockBuilder {
+	return &BlockBuilder{
+		chain:          chain,
+		casper:         casper,
+		accountManager: accountManager,
+	}
+}
+
 type BlockBuilder struct {
 	chain          *protocol.Chain
 	casper         *consensus.Casper
