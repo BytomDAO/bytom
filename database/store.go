@@ -91,17 +91,7 @@ func (s *Store) GetUtxo(hash *bc.Hash) (*storage.UtxoEntry, error) {
 }
 
 func (s *Store) GetContract(hash [32]byte) ([]byte, error) {
-	data := s.db.Get(CalcContractKey(hash))
-	if data == nil {
-		return nil, errors.New("can't find the registered contract by contract hash")
-	}
-
-	// data:"txID+program.Code"
-	if len(data) <= 32 {
-		return nil, errors.New("registered contract format error")
-	}
-
-	return data[32:], nil
+	return getContract(s.db, hash)
 }
 
 // BlockExist check if the block is stored in disk
