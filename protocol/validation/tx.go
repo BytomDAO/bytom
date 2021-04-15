@@ -45,7 +45,6 @@ type GasState struct {
 	BTMValue   uint64
 	GasLeft    int64
 	GasUsed    int64
-	GasValid   bool
 	StorageGas int64
 }
 
@@ -81,7 +80,6 @@ func (g *GasState) setGasValid() error {
 		return errors.Wrap(ErrGasCalculate, "setGasValid calc gasUsed")
 	}
 
-	g.GasValid = true
 	return nil
 }
 
@@ -495,31 +493,31 @@ func checkTimeRange(tx *bc.Tx, block *bc.Block) error {
 // ValidateTx validates a transaction.
 func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
 	if block.Version == 1 && tx.Version != 1 {
-		return &GasState{GasValid: false}, errors.WithDetailf(ErrTxVersion, "block version %d, transaction version %d", block.Version, tx.Version)
+		return nil, errors.WithDetailf(ErrTxVersion, "block version %d, transaction version %d", block.Version, tx.Version)
 	}
 
 	if tx.SerializedSize == 0 {
-		return &GasState{GasValid: false}, ErrWrongTransactionSize
+		return nil, ErrWrongTransactionSize
 	}
 
 	if err := checkTimeRange(tx, block); err != nil {
-		return &GasState{GasValid: false}, err
+		return nil, err
 	}
 
 	if err := checkStandardTx(tx, block.Height); err != nil {
-		return &GasState{GasValid: false}, err
+		return nil, err
 	}
 
 	vs := &validationState{
 		block:     block,
 		tx:        tx,
 		entryID:   tx.ID,
-		gasStatus: &GasState{GasValid: false},
+		gasStatus: &GasState{},
 		cache:     make(map[bc.Hash]error),
 	}
 
 	if err := checkValid(vs, tx.TxHeader); err != nil {
-		return &GasState{GasValid: false}, err
+		return nil, err
 	}
 
 	return vs.gasStatus, nil

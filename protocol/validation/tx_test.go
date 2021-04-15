@@ -144,13 +144,11 @@ func TestGasStatus(t *testing.T) {
 				GasLeft:    1000,
 				GasUsed:    10,
 				StorageGas: 1000,
-				GasValid:   false,
 			},
 			output: &GasState{
 				GasLeft:    0,
 				GasUsed:    1010,
 				StorageGas: 1000,
-				GasValid:   true,
 			},
 			f: func(input *GasState) error {
 				return input.setGasValid()
@@ -162,13 +160,11 @@ func TestGasStatus(t *testing.T) {
 				GasLeft:    900,
 				GasUsed:    10,
 				StorageGas: 1000,
-				GasValid:   false,
 			},
 			output: &GasState{
 				GasLeft:    -100,
 				GasUsed:    10,
 				StorageGas: 1000,
-				GasValid:   false,
 			},
 			f: func(input *GasState) error {
 				return input.setGasValid()
@@ -180,13 +176,11 @@ func TestGasStatus(t *testing.T) {
 				GasLeft:    1000,
 				GasUsed:    math.MaxInt64,
 				StorageGas: 1000,
-				GasValid:   false,
 			},
 			output: &GasState{
 				GasLeft:    0,
 				GasUsed:    0,
 				StorageGas: 1000,
-				GasValid:   false,
 			},
 			f: func(input *GasState) error {
 				return input.setGasValid()
@@ -198,13 +192,11 @@ func TestGasStatus(t *testing.T) {
 				GasLeft:    math.MinInt64,
 				GasUsed:    0,
 				StorageGas: 1000,
-				GasValid:   false,
 			},
 			output: &GasState{
 				GasLeft:    0,
 				GasUsed:    0,
 				StorageGas: 1000,
-				GasValid:   false,
 			},
 			f: func(input *GasState) error {
 				return input.setGasValid()
