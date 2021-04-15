@@ -708,7 +708,6 @@ func TestCoinbase(t *testing.T) {
 	cases := []struct {
 		block    *bc.Block
 		txIndex  int
-		GasValid bool
 		err      error
 	}{
 		{
@@ -717,7 +716,6 @@ func TestCoinbase(t *testing.T) {
 				Transactions: []*bc.Tx{CbTx},
 			},
 			txIndex:  0,
-			GasValid: true,
 			err:      nil,
 		},
 		{
@@ -737,7 +735,6 @@ func TestCoinbase(t *testing.T) {
 				},
 			},
 			txIndex:  1,
-			GasValid: false,
 			err:      ErrWrongCoinbaseTransaction,
 		},
 		{
@@ -759,7 +756,6 @@ func TestCoinbase(t *testing.T) {
 				},
 			},
 			txIndex:  1,
-			GasValid: false,
 			err:      ErrWrongCoinbaseTransaction,
 		},
 		{
@@ -781,7 +777,6 @@ func TestCoinbase(t *testing.T) {
 				},
 			},
 			txIndex:  1,
-			GasValid: false,
 			err:      ErrWrongCoinbaseTransaction,
 		},
 		{
@@ -802,7 +797,6 @@ func TestCoinbase(t *testing.T) {
 				},
 			},
 			txIndex:  0,
-			GasValid: true,
 			err:      nil,
 		},
 		{
@@ -823,20 +817,14 @@ func TestCoinbase(t *testing.T) {
 				},
 			},
 			txIndex:  0,
-			GasValid: false,
 			err:      vm.ErrReturn,
 		},
 	}
 
 	for i, c := range cases {
-		gasStatus, err := ValidateTx(c.block.Transactions[c.txIndex], c.block)
-
+		_, err := ValidateTx(c.block.Transactions[c.txIndex], c.block)
 		if rootErr(err) != c.err {
 			t.Errorf("#%d got error %s, want %s", i, err, c.err)
-		}
-
-		if c.GasValid != gasStatus.GasValid {
-			t.Errorf("#%d got GasValid %t, want %t", i, gasStatus.GasValid, c.GasValid)
 		}
 	}
 }
