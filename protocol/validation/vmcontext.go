@@ -3,6 +3,7 @@ package validation
 import (
 	"bytes"
 
+	"github.com/bytom/bytom/consensus/bcrp"
 	"github.com/bytom/bytom/consensus/segwit"
 	"github.com/bytom/bytom/crypto/sha3pool"
 	"github.com/bytom/bytom/errors"
@@ -94,7 +95,7 @@ func convertProgram(prog []byte, converter ProgramConverterFunc) []byte {
 		if witnessProg, err := segwit.ConvertP2SHProgram([]byte(prog)); err == nil {
 			return witnessProg
 		}
-	} else if segwit.IsCallBCRPScript(prog) {
+	} else if bcrp.IsCallBCRPScript(prog) {
 		if contractProg, err := converter(prog); err == nil {
 			return contractProg
 		}

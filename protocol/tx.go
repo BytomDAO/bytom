@@ -3,12 +3,12 @@ package protocol
 import (
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bytom/bytom/consensus/bcrp"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
 	"github.com/bytom/bytom/protocol/validation"
-	"github.com/bytom/bytom/protocol/vm"
 )
 
 // ErrBadTx is returned for transactions failing validation
@@ -45,17 +45,10 @@ func (c *Chain) ValidateTx(tx *types.Tx) (bool, error) {
 
 //ProgramConverter convert program. Only for BCRP now
 func (c *Chain) ProgramConverter(prog []byte) ([]byte, error) {
-	insts, err := vm.ParseProgram(prog)
+	hash, err := bcrp.ParseContractHash(prog)
 	if err != nil {
 		return nil, err
 	}
-
-	if len(insts) != 2 {
-		return nil, errors.New("unsupport program")
-	}
-
-	var hash [32]byte
-	copy(hash[:], insts[1].Data)
 
 	return c.store.GetContract(hash)
 }
