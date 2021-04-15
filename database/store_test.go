@@ -4,10 +4,11 @@ import (
 	"os"
 	"testing"
 
+	store2 "github.com/bytom/bytom/protocol/store"
+
 	"github.com/bytom/bytom/config"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/database/storage"
-	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
@@ -154,7 +155,7 @@ func TestSaveChainStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectStatus := &protocol.BlockStoreState{Height: node.Height, Hash: &node.Hash}
+	expectStatus := &store2.BlockStoreState{Height: node.Height, Hash: &node.Hash}
 	if !testutil.DeepEqual(store.GetStoreStatus(), expectStatus) {
 		t.Errorf("got block status:%v, expect block status:%v", store.GetStoreStatus(), expectStatus)
 	}

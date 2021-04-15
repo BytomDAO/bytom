@@ -2,8 +2,10 @@ package integration
 
 import (
 	"fmt"
-	"time"
 	"testing"
+	"time"
+
+	"github.com/bytom/bytom/protocol/store"
 
 	"github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/consensus"
@@ -1129,7 +1131,7 @@ func createStoreItems(mainChainIndexes []int, attachBlocks []*attachBlock, extra
 	bestBlockHash := betBlock.Hash()
 	items = append(items, &storeItem{
 		key: database.BlockStoreKey,
-		val: &protocol.BlockStoreState{Height: betBlock.Height, Hash: &bestBlockHash},
+		val: &store.BlockStoreState{Height: betBlock.Height, Hash: &bestBlockHash},
 	})
 	return items
 }

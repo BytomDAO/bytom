@@ -9,6 +9,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/bytom/bytom/protocol/store"
+
 	"github.com/golang/protobuf/proto"
 
 	"github.com/bytom/bytom/database"
@@ -36,7 +38,7 @@ type deserialFun func(data []byte) (interface{}, error)
 
 func getSerialFun(item interface{}) (serialFun, error) {
 	switch item.(type) {
-	case *protocol.BlockStoreState:
+	case *store.BlockStoreState:
 		return json.Marshal, nil
 	case *types.Block:
 		return func(obj interface{}) ([]byte, error) {
@@ -66,7 +68,7 @@ func getSerialFun(item interface{}) (serialFun, error) {
 func getDeserialFun(key []byte) (deserialFun, error) {
 	funMap := map[string]deserialFun{
 		string(database.BlockStoreKey): func(data []byte) (interface{}, error) {
-			storeState := &protocol.BlockStoreState{}
+			storeState := &store.BlockStoreState{}
 			err := json.Unmarshal(data, storeState)
 			return storeState, err
 		},
@@ -238,7 +240,7 @@ func loadStoreItems(db dbm.DB) ([]*storeItem, error) {
 	return items, nil
 }
 
-func initStore(c *processBlockTestCase) (protocol.Store, dbm.DB, error) {
+func initStore(c *processBlockTestCase) (store.Store, dbm.DB, error) {
 	testDB := dbm.NewDB("testdb", "leveldb", dbDir)
 	batch := testDB.NewBatch()
 	for _, item := range c.initStore {

@@ -26,6 +26,21 @@ type TxOutput struct {
 	TypedOutput
 }
 
+// NewTxOutput create a new output struct
+func NewTxOutput(assetID bc.AssetID, amount uint64, controlProgram []byte) *TxOutput {
+	return &TxOutput{
+		AssetVersion: 1,
+		OutputCommitment: OutputCommitment{
+			AssetAmount: bc.AssetAmount{
+				AssetId: &assetID,
+				Amount:  amount,
+			},
+			VMVersion:      1,
+			ControlProgram: controlProgram,
+		},
+	}
+}
+
 // TypedOutput return the txoutput type.
 type TypedOutput interface {
 	OutputType() uint8
@@ -37,7 +52,6 @@ func (to *TxOutput) readFrom(r *blockchain.Reader) (err error) {
 	if to.AssetVersion, err = blockchain.ReadVarint63(r); err != nil {
 		return errors.Wrap(err, "reading asset version")
 	}
-
 
 	typedOutput, err := parseTypedOutput(r)
 	if err != nil {

@@ -6,6 +6,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	store2 "github.com/bytom/bytom/protocol/store"
+
 	"github.com/golang/groupcache/lru"
 	log "github.com/sirupsen/logrus"
 
@@ -66,7 +68,7 @@ type orphanTx struct {
 type TxPool struct {
 	lastUpdated     int64
 	mtx             sync.RWMutex
-	store           Store
+	store           store2.Store
 	pool            map[bc.Hash]*TxDesc
 	utxo            map[bc.Hash]*types.Tx
 	orphans         map[bc.Hash]*orphanTx
@@ -76,7 +78,7 @@ type TxPool struct {
 }
 
 // NewTxPool init a new TxPool
-func NewTxPool(store Store, dispatcher *event.Dispatcher) *TxPool {
+func NewTxPool(store store2.Store, dispatcher *event.Dispatcher) *TxPool {
 	tp := &TxPool{
 		lastUpdated:     time.Now().Unix(),
 		store:           store,

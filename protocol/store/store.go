@@ -1,4 +1,4 @@
-package protocol
+package store
 
 import (
 	"github.com/bytom/bytom/database/storage"

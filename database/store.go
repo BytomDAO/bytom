@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/bytom/bytom/protocol/store"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/common"
 
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/errors"
-	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
@@ -26,12 +27,12 @@ var (
 	TxStatusPrefix    = []byte("BTS:")
 )
 
-func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
+func loadBlockStoreStateJSON(db dbm.DB) *store.BlockStoreState {
 	bytes := db.Get(BlockStoreKey)
 	if bytes == nil {
 		return nil
 	}
-	bsj := &protocol.BlockStoreState{}
+	bsj := &store.BlockStoreState{}
 	if err := json.Unmarshal(bytes, bsj); err != nil {
 		common.PanicCrisis(common.Fmt("Could not unmarshal bytes: %X", bytes))
 	}
@@ -111,7 +112,7 @@ func (s *Store) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) err
 }
 
 // GetStoreStatus return the BlockStoreStateJSON
-func (s *Store) GetStoreStatus() *protocol.BlockStoreState {
+func (s *Store) GetStoreStatus() *store.BlockStoreState {
 	return loadBlockStoreStateJSON(s.db)
 }
 
@@ -201,7 +202,7 @@ func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint
 		return err
 	}
 
-	bytes, err := json.Marshal(protocol.BlockStoreState{Height: node.Height, Hash: &node.Hash})
+	bytes, err := json.Marshal(store.BlockStoreState{Height: node.Height, Hash: &node.Hash})
 	if err != nil {
 		return err
 	}

@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytom/bytom/protocol/store"
+
 	"github.com/davecgh/go-spew/spew"
 
 	"github.com/bytom/bytom/consensus"
@@ -103,7 +105,7 @@ func (s *mockStore) GetCheckpointsByHeight(u uint64) ([]*state.Checkpoint, error
 func (s *mockStore) SaveCheckpoints(...*state.Checkpoint) error                   { return nil }
 func (s *mockStore) BlockExist(hash *bc.Hash) bool                                { return false }
 func (s *mockStore) GetBlock(*bc.Hash) (*types.Block, error)                      { return nil, nil }
-func (s *mockStore) GetStoreStatus() *BlockStoreState                             { return nil }
+func (s *mockStore) GetStoreStatus() *store.BlockStoreState                       { return nil }
 func (s *mockStore) GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error     { return nil }
 func (s *mockStore) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)                 { return nil, nil }
 func (s *mockStore) GetContract(hash [32]byte) ([]byte, error)                    { return nil, nil }
@@ -597,7 +599,7 @@ func (s *mockStore1) GetCheckpointsByHeight(u uint64) ([]*state.Checkpoint, erro
 func (s *mockStore1) SaveCheckpoints(...*state.Checkpoint) error                   { return nil }
 func (s *mockStore1) BlockExist(hash *bc.Hash) bool                                { return false }
 func (s *mockStore1) GetBlock(*bc.Hash) (*types.Block, error)                      { return nil, nil }
-func (s *mockStore1) GetStoreStatus() *BlockStoreState                             { return nil }
+func (s *mockStore1) GetStoreStatus() *store.BlockStoreState                       { return nil }
 func (s *mockStore1) GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error) { return nil, nil }
 func (s *mockStore1) GetTransactionsUtxo(utxoView *state.UtxoViewpoint, tx []*bc.Tx) error {
 	for _, hash := range testTxs[2].SpentOutputIDs {
@@ -605,11 +607,13 @@ func (s *mockStore1) GetTransactionsUtxo(utxoView *state.UtxoViewpoint, tx []*bc
 	}
 	return nil
 }
-func (s *mockStore1) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)        { return nil, nil }
-func (s *mockStore1) GetContract(hash [32]byte) ([]byte, error)           { return nil, nil }
-func (s *mockStore1) LoadBlockIndex(uint64) (*state.BlockIndex, error)    { return nil, nil }
-func (s *mockStore1) SaveBlock(*types.Block) error { return nil }
-func (s *mockStore1) SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint, *state.ContractViewpoint) error { return nil}
+func (s *mockStore1) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)     { return nil, nil }
+func (s *mockStore1) GetContract(hash [32]byte) ([]byte, error)        { return nil, nil }
+func (s *mockStore1) LoadBlockIndex(uint64) (*state.BlockIndex, error) { return nil, nil }
+func (s *mockStore1) SaveBlock(*types.Block) error                     { return nil }
+func (s *mockStore1) SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint, *state.ContractViewpoint) error {
+	return nil
+}
 
 func TestProcessTransaction(t *testing.T) {
 	txPool := &TxPool{
