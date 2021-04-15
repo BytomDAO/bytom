@@ -227,6 +227,7 @@ func TestGasStatus(t *testing.T) {
 func TestOverflow(t *testing.T) {
 	sourceID := &bc.Hash{V0: 9999}
 	ctrlProgram := []byte{byte(vm.OP_TRUE)}
+	converter := func(prog []byte) ([]byte, error) { return nil, nil }
 	newTx := func(inputs []uint64, outputs []uint64) *bc.Tx {
 		txInputs := make([]*types.TxInput, 0, len(inputs))
 		txOutputs := make([]*types.TxOutput, 0, len(outputs))
@@ -305,7 +306,7 @@ func TestOverflow(t *testing.T) {
 
 	for i, c := range cases {
 		tx := newTx(c.inputs, c.outputs)
-		if _, err := ValidateTx(tx, mockBlock()); rootErr(err) != c.err {
+		if _, err := ValidateTx(tx, mockBlock(), converter); rootErr(err) != c.err {
 			t.Fatalf("case %d test failed, want %s, have %s", i, c.err, rootErr(err))
 		}
 	}
@@ -695,6 +696,7 @@ func TestTxValidation(t *testing.T) {
 func TestCoinbase(t *testing.T) {
 	cp, _ := vmutil.DefaultCoinbaseProgram()
 	retire, _ := vmutil.RetireProgram([]byte{})
+	converter := func(prog []byte) ([]byte, error) { return nil, nil }
 	CbTx := types.MapTx(&types.TxData{
 		SerializedSize: 1,
 		Inputs: []*types.TxInput{
@@ -829,7 +831,7 @@ func TestCoinbase(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		gasStatus, err := ValidateTx(c.block.Transactions[c.txIndex], c.block)
+		gasStatus, err := ValidateTx(c.block.Transactions[c.txIndex], c.block, converter)
 
 		if rootErr(err) != c.err {
 			t.Errorf("#%d got error %s, want %s", i, err, c.err)
@@ -842,6 +844,7 @@ func TestCoinbase(t *testing.T) {
 
 func TestRuleAA(t *testing.T) {
 	testData := "070100040161015f9bc47dda88eee18c7433340c16e054cabee4318a8d638e873be19e979df81dc7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0e3f9f5c80e01011600147c7662d92bd5e77454736f94731c60a6e9cbc69f6302404a17a5995b8163ee448719b462a5694b22a35522dd9883333fd462cc3d0aabf049445c5cbb911a40e1906a5bea99b23b1a79e215eeb1a818d8b1dd27e06f3004200530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce9940160015ee334d4fe18398f0232d2aca7050388ce4ee5ae82c8148d7f0cea748438b65135ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ace6842001011600147c7662d92bd5e77454736f94731c60a6e9cbc69f6302404a17a5995b8163ee448719b462a5694b22a35522dd9883333fd462cc3d0aabf049445c5cbb911a40e1906a5bea99b23b1a79e215eeb1a818d8b1dd27e06f3004200530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce9940161015f9bc47dda88eee18c7433340c16e054cabee4318a8d638e873be19e979df81dc7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0e3f9f5c80e01011600147c7662d92bd5e77454736f94731c60a6e9cbc69f63024062c29b20941e7f762c3afae232f61d8dac1c544825931e391408c6715c408ef69f494a1b3b61ce380ddee0c8b18ecac2b46ef96a62eebb6ec40f9f545410870a200530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce9940160015ee334d4fe18398f0232d2aca7050388ce4ee5ae82c8148d7f0cea748438b65135ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ace6842001011600147c7662d92bd5e77454736f94731c60a6e9cbc69f630240e443d66c75b4d5fa71676d60b0b067e6941f06349f31e5f73a7d51a73f5797632b2e01e8584cd1c8730dc16df075866b0c796bd7870182e2da4b37188208fe02200530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce9940201003effffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa08ba3fae80e01160014aac0345165045e612b3d7363f39a372bead80ce70001003effffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe08fe0fae80e01160014aac0345165045e612b3d7363f39a372bead80ce700"
+	converter := func(prog []byte) ([]byte, error) { return nil, nil }
 	tx := types.Tx{}
 	if err := tx.UnmarshalText([]byte(testData)); err != nil {
 		t.Errorf("fail on unmarshal txData: %s", err)
@@ -871,7 +874,7 @@ func TestRuleAA(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		_, err := ValidateTx(tx.Tx, c.block)
+		_, err := ValidateTx(tx.Tx, c.block, converter)
 		if rootErr(err) != c.err {
 			t.Errorf("#%d got error %s, want %s", i, err, c.err)
 		}
@@ -880,6 +883,7 @@ func TestRuleAA(t *testing.T) {
 
 // TestTimeRange test the checkTimeRange function (txtest#1004)
 func TestTimeRange(t *testing.T) {
+	converter := func(prog []byte) ([]byte, error) { return nil, nil }
 	cases := []struct {
 		timeRange uint64
 		err       bool
@@ -922,7 +926,7 @@ func TestTimeRange(t *testing.T) {
 
 	for i, c := range cases {
 		tx.TimeRange = c.timeRange
-		if _, err := ValidateTx(tx, block); (err != nil) != c.err {
+		if _, err := ValidateTx(tx, block, converter); (err != nil) != c.err {
 			t.Errorf("#%d got error %t, want %t", i, !c.err, c.err)
 		}
 	}
@@ -976,6 +980,7 @@ func TestStandardTx(t *testing.T) {
 }
 
 func TestValidateTxVersion(t *testing.T) {
+	converter := func(prog []byte) ([]byte, error) { return nil, nil }
 	cases := []struct {
 		desc  string
 		block *bc.Block
@@ -1014,7 +1019,7 @@ func TestValidateTxVersion(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		if _, err := ValidateTx(c.block.Transactions[0], c.block); rootErr(err) != c.err {
+		if _, err := ValidateTx(c.block.Transactions[0], c.block, converter); rootErr(err) != c.err {
 			t.Errorf("case #%d (%s) got error %t, want %t", i, c.desc, err, c.err)
 		}
 	}
