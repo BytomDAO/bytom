@@ -11,6 +11,7 @@ import (
 )
 
 func TestValidateTx(t *testing.T) {
+	converter := func(prog []byte) ([]byte, error) { return nil, nil }
 	cases := []struct {
 		desc     string
 		txData   *types.TxData
@@ -264,7 +265,7 @@ func TestValidateTx(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		gasStatus, err := ValidateTx(types.MapTx(c.txData), mockBlock())
+		gasStatus, err := ValidateTx(types.MapTx(c.txData), mockBlock(), converter)
 		if rootErr(err) != c.err {
 			t.Errorf("case #%d (%s) got error %s, want %s; validationState is:\n", i, c.desc, err, c.err)
 		}

@@ -90,6 +90,10 @@ func (s *Store) GetUtxo(hash *bc.Hash) (*storage.UtxoEntry, error) {
 	return getUtxo(s.db, hash)
 }
 
+func (s *Store) GetContract(hash [32]byte) ([]byte, error) {
+	return getContract(s.db, hash)
+}
+
 // BlockExist check if the block is stored in disk
 func (s *Store) BlockExist(hash *bc.Hash) bool {
 	block, err := s.cache.lookup(hash)
