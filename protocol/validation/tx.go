@@ -97,7 +97,7 @@ func (g *GasState) updateUsage(gasLeft int64) error {
 		return errors.Wrap(ErrGasCalculate, "updateUsage calc gas diff")
 	}
 
-	if !g.GasValid && (g.GasUsed > consensus.DefaultGasCredit || g.StorageGas > g.GasLeft) {
+	if g.GasUsed > consensus.DefaultGasCredit || g.StorageGas > g.GasLeft {
 		return ErrOverGasCredit
 	}
 	return nil
@@ -520,10 +520,6 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
 
 	if err := checkValid(vs, tx.TxHeader); err != nil {
 		return &GasState{GasValid: false}, err
-	}
-
-	if !(vs.gasStatus.GasValid) {
-		return &GasState{GasValid: false}, errors.New("gas invalid")
 	}
 
 	return vs.gasStatus, nil

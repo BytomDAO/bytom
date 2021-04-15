@@ -834,6 +834,7 @@ func TestCoinbase(t *testing.T) {
 		if rootErr(err) != c.err {
 			t.Errorf("#%d got error %s, want %s", i, err, c.err)
 		}
+
 		if c.GasValid != gasStatus.GasValid {
 			t.Errorf("#%d got GasValid %t, want %t", i, gasStatus.GasValid, c.GasValid)
 		}
