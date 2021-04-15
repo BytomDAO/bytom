@@ -45,7 +45,6 @@ type GasState struct {
 	BTMValue   uint64
 	GasLeft    int64
 	GasUsed    int64
-	GasValid   bool
 	StorageGas int64
 }
 
@@ -81,7 +80,6 @@ func (g *GasState) setGasValid() error {
 		return errors.Wrap(ErrGasCalculate, "setGasValid calc gasUsed")
 	}
 
-	g.GasValid = true
 	return nil
 }
 
@@ -97,11 +95,14 @@ func (g *GasState) updateUsage(gasLeft int64) error {
 		return errors.Wrap(ErrGasCalculate, "updateUsage calc gas diff")
 	}
 
-	if !g.GasValid && (g.GasUsed > consensus.DefaultGasCredit || g.StorageGas > g.GasLeft) {
+	if g.GasUsed > consensus.DefaultGasCredit || g.StorageGas > g.GasLeft {
 		return ErrOverGasCredit
 	}
 	return nil
 }
+
+// ProgramConverterFunc represent a func convert control program
+type ProgramConverterFunc func(prog []byte) ([]byte, error)
 
 // validationState contains the context that must propagate through
 // the transaction graph when validating entries.
@@ -109,10 +110,11 @@ type validationState struct {
 	block     *bc.Block
 	tx        *bc.Tx
 	gasStatus *GasState
-	entryID   bc.Hash           // The ID of the nearest enclosing entry
-	sourcePos uint64            // The source position, for validate ValueSources
-	destPos   uint64            // The destination position, for validate ValueDestinations
-	cache     map[bc.Hash]error // Memoized per-entry validation results
+	entryID   bc.Hash              // The ID of the nearest enclosing entry
+	sourcePos uint64               // The source position, for validate ValueSources
+	destPos   uint64               // The destination position, for validate ValueDestinations
+	cache     map[bc.Hash]error    // Memoized per-entry validation results
+	converter ProgramConverterFunc // Program converter function
 }
 
 func checkValid(vs *validationState, e bc.Entry) (err error) {
@@ -493,37 +495,34 @@ func checkTimeRange(tx *bc.Tx, block *bc.Block) error {
 }
 
 // ValidateTx validates a transaction.
-func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
+func ValidateTx(tx *bc.Tx, block *bc.Block, converter ProgramConverterFunc) (*GasState, error) {
 	if block.Version == 1 && tx.Version != 1 {
-		return &GasState{GasValid: false}, errors.WithDetailf(ErrTxVersion, "block version %d, transaction version %d", block.Version, tx.Version)
+		return nil, errors.WithDetailf(ErrTxVersion, "block version %d, transaction version %d", block.Version, tx.Version)
 	}
 
 	if tx.SerializedSize == 0 {
-		return &GasState{GasValid: false}, ErrWrongTransactionSize
+		return nil, ErrWrongTransactionSize
 	}
 
 	if err := checkTimeRange(tx, block); err != nil {
-		return &GasState{GasValid: false}, err
+		return nil, err
 	}
 
 	if err := checkStandardTx(tx, block.Height); err != nil {
-		return &GasState{GasValid: false}, err
+		return nil, err
 	}
 
 	vs := &validationState{
 		block:     block,
 		tx:        tx,
 		entryID:   tx.ID,
-		gasStatus: &GasState{GasValid: false},
+		gasStatus: &GasState{},
 		cache:     make(map[bc.Hash]error),
+		converter: converter,
 	}
 
 	if err := checkValid(vs, tx.TxHeader); err != nil {
-		return &GasState{GasValid: false}, err
-	}
-
-	if !(vs.gasStatus.GasValid) {
-		return &GasState{GasValid: false}, errors.New("gas invalid")
+		return nil, err
 	}
 
 	return vs.gasStatus, nil
@@ -552,16 +551,16 @@ func (r *ValidateTxResult) GetError() error {
 	return r.err
 }
 
-func validateTxWorker(workCh chan *validateTxWork, resultCh chan *ValidateTxResult, wg *sync.WaitGroup) {
+func validateTxWorker(workCh chan *validateTxWork, resultCh chan *ValidateTxResult, wg *sync.WaitGroup, converter ProgramConverterFunc) {
 	for work := range workCh {
-		gasStatus, err := ValidateTx(work.tx, work.block)
+		gasStatus, err := ValidateTx(work.tx, work.block, converter)
 		resultCh <- &ValidateTxResult{i: work.i, gasStatus: gasStatus, err: err}
 	}
 	wg.Done()
 }
 
 // ValidateTxs validates txs in async mode
-func ValidateTxs(txs []*bc.Tx, block *bc.Block) []*ValidateTxResult {
+func ValidateTxs(txs []*bc.Tx, block *bc.Block, converter ProgramConverterFunc) []*ValidateTxResult {
 	txSize := len(txs)
 	validateWorkerNum := runtime.NumCPU()
 	//init the goroutine validate worker
@@ -570,7 +569,7 @@ func ValidateTxs(txs []*bc.Tx, block *bc.Block) []*ValidateTxResult {
 	resultCh := make(chan *ValidateTxResult, txSize)
 	for i := 0; i <= validateWorkerNum && i < txSize; i++ {
 		wg.Add(1)
-		go validateTxWorker(workCh, resultCh, &wg)
+		go validateTxWorker(workCh, resultCh, &wg, converter)
 	}
 
 	//sent the works

@@ -834,11 +834,12 @@ func TestValidateUglyTx(t *testing.T) {
 		tx := types.NewTx(c.txData)
 		mockSignTx(tx, c.insts)
 		bcTx := types.MapTx(&c.txData)
+		converter := func(prog []byte) ([]byte, error) { return nil, nil }
 
 		_, err := validation.ValidateTx(bcTx, &bc.Block{
 			BlockHeader:  &bc.BlockHeader{Height: 1},
 			Transactions: []*bc.Tx{bcTx},
-		})
+		}, converter)
 		if !c.err && err != nil {
 			t.Errorf("case #%d (%s) expect no error, got error %s", i, c.desc, err)
 		}
