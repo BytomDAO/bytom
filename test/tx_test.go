@@ -87,13 +87,6 @@ func (cfg *TxTestConfig) Run() error {
 			continue
 		}
 
-		gasOnlyTx := false
-		if err != nil && status.GasValid {
-			gasOnlyTx = true
-		}
-		if gasOnlyTx != t.GasOnly {
-			return fmt.Errorf("gas only tx %s validate failed", t.Describe)
-		}
 		if result && t.TxFee != status.BTMValue {
 			return fmt.Errorf("gas used dismatch, expected: %d, have: %d", t.TxFee, status.BTMValue)
 		}
@@ -106,7 +99,6 @@ type ttTransaction struct {
 	Describe string `json:"describe"`
 	Version  uint64 `json:"version"`
 	Valid    bool   `json:"valid"`
-	GasOnly  bool   `json:"gas_only"`
 	TxFee    uint64 `json:"tx_fee"`
 }
 

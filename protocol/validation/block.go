@@ -87,7 +87,7 @@ func ValidateBlock(b *bc.Block, parent *state.BlockNode, converter ProgramConver
 	validateResults := ValidateTxs(b.Transactions, b, converter)
 	for i, validateResult := range validateResults {
 		if validateResult.err != nil {
-			return errors.Wrapf(validateResult.err, "validate of transaction %d of %d, gas_valid:%v", i, len(b.Transactions), validateResult.gasStatus.GasValid)
+			return errors.Wrapf(validateResult.err, "validate of transaction %d of %d", i, len(b.Transactions))
 		}
 
 		coinbaseAmount += validateResult.gasStatus.BTMValue

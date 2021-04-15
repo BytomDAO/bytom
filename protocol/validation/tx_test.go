@@ -144,13 +144,11 @@ func TestGasStatus(t *testing.T) {
 				GasLeft:    1000,
 				GasUsed:    10,
 				StorageGas: 1000,
-				GasValid:   false,
 			},
 			output: &GasState{
 				GasLeft:    0,
 				GasUsed:    1010,
 				StorageGas: 1000,
-				GasValid:   true,
 			},
 			f: func(input *GasState) error {
 				return input.setGasValid()
@@ -162,13 +160,11 @@ func TestGasStatus(t *testing.T) {
 				GasLeft:    900,
 				GasUsed:    10,
 				StorageGas: 1000,
-				GasValid:   false,
 			},
 			output: &GasState{
 				GasLeft:    -100,
 				GasUsed:    10,
 				StorageGas: 1000,
-				GasValid:   false,
 			},
 			f: func(input *GasState) error {
 				return input.setGasValid()
@@ -180,13 +176,11 @@ func TestGasStatus(t *testing.T) {
 				GasLeft:    1000,
 				GasUsed:    math.MaxInt64,
 				StorageGas: 1000,
-				GasValid:   false,
 			},
 			output: &GasState{
 				GasLeft:    0,
 				GasUsed:    0,
 				StorageGas: 1000,
-				GasValid:   false,
 			},
 			f: func(input *GasState) error {
 				return input.setGasValid()
@@ -198,13 +192,11 @@ func TestGasStatus(t *testing.T) {
 				GasLeft:    math.MinInt64,
 				GasUsed:    0,
 				StorageGas: 1000,
-				GasValid:   false,
 			},
 			output: &GasState{
 				GasLeft:    0,
 				GasUsed:    0,
 				StorageGas: 1000,
-				GasValid:   false,
 			},
 			f: func(input *GasState) error {
 				return input.setGasValid()
@@ -710,7 +702,6 @@ func TestCoinbase(t *testing.T) {
 	cases := []struct {
 		block    *bc.Block
 		txIndex  int
-		GasValid bool
 		err      error
 	}{
 		{
@@ -719,7 +710,6 @@ func TestCoinbase(t *testing.T) {
 				Transactions: []*bc.Tx{CbTx},
 			},
 			txIndex:  0,
-			GasValid: true,
 			err:      nil,
 		},
 		{
@@ -739,7 +729,6 @@ func TestCoinbase(t *testing.T) {
 				},
 			},
 			txIndex:  1,
-			GasValid: false,
 			err:      ErrWrongCoinbaseTransaction,
 		},
 		{
@@ -761,7 +750,6 @@ func TestCoinbase(t *testing.T) {
 				},
 			},
 			txIndex:  1,
-			GasValid: false,
 			err:      ErrWrongCoinbaseTransaction,
 		},
 		{
@@ -783,7 +771,6 @@ func TestCoinbase(t *testing.T) {
 				},
 			},
 			txIndex:  1,
-			GasValid: false,
 			err:      ErrWrongCoinbaseTransaction,
 		},
 		{
@@ -804,7 +791,6 @@ func TestCoinbase(t *testing.T) {
 				},
 			},
 			txIndex:  0,
-			GasValid: true,
 			err:      nil,
 		},
 		{
@@ -825,19 +811,14 @@ func TestCoinbase(t *testing.T) {
 				},
 			},
 			txIndex:  0,
-			GasValid: false,
 			err:      vm.ErrReturn,
 		},
 	}
 
 	for i, c := range cases {
-		gasStatus, err := ValidateTx(c.block.Transactions[c.txIndex], c.block, converter)
-
+		_, err := ValidateTx(c.block.Transactions[c.txIndex], c.block, converter)
 		if rootErr(err) != c.err {
 			t.Errorf("#%d got error %s, want %s", i, err, c.err)
-		}
-		if c.GasValid != gasStatus.GasValid {
-			t.Errorf("#%d got GasValid %t, want %t", i, gasStatus.GasValid, c.GasValid)
 		}
 	}
 }

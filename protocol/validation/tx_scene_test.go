@@ -15,7 +15,6 @@ func TestValidateTx(t *testing.T) {
 	cases := []struct {
 		desc     string
 		txData   *types.TxData
-		gasValid bool
 		err      error
 	}{
 		{
@@ -37,7 +36,6 @@ func TestValidateTx(t *testing.T) {
 					types.NewOriginalTxOutput(*consensus.BTMAssetID, 10000000000, mustDecodeString("00149c9dd93184cc34ac5d47c145c5af3df852235aad")),
 				},
 			},
-			gasValid: true,
 			err:      nil,
 		},
 		{
@@ -67,7 +65,6 @@ func TestValidateTx(t *testing.T) {
 					types.NewOriginalTxOutput(*consensus.BTMAssetID, 19900000000, mustDecodeString("00145ade29df622cc68d0473aa1a20fb89690451c66e")),
 				},
 			},
-			gasValid: true,
 			err:      nil,
 		},
 		{
@@ -97,7 +94,6 @@ func TestValidateTx(t *testing.T) {
 					types.NewOriginalTxOutput(*consensus.BTMAssetID, 20000000000, mustDecodeString("0014447e597c1c326ad1a639f8023d3f87ae22a4e049")),
 				},
 			},
-			gasValid: false,
 			err:      vm.ErrRunLimitExceeded,
 		},
 		{
@@ -119,7 +115,6 @@ func TestValidateTx(t *testing.T) {
 					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9900000000, mustDecodeString("0014414eb62abda9a9191f9cba5d7e38d92f3e91e268")),
 				},
 			},
-			gasValid: true,
 			err:      nil,
 		},
 		{
@@ -141,7 +136,6 @@ func TestValidateTx(t *testing.T) {
 					types.NewOriginalTxOutput(*consensus.BTMAssetID, 90000000, []byte{byte(vm.OP_FAIL)}),
 				},
 			},
-			gasValid: true,
 			err:      nil,
 		},
 		{
@@ -173,7 +167,6 @@ func TestValidateTx(t *testing.T) {
 					types.NewOriginalTxOutput(bc.AssetID{V0: 8879089148261671560, V1: 16875272676673176923, V2: 14627348561007036053, V3: 5774520766896450836}, 10000000000, mustDecodeString("0014447e597c1c326ad1a639f8023d3f87ae22a4e049")),
 				},
 			},
-			gasValid: true,
 			err:      nil,
 		},
 		{
@@ -205,7 +198,6 @@ func TestValidateTx(t *testing.T) {
 					types.NewOriginalTxOutput(bc.AssetID{V0: 8879089148261671560, V1: 16875272676673176923, V2: 14627348561007036053, V3: 5774520766896450836}, 10000000000, mustDecodeString("0014447e597c1c326ad1a639f8023d3f87ae22a4e049")),
 				},
 			},
-			gasValid: false,
 			err:      vm.ErrRunLimitExceeded,
 		},
 		{
@@ -227,7 +219,6 @@ func TestValidateTx(t *testing.T) {
 					types.NewOriginalTxOutput(*consensus.BTMAssetID, 10000000000, mustDecodeString("00149c9dd93184cc34ac5d47c145c5af3df852235aad")),
 				},
 			},
-			gasValid: false,
 			err:      vm.ErrFalseVMResult,
 		},
 		{
@@ -259,19 +250,14 @@ func TestValidateTx(t *testing.T) {
 					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9750000000, mustDecodeString("0014ec75fda5c727cb0d41137ab62afbf9070a405744")),
 				},
 			},
-			gasValid: true,
 			err:      nil,
 		},
 	}
 
 	for i, c := range cases {
-		gasStatus, err := ValidateTx(types.MapTx(c.txData), mockBlock(), converter)
+		_, err := ValidateTx(types.MapTx(c.txData), mockBlock(), converter)
 		if rootErr(err) != c.err {
 			t.Errorf("case #%d (%s) got error %s, want %s; validationState is:\n", i, c.desc, err, c.err)
-		}
-
-		if c.gasValid != gasStatus.GasValid {
-			t.Errorf("#%d got GasValid %t, want %t", i, gasStatus.GasValid, c.gasValid)
 		}
 	}
 }

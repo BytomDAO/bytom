@@ -45,7 +45,6 @@ type GasState struct {
 	BTMValue   uint64
 	GasLeft    int64
 	GasUsed    int64
-	GasValid   bool
 	StorageGas int64
 }
 
@@ -81,7 +80,6 @@ func (g *GasState) setGasValid() error {
 		return errors.Wrap(ErrGasCalculate, "setGasValid calc gasUsed")
 	}
 
-	g.GasValid = true
 	return nil
 }
 
@@ -97,7 +95,7 @@ func (g *GasState) updateUsage(gasLeft int64) error {
 		return errors.Wrap(ErrGasCalculate, "updateUsage calc gas diff")
 	}
 
-	if !g.GasValid && (g.GasUsed > consensus.DefaultGasCredit || g.StorageGas > g.GasLeft) {
+	if g.GasUsed > consensus.DefaultGasCredit || g.StorageGas > g.GasLeft {
 		return ErrOverGasCredit
 	}
 	return nil
@@ -499,36 +497,32 @@ func checkTimeRange(tx *bc.Tx, block *bc.Block) error {
 // ValidateTx validates a transaction.
 func ValidateTx(tx *bc.Tx, block *bc.Block, converter ProgramConverterFunc) (*GasState, error) {
 	if block.Version == 1 && tx.Version != 1 {
-		return &GasState{GasValid: false}, errors.WithDetailf(ErrTxVersion, "block version %d, transaction version %d", block.Version, tx.Version)
+		return nil, errors.WithDetailf(ErrTxVersion, "block version %d, transaction version %d", block.Version, tx.Version)
 	}
 
 	if tx.SerializedSize == 0 {
-		return &GasState{GasValid: false}, ErrWrongTransactionSize
+		return nil, ErrWrongTransactionSize
 	}
 
 	if err := checkTimeRange(tx, block); err != nil {
-		return &GasState{GasValid: false}, err
+		return nil, err
 	}
 
 	if err := checkStandardTx(tx, block.Height); err != nil {
-		return &GasState{GasValid: false}, err
+		return nil, err
 	}
 
 	vs := &validationState{
 		block:     block,
 		tx:        tx,
 		entryID:   tx.ID,
-		gasStatus: &GasState{GasValid: false},
+		gasStatus: &GasState{},
 		cache:     make(map[bc.Hash]error),
 		converter: converter,
 	}
 
 	if err := checkValid(vs, tx.TxHeader); err != nil {
-		return &GasState{GasValid: false}, err
-	}
-
-	if !(vs.gasStatus.GasValid) {
-		return &GasState{GasValid: false}, errors.New("gas invalid")
+		return nil, err
 	}
 
 	return vs.gasStatus, nil
