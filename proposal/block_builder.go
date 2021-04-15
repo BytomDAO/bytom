@@ -159,7 +159,7 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 	if err = builder.AddInput(types.NewCoinbaseInput(arbitrary), &txbuilder.SigningInstruction{}); err != nil {
 		return nil, err
 	}
-	// TODO: calculate block reward
+	//TODO: calculate block reward
 	if err = builder.AddOutput(&types.TxOutput{
 		AssetVersion: 1,
 		OutputCommitment: types.OutputCommitment{
