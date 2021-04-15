@@ -4,6 +4,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bytom/bytom/protocol/bc/types"
+
 	"github.com/bytom/bytom/event"
 
 	"github.com/bytom/bytom/errors"
@@ -18,6 +20,10 @@ import (
 
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/consensus"
+)
+
+var (
+	errNotFoundBlockNode = errors.New("can not find block node")
 )
 
 type BlockProposer struct {
@@ -69,22 +75,15 @@ func (bp *BlockProposer) Propose() error {
 	_, preHash := bp.casper.BestChain()
 	preHeader, _ := bp.chain.GetHeaderByHash(&preHash)
 
-	now := uint64(time.Now().Unix())
-	base := now
-	if now < preHeader.Timestamp {
-		base = preHeader.Timestamp
-	}
-	minTimeToNextBlock := consensusConfig.ActiveNetParams.BlockTimeInterval - base%consensusConfig.ActiveNetParams.BlockTimeInterval
-	nextBlockTime := base + minTimeToNextBlock
-	if (nextBlockTime - now) < consensusConfig.ActiveNetParams.BlockTimeInterval/10 {
-		nextBlockTime += consensusConfig.ActiveNetParams.BlockTimeInterval
-	}
-
-	if !bp.inturn(preHash) {
+	blockTime := nextBlockTime(preHeader.Timestamp)
+	if myTurn, err := bp.inturn(&preHash); !myTurn {
+		if err != nil {
+			return err
+		}
 		return errors.New("it's not your turn")
 	}
 
-	block, err := NewBlock(bp.chain, bp.casper, bp.accountManager, nextBlockTime)
+	block, err := NewBlockTemplate(bp.chain, bp.casper, bp.accountManager, blockTime)
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("failed on create NewBlockTemplate")
 		return err
@@ -103,9 +102,24 @@ func (bp *BlockProposer) Propose() error {
 	return nil
 }
 
-func (bp *BlockProposer) inturn(blockHash bc.Hash) bool {
+func (bp *BlockProposer) inturn(preHash *bc.Hash) (bool, error) {
 
-	return false
+	return false, nil
+}
+
+func (bp *BlockProposer) getPreRoundLastBlock(hash *bc.Hash) (*types.BlockHeader, error) {
+	header, err := bp.chain.GetHeaderByHash(hash)
+	if err != nil {
+		return nil, errNotFoundBlockNode
+	}
+	// loop find the previous round vote block hash
+	for header.Height%consensusConfig.ActiveNetParams.RoundVoteBlockNums != 0 {
+		header, err = bp.chain.GetHeaderByHash(&header.PreviousBlockHash)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return header, nil
 }
 
 func (bp *BlockProposer) IsProPosing() bool {
@@ -113,4 +127,19 @@ func (bp *BlockProposer) IsProPosing() bool {
 	defer bp.Unlock()
 
 	return bp.started
+}
+
+func nextBlockTime(preBlockTime uint64) uint64 {
+	now := uint64(time.Now().Unix() / 1e6)
+	base := now
+	if now < preBlockTime {
+		base = preBlockTime
+	}
+	minTimeToNextBlock := consensusConfig.ActiveNetParams.BlockTimeInterval - base%consensusConfig.ActiveNetParams.BlockTimeInterval
+	blockTime := base + minTimeToNextBlock
+	if (blockTime - now) < consensusConfig.ActiveNetParams.BlockTimeInterval/10 {
+		blockTime += consensusConfig.ActiveNetParams.BlockTimeInterval
+	}
+
+	return blockTime
 }

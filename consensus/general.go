@@ -74,8 +74,9 @@ func IsBech32SegwitPrefix(prefix string, params *Params) bool {
 }
 
 type DPOSConfig struct {
-	BlockTimeInterval uint64 // milliseconds, the block time interval for producing a block
-	BlockNumEachNode  uint64
+	BlockTimeInterval  uint64 // milliseconds, the block time interval for producing a block
+	BlockNumEachNode   uint64 // proposers, the number of generated continuous blocks for each node
+	RoundVoteBlockNums uint64 // blocks, the period which count the vote result in a round
 }
 
 // Checkpoint identifies a known gofor {
