@@ -18,7 +18,6 @@ import (
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
-	"github.com/bytom/bytom/protocol/consensus"
 	"github.com/bytom/bytom/protocol/state"
 	"github.com/bytom/bytom/protocol/validation"
 	"github.com/bytom/bytom/protocol/vm/vmutil"
@@ -26,12 +25,12 @@ import (
 
 const logModule = "proposal"
 
-func NewBlockTemplate(chain *protocol.Chain, casper *consensus.Casper, accountManager *account.Manager, timestamp uint64) (*types.Block, error) {
-	builder := NewBlockBuilder(chain, casper, accountManager)
+func NewBlockTemplate(chain *protocol.Chain, accountManager *account.Manager, timestamp uint64) (*types.Block, error) {
+	builder := NewBlockBuilder(chain, accountManager)
 	return builder.Build(timestamp)
 }
 
-func NewBlockBuilder(chain *protocol.Chain, casper *consensus.Casper, accountManager *account.Manager) *BlockBuilder {
+func NewBlockBuilder(chain *protocol.Chain, accountManager *account.Manager) *BlockBuilder {
 	return &BlockBuilder{
 		chain:          chain,
 		accountManager: accountManager,
