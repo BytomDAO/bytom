@@ -639,7 +639,7 @@ func TestTxValidation(t *testing.T) {
 			f: func() {
 				spend := txSpend(t, tx, 1)
 				prevout := tx.Entries[*spend.SpentOutputId].(*bc.Output)
-				newPrevout := bc.NewOutput(prevout.Source, prevout.ControlProgram, nil, 10)
+				newPrevout := bc.NewOutput(prevout.Source, prevout.ControlProgram, prevout.StateData, 10)
 				hash := bc.EntryID(newPrevout)
 				spend.SpentOutputId = &hash
 			},
@@ -841,7 +841,100 @@ func TestCoinbase(t *testing.T) {
 }
 
 func TestRuleAA(t *testing.T) {
-	testData := "070100040161015f9bc47dda88eee18c7433340c16e054cabee4318a8d638e873be19e979df81dc7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0e3f9f5c80e01011600147c7662d92bd5e77454736f94731c60a6e9cbc69f6302404a17a5995b8163ee448719b462a5694b22a35522dd9883333fd462cc3d0aabf049445c5cbb911a40e1906a5bea99b23b1a79e215eeb1a818d8b1dd27e06f3004200530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce9940160015ee334d4fe18398f0232d2aca7050388ce4ee5ae82c8148d7f0cea748438b65135ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ace6842001011600147c7662d92bd5e77454736f94731c60a6e9cbc69f6302404a17a5995b8163ee448719b462a5694b22a35522dd9883333fd462cc3d0aabf049445c5cbb911a40e1906a5bea99b23b1a79e215eeb1a818d8b1dd27e06f3004200530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce9940161015f9bc47dda88eee18c7433340c16e054cabee4318a8d638e873be19e979df81dc7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0e3f9f5c80e01011600147c7662d92bd5e77454736f94731c60a6e9cbc69f63024062c29b20941e7f762c3afae232f61d8dac1c544825931e391408c6715c408ef69f494a1b3b61ce380ddee0c8b18ecac2b46ef96a62eebb6ec40f9f545410870a200530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce9940160015ee334d4fe18398f0232d2aca7050388ce4ee5ae82c8148d7f0cea748438b65135ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ace6842001011600147c7662d92bd5e77454736f94731c60a6e9cbc69f630240e443d66c75b4d5fa71676d60b0b067e6941f06349f31e5f73a7d51a73f5797632b2e01e8584cd1c8730dc16df075866b0c796bd7870182e2da4b37188208fe02200530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce9940201003effffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa08ba3fae80e01160014aac0345165045e612b3d7363f39a372bead80ce70001003effffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe08fe0fae80e01160014aac0345165045e612b3d7363f39a372bead80ce700"
+	testData := "07010004016201609bc47dda88eee18c7433340c16e054cabee4318a8d638e873be19e979df81dc7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0e3f9f5c80e01011600147c7662d92bd5e77454736f94731c60a6e9cbc69f006302404a17a5995b8163ee448719b462a5694b22a35522dd9883333fd462cc3d0aabf049445c5cbb911a40e1906a5bea99b23b1a79e215eeb1a818d8b1dd27e06f3004200530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce9940161015fe334d4fe18398f0232d2aca7050388ce4ee5ae82c8148d7f0cea748438b65135ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ace6842001011600147c7662d92bd5e77454736f94731c60a6e9cbc69f006302404a17a5995b8163ee448719b462a5694b22a35522dd9883333fd462cc3d0aabf049445c5cbb911a40e1906a5bea99b23b1a79e215eeb1a818d8b1dd27e06f3004200530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce994016201609bc47dda88eee18c7433340c16e054cabee4318a8d638e873be19e979df81dc7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0e3f9f5c80e01011600147c7662d92bd5e77454736f94731c60a6e9cbc69f0063024062c29b20941e7f762c3afae232f61d8dac1c544825931e391408c6715c408ef69f494a1b3b61ce380ddee0c8b18ecac2b46ef96a62eebb6ec40f9f545410870a200530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce9940161015fe334d4fe18398f0232d2aca7050388ce4ee5ae82c8148d7f0cea748438b65135ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ace6842001011600147c7662d92bd5e77454736f94731c60a6e9cbc69f00630240e443d66c75b4d5fa71676d60b0b067e6941f06349f31e5f73a7d51a73f5797632b2e01e8584cd1c8730dc16df075866b0c796bd7870182e2da4b37188208fe02200530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce9940201003fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa08ba3fae80e01160014aac0345165045e612b3d7363f39a372bead80ce7000001003fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe08fe0fae80e01160014aac0345165045e612b3d7363f39a372bead80ce70000"
+	/*
+		07  // serflags
+		01  // tx version
+		00  // time range
+		04  // input cnts
+
+		01  // input0: asset version
+		63  // input 0: input commitment length   +state length
+		01  // input 0: spend type flag
+		61 // input 0: spend commitment length  + state length
+		9bc47dda88eee18c7433340c16e054cabee4318a8d638e873be19e979df81dc7  // input 0: source id
+		ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff  // input 0: assetID
+		e0e3f9f5c80e  // amt
+		01  // source pos
+		01  // vm version
+		16  // spend program length
+		00147c7662d92bd5e77454736f94731c60a6e9cbc69f // spend program  + after state encode
+		00
+		63 // witness length
+		02 // arg array length
+		40 // 1 arg length
+		4a17a5995b8163ee448719b462a5694b22a35522dd9883333fd462cc3d0aabf049445c5cbb911a40e1906a5bea99b23b1a79e215eeb1a818d8b1dd27e06f3004 // 1 arg data
+		20 // 2 arg length
+		0530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce994 // 2 arg data
+		01 // input 1 ~ input 3,output 0 ~ output1 ...
+		61
+		01
+		5f
+		e334d4fe18398f0232d2aca7050388ce4ee5ae82c8148d7f0cea748438b65135
+		ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+		80ace68420
+		01
+		01
+		16
+		00147c7662d92bd5e77454736f94731c60a6e9cbc69f
+		00
+		63
+		02
+		40
+		4a17a5995b8163ee448719b462a5694b22a35522dd9883333fd462cc3d0aabf049445c5cbb911a40e1906a5bea99b23b1a79e215eeb1a818d8b1dd27e06f3004
+		20
+		0530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce994
+		01  // input2
+		62
+		01
+		60
+		9bc47dda88eee18c7433340c16e054cabee4318a8d638e873be19e979df81dc7
+		ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+		e0e3f9f5c80e
+		01
+		01
+		16
+		00147c7662d92bd5e77454736f94731c60a6e9cbc69f
+		00
+		63
+		02
+		40
+		62c29b20941e7f762c3afae232f61d8dac1c544825931e391408c6715c408ef69f494a1b3b61ce380ddee0c8b18ecac2b46ef96a62eebb6ec40f9f545410870a
+		20
+		0530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce994
+		01 // input3
+		61
+		01
+		5f
+		e334d4fe18398f0232d2aca7050388ce4ee5ae82c8148d7f0cea748438b65135
+		ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+		80ace68420
+		01
+		01
+		16
+		00147c7662d92bd5e77454736f94731c60a6e9cbc69f
+		00
+		63
+		02
+		40
+		e443d66c75b4d5fa71676d60b0b067e6941f06349f31e5f73a7d51a73f5797632b2e01e8584cd1c8730dc16df075866b0c796bd7870182e2da4b37188208fe02
+		20
+		0530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce994
+		02  //output cnts
+		01
+		00
+		3f
+		ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+		a08ba3fae80e
+		01
+		16
+		0014aac0345165045e612b3d7363f39a372bead80ce7
+		00
+		00
+		01003f
+		ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe08fe0fae80e01160014aac0345165045e612b3d7363f39a372bead80ce700
+		00
+	*/
 	tx := types.Tx{}
 	if err := tx.UnmarshalText([]byte(testData)); err != nil {
 		t.Errorf("fail on unmarshal txData: %s", err)

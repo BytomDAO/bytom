@@ -133,7 +133,8 @@ func TestTransaction(t *testing.T) {
 				"00",                 // input 0: witness length
 				"02",                 // outputs count
 				"01",                 // output 0: asset version
-				"33",                 // output 0: serialization length
+				"00",
+				"33", // output 0: serialization length
 				"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // output 0: assetID
 				"92c30f",             // output 0: amount
 				"01",                 // output 0: version
@@ -143,8 +144,8 @@ func TestTransaction(t *testing.T) {
 				"737461746544617461", // output 0: state data
 				"00",                 // output 0: witness length
 				"01",                 // output 1: asset version
-				"34",                 // output 1: serialization length
 				"00",
+				"34", // output 1: serialization length
 				"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // output 1: assetID
 				"92c30f",             // output 1: amount
 				"01",                 // output 1: version
@@ -195,7 +196,7 @@ func TestTransaction(t *testing.T) {
 
 func TestTransactionTrailingGarbage(t *testing.T) {
 	// validTxHex is a valid tx, we don't care what's inside as long as it's valid
-	validTxHex := `07010001012b00030a0908916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380a094a58d1d0900010101010301020301010029000000000000000000000000000000000000000000000000000000000000000080a094a58d1d01010100`
+	validTxHex := `07010001012b00030a0908916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380a094a58d1d090001010101030102030101002a000000000000000000000000000000000000000000000000000000000000000080a094a58d1d0101010000`
 	validTx := Tx{}
 	if err := validTx.UnmarshalText([]byte(validTxHex)); err != nil {
 		t.Fatal(err)
@@ -249,7 +250,28 @@ func TestInvalidIssuance(t *testing.T) {
 }
 
 func TestFuzzUnknownAssetVersion(t *testing.T) {
-	rawTx := `07010001012b00030a0908916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380a094a58d1d0900010101010301020301010029000000000000000000000000000000000000000000000000000000000000000080a094a58d1d01010100`
+	rawTx := `07010001012b00030a0908916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380a094a58d1d090001010101030102030101002a000000000000000000000000000000000000000000000000000000000000000080a094a58d1d0101010000`
+	/*
+		07
+		01
+		00
+		01
+		01
+		2b
+		00
+		03
+		0a0908
+		916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a263
+		80a094a58d1d0900
+		0101010103010203010100
+		29
+		0000000000000000000000000000000000000000000000000000000000000000
+		80a094a58d1d
+		01
+		01
+		01
+		00
+	*/
 	want := Tx{}
 	if err := want.UnmarshalText([]byte(rawTx)); err != nil {
 		t.Fatal(err)
