@@ -74,10 +74,9 @@ func IsBech32SegwitPrefix(prefix string, params *Params) bool {
 	return prefix == params.Bech32HRPSegwit+"1"
 }
 
-type DPOSConfig struct {
-	BlockTimeInterval  uint64 // milliseconds, the block time interval for producing a block
-	BlockNumEachNode   uint64 // proposers, the number of generated continuous blocks for each node
-	RoundVoteBlockNums uint64 // blocks, the period which count the vote result in a round
+type CasperConfig struct {
+	BlockTimeInterval uint64 // milliseconds, the block time interval for producing a block
+	BlockNumEachNode  uint64 // proposers, the number of generated continuous blocks for each node
 }
 
 // Checkpoint identifies a known gofor {
@@ -110,7 +109,7 @@ type Params struct {
 	DNSSeeds    []string
 	Checkpoints []Checkpoint
 
-	DPOSConfig
+	CasperConfig
 }
 
 // ActiveNetParams is ...

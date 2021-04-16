@@ -1,10 +1,13 @@
 package proposal
 
 import (
+	"encoding/hex"
 	"sync"
 	"time"
 
-	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/config"
+
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 
 	"github.com/bytom/bytom/event"
 
@@ -14,26 +17,30 @@ import (
 
 	"github.com/bytom/bytom/account"
 
-	"github.com/bytom/bytom/protocol/bc"
-
 	consensusConfig "github.com/bytom/bytom/consensus"
 
 	"github.com/bytom/bytom/protocol"
-	"github.com/bytom/bytom/protocol/consensus"
 )
 
 var (
-	errNotFoundBlockNode = errors.New("can not find block node")
+	errNotYourTurn = errors.New("not your turn to propose")
 )
 
 type BlockProposer struct {
 	sync.Mutex
 	chain           *protocol.Chain
-	casper          *consensus.Casper
 	accountManager  *account.Manager
 	quit            chan struct{}
 	started         bool
 	eventDispatcher *event.Dispatcher
+}
+
+func NewBlockProposer(chain *protocol.Chain, accountManager *account.Manager, dispatcher *event.Dispatcher) *BlockProposer {
+	return &BlockProposer{
+		chain:           chain,
+		accountManager:  accountManager,
+		eventDispatcher: dispatcher,
+	}
 }
 
 func (bp *BlockProposer) Start() {
@@ -44,8 +51,9 @@ func (bp *BlockProposer) Start() {
 		return
 	}
 	bp.quit = make(chan struct{})
-	go bp.generateBlockLoop()
+	go bp.proposeLoop()
 	bp.started = true
+	log.Info("block proposer started")
 }
 
 func (bp *BlockProposer) Stop() {
@@ -57,9 +65,17 @@ func (bp *BlockProposer) Stop() {
 	}
 	close(bp.quit)
 	bp.started = false
+	log.Info("block proposer stopped")
 }
 
-func (bp *BlockProposer) generateBlockLoop() {
+func (bp *BlockProposer) IsProPosing() bool {
+	bp.Lock()
+	defer bp.Unlock()
+
+	return bp.started
+}
+
+func (bp *BlockProposer) proposeLoop() {
 	ticker := time.NewTicker(time.Duration(consensusConfig.ActiveNetParams.BlockTimeInterval) * time.Millisecond)
 	for {
 		select {
@@ -67,23 +83,25 @@ func (bp *BlockProposer) generateBlockLoop() {
 			return
 		case <-ticker.C:
 		}
-		bp.Propose()
+		bp.propose()
 	}
 }
 
-func (bp *BlockProposer) Propose() error {
-	_, preHash := bp.casper.BestChain()
+func (bp *BlockProposer) propose() error {
+	_, preHash := bp.chain.Casper().BestChain()
 	preHeader, _ := bp.chain.GetHeaderByHash(&preHash)
 
 	blockTime := nextBlockTime(preHeader.Timestamp)
-	if myTurn, err := bp.inturn(&preHash); !myTurn {
-		if err != nil {
-			return err
-		}
-		return errors.New("it's not your turn")
+	xpubStr := getXpubStr()
+	proposer, err := bp.chain.GetBlocker(&preHeader.PreviousBlockHash, blockTime)
+	if err != nil {
+		return err
+	}
+	if xpubStr != proposer {
+		return errNotYourTurn
 	}
 
-	block, err := NewBlockTemplate(bp.chain, bp.casper, bp.accountManager, blockTime)
+	block, err := NewBlockTemplate(bp.chain, bp.accountManager, blockTime)
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("failed on create NewBlockTemplate")
 		return err
@@ -102,31 +120,19 @@ func (bp *BlockProposer) Propose() error {
 	return nil
 }
 
-func (bp *BlockProposer) inturn(preHash *bc.Hash) (bool, error) {
-
-	return false, nil
-}
-
-func (bp *BlockProposer) getPreRoundLastBlock(hash *bc.Hash) (*types.BlockHeader, error) {
-	header, err := bp.chain.GetHeaderByHash(hash)
+func getXpubStr() string {
+	privateKeyhexStr, err := config.CommonConfig.NodeKey()
 	if err != nil {
-		return nil, errNotFoundBlockNode
+		log.WithField("err", err).Panic("fail on get private key")
 	}
-	// loop find the previous round vote block hash
-	for header.Height%consensusConfig.ActiveNetParams.RoundVoteBlockNums != 0 {
-		header, err = bp.chain.GetHeaderByHash(&header.PreviousBlockHash)
-		if err != nil {
-			return nil, err
-		}
+	var xprv chainkd.XPrv
+	if _, err := hex.Decode(xprv[:], []byte(privateKeyhexStr)); err != nil {
+		log.WithField("err", err).Panic("fail on decode private key")
 	}
-	return header, nil
-}
+	xpub := xprv.XPub()
+	xpubStr := hex.EncodeToString(xpub.Bytes())
 
-func (bp *BlockProposer) IsProPosing() bool {
-	bp.Lock()
-	defer bp.Unlock()
-
-	return bp.started
+	return xpubStr
 }
 
 func nextBlockTime(preBlockTime uint64) uint64 {
