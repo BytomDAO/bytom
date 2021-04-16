@@ -4,11 +4,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/bytom/bytom/protocol"
-
 	"github.com/bytom/bytom/config"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/database/storage"
+	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"

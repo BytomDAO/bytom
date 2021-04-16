@@ -6,14 +6,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/bytom/bytom/config"
-	"github.com/bytom/bytom/crypto/ed25519/chainkd"
-
-	log "github.com/sirupsen/logrus"
-
 	"github.com/bytom/bytom/account"
 	"github.com/bytom/bytom/blockchain/txbuilder"
+	"github.com/bytom/bytom/config"
 	consensusConfig "github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
@@ -21,6 +18,7 @@ import (
 	"github.com/bytom/bytom/protocol/state"
 	"github.com/bytom/bytom/protocol/validation"
 	"github.com/bytom/bytom/protocol/vm/vmutil"
+	log "github.com/sirupsen/logrus"
 )
 
 const logModule = "proposal"
