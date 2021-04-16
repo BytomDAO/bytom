@@ -52,6 +52,7 @@ func (bd *BlockBuilder) Build(timeStamp uint64) (*types.Block, error) {
 			PreviousBlockHash: preHash,
 			Timestamp:         timeStamp,
 			BlockCommitment:   types.BlockCommitment{},
+			Witness:           make([]byte, protocol.SignatureLength),
 		},
 		// leave the first transaction for coinbase transaction
 		Transactions: []*types.Tx{nil},
@@ -141,7 +142,7 @@ func (bd *BlockBuilder) signHeader(header *types.BlockHeader) error {
 		log.WithField("err", err).Panic("fail on decode private key")
 	}
 	signature := xprv.Sign(header.Hash().Bytes())
-	header.Witness = signature
+	copy(header.Witness, signature)
 
 	return nil
 }
