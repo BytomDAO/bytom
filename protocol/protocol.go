@@ -169,7 +169,7 @@ func (c *Chain) BestChain() (uint64, bc.Hash) {
 	return c.casper.BestChain()
 }
 
-func (c *Chain) GetBlocker(prevBlockHash *bc.Hash, timestamp uint64) (string, error) {
+func (c *Chain) GetProposer(prevBlockHash *bc.Hash, timestamp uint64) (string, error) {
 	validators, err := c.casper.Validators(prevBlockHash)
 	if err != nil {
 		return "", err
@@ -180,7 +180,7 @@ func (c *Chain) GetBlocker(prevBlockHash *bc.Hash, timestamp uint64) (string, er
 	}
 
 	startTimestamp := prevVoteRoundLastBlock.Timestamp + consensus.ActiveNetParams.BlockTimeInterval
-	order := getBlockerOrder(startTimestamp, timestamp, uint64(len(validators)))
+	order := getProposerOrder(startTimestamp, timestamp, uint64(len(validators)))
 	return validators[order].PubKey, nil
 }
 
@@ -200,7 +200,7 @@ func (c *Chain) getPrevRoundLastBlock(hash *bc.Hash) (*types.BlockHeader, error)
 	return header, nil
 }
 
-func getBlockerOrder(startTimestamp, blockTimestamp, numOfConsensusNode uint64) uint64 {
+func getProposerOrder(startTimestamp, blockTimestamp, numOfConsensusNode uint64) uint64 {
 	roundBlockTime := consensus.ActiveNetParams.BlockNumEachNode * numOfConsensusNode * consensus.ActiveNetParams.BlockTimeInterval
 	lastRoundStartTime := startTimestamp + (blockTimestamp-startTimestamp)/roundBlockTime*roundBlockTime
 	return (blockTimestamp - lastRoundStartTime) / (consensus.ActiveNetParams.BlockNumEachNode * consensus.ActiveNetParams.BlockTimeInterval)
