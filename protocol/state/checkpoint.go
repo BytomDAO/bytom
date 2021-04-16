@@ -55,8 +55,8 @@ type Checkpoint struct {
 	SupLinks       []*SupLink
 	Status         CheckpointStatus
 
-	Votes     map[string]uint64 // putKey -> num of vote
-	Mortgages map[string]uint64 // pubKey -> num of mortgages
+	Votes      map[string]uint64 // putKey -> num of vote
+	Guaranties map[string]uint64 // pubKey -> num of guaranty
 }
 
 // AddSupLink add a valid sup link to checkpoint
@@ -82,7 +82,7 @@ func (c *Checkpoint) AddSupLink(sourceHeight uint64, sourceHash bc.Hash, pubKey 
 type Validator struct {
 	PubKey   string
 	Vote     uint64
-	Mortgage uint64
+	Guaranty uint64
 }
 
 // Validators return next epoch of validators, if the status of checkpoint is growing, return empty
@@ -92,18 +92,18 @@ func (c *Checkpoint) Validators() []*Validator {
 		return validators
 	}
 
-	for pubKey, mortgageNum := range c.Mortgages {
+	for pubKey, mortgageNum := range c.Guaranties {
 		if mortgageNum >= minMortgage {
 			validators = append(validators, &Validator{
 				PubKey:   pubKey,
 				Vote:     c.Votes[pubKey],
-				Mortgage: mortgageNum,
+				Guaranty: mortgageNum,
 			})
 		}
 	}
 
 	sort.Slice(validators, func(i, j int) bool {
-		return validators[i].Mortgage+validators[i].Vote > validators[j].Mortgage+validators[j].Vote
+		return validators[i].Guaranty+validators[i].Vote > validators[j].Guaranty+validators[j].Vote
 	})
 
 	end := numOfValidators

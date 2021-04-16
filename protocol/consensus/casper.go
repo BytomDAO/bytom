@@ -1,9 +1,11 @@
 package consensus
 
 import (
+	"encoding/hex"
 	"sync"
 
 	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/math/checked"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
@@ -16,7 +18,11 @@ var (
 	errVoteToGrowingCheckpoint  = errors.New("validator publish vote to growing checkpoint")
 	errSameHeightInVerification = errors.New("validator publish two distinct votes for the same target height")
 	errSpanHeightInVerification = errors.New("validator publish vote within the span of its other votes")
+	errVoteToNonValidator       = errors.New("pubKey of vote is not validator")
+	errOverflow                 = errors.New("arithmetic overflow/underflow")
 )
+
+const minGuaranty = 1E14
 
 // Casper is BFT based proof of stack consensus algorithm, it provides safety and liveness in theory,
 // it's design mainly refers to https://github.com/ethereum/research/blob/master/papers/casper-basics/casper_basics.pdf
@@ -148,10 +154,89 @@ func (c *Casper) ProcessBlock(block *types.Block) error {
 		return errors.Wrap(err, "apply block to checkpoint")
 	}
 
-	for range block.Transactions {
-		// process the votes and mortgages
+	for _, tx := range block.Transactions {
+		for _, input := range tx.Inputs {
+			switch typ := input.TypedInput.(type) {
+			case *types.VetoInput:
+				if err := processVeto(typ, checkpoint); err != nil {
+					return err
+				}
+			case *types.WithdrawalInput:
+				if err := processWithdrawal(typ, checkpoint); err != nil {
+					return err
+				}
+			}
+		}
+
+		for _, output := range tx.Outputs {
+			switch output.TypedOutput.(type) {
+			case *types.VoteOutput:
+				if err := processVote(output, checkpoint); err != nil {
+					return err
+				}
+			case *types.GuarantyOutput:
+				if err := processGuaranty(output, checkpoint); err != nil {
+					return err
+				}
+			}
+		}
 	}
 	return c.store.SaveCheckpoints(checkpoint)
+}
+
+func processWithdrawal(input *types.WithdrawalInput, checkpoint *state.Checkpoint) error {
+	pubKey := hex.EncodeToString(input.PubKey)
+	guarantyNum := checkpoint.Guaranties[pubKey]
+	guarantyNum, ok := checked.SubUint64(guarantyNum, input.Amount)
+	if !ok {
+		return errOverflow
+	}
+
+	checkpoint.Guaranties[pubKey] = guarantyNum
+	return nil
+}
+
+
+func processGuaranty(output *types.TxOutput, checkpoint *state.Checkpoint) error {
+	guarantyOutput := output.TypedOutput.(*types.GuarantyOutput)
+	pubKey := hex.EncodeToString(guarantyOutput.PubKey)
+	guarantyNum := checkpoint.Guaranties[pubKey]
+	guarantyNum, ok := checked.AddUint64(guarantyNum, output.Amount)
+	if !ok {
+		return errOverflow
+	}
+
+	checkpoint.Guaranties[pubKey] = guarantyNum
+	return nil
+}
+
+func processVeto(input *types.VetoInput, checkpoint *state.Checkpoint) error {
+	pubKey := hex.EncodeToString(input.Vote)
+	voteNum := checkpoint.Votes[pubKey]
+	voteNum, ok := checked.SubUint64(voteNum, input.Amount)
+	if !ok {
+		return errOverflow
+	}
+
+	checkpoint.Votes[pubKey] = voteNum
+	return nil
+}
+
+func processVote(output *types.TxOutput, checkpoint *state.Checkpoint) error {
+	voteOutput := output.TypedOutput.(*types.VoteOutput)
+	pubKey := hex.EncodeToString(voteOutput.Vote)
+	if checkpoint.Guaranties[pubKey] < minGuaranty {
+		return errVoteToNonValidator
+	}
+
+	voteNum := checkpoint.Votes[pubKey]
+	voteNum, ok := checked.AddUint64(voteNum, output.Amount)
+	if !ok {
+		return errOverflow
+	}
+
+	checkpoint.Votes[pubKey] = voteNum
+	return nil
 }
 
 func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, error) {
@@ -168,7 +253,7 @@ func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, 
 			StartTimestamp: block.Timestamp,
 			Status:         state.Growing,
 			Votes:          make(map[string]uint64),
-			Mortgages:      make(map[string]uint64),
+			Guaranties:     make(map[string]uint64),
 		}
 		node.children = append(node.children, &treeNode{checkpoint: checkpoint})
 	} else if mod == 0 {
@@ -238,7 +323,7 @@ func chainOfMaxJustifiedHeight(node *treeNode, justifiedHeight uint64) (uint64, 
 
 	bestHeight, bestHash, maxJustifiedHeight := checkpoint.Height, checkpoint.Hash, justifiedHeight
 	for _, child := range node.children {
-		if height, hash, justified := chainOfMaxJustifiedHeight(child, justifiedHeight); justified > maxJustifiedHeight {
+		if height, hash, justified := chainOfMaxJustifiedHeight(child, justifiedHeight); justified >= maxJustifiedHeight {
 			bestHeight, bestHash, maxJustifiedHeight = height, hash, justified
 		}
 	}

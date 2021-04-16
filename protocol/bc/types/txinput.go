@@ -15,6 +15,7 @@ const (
 	SpendInputType
 	CoinbaseInputType
 	VetoInputType
+	WithdrawalInputType
 )
 
 type (
