@@ -3,9 +3,8 @@ package consensus
 import (
 	"sync"
 
-	"github.com/bytom/bytom/protocol"
-
 	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
