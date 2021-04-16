@@ -2,7 +2,7 @@ package protocol
 
 import (
 	"github.com/bytom/bytom/errors"
-	"github.com/bytom/bytom/protocol/consensus"
+	"github.com/bytom/bytom/protocol/bc"
 )
 
 var (
@@ -11,6 +11,11 @@ var (
 	errInvalidSignature = errors.New("the signature of block is invalid")
 )
 
-func (c *Chain) Casper() *consensus.Casper {
+// ICasper interface of casper consensus
+type ICasper interface {
+	BestChain() (uint64, bc.Hash)
+}
+
+func (c *Chain) Casper() ICasper {
 	return c.casper
 }

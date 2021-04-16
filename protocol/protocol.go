@@ -3,10 +3,6 @@ package protocol
 import (
 	"sync"
 
-	store2 "github.com/bytom/bytom/protocol/store"
-
-	"github.com/bytom/bytom/protocol/consensus"
-
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/config"
@@ -22,20 +18,20 @@ type Chain struct {
 	index          *state.BlockIndex
 	orphanManage   *OrphanManage
 	txPool         *TxPool
-	store          store2.Store
+	store          Store
 	processBlockCh chan *processBlockMsg
 
 	cond     sync.Cond
 	bestNode *state.BlockNode
-	casper   *consensus.Casper
+	casper   ICasper
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
-func NewChain(store store2.Store, txPool *TxPool) (*Chain, error) {
+func NewChain(store Store, txPool *TxPool) (*Chain, error) {
 	return NewChainWithOrphanManage(store, txPool, NewOrphanManage())
 }
 
-func NewChainWithOrphanManage(store store2.Store, txPool *TxPool, manage *OrphanManage) (*Chain, error) {
+func NewChainWithOrphanManage(store Store, txPool *TxPool, manage *OrphanManage) (*Chain, error) {
 	c := &Chain{
 		orphanManage:   manage,
 		txPool:         txPool,

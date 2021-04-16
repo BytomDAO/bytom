@@ -3,7 +3,7 @@ package consensus
 import (
 	"sync"
 
-	store2 "github.com/bytom/bytom/protocol/store"
+	"github.com/bytom/bytom/protocol"
 
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
@@ -25,7 +25,7 @@ type Casper struct {
 	mu               sync.RWMutex
 	tree             *treeNode
 	rollbackNotifyCh chan bc.Hash
-	store            store2.Store
+	store            protocol.Store
 }
 
 // Best chain return the chain containing the justified checkpoint of the largest height
