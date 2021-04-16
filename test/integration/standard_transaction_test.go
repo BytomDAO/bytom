@@ -10,10 +10,10 @@ import (
 	"github.com/bytom/bytom/blockchain/pseudohsm"
 	"github.com/bytom/bytom/blockchain/signers"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/validation"
 	"github.com/bytom/bytom/test"
-	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 func TestP2PKH(t *testing.T) {
@@ -62,7 +62,8 @@ func TestP2PKH(t *testing.T) {
 	}
 
 	tx.SerializedSize = 1
-	if _, err = validation.ValidateTx(types.MapTx(tx), test.MockBlock()); err != nil {
+	converter := func(prog []byte) ([]byte, error) { return nil, nil }
+	if _, err = validation.ValidateTx(types.MapTx(tx), test.MockBlock(), converter); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -126,7 +127,8 @@ func TestBip0032P2PKH(t *testing.T) {
 	}
 
 	tx.SerializedSize = 1
-	if _, err = validation.ValidateTx(types.MapTx(tx), test.MockBlock()); err != nil {
+	converter := func(prog []byte) ([]byte, error) { return nil, nil }
+	if _, err = validation.ValidateTx(types.MapTx(tx), test.MockBlock(), converter); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -187,7 +189,8 @@ func TestP2SH(t *testing.T) {
 	}
 
 	tx.SerializedSize = 1
-	if _, err = validation.ValidateTx(types.MapTx(tx), test.MockBlock()); err != nil {
+	converter := func(prog []byte) ([]byte, error) { return nil, nil }
+	if _, err = validation.ValidateTx(types.MapTx(tx), test.MockBlock(), converter); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -260,7 +263,8 @@ func TestBip0032P2SH(t *testing.T) {
 	}
 
 	tx.SerializedSize = 1
-	if _, err = validation.ValidateTx(types.MapTx(tx), test.MockBlock()); err != nil {
+	converter := func(prog []byte) ([]byte, error) { return nil, nil }
+	if _, err = validation.ValidateTx(types.MapTx(tx), test.MockBlock(), converter); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -331,7 +335,8 @@ func TestMutilNodeSign(t *testing.T) {
 	}
 
 	tx.SerializedSize = 1
-	if _, err = validation.ValidateTx(types.MapTx(tx), test.MockBlock()); err != nil {
+	converter := func(prog []byte) ([]byte, error) { return nil, nil }
+	if _, err = validation.ValidateTx(types.MapTx(tx), test.MockBlock(), converter); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -415,7 +420,8 @@ func TestBip0032MutilNodeSign(t *testing.T) {
 	}
 
 	tx.SerializedSize = 1
-	if _, err = validation.ValidateTx(types.MapTx(tx), test.MockBlock()); err != nil {
+	converter := func(prog []byte) ([]byte, error) { return nil, nil }
+	if _, err = validation.ValidateTx(types.MapTx(tx), test.MockBlock(), converter); err != nil {
 		t.Fatal(err)
 	}
 }

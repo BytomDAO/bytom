@@ -28,6 +28,7 @@ const (
 
 	PayToWitnessPubKeyHashDataSize = 20
 	PayToWitnessScriptHashDataSize = 32
+	BCRPContractHashDataSize       = 32
 	CoinbaseArbitrarySizeLimit     = 128
 
 	BTMAlias = "BTM"

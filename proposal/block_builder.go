@@ -1,48 +1,47 @@
 package proposal
 
 import (
+	"encoding/hex"
 	"sort"
 	"strconv"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/bytom/bytom/account"
 	"github.com/bytom/bytom/blockchain/txbuilder"
+	"github.com/bytom/bytom/config"
 	consensusConfig "github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
-	"github.com/bytom/bytom/protocol/consensus"
 	"github.com/bytom/bytom/protocol/state"
 	"github.com/bytom/bytom/protocol/validation"
 	"github.com/bytom/bytom/protocol/vm/vmutil"
+	log "github.com/sirupsen/logrus"
 )
 
 const logModule = "proposal"
 
-func NewBlockTemplate(chain *protocol.Chain, casper *consensus.Casper, accountManager *account.Manager, timestamp uint64) (*types.Block, error) {
-	builder := NewBlockBuilder(chain, casper, accountManager)
+func NewBlockTemplate(chain *protocol.Chain, accountManager *account.Manager, timestamp uint64) (*types.Block, error) {
+	builder := NewBlockBuilder(chain, accountManager)
 	return builder.Build(timestamp)
 }
 
-func NewBlockBuilder(chain *protocol.Chain, casper *consensus.Casper, accountManager *account.Manager) *BlockBuilder {
+func NewBlockBuilder(chain *protocol.Chain, accountManager *account.Manager) *BlockBuilder {
 	return &BlockBuilder{
 		chain:          chain,
-		casper:         casper,
 		accountManager: accountManager,
 	}
 }
 
 type BlockBuilder struct {
 	chain          *protocol.Chain
-	casper         *consensus.Casper
 	accountManager *account.Manager
 }
 
 func (bd *BlockBuilder) Build(timeStamp uint64) (*types.Block, error) {
-	preHeight, preHash := bd.casper.BestChain()
+	preHeight, preHash := bd.chain.Casper().BestChain()
 	block := &types.Block{
 		BlockHeader: types.BlockHeader{
 			Version:           1,
@@ -50,20 +49,21 @@ func (bd *BlockBuilder) Build(timeStamp uint64) (*types.Block, error) {
 			PreviousBlockHash: preHash,
 			Timestamp:         timeStamp,
 			BlockCommitment:   types.BlockCommitment{},
+			Witness:           make([]byte, protocol.SignatureLength),
 		},
 		// leave the first transaction for coinbase transaction
 		Transactions: []*types.Tx{nil},
 	}
 
-	err := bd.applyTransactions(block)
-	if err != nil {
+	if err := bd.applyTransactions(block); err != nil {
 		return nil, err
 	}
-	err = bd.calculateBlockCommitment(block)
-	if err != nil {
+	if err := bd.calculateBlockCommitment(block); err != nil {
 		return nil, err
 	}
-	//TODO: sign block header
+	if err := bd.signHeader(&block.BlockHeader); err != nil {
+		return nil, err
+	}
 
 	return block, nil
 }
@@ -86,12 +86,10 @@ func (bd *BlockBuilder) applyTransactions(block *types.Block) (err error) {
 			continue
 		}
 
-		gasStatus, err := validation.ValidateTx(tx, bcBlock)
+		gasStatus, err := validation.ValidateTx(tx, bcBlock, bd.chain.ProgramConverter)
 		if err != nil {
-			if !gasStatus.GasValid {
-				removeTransactionForError(txPool, &tx.ID, err)
-				continue
-			}
+			removeTransactionForError(txPool, &tx.ID, err)
+			continue
 		}
 
 		if gasUsed+uint64(gasStatus.GasUsed) > consensusConfig.MaxBlockGas {
@@ -131,6 +129,21 @@ func (bd *BlockBuilder) calculateBlockCommitment(block *types.Block) error {
 	return err
 }
 
+func (bd *BlockBuilder) signHeader(header *types.BlockHeader) error {
+	privKeyStr, err := config.CommonConfig.NodeKey()
+	if err != nil {
+		return err
+	}
+	var xprv chainkd.XPrv
+	if _, err := hex.Decode(xprv[:], []byte(privKeyStr)); err != nil {
+		log.WithField("err", err).Panic("fail on decode private key")
+	}
+	signature := xprv.Sign(header.Hash().Bytes())
+	copy(header.Witness, signature)
+
+	return nil
+}
+
 func removeTransactionForError(txPool *protocol.TxPool, txHash *bc.Hash, err error) {
 	log.WithFields(log.Fields{"module": logModule, "error": err}).Error("mining block generation: skip tx due to")
 	txPool.RemoveTransaction(txHash)
@@ -159,18 +172,8 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 	if err = builder.AddInput(types.NewCoinbaseInput(arbitrary), &txbuilder.SigningInstruction{}); err != nil {
 		return nil, err
 	}
-	// TODO: calculate block reward
-	if err = builder.AddOutput(&types.TxOutput{
-		AssetVersion: 1,
-		OutputCommitment: types.OutputCommitment{
-			AssetAmount: bc.AssetAmount{
-				AssetId: consensusConfig.BTMAssetID,
-				Amount:  amount,
-			},
-			VMVersion:      1,
-			ControlProgram: script,
-		},
-	}); err != nil {
+	//TODO: calculate block reward
+	if err = builder.AddOutput(types.NewTxOutput(*consensusConfig.BTMAssetID, amount, script)); err != nil {
 		return nil, err
 	}
 	_, txData, err := builder.Build()

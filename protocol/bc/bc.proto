@@ -90,6 +90,20 @@ message Output {
   uint64      ordinal         = 3;
 }
 
+message VoteOutput {
+  ValueSource source          = 1;
+  Program     control_program = 2;
+  uint64      ordinal         = 3;
+  bytes       vote            = 4;
+}
+
+message VetoInput {
+  Hash             spent_output_id     = 1;
+  ValueDestination witness_destination = 2;
+  repeated bytes   witness_arguments   = 3;
+  uint64           ordinal             = 4;
+}
+
 message Retirement {
   ValueSource source   = 1;
   uint64      ordinal  = 2;

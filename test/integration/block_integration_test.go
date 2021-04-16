@@ -2,8 +2,8 @@ package integration
 
 import (
 	"fmt"
-	"time"
 	"testing"
+	"time"
 
 	"github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/consensus"
