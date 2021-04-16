@@ -74,6 +74,11 @@ func IsBech32SegwitPrefix(prefix string, params *Params) bool {
 	return prefix == params.Bech32HRPSegwit+"1"
 }
 
+type CasperConfig struct {
+	BlockTimeInterval uint64 // milliseconds, the block time interval for producing a block
+	BlockNumEachNode  uint64 // proposers, the number of generated continuous blocks for each node
+}
+
 // Checkpoint identifies a known good point in the block chain.  Using
 // checkpoints allows a few optimizations for old blocks during initial download
 // and also prevents forks from old blocks.
@@ -94,6 +99,9 @@ type Params struct {
 	// as one method to discover peers.
 	DNSSeeds    []string
 	Checkpoints []Checkpoint
+
+	// casper consensus
+	CasperConfig
 }
 
 // ActiveNetParams is ...

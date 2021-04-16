@@ -3,6 +3,8 @@ package protocol
 import (
 	"sync"
 
+	"github.com/bytom/bytom/consensus"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/config"
@@ -12,6 +14,11 @@ import (
 )
 
 const maxProcessBlockChSize = 1024
+
+type ICasper interface {
+	BestChain() (uint64, bc.Hash)
+	Validators(blockHash *bc.Hash) ([]*state.Validator, error)
+}
 
 // Chain provides functions for working with the Bytom block chain.
 type Chain struct {
@@ -23,6 +30,7 @@ type Chain struct {
 
 	cond     sync.Cond
 	bestNode *state.BlockNode
+	casper   ICasper
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
@@ -155,4 +163,45 @@ func (c *Chain) BlockWaiter(height uint64) <-chan struct{} {
 // GetTxPool return chain txpool.
 func (c *Chain) GetTxPool() *TxPool {
 	return c.txPool
+}
+
+func (c *Chain) BestChain() (uint64, bc.Hash) {
+	return c.casper.BestChain()
+}
+
+func (c *Chain) GetBlocker(prevBlockHash *bc.Hash, timestamp uint64) (string, error) {
+	validators, err := c.casper.Validators(prevBlockHash)
+	if err != nil {
+		return "", err
+	}
+	prevVoteRoundLastBlock, err := c.getPrevRoundLastBlock(prevBlockHash)
+	if err != nil {
+		return "", err
+	}
+
+	startTimestamp := prevVoteRoundLastBlock.Timestamp + consensus.ActiveNetParams.BlockTimeInterval
+	order := getBlockerOrder(startTimestamp, timestamp, uint64(len(validators)))
+	return validators[order].PubKey, nil
+}
+
+func (c *Chain) getPrevRoundLastBlock(hash *bc.Hash) (*types.BlockHeader, error) {
+	header, err := c.store.GetBlockHeader(hash)
+	if err != nil {
+		return nil, err
+	}
+
+	// loop find the previous epoch block hash
+	for header.Height%state.BlocksOfEpoch != 0 {
+		header, err = c.store.GetBlockHeader(&header.PreviousBlockHash)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return header, nil
+}
+
+func getBlockerOrder(startTimestamp, blockTimestamp, numOfConsensusNode uint64) uint64 {
+	roundBlockTime := consensus.ActiveNetParams.BlockNumEachNode * numOfConsensusNode * consensus.ActiveNetParams.BlockTimeInterval
+	lastRoundStartTime := startTimestamp + (blockTimestamp-startTimestamp)/roundBlockTime*roundBlockTime
+	return (blockTimestamp - lastRoundStartTime) / (consensus.ActiveNetParams.BlockNumEachNode * consensus.ActiveNetParams.BlockTimeInterval)
 }
