@@ -1,7 +1,6 @@
 package p2p
 
 import (
-	"encoding/hex"
 	"fmt"
 	"net"
 	"sync"
@@ -84,16 +83,7 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 	var discv *dht.Network
 	var lanDiscv *mdns.LANDiscover
 
-	config.P2P.PrivateKey, err = config.NodeKey()
-	if err != nil {
-		return nil, err
-	}
-
-	bytes, err := hex.DecodeString(config.P2P.PrivateKey)
-	if err != nil {
-		return nil, err
-	}
-
+	bytes := config.PrivateKey().Bytes()
 	var newKey [64]byte
 	copy(newKey[:], bytes)
 	privKey := crypto.PrivKeyEd25519(newKey)
