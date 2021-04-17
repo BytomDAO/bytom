@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/bytom/bytom/crypto/ed25519/chainkd"
-
 	log "github.com/sirupsen/logrus"
+
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 )
 
 var (
