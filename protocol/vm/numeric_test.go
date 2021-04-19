@@ -91,38 +91,6 @@ func TestNumericOps(t *testing.T) {
 			dataStack: [][]byte{{1}},
 		},
 	}, {
-		op: OP_NEGATE,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{2}},
-		},
-		wantVM: &virtualMachine{
-			runLimit:     49998,
-			deferredCost: 7,
-			dataStack:    [][]byte{Int64Bytes(-2)},
-		},
-	}, {
-		op: OP_ABS,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{2}},
-		},
-		wantVM: &virtualMachine{
-			runLimit:  49998,
-			dataStack: [][]byte{{2}},
-		},
-	}, {
-		op: OP_ABS,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{Int64Bytes(-2)},
-		},
-		wantVM: &virtualMachine{
-			runLimit:     49998,
-			deferredCost: -7,
-			dataStack:    [][]byte{{2}},
-		},
-	}, {
 		op: OP_NOT,
 		startVM: &virtualMachine{
 			runLimit:  50000,
@@ -398,7 +366,7 @@ func TestNumericOps(t *testing.T) {
 	}}
 
 	numops := []Op{
-		OP_1ADD, OP_1SUB, OP_2MUL, OP_2DIV, OP_NEGATE, OP_ABS, OP_NOT, OP_0NOTEQUAL,
+		OP_1ADD, OP_1SUB, OP_2MUL, OP_2DIV, OP_NOT, OP_0NOTEQUAL,
 		OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_MOD, OP_LSHIFT, OP_RSHIFT, OP_BOOLAND,
 		OP_BOOLOR, OP_NUMEQUAL, OP_NUMEQUALVERIFY, OP_NUMNOTEQUAL, OP_LESSTHAN,
 		OP_LESSTHANOREQUAL, OP_GREATERTHAN, OP_GREATERTHANOREQUAL, OP_MIN, OP_MAX, OP_WITHIN,
