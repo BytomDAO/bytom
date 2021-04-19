@@ -23,7 +23,6 @@ var (
 func (c *Chain) SignBlockHeader(blockHeader *types.BlockHeader) {
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
-
 	xprv := config.CommonConfig.PrivateKey()
 	signature := xprv.Sign(blockHeader.Hash().Bytes())
 	blockHeader.Set(signature)
