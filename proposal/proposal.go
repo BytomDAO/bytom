@@ -207,7 +207,7 @@ func (b *blockBuilder) applyTransactions(txs []*types.Tx, timeoutStatus uint8) e
 		}
 
 		b.gasLeft = gasLeft
-		batchTxs = []*types.Tx{}
+		batchTxs = batchTxs[:0]
 		if b.getTimeoutStatus() >= timeoutStatus || len(b.block.Transactions) > softMaxTxNum {
 			break
 		}
