@@ -171,8 +171,6 @@ const (
 	OP_1SUB               Op = 0x8c
 	OP_2MUL               Op = 0x8d
 	OP_2DIV               Op = 0x8e
-	OP_NEGATE             Op = 0x8f
-	OP_ABS                Op = 0x90
 	OP_NOT                Op = 0x91
 	OP_0NOTEQUAL          Op = 0x92
 	OP_ADD                Op = 0x93
@@ -277,8 +275,6 @@ var (
 		OP_1SUB:               {OP_1SUB, "1SUB", op1Sub},
 		OP_2MUL:               {OP_2MUL, "2MUL", op2Mul},
 		OP_2DIV:               {OP_2DIV, "2DIV", op2Div},
-		OP_NEGATE:             {OP_NEGATE, "NEGATE", opNegate},
-		OP_ABS:                {OP_ABS, "ABS", opAbs},
 		OP_NOT:                {OP_NOT, "NOT", opNot},
 		OP_0NOTEQUAL:          {OP_0NOTEQUAL, "0NOTEQUAL", op0NotEqual},
 		OP_ADD:                {OP_ADD, "ADD", opAdd},
