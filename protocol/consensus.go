@@ -4,10 +4,8 @@ import (
 	"crypto/ed25519"
 
 	"github.com/bytom/bytom/config"
-
-	"github.com/bytom/bytom/protocol/bc/types"
-
 	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/protocol/bc/types"
 )
 
 var (
