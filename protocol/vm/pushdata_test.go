@@ -151,21 +151,19 @@ func TestPushdataInt64(t *testing.T) {
 		num  int64
 		want []byte
 	}
-	cases := []test{
-	// 	{
-	// 	num:  0,
-	// 	want: []byte{byte(OP_0)},
-	// }, {
-	// 	num:  17,
-	// 	want: []byte{byte(OP_DATA_1), 0x11},
-	// }, {
-	// 	num:  255,
-	// 	want: []byte{byte(OP_DATA_1), 0xff},
-	// }, {
-	// 	num:  256,
-	// 	want: []byte{byte(OP_DATA_2), 0x00, 0x01},
-	// },
-	{
+	cases := []test{{
+		num:  0,
+		want: []byte{byte(OP_0)},
+	}, {
+		num:  17,
+		want: []byte{byte(OP_DATA_1), 0x11},
+	}, {
+		num:  255,
+		want: []byte{byte(OP_DATA_1), 0xff},
+	}, {
+		num:  256,
+		want: []byte{byte(OP_DATA_2), 0x00, 0x01},
+	}, {
 		num:  -1,
 		want: []byte{byte(OP_DATA_8), 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 	}, {
