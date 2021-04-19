@@ -9,7 +9,6 @@ import (
 
 	"github.com/bytom/bytom/account"
 	"github.com/bytom/bytom/blockchain/txbuilder"
-	"github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol"
@@ -58,7 +57,7 @@ func newBlockBuilder(chain *protocol.Chain, accountManager *account.Manager, tim
 			PreviousBlockHash: preBlockHeader.Hash(),
 			Timestamp:         timestamp,
 			BlockCommitment:   types.BlockCommitment{},
-			Witness:           make([]byte, protocol.SignatureLength),
+			BlockWitness:      make([]byte, protocol.SignatureLength),
 		},
 	}
 
@@ -88,7 +87,7 @@ func (b *blockBuilder) build() (*types.Block, error) {
 		return nil, err
 	}
 
-	b.signHeader(&b.block.BlockHeader)
+	b.chain.SignBlockHeader(&b.block.BlockHeader)
 	return b.block, nil
 }
 
@@ -132,12 +131,6 @@ func (b *blockBuilder) calculateBlockCommitment() (err error) {
 	}
 
 	return nil
-}
-
-func (b *blockBuilder) signHeader(header *types.BlockHeader) {
-	xprv := config.CommonConfig.PrivateKey()
-	signature := xprv.Sign(header.Hash().Bytes())
-	copy(b.block.Witness, signature)
 }
 
 // createCoinbaseTx returns a coinbase transaction paying an appropriate subsidy
