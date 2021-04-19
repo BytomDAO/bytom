@@ -89,3 +89,32 @@ func TestIsCallBCRPScript(t *testing.T) {
 	}
 }
 
+func TestParseContractHash(t *testing.T) {
+	tests := []struct {
+		program  string
+		expected string
+	}{
+		{
+			//call BCRP script format: OP_1 + OP_DATA_32 + SHA3-256(contract)
+			program:  "5120605f9b8e978bb3956d729047e556cdf4b56238348d4293ad9afef376462063c5",
+			expected: "605f9b8e978bb3956d729047e556cdf4b56238348d4293ad9afef376462063c5",
+		},
+	}
+
+	for i, test := range tests {
+		program, err := hex.DecodeString(test.program)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		hash, err := ParseContractHash(program)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expected := hex.EncodeToString(hash[:])
+		if expected != test.expected {
+			t.Errorf("TestParseContractHash #%d failed: got %v want %v", i, expected, test.expected)
+		}
+	}
+}
