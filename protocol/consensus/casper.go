@@ -19,6 +19,7 @@ var (
 	errSameHeightInVerification = errors.New("validator publish two distinct votes for the same target height")
 	errSpanHeightInVerification = errors.New("validator publish vote within the span of its other votes")
 	errVoteToNonValidator       = errors.New("pubKey of vote is not validator")
+	errGuarantyLessThanMinimum  = errors.New("guaranty less than minimum")
 	errOverflow                 = errors.New("arithmetic overflow/underflow")
 )
 
@@ -31,6 +32,9 @@ type Casper struct {
 	tree             *treeNode
 	rollbackNotifyCh chan bc.Hash
 	store            protocol.Store
+
+	// pubKey -> conflicting verifications
+	evilValidators map[string][]*Verification
 }
 
 // Best chain return the chain containing the justified checkpoint of the largest height
@@ -105,7 +109,7 @@ func (c *Casper) AuthVerification(v *Verification) error {
 		return err
 	}
 
-	supLink := target.AddSupLink(v.SourceHeight, v.SourceHash, v.PubKey)
+	supLink := target.AddSupLink(v.SourceHeight, v.SourceHash, v.PubKey, v.Signature)
 	if source.Status == state.Justified && supLink.Confirmed() {
 		c.setJustified(target)
 		// must direct child
@@ -137,10 +141,33 @@ func (c *Casper) setFinalized(checkpoint *state.Checkpoint) error {
 	return nil
 }
 
-// ProcessBlock used to receive a new block from upper layer, it provides idempotence
+// EvilValidator represent a validator who broadcast two distinct verification that violate the commandment
+type EvilValidator struct {
+	PubKey string
+	V1     *Verification
+	V2     *Verification
+}
+
+// EvilValidators return all evil validators
+func (c *Casper) EvilValidators() []*EvilValidator {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	var validators []*EvilValidator
+	for pubKey, verifications := range c.evilValidators {
+		validators = append(validators, &EvilValidator{
+			PubKey: pubKey,
+			V1:     verifications[0],
+			V2:     verifications[1],
+		})
+	}
+	return validators
+}
+
+// ApplyBlock used to receive a new block from upper layer, it provides idempotence
 // and parse the vote and mortgage from the transactions, then save to the checkpoint
 // the tree of checkpoint will grow with the arrival of new blocks
-func (c *Casper) ProcessBlock(block *types.Block) error {
+func (c *Casper) ApplyBlock(block *types.Block) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -156,26 +183,28 @@ func (c *Casper) ProcessBlock(block *types.Block) error {
 
 	for _, tx := range block.Transactions {
 		for _, input := range tx.Inputs {
-			switch typ := input.TypedInput.(type) {
-			case *types.VetoInput:
-				if err := processVeto(typ, checkpoint); err != nil {
+			if vetoInput, ok := input.TypedInput.(*types.VetoInput); ok {
+				if err := processVeto(vetoInput, checkpoint); err != nil {
 					return err
 				}
-			case *types.WithdrawalInput:
-				if err := processWithdrawal(typ, checkpoint); err != nil {
+			}
+
+			if isGuarantyProgram(input.ControlProgram()) {
+				if err := processWithdrawal(decodeGuarantyArgs(input.ControlProgram()), checkpoint); err != nil {
 					return err
 				}
 			}
 		}
 
 		for _, output := range tx.Outputs {
-			switch output.TypedOutput.(type) {
-			case *types.VoteOutput:
+			if _, ok := output.TypedOutput.(*types.VoteOutput); ok {
 				if err := processVote(output, checkpoint); err != nil {
 					return err
 				}
-			case *types.GuarantyOutput:
-				if err := processGuaranty(output, checkpoint); err != nil {
+			}
+
+			if isGuarantyProgram(output.ControlProgram) {
+				if err := processGuaranty(decodeGuarantyArgs(output.ControlProgram), checkpoint); err != nil {
 					return err
 				}
 			}
@@ -184,24 +213,40 @@ func (c *Casper) ProcessBlock(block *types.Block) error {
 	return c.store.SaveCheckpoints(checkpoint)
 }
 
-func processWithdrawal(input *types.WithdrawalInput, checkpoint *state.Checkpoint) error {
-	pubKey := hex.EncodeToString(input.PubKey)
+type guarantyArgs struct {
+	Amount uint64
+	PubKey []byte
+}
+
+func isGuarantyProgram(program []byte) bool {
+	return false
+}
+
+func decodeGuarantyArgs(program []byte) *guarantyArgs {
+	return nil
+}
+
+func processWithdrawal(guarantyArgs *guarantyArgs, checkpoint *state.Checkpoint) error {
+	pubKey := hex.EncodeToString(guarantyArgs.PubKey)
 	guarantyNum := checkpoint.Guaranties[pubKey]
-	guarantyNum, ok := checked.SubUint64(guarantyNum, input.Amount)
+	guarantyNum, ok := checked.SubUint64(guarantyNum, guarantyArgs.Amount)
 	if !ok {
 		return errOverflow
 	}
 
 	checkpoint.Guaranties[pubKey] = guarantyNum
+	// TODO delete the evil validator when receive the confiscate transaction
 	return nil
 }
 
+func processGuaranty(guarantyArgs *guarantyArgs, checkpoint *state.Checkpoint) error {
+	if guarantyArgs.Amount < minGuaranty {
+		return errGuarantyLessThanMinimum
+	}
 
-func processGuaranty(output *types.TxOutput, checkpoint *state.Checkpoint) error {
-	guarantyOutput := output.TypedOutput.(*types.GuarantyOutput)
-	pubKey := hex.EncodeToString(guarantyOutput.PubKey)
+	pubKey := hex.EncodeToString(guarantyArgs.PubKey)
 	guarantyNum := checkpoint.Guaranties[pubKey]
-	guarantyNum, ok := checked.AddUint64(guarantyNum, output.Amount)
+	guarantyNum, ok := checked.AddUint64(guarantyNum, guarantyArgs.Amount)
 	if !ok {
 		return errOverflow
 	}
@@ -282,7 +327,8 @@ func (c *Casper) verifySameHeight(v *Verification) error {
 
 	for _, checkpoint := range checkpoints {
 		for _, supLink := range checkpoint.SupLinks {
-			if supLink.PubKeys[v.PubKey] {
+			if signature, ok := supLink.Signatures[v.PubKey]; ok {
+				c.evilValidators[v.PubKey] = []*Verification{v, makeVerification(supLink, checkpoint, signature, v.PubKey)}
 				return errSameHeightInVerification
 			}
 		}
@@ -292,17 +338,16 @@ func (c *Casper) verifySameHeight(v *Verification) error {
 
 // a validator must not vote within the span of its other votes.
 func (c *Casper) verifySpanHeight(v *Verification) error {
-	if c.tree.findOnlyOne(func(c *state.Checkpoint) bool {
-		if c.Height < v.TargetHeight {
-			for _, supLink := range c.SupLinks {
-				if supLink.PubKeys[v.PubKey] && supLink.SourceHeight > v.SourceHeight {
-					return true
-				}
-			}
+	if c.tree.findOnlyOne(func(checkpoint *state.Checkpoint) bool {
+		if checkpoint.Height == v.TargetHeight {
+			return false
 		}
-		if c.Height > v.TargetHeight {
-			for _, supLink := range c.SupLinks {
-				if supLink.PubKeys[v.PubKey] && supLink.SourceHeight < v.SourceHeight {
+
+		for _, supLink := range checkpoint.SupLinks {
+			if signature, ok := supLink.Signatures[v.PubKey]; ok {
+				if (checkpoint.Height < v.TargetHeight && supLink.SourceHeight > v.SourceHeight) ||
+					(checkpoint.Height > v.TargetHeight && supLink.SourceHeight < v.SourceHeight) {
+					c.evilValidators[v.PubKey] = []*Verification{v, makeVerification(supLink, checkpoint, signature, v.PubKey)}
 					return true
 				}
 			}
@@ -312,6 +357,17 @@ func (c *Casper) verifySpanHeight(v *Verification) error {
 		return errSpanHeightInVerification
 	}
 	return nil
+}
+
+func makeVerification(supLink *state.SupLink, checkpoint *state.Checkpoint, signature, pubKey string) *Verification {
+	return &Verification{
+		SourceHash:   supLink.SourceHash,
+		TargetHash:   checkpoint.Hash,
+		SourceHeight: supLink.SourceHeight,
+		TargetHeight: checkpoint.Height,
+		Signature:    signature,
+		PubKey:       pubKey,
+	}
 }
 
 // justifiedHeight is the max justified height of checkpoint from node to root
