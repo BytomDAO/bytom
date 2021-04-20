@@ -34,3 +34,44 @@ func (c *cache) lookupBlockHashesByHeight(height uint64) ([]*bc.Hash, error) {
 func (c *cache) removeBlockHashes(height uint64) {
 	c.lruBlockHashes.Remove(height)
 }
+
+func (c *cache) lookupBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
+	if data, ok := c.lruBlockHeaders.Get(*hash); ok {
+		return data.(*types.BlockHeader), nil
+	}
+
+	blockHeader, err := c.sf.Do("BlockHeader:"+hash.String(), func() (interface{}, error) {
+		blockHeader, err := c.fillBlockHeaderFn(hash)
+		if err != nil {
+			return nil, err
+		}
+
+		c.lruBlockHeaders.Add(blockHeader.Hash(), blockHeader)
+		return blockHeader, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return blockHeader.(*types.BlockHeader), nil
+}
+
+
+func (c *cache) lookupBlockTxs(hash *bc.Hash) ([]*types.Tx, error) {
+	if data, ok := c.lruBlockTxs.Get(*hash); ok {
+		return data.([]*types.Tx), nil
+	}
+
+	blockTxs, err := c.sf.Do("BlockTxs:"+hash.String(), func() (interface{}, error) {
+		blockTxs, err := c.fillBlockTransactionFn(hash)
+		if err != nil {
+			return nil, err
+		}
+
+		c.lruBlockTxs.Add(*hash, blockTxs)
+		return blockTxs, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return blockTxs.([]*types.Tx), nil
+}

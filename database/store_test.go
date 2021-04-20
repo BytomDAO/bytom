@@ -177,16 +177,20 @@ func TestSaveChainStatus(t *testing.T) {
 }
 
 func TestSaveBlock(t *testing.T) {
-	defer os.RemoveAll("temp")
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	store := NewStore(testDB)
+	defer func() {
+		testDB.Close()
+		os.RemoveAll("temp")
+	}()
 
+	store := NewStore(testDB)
 	block := config.GenesisBlock()
 	if err := store.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
 
 	blockHash := block.Hash()
+	//todo:
 	gotBlock, err := store.GetBlock(&blockHash)
 	if err != nil {
 		t.Fatal(err)

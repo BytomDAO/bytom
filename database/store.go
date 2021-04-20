@@ -3,6 +3,7 @@ package database
 import (
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -56,9 +57,37 @@ func CalcBlockHeaderKey(height uint64, hash *bc.Hash) []byte {
 	return append(key, hash.Bytes()...)
 }
 
+// GetBlockHeader return the block header by given hash
+func GetBlockHeader(db dbm.DB, hash *bc.Hash) (*types.BlockHeader, error) {
+	binaryBlockHeader := db.Get(calcBlockHeaderKey(hash))
+	if binaryBlockHeader == nil {
+		return nil, fmt.Errorf("There are no blockHeader with given hash %s", hash.String())
+	}
+
+	blockHeader := &types.BlockHeader{}
+	if err := blockHeader.UnmarshalText(binaryBlockHeader); err != nil {
+		return nil, err
+	}
+	return blockHeader, nil
+}
+
+// GetBlockTransactions return the block transactions by given hash
+func GetBlockTransactions(db dbm.DB, hash *bc.Hash) ([]*types.Tx, error) {
+	binaryBlockTxs := db.Get(calcBlockTransactionsKey(hash))
+	if binaryBlockTxs == nil {
+		return nil, fmt.Errorf("There are no block transactions with given hash %s", hash.String())
+	}
+
+	block := &types.Block{}
+	if err := block.UnmarshalText(binaryBlockTxs); err != nil {
+		return nil, err
+	}
+	return block.Transactions, nil
+}
+
 // GetBlockHeader return the BlockHeader by given hash
 func (s *Store) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
-	return nil, nil
+	return s.cache.lookupBlockHeader(hash)
 }
 
 // GetBlock return the block by given hash
@@ -75,6 +104,14 @@ func GetBlock(db dbm.DB, hash *bc.Hash) (*types.Block, error) {
 
 // NewStore creates and returns a new Store object.
 func NewStore(db dbm.DB) *Store {
+	fillBlockHeaderFn := func(hash *bc.Hash) (*types.BlockHeader, error) {
+		return GetBlockHeader(db, hash)
+	}
+
+	fillBlockTxsFn := func(hash *bc.Hash) ([]*types.Tx, error) {
+		return GetBlockTransactions(db, hash)
+	}
+
 	fillFn := func(hash *bc.Hash) (*types.Block, error) {
 		return GetBlock(db, hash)
 	}
@@ -83,7 +120,7 @@ func NewStore(db dbm.DB) *Store {
 		return GetBlockHashesByHeight(db, height)
 	}
 
-	cache := newCache(fillFn, fillBlockHashesFn)
+	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillFn, fillBlockHashesFn)
 	return &Store{
 		db:    db,
 		cache: cache,

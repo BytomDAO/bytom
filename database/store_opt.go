@@ -110,3 +110,26 @@ func GetBlockHashesByHeight(db dbm.DB, height uint64) ([]*bc.Hash, error) {
 	}
 	return hashes, nil
 }
+
+// GetBlockTransactions return the Block transactions by given hash
+func (s *Store) GetBlockTransactions(hash *bc.Hash) ([]*types.Tx, error) {
+	return s.cache.lookupBlockTxs(hash)
+}
+
+// GetBlock return the block by given hash
+func (s *Store) GetBlockEx(hash *bc.Hash) (*types.Block, error) {
+	blockHeader, err := s.GetBlockHeader(hash)
+	if err != nil {
+		return nil, err
+	}
+
+	txs, err := s.GetBlockTransactions(hash)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.Block{
+		BlockHeader:  *blockHeader,
+		Transactions: txs,
+	}, nil
+}

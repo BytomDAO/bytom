@@ -13,21 +13,27 @@ import (
 )
 
 const (
-	maxCachedBlocks       = 30
-	maxCachedBlockHeaders = 4096
-	maxCachedBlockHashes  = 8192
+	maxCachedBlocks            = 30
+	maxCachedBlockHeaders      = 4096
+	maxCachedBlockTransactions = 1024
+	maxCachedBlockHashes       = 8192
 )
 
+type fillBlockHeaderFn func(hash *bc.Hash) (*types.BlockHeader, error)
+type fillBlockTransactionsFn func(hash *bc.Hash) ([]*types.Tx, error)
 type fillBlockHashesFn func(height uint64) ([]*bc.Hash, error)
 type fillFn func(hash *bc.Hash) (*types.Block, error)
 
-func newCache(fill fillFn, fillBlockHashes fillBlockHashesFn) cache {
+func newCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransactionsFn, fill fillFn, fillBlockHashes fillBlockHashesFn) cache {
 	return cache{
 		lruBlockHeaders: common.NewCache(maxCachedBlockHeaders),
+		lruBlockTxs:     common.NewCache(maxCachedBlockTransactions),
 		lruBlockHashes:  common.NewCache(maxCachedBlockHashes),
 
-		fillBlockHashesFn: fillBlockHashes,
-		fillFn:            fill,
+		fillBlockHeaderFn:      fillBlockHeader,
+		fillBlockTransactionFn: fillBlockTxs,
+		fillBlockHashesFn:      fillBlockHashes,
+		fillFn:                 fill,
 
 		lru: lru.New(maxCachedBlocks),
 	}
@@ -35,15 +41,18 @@ func newCache(fill fillFn, fillBlockHashes fillBlockHashesFn) cache {
 
 type cache struct {
 	lruBlockHeaders *common.Cache
+	lruBlockTxs     *common.Cache
 	lruBlockHashes  *common.Cache
 
-	fillBlockHashesFn func(uint64) ([]*bc.Hash, error)
+	fillBlockHashesFn      func(uint64) ([]*bc.Hash, error)
+	fillBlockTransactionFn func(hash *bc.Hash) ([]*types.Tx, error)
+	fillBlockHeaderFn      func(hash *bc.Hash) (*types.BlockHeader, error)
+	fillFn                 func(hash *bc.Hash) (*types.Block, error)
 
 	sf singleflight.Group
 
-	mu     sync.Mutex
-	lru    *lru.Cache
-	fillFn func(hash *bc.Hash) (*types.Block, error)
+	mu  sync.Mutex
+	lru *lru.Cache
 }
 
 func (c *cache) lookup(hash *bc.Hash) (*types.Block, error) {
