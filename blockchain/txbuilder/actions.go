@@ -109,6 +109,13 @@ func DecodeRetireAction(data []byte) (Action, error) {
 	return a, err
 }
 
+// DecodeRegisterAction convert input data to action struct
+func DecodeRegisterAction(data []byte) (Action, error) {
+	a := new(registerAction)
+	err := stdjson.Unmarshal(data, a)
+	return a, err
+}
+
 type retireAction struct {
 	bc.AssetAmount
 	Arbitrary json.HexBytes `json:"arbitrary"`
@@ -136,4 +143,36 @@ func (a *retireAction) Build(ctx context.Context, b *TemplateBuilder) error {
 
 func (a *retireAction) ActionType() string {
 	return "retire"
+}
+
+type registerAction struct {
+	bc.AssetAmount
+	Contract json.HexBytes `json:"contract"`
+}
+
+func (a *registerAction) Build(ctx context.Context, b *TemplateBuilder) error {
+	var missing []string
+	if a.AssetId.IsZero() {
+		missing = append(missing, "asset_id")
+	}
+	if a.Amount == 0 {
+		missing = append(missing, "amount")
+	}
+	if len(a.Contract) == 0 {
+		missing = append(missing, "contract")
+	}
+	if len(missing) > 0 {
+		return MissingFieldsError(missing...)
+	}
+
+	program, err := vmutil.RegisterProgram(a.Contract)
+	if err != nil {
+		return err
+	}
+	out := types.NewOriginalTxOutput(*a.AssetId, a.Amount, program)
+	return b.AddOutput(out)
+}
+
+func (a *registerAction) ActionType() string {
+	return "register"
 }
