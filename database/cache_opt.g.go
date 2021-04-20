@@ -6,11 +6,11 @@ import (
 	"strconv"
 )
 
-func (c *blockCache) removeBlockHeader(blockHeader *types.BlockHeader) {
+func (c *cache) removeBlockHeader(blockHeader *types.BlockHeader) {
 	c.lruBlockHeaders.Remove(blockHeader.Hash())
 }
 
-func (c *blockCache) lookupBlockHashesByHeight(height uint64) ([]*bc.Hash, error) {
+func (c *cache) lookupBlockHashesByHeight(height uint64) ([]*bc.Hash, error) {
 	if hashes, ok := c.lruBlockHashes.Get(height); ok {
 		return hashes.([]*bc.Hash), nil
 	}
@@ -31,6 +31,6 @@ func (c *blockCache) lookupBlockHashesByHeight(height uint64) ([]*bc.Hash, error
 	return hashes.([]*bc.Hash), nil
 }
 
-func (c *blockCache) removeBlockHashes(height uint64) {
+func (c *cache) removeBlockHashes(height uint64) {
 	c.lruBlockHashes.Remove(height)
 }

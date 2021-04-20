@@ -21,8 +21,8 @@ const (
 type fillBlockHashesFn func(height uint64) ([]*bc.Hash, error)
 type fillFn func(hash *bc.Hash) (*types.Block, error)
 
-func newCache(fill fillFn, fillBlockHashes fillBlockHashesFn) blockCache {
-	return blockCache{
+func newCache(fill fillFn, fillBlockHashes fillBlockHashesFn) cache {
+	return cache{
 		lruBlockHeaders: common.NewCache(maxCachedBlockHeaders),
 		lruBlockHashes:  common.NewCache(maxCachedBlockHashes),
 
@@ -33,7 +33,7 @@ func newCache(fill fillFn, fillBlockHashes fillBlockHashesFn) blockCache {
 	}
 }
 
-type blockCache struct {
+type cache struct {
 	lruBlockHeaders *common.Cache
 	lruBlockHashes  *common.Cache
 
@@ -46,7 +46,7 @@ type blockCache struct {
 	fillFn func(hash *bc.Hash) (*types.Block, error)
 }
 
-func (c *blockCache) lookup(hash *bc.Hash) (*types.Block, error) {
+func (c *cache) lookup(hash *bc.Hash) (*types.Block, error) {
 	if b, ok := c.get(hash); ok {
 		return b, nil
 	}
@@ -70,7 +70,7 @@ func (c *blockCache) lookup(hash *bc.Hash) (*types.Block, error) {
 	return block.(*types.Block), nil
 }
 
-func (c *blockCache) get(hash *bc.Hash) (*types.Block, bool) {
+func (c *cache) get(hash *bc.Hash) (*types.Block, bool) {
 	c.mu.Lock()
 	block, ok := c.lru.Get(*hash)
 	c.mu.Unlock()
@@ -80,7 +80,7 @@ func (c *blockCache) get(hash *bc.Hash) (*types.Block, bool) {
 	return block.(*types.Block), ok
 }
 
-func (c *blockCache) add(block *types.Block) {
+func (c *cache) add(block *types.Block) {
 	c.mu.Lock()
 	c.lru.Add(block.Hash(), block)
 	c.mu.Unlock()

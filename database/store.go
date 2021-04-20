@@ -42,7 +42,7 @@ func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
 // methods for querying current data.
 type Store struct {
 	db    dbm.DB
-	cache blockCache
+	cache cache
 }
 
 func CalcBlockKey(hash *bc.Hash) []byte {
