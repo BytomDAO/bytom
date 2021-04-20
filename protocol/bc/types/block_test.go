@@ -37,8 +37,8 @@ func TestBlock(t *testing.T) {
 				"00", // timestamp
 				"20", // commitment extensible field length
 				"0000000000000000000000000000000000000000000000000000000000000000", // transactions merkle root
-				"0100",
-				"00", // num transactions
+				"0100", // block witness
+				"00",   // num transactions
 			}, ""),
 			hash: testutil.MustDecodeHash("42e74d130e5ab27e8a71b90e7de8c8e00ecfa77456070202ab8509f7b0ab49ae"),
 		},
@@ -87,8 +87,8 @@ func TestBlock(t *testing.T) {
 				"f3f896d605", // timestamp
 				"20",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
-				"0100",
-				"02", // num transactions
+				"0100", // block witness
+				"02",   // num transactions
 				"07018e0502012a00056e6f6e6365a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf92c30f380f6173736574446566696e6974696f6e010f69737375616e636550726f6772616d020a617267756d656e7473310a617267756d656e74733201540152fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff92c30f03010c7370656e6450726f6772616d17020a617267756d656e7473330a617267756d656e74733401010029a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf92c30f01047472756500",
 				"07010001010b02096172626974726172790002010029ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff92c30f0104747275650001002affffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff92c30f010566616c736500",
 			}, ""),
