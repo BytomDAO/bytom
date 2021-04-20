@@ -7,6 +7,7 @@ import (
 	"github.com/golang/groupcache/lru"
 	"github.com/golang/groupcache/singleflight"
 
+	"github.com/bytom/bytom/common"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 )
@@ -21,6 +22,8 @@ func newBlockCache(fillFn func(hash *bc.Hash) (*types.Block, error)) blockCache 
 }
 
 type blockCache struct {
+	lruBlockHeaders *common.Cache
+
 	mu     sync.Mutex
 	lru    *lru.Cache
 	fillFn func(hash *bc.Hash) (*types.Block, error)
@@ -37,7 +40,7 @@ func (c *blockCache) lookup(hash *bc.Hash) (*types.Block, error) {
 		if err != nil {
 			return nil, err
 		}
-		
+
 		if b == nil {
 			return nil, fmt.Errorf("There are no block with given hash %s", hash.String())
 		}
