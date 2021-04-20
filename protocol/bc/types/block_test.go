@@ -7,11 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bytom/bytom/encoding/blockchain"
-
 	"github.com/davecgh/go-spew/spew"
 
 	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/encoding/blockchain"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/testutil"
 )
