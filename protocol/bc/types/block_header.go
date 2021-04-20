@@ -85,6 +85,9 @@ func (bh *BlockHeader) readFrom(r *blockchain.Reader) (serflag uint8, err error)
 	if _, err = blockchain.ReadExtensibleString(r, bh.BlockCommitment.readFrom); err != nil {
 		return 0, err
 	}
+	if _, err = blockchain.ReadExtensibleString(r, bh.BlockWitness.readFrom); err != nil {
+		return 0, err
+	}
 
 	return
 }
@@ -113,6 +116,9 @@ func (bh *BlockHeader) writeTo(w io.Writer, serflags uint8) (err error) {
 		return err
 	}
 	if _, err = blockchain.WriteExtensibleString(w, nil, bh.BlockCommitment.writeTo); err != nil {
+		return err
+	}
+	if _, err = blockchain.WriteExtensibleString(w, nil, bh.BlockWitness.writeTo); err != nil {
 		return err
 	}
 

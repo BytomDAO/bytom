@@ -23,6 +23,7 @@ func TestBlockHeader(t *testing.T) {
 		BlockCommitment: BlockCommitment{
 			TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 		},
+		BlockWitness: BlockWitness{0xbe, 0xef},
 	}
 
 	wantHex := strings.Join([]string{
@@ -33,6 +34,7 @@ func TestBlockHeader(t *testing.T) {
 		"f3f896d605", // timestamp
 		"20",         // commitment extensible field length
 		"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
+		"0302beef",
 	}, "")
 
 	gotHex := testutil.Serialize(t, blockHeader)
@@ -70,6 +72,7 @@ func TestMarshalBlockHeader(t *testing.T) {
 				BlockCommitment: BlockCommitment{
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 				},
+				BlockWitness: BlockWitness{0xbe, 0xef},
 			},
 			wantHex: strings.Join([]string{
 				"01",   // serialization flags
@@ -79,6 +82,7 @@ func TestMarshalBlockHeader(t *testing.T) {
 				"e8b287d905", // timestamp
 				"20",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
+				"0302beef",
 			}, ""),
 		},
 		{
@@ -90,6 +94,7 @@ func TestMarshalBlockHeader(t *testing.T) {
 				BlockCommitment: BlockCommitment{
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 				},
+				BlockWitness: BlockWitness{0xbe, 0xef},
 			},
 			wantError: blockchain.ErrRange,
 		},
@@ -102,6 +107,7 @@ func TestMarshalBlockHeader(t *testing.T) {
 				BlockCommitment: BlockCommitment{
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 				},
+				BlockWitness: BlockWitness{0xbe, 0xef},
 			},
 			wantError: blockchain.ErrRange,
 		},
@@ -111,6 +117,7 @@ func TestMarshalBlockHeader(t *testing.T) {
 				Height:            9223372036854775807, // MaxInt64(9223372036854775807)
 				PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
 				Timestamp:         1528945000,
+				BlockWitness:      BlockWitness{0xbe, 0xef},
 			},
 			wantHex: strings.Join([]string{
 				"01",                 // serialization flags
@@ -120,6 +127,26 @@ func TestMarshalBlockHeader(t *testing.T) {
 				"e8b287d905", // timestamp
 				"20",         // commitment extensible field length
 				"0000000000000000000000000000000000000000000000000000000000000000", // transactions merkle root
+				"0302beef",
+			}, ""),
+		},
+		{
+			blockHeader: &BlockHeader{
+				Version:           1,
+				Height:            9223372036854775807, // MaxInt64(9223372036854775807)
+				PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
+				Timestamp:         1528945000,
+				BlockWitness:      BlockWitness{},
+			},
+			wantHex: strings.Join([]string{
+				"01",                 // serialization flags
+				"01",                 // version
+				"ffffffffffffffff7f", // block height
+				"c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0", // prev block hash
+				"e8b287d905", // timestamp
+				"20",         // commitment extensible field length
+				"0000000000000000000000000000000000000000000000000000000000000000", // transactions merkle root
+				"0100",
 			}, ""),
 		},
 	}
@@ -162,6 +189,7 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				"e8b287d905", // timestamp
 				"20",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
+				"0302beef",
 			}, ""),
 			wantBlockHeader: &BlockHeader{
 				Version:           1,
@@ -171,6 +199,7 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				BlockCommitment: BlockCommitment{
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 				},
+				BlockWitness: BlockWitness{0xbe, 0xef},
 			},
 		},
 		{
@@ -182,6 +211,7 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				"e8b287d905", // timestamp
 				"20",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
+				"0302beef",
 			}, ""),
 			wantBlockHeader: &BlockHeader{
 				Version:           1,
@@ -191,6 +221,7 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				BlockCommitment: BlockCommitment{
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 				},
+				BlockWitness: BlockWitness{0xbe, 0xef},
 			},
 		},
 		{
@@ -226,6 +257,7 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				"e8b287d905", // timestamp
 				"20",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
+				"0302beef",
 			}, ""),
 			wantError: errors.New("binary: varint overflows a 64-bit integer"),
 		},
@@ -238,6 +270,7 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				"e8b287d905", // timestamp
 				"20",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
+				"0302beef",
 			}, ""),
 			wantBlockHeader: &BlockHeader{
 				Version:           1,
@@ -247,6 +280,7 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				BlockCommitment: BlockCommitment{
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 				},
+				BlockWitness: BlockWitness{0xbe, 0xef},
 			},
 		},
 	}
