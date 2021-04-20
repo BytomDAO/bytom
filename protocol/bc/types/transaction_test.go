@@ -62,39 +62,39 @@ func TestTransaction(t *testing.T) {
 				"05",         // input 0: nonce length
 				"6e6f6e6365", // input 0: nonce
 				"a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf", // input 0: assetID
-				"92c30f",                         // input 0: amount
-				"38",                             // input 0: input witness length
-				"0f",                             // input 0: asset definition length
+				"92c30f", // input 0: amount
+				"38",     // input 0: input witness length
+				"0f",     // input 0: asset definition length
 				"6173736574446566696e6974696f6e", // input 0: asset definition
-				"01",                             // input 0: vm version
-				"0f",                             // input 0: issuanceProgram length
+				"01", // input 0: vm version
+				"0f", // input 0: issuanceProgram length
 				"69737375616e636550726f6772616d", // input 0: issuance program
-				"02",                             // input 0: argument array length
-				"0a",                             // input 0: first argument length
-				"617267756d656e747331",           // input 0: first argument data
-				"0a",                             // input 0: second argument length
-				"617267756d656e747332",           // input 0: second argument data
-				"01",                             // input 1: asset version
-				"54",                             // input 1: input commitment length
-				"01",                             // input 1: spend type flag
-				"52",                             // input 1: spend commitment length
+				"02", // input 0: argument array length
+				"0a", // input 0: first argument length
+				"617267756d656e747331", // input 0: first argument data
+				"0a", // input 0: second argument length
+				"617267756d656e747332", // input 0: second argument data
+				"01", // input 1: asset version
+				"54", // input 1: input commitment length
+				"01", // input 1: spend type flag
+				"52", // input 1: spend commitment length
 				"fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409", // input 1: source id
 				"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // input 1: assetID
-				"92c30f",                   // input 1: amount
-				"03",                       // input 1: source position
-				"01",                       // input 1: vm version
-				"0c",                       // input 1: spend program length
+				"92c30f", // input 1: amount
+				"03",     // input 1: source position
+				"01",     // input 1: vm version
+				"0c",     // input 1: spend program length
 				"7370656e6450726f6772616d", // input 1: spend program
-				"17",                       // input 1: witness length
-				"02",                       // input 1: argument array length
-				"0a",                       // input 1: first argument length
-				"617267756d656e747333",     // input 1: first argument data
-				"0a",                       // input 1: second argument length
-				"617267756d656e747334",     // input 1: second argument data
-				"01",                       // outputs count
-				"01",                       // output 0: asset version
-				"00",                       // output type
-				"29",                       // output 0: serialization length
+				"17", // input 1: witness length
+				"02", // input 1: argument array length
+				"0a", // input 1: first argument length
+				"617267756d656e747333", // input 1: first argument data
+				"0a", // input 1: second argument length
+				"617267756d656e747334", // input 1: second argument data
+				"01", // outputs count
+				"01", // output 0: asset version
+				"00",         // output type
+				"29", // output 0: serialization length
 				"a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf", // output 0: assetID
 				"92c30f",   // output 0: amount
 				"01",       // output 0: version
@@ -138,7 +138,7 @@ func TestTransaction(t *testing.T) {
 				"74727565", // output 0: control program
 				"00",       // output 0: witness length
 				"01",       // output 1: asset version
-				"00",       // output type
+				"00",         // output type
 				"2a",       // output 1: serialization length
 				"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // output 1: assetID
 				"92c30f",     // output 1: amount

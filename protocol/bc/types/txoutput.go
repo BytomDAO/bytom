@@ -38,6 +38,7 @@ func (to *TxOutput) readFrom(r *blockchain.Reader) (err error) {
 		return errors.Wrap(err, "reading asset version")
 	}
 
+
 	typedOutput, err := parseTypedOutput(r)
 	if err != nil {
 		return errors.Wrap(err, "parse typedOutput")
