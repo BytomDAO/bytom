@@ -21,7 +21,7 @@ const (
 type TxOutput struct {
 	AssetVersion uint64
 	OutputCommitment
-	// Unconsumed suffixes of the commitment and blockWitness extensible strings.
+	// Unconsumed suffixes of the commitment and witness extensible strings.
 	CommitmentSuffix []byte
 	TypedOutput
 }
@@ -55,9 +55,9 @@ func (to *TxOutput) readFrom(r *blockchain.Reader) (err error) {
 		return errors.Wrap(err, "reading output commitment")
 	}
 
-	// read and ignore the (empty) output blockWitness
+	// read and ignore the (empty) output witness
 	_, err = blockchain.ReadVarstr31(r)
-	return errors.Wrap(err, "reading output blockWitness")
+	return errors.Wrap(err, "reading output witness")
 }
 
 var outputTypeMap = map[uint8]func() TypedOutput{
@@ -99,7 +99,7 @@ func (to *TxOutput) writeTo(w io.Writer) error {
 	}
 
 	if _, err := blockchain.WriteVarstr31(w, nil); err != nil {
-		return errors.Wrap(err, "writing blockWitness")
+		return errors.Wrap(err, "writing witness")
 	}
 	return nil
 }

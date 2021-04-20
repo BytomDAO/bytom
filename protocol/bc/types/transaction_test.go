@@ -63,7 +63,7 @@ func TestTransaction(t *testing.T) {
 				"6e6f6e6365", // input 0: nonce
 				"a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf", // input 0: assetID
 				"92c30f",                         // input 0: amount
-				"38",                             // input 0: input blockWitness length
+				"38",                             // input 0: input witness length
 				"0f",                             // input 0: asset definition length
 				"6173736574446566696e6974696f6e", // input 0: asset definition
 				"01",                             // input 0: vm version
@@ -85,7 +85,7 @@ func TestTransaction(t *testing.T) {
 				"01",                       // input 1: vm version
 				"0c",                       // input 1: spend program length
 				"7370656e6450726f6772616d", // input 1: spend program
-				"17",                       // input 1: blockWitness length
+				"17",                       // input 1: witness length
 				"02",                       // input 1: argument array length
 				"0a",                       // input 1: first argument length
 				"617267756d656e747333",     // input 1: first argument data
@@ -100,7 +100,7 @@ func TestTransaction(t *testing.T) {
 				"01",       // output 0: version
 				"04",       // output 0: control program length
 				"74727565", // output 0: control program
-				"00",       // output 0: blockWitness length
+				"00",       // output 0: witness length
 			}, ""),
 			hash: testutil.MustDecodeHash("a0ece5ca48dca27708394852599cb4d04af22c36538c03cb72663f3091406c17"),
 		},
@@ -126,7 +126,7 @@ func TestTransaction(t *testing.T) {
 				"02",                 // input 0: coinbase type flag
 				"09",                 // input 0: arbitrary length
 				"617262697472617279", // input 0: arbitrary data
-				"00",                 // input 0: blockWitness length
+				"00",                 // input 0: witness length
 				"02",                 // outputs count
 				"01",                 // output 0: asset version
 				"00",                 // output type
@@ -136,7 +136,7 @@ func TestTransaction(t *testing.T) {
 				"01",       // output 0: version
 				"04",       // output 0: control program length
 				"74727565", // output 0: control program
-				"00",       // output 0: blockWitness length
+				"00",       // output 0: witness length
 				"01",       // output 1: asset version
 				"00",       // output type
 				"2a",       // output 1: serialization length
@@ -145,7 +145,7 @@ func TestTransaction(t *testing.T) {
 				"01",         // output 1: version
 				"05",         // output 1: control program length
 				"66616c7365", // output 1: control program
-				"00",         // output 1: blockWitness length
+				"00",         // output 1: witness length
 			}, ""),
 			hash: testutil.MustDecodeHash("c2e2f388706fc06cca6aba5e85e0e85029f772872e1b6e6c32a70da22d0309dc"),
 		},
@@ -214,15 +214,15 @@ func TestInvalidIssuance(t *testing.T) {
 		"0a0908", // input 0, input commitment, nonce
 		"0000000000000000000000000000000000000000000000000000000000000000", // input 0, input commitment, WRONG asset id
 		"80a094a58d1d", // input 0, input commitment, amount
-		"29",           // input 0, issuance input blockWitness length prefix
-		"03deff1d4319d67baa10a6d26c1fea9c3e8d30e33474efee1a610a9bb49d758d", // input 0, issuance input blockWitness, initial block
-		"00",     // input 0, issuance input blockWitness, asset definition
-		"01",     // input 0, issuance input blockWitness, vm version
-		"01",     // input 0, issuance input blockWitness, issuance program length prefix
-		"01",     // input 0, issuance input blockWitness, issuance program
-		"01",     // input 0, issuance input blockWitness, arguments count
-		"03",     // input 0, issuance input blockWitness, argument 0 length prefix
-		"010203", // input 0, issuance input blockWitness, argument 0
+		"29",           // input 0, issuance input witness length prefix
+		"03deff1d4319d67baa10a6d26c1fea9c3e8d30e33474efee1a610a9bb49d758d", // input 0, issuance input witness, initial block
+		"00",     // input 0, issuance input witness, asset definition
+		"01",     // input 0, issuance input witness, vm version
+		"01",     // input 0, issuance input witness, issuance program length prefix
+		"01",     // input 0, issuance input witness, issuance program
+		"01",     // input 0, issuance input witness, arguments count
+		"03",     // input 0, issuance input witness, argument 0 length prefix
+		"010203", // input 0, issuance input witness, argument 0
 		"01",     // outputs count
 		"01",     // output 0, asset version
 		"29",     // output 0, output commitment length
@@ -231,7 +231,7 @@ func TestInvalidIssuance(t *testing.T) {
 		"01",             // output 0, output commitment, vm version
 		"0101",           // output 0, output commitment, control program
 		"066f7574707574", // output 0, reference data
-		"00",             // output 0, output blockWitness
+		"00",             // output 0, output witness
 		"0869737375616e6365",
 	}, "")
 

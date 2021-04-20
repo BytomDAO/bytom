@@ -27,7 +27,7 @@ func TestSerializationIssuance(t *testing.T) {
 		"6e6f6e6365", // nonce
 		"a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf", // assetID
 		"92c30f",                         // amount
-		"38",                             // input blockWitness length
+		"38",                             // input witness length
 		"0f",                             // asset definition length
 		"6173736574446566696e6974696f6e", // asset definition
 		"01",                             // vm version
@@ -86,7 +86,7 @@ func TestSerializationSpend(t *testing.T) {
 		"01",                       // vm version
 		"0c",                       // spend program length
 		"7370656e6450726f6772616d", // spend program
-		"17",                       // blockWitness length
+		"17",                       // witness length
 		"02",                       // argument array length
 		"0a",                       // first argument length
 		"617267756d656e747331",     // first argument data
@@ -129,7 +129,7 @@ func TestSerializationCoinbase(t *testing.T) {
 		"02",                 // coinbase type flag
 		"09",                 // arbitrary length
 		"617262697472617279", // arbitrary data
-		"00",                 // blockWitness length
+		"00",                 // witness length
 	}, "")
 
 	// Test convert struct to hex
@@ -181,7 +181,7 @@ func TestSerializationVeto(t *testing.T) {
 		"7370656e6450726f6772616d", // veto program
 		"8001",                     //xpub length
 		"6166353934303036613430383337643966303238646161626236643538396466306239313338646165666164353638336535323333633236343632373932313732393461386435333265363038363362636631393636323561333566623863656566666133633039363130656239326463666236353561393437663133323639", //voter xpub
-		"17",                   // blockWitness length
+		"17",                   // witness length
 		"02",                   // argument array length
 		"0a",                   // first argument length
 		"617267756d656e747331", // first argument data

@@ -247,7 +247,7 @@ func (t *TxInput) writeTo(w io.Writer) error {
 	}
 
 	_, err := blockchain.WriteExtensibleString(w, t.WitnessSuffix, t.writeInputWitness)
-	return errors.Wrap(err, "writing input blockWitness")
+	return errors.Wrap(err, "writing input witness")
 }
 
 func (t *TxInput) writeInputCommitment(w io.Writer) (err error) {

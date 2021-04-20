@@ -26,7 +26,7 @@ func TestSerializationOriginalTxOutput(t *testing.T) {
 		"01",     // version
 		"19",     // control program length
 		"5465737453657269616c697a6174696f6e54784f7574707574", // control program
-		"00", // blockWitness length
+		"00", // witness length
 	}, "")
 
 	// Test convert struct to hex
@@ -71,7 +71,7 @@ func TestSerializationVoteOutput(t *testing.T) {
 		"01",   // version
 		"19",   // control program length
 		"5465737453657269616c697a6174696f6e54784f7574707574", // control program
-		"00", // blockWitness length
+		"00", // witness length
 	}, "")
 
 	// Test convert struct to hex

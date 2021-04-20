@@ -11,31 +11,31 @@ import (
 
 func TestReadWriteBlockWitness(t *testing.T) {
 	cases := []struct {
-		blockWitness BlockWitness
-		hexString    string
+		witness   BlockWitness
+		hexString string
 	}{
 		{
-			blockWitness: BlockWitness{0xbe, 0xef},
-			hexString:    "02beef",
+			witness:   BlockWitness{0xbe, 0xef},
+			hexString: "02beef",
 		},
 		{
-			blockWitness: BlockWitness{0xab, 0xcd},
-			hexString:    "02abcd",
+			witness:   BlockWitness{0xab, 0xcd},
+			hexString: "02abcd",
 		},
 		{
-			blockWitness: BlockWitness{0xcd, 0x68},
-			hexString:    "02cd68",
+			witness:   BlockWitness{0xcd, 0x68},
+			hexString: "02cd68",
 		},
 		{
-			blockWitness: BlockWitness{},
-			hexString:    "00",
+			witness:   BlockWitness{},
+			hexString: "00",
 		},
 	}
 
 	for _, c := range cases {
 		buff := []byte{}
 		buffer := bytes.NewBuffer(buff)
-		if err := c.blockWitness.writeTo(buffer); err != nil {
+		if err := c.witness.writeTo(buffer); err != nil {
 			t.Fatal(err)
 		}
 
@@ -49,8 +49,8 @@ func TestReadWriteBlockWitness(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if !testutil.DeepEqual(*blockWitness, c.blockWitness) {
-			t.Errorf("test read block commitment fail, got:%v, want:%v", *blockWitness, c.blockWitness)
+		if !testutil.DeepEqual(*blockWitness, c.witness) {
+			t.Errorf("test read block commitment fail, got:%v, want:%v", *blockWitness, c.witness)
 		}
 	}
 }
