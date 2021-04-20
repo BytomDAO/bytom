@@ -15,9 +15,6 @@ const (
 
 	// VoteOutputType represent the type of vote output
 	VoteOutputType
-
-	// GuarantyOutputType represent the type of guaranty output
-	GuarantyOutputType
 )
 
 // TxOutput is the top level struct of tx output.
