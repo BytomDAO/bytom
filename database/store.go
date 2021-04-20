@@ -83,7 +83,7 @@ func NewStore(db dbm.DB) *Store {
 		return GetBlockHashesByHeight(db, height)
 	}
 
-	cache := newBlockCache(fillFn, fillBlockHashesFn)
+	cache := newCache(fillFn, fillBlockHashesFn)
 	return &Store{
 		db:    db,
 		cache: cache,

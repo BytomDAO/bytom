@@ -21,7 +21,7 @@ const (
 type fillBlockHashesFn func(height uint64) ([]*bc.Hash, error)
 type fillFn func(hash *bc.Hash) (*types.Block, error)
 
-func newBlockCache(fill fillFn, fillBlockHashes fillBlockHashesFn) blockCache {
+func newCache(fill fillFn, fillBlockHashes fillBlockHashesFn) blockCache {
 	return blockCache{
 		lruBlockHeaders: common.NewCache(maxCachedBlockHeaders),
 		lruBlockHashes:  common.NewCache(maxCachedBlockHashes),

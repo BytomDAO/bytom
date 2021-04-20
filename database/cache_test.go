@@ -16,14 +16,23 @@ func TestBlockCache(t *testing.T) {
 		}
 	}
 	blocks := make(map[bc.Hash]*types.Block)
+	blockIndexHashes := make(map[uint64][]*bc.Hash)
 	for i := 0; i < maxCachedBlocks + 10; i++ {
 		block := newBlock(uint64(i))
+		hash := block.Hash()
 		blocks[block.Hash()] = block
+		blockIndexHashes[block.Height] = append(blockIndexHashes[block.Height], &hash)
 	}
 
-	cache := newBlockCache(func(hash *bc.Hash) (*types.Block, error) {
+	fillFn := func(hash *bc.Hash) (*types.Block, error) {
 		return blocks[*hash], nil
-	})
+	}
+
+	fillBlockHashesFn := func(height uint64) ([]*bc.Hash, error) {
+		return blockIndexHashes[height], nil
+	}
+
+	cache := newCache(fillFn, fillBlockHashesFn)
 
 	for i := 0; i < maxCachedBlocks + 10; i++ {
 		block := newBlock(uint64(i))

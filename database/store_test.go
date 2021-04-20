@@ -135,6 +135,7 @@ func TestLoadBlockIndexEquals(t *testing.T) {
 		t.Errorf("got block index:%v, expect block index:%v", index, expectBlockIndex)
 	}
 }
+
 func TestSaveChainStatus(t *testing.T) {
 	defer os.RemoveAll("temp")
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
