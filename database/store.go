@@ -10,7 +10,6 @@ import (
 
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/database/storage"
-	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
@@ -76,9 +75,15 @@ func GetBlock(db dbm.DB, hash *bc.Hash) (*types.Block, error) {
 
 // NewStore creates and returns a new Store object.
 func NewStore(db dbm.DB) *Store {
-	cache := newBlockCache(func(hash *bc.Hash) (*types.Block, error) {
+	fillFn := func(hash *bc.Hash) (*types.Block, error) {
 		return GetBlock(db, hash)
-	})
+	}
+
+	fillBlockHashesFn := func(height uint64) ([]*bc.Hash, error) {
+		return GetBlockHashesByHeight(db, height)
+	}
+
+	cache := newBlockCache(fillFn, fillBlockHashesFn)
 	return &Store{
 		db:    db,
 		cache: cache,
@@ -156,34 +161,6 @@ func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error
 		"duration": time.Since(startTime),
 	}).Debug("initialize load history block index from database")
 	return blockIndex, nil
-}
-
-// SaveBlock persists a new block in the protocol.
-func (s *Store) SaveBlock(block *types.Block) error {
-	startTime := time.Now()
-	binaryBlock, err := block.MarshalText()
-	if err != nil {
-		return errors.Wrap(err, "Marshal block meta")
-	}
-
-	binaryBlockHeader, err := block.BlockHeader.MarshalText()
-	if err != nil {
-		return errors.Wrap(err, "Marshal block header")
-	}
-
-	blockHash := block.Hash()
-	batch := s.db.NewBatch()
-	batch.Set(CalcBlockKey(&blockHash), binaryBlock)
-	batch.Set(CalcBlockHeaderKey(block.Height, &blockHash), binaryBlockHeader)
-	batch.Write()
-
-	log.WithFields(log.Fields{
-		"module":   logModule,
-		"height":   block.Height,
-		"hash":     blockHash.String(),
-		"duration": time.Since(startTime),
-	}).Info("block saved on disk")
-	return nil
 }
 
 // SaveChainStatus save the core's newest status && delete old status

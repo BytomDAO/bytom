@@ -58,6 +58,33 @@ func (b *Block) UnmarshalText(text []byte) error {
 	return nil
 }
 
+// MarshalTextForBlockHeader fulfills the json.Marshaler interface.
+func (b *Block) MarshalTextForBlockHeader() ([]byte, error) {
+	return b.marshalText(SerBlockHeader)
+}
+
+// MarshalTextForTransactions fulfills the json.Marshaler interface.
+func (b *Block) MarshalTextForTransactions() ([]byte, error) {
+	return b.marshalText(SerBlockTransactions)
+}
+
+func (b *Block) marshalText(serflags uint8) ([]byte, error) {
+	buf := bufpool.Get()
+	defer bufpool.Put(buf)
+
+	ew := errors.NewWriter(buf)
+	if err := b.writeTo(ew, serflags); err != nil {
+		return nil, err
+	}
+	if err := ew.Err(); err != nil {
+		return nil, err
+	}
+
+	enc := make([]byte, hex.EncodedLen(buf.Len()))
+	hex.Encode(enc, buf.Bytes())
+	return enc, nil
+}
+
 func (b *Block) readFrom(r *blockchain.Reader) error {
 	serflags, err := b.BlockHeader.readFrom(r)
 	if err != nil {

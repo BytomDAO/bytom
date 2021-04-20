@@ -12,22 +12,38 @@ import (
 	"github.com/bytom/bytom/protocol/bc/types"
 )
 
-const maxCachedBlocks = 30
+const (
+	maxCachedBlocks       = 30
+	maxCachedBlockHeaders = 4096
+	maxCachedBlockHashes  = 8192
+)
 
-func newBlockCache(fillFn func(hash *bc.Hash) (*types.Block, error)) blockCache {
+type fillBlockHashesFn func(height uint64) ([]*bc.Hash, error)
+type fillFn func(hash *bc.Hash) (*types.Block, error)
+
+func newBlockCache(fill fillFn, fillBlockHashes fillBlockHashesFn) blockCache {
 	return blockCache{
-		lru:    lru.New(maxCachedBlocks),
-		fillFn: fillFn,
+		lruBlockHeaders: common.NewCache(maxCachedBlockHeaders),
+		lruBlockHashes:  common.NewCache(maxCachedBlockHashes),
+
+		fillBlockHashesFn: fillBlockHashes,
+		fillFn:            fill,
+
+		lru: lru.New(maxCachedBlocks),
 	}
 }
 
 type blockCache struct {
 	lruBlockHeaders *common.Cache
+	lruBlockHashes  *common.Cache
+
+	fillBlockHashesFn func(uint64) ([]*bc.Hash, error)
+
+	sf singleflight.Group
 
 	mu     sync.Mutex
 	lru    *lru.Cache
 	fillFn func(hash *bc.Hash) (*types.Block, error)
-	single singleflight.Group
 }
 
 func (c *blockCache) lookup(hash *bc.Hash) (*types.Block, error) {
@@ -35,7 +51,7 @@ func (c *blockCache) lookup(hash *bc.Hash) (*types.Block, error) {
 		return b, nil
 	}
 
-	block, err := c.single.Do(hash.String(), func() (interface{}, error) {
+	block, err := c.sf.Do(hash.String(), func() (interface{}, error) {
 		b, err := c.fillFn(hash)
 		if err != nil {
 			return nil, err
