@@ -49,7 +49,7 @@ func TestIsBCRPScript(t *testing.T) {
 	}
 }
 
-func TestIsCallBCRPScript(t *testing.T) {
+func TestIsCallContractScript(t *testing.T) {
 	tests := []struct {
 		program  string
 		expected bool
@@ -67,11 +67,11 @@ func TestIsCallBCRPScript(t *testing.T) {
 			expected: false,
 		},
 		{
-			program:  "514c204e4f02d43bf50171f7f25d046b7f016002da410fc00d2e8902e7b170c98cf946",
+			program:  "51204e4f02d43bf50171f7f25d046b7f016002da410fc00d2e8902e7b170c98cf946",
 			expected: false,
 		},
 		{
-			program:  "51204e4f02d43bf50171f7f25d046b7f016002da410fc00d2e8902e7b170c98cf946",
+			program:  "514c204e4f02d43bf50171f7f25d046b7f016002da410fc00d2e8902e7b170c98cf946",
 			expected: true,
 		},
 	}
@@ -82,9 +82,9 @@ func TestIsCallBCRPScript(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		expected := IsCallBCRPScript(program)
+		expected := IsCallContractScript(program)
 		if expected != test.expected {
-			t.Errorf("TestIsCallBCRPScript #%d failed: got %v want %v", i, expected, test.expected)
+			t.Errorf("TestIsCallContractScript #%d failed: got %v want %v", i, expected, test.expected)
 		}
 	}
 }
