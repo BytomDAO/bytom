@@ -25,13 +25,16 @@ func opCheckOutput(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	amount, err := vm.popInt64(true)
+	amountInt, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	if amount < 0 {
+
+	amount, overflow := amountInt.Uint64WithOverflow()
+	if overflow {
 		return ErrBadValue
 	}
+
 	index, err := vm.popInt64(true)
 	if err != nil {
 		return err
@@ -44,7 +47,7 @@ func opCheckOutput(vm *virtualMachine) error {
 		return ErrContext
 	}
 
-	ok, err := vm.context.CheckOutput(uint64(index), uint64(amount), assetID, uint64(vmVersion), code, vm.expansionReserved)
+	ok, err := vm.context.CheckOutput(uint64(index), amount, assetID, uint64(vmVersion), code, vm.expansionReserved)
 	if err != nil {
 		return err
 	}
@@ -72,7 +75,8 @@ func opAmount(vm *virtualMachine) error {
 	if vm.context.Amount == nil {
 		return ErrContext
 	}
-	return vm.pushInt64(int64(*vm.context.Amount), true)
+
+	return vm.pushBigInt(uint256.NewInt().SetUint64(*vm.context.Amount), true)
 }
 
 func opProgram(vm *virtualMachine) error {
