@@ -32,7 +32,8 @@ func opNop(vm *virtualMachine) error {
 	return vm.applyCost(1)
 }
 
-func PushdataBytes(in []byte) []byte {
+// PushDataBytes push bytes to stack
+func PushDataBytes(in []byte) []byte {
 	l := len(in)
 	if l == 0 {
 		return []byte{byte(OP_0)}
@@ -53,12 +54,13 @@ func PushdataBytes(in []byte) []byte {
 	return append([]byte{byte(OP_PUSHDATA4), b[0], b[1], b[2], b[3]}, in...)
 }
 
-func PushdataInt64(n int64) []byte {
+// PushDataInt64 push int64 to stack
+func PushDataInt64(n int64) []byte {
 	if n == 0 {
 		return []byte{byte(OP_0)}
 	}
 	if n >= 1 && n <= 16 {
 		return []byte{uint8(OP_1) + uint8(n) - 1}
 	}
-	return PushdataBytes(Int64Bytes(n))
+	return PushDataBytes(Int64Bytes(n))
 }

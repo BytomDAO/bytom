@@ -192,7 +192,7 @@ func TestP2SPMultiSigProgramWithHeight(t *testing.T) {
 func TestGetIssuanceProgramRestrictHeight(t *testing.T) {
 	tests := []struct {
 		issuanceProgram string
-		wantHeight      int64
+		wantHeight      uint64
 	}{
 		{
 			issuanceProgram: "",
@@ -206,6 +206,10 @@ func TestGetIssuanceProgramRestrictHeight(t *testing.T) {
 			issuanceProgram: "01c8cda069ae20f44dd85be89de08b0f894476ccc7b3eebcf0a288c79504fa7e4c8033f5b7338020c86dc682ce3ecac64e165d9b5f8cca9ee05bd0d4df07adbfd11251ad7e88f1685152ad",
 			wantHeight:      200,
 		},
+		{
+			issuanceProgram: "08c8c8c8c8c8c8c8c8cda069ae20f44dd85be89de08b0f894476ccc7b3eebcf0a288c79504fa7e4c8033f5b7338020c86dc682ce3ecac64e165d9b5f8cca9ee05bd0d4df07adbfd11251ad7e88f1685152ad",
+			wantHeight:      14468034567615334600,
+		},
 	}
 
 	for i, test := range tests {
@@ -217,6 +221,34 @@ func TestGetIssuanceProgramRestrictHeight(t *testing.T) {
 		gotHeight := GetIssuanceProgramRestrictHeight(program)
 		if gotHeight != test.wantHeight {
 			t.Errorf("TestGetIssuanceProgramRestrictHeight #%d failed: got %d want %d", i, gotHeight, test.wantHeight)
+		}
+	}
+}
+
+func TestRegisterProgram(t *testing.T) {
+	tests := []struct {
+		contract string
+		expected string
+	}{
+		{
+			contract: "20e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c0",
+			expected: "6a4c04626372704c01014c2820e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c0",
+		},
+	}
+
+	for _, test := range tests {
+		contract, err := hex.DecodeString(test.contract)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		program, err := RegisterProgram(contract)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if hex.EncodeToString(program) != test.expected {
+			t.Errorf("got program data: %s, expect program data: %s", hex.EncodeToString(program), test.expected)
 		}
 	}
 }

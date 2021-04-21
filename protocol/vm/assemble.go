@@ -79,7 +79,7 @@ func Assemble(s string) (res []byte, err error) {
 			if err != nil {
 				return nil, err
 			}
-			res = append(res, PushdataBytes(bytes)...)
+			res = append(res, PushDataBytes(bytes)...)
 		} else if len(token) >= 2 && token[0] == '\'' && token[len(token)-1] == '\'' {
 			bytes := make([]byte, 0, len(token)-2)
 			var b int
@@ -90,9 +90,9 @@ func Assemble(s string) (res []byte, err error) {
 				bytes = append(bytes, token[i])
 				b++
 			}
-			res = append(res, PushdataBytes(bytes)...)
+			res = append(res, PushDataBytes(bytes)...)
 		} else if num, ok := checked.NewUInt256(token); ok {
-			res = append(res, PushdataBytes(BigIntBytes(num))...)
+			res = append(res, PushDataBytes(BigIntBytes(num))...)
 		} else {
 			return nil, errors.Wrap(ErrToken, token)
 		}

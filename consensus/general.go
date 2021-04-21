@@ -31,6 +31,8 @@ const (
 	BCRPContractHashDataSize       = 32
 	CoinbaseArbitrarySizeLimit     = 128
 
+	BCRPRequiredBTMAmount = uint64(100000000)
+
 	BTMAlias = "BTM"
 )
 
