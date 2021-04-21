@@ -166,5 +166,5 @@ func opCatpushdata(vm *virtualMachine) error {
 		return err
 	}
 	vm.deferCost(-lens)
-	return vm.push(append(a, PushdataBytes(b)...), true)
+	return vm.push(append(a, PushDataBytes(b)...), true)
 }

@@ -18,6 +18,7 @@ type BlockHeader struct {
 	Height            uint64  // The height of the block.
 	PreviousBlockHash bc.Hash // The hash of the previous block.
 	Timestamp         uint64  // The time of the block in seconds.
+	BlockWitness
 	BlockCommitment
 }
 

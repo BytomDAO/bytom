@@ -28,13 +28,13 @@ func NewBuilder() *Builder {
 
 // AddInt64 adds a pushdata instruction for an integer value.
 func (b *Builder) AddInt64(n int64) *Builder {
-	b.program = append(b.program, vm.PushdataInt64(n)...)
+	b.program = append(b.program, vm.PushDataInt64(n)...)
 	return b
 }
 
 // AddData adds a pushdata instruction for a given byte string.
 func (b *Builder) AddData(data []byte) *Builder {
-	b.program = append(b.program, vm.PushdataBytes(data)...)
+	b.program = append(b.program, vm.PushDataBytes(data)...)
 	return b
 }
 

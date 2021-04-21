@@ -1,8 +1,6 @@
 package vm
 
 import (
-	"math"
-
 	"github.com/holiman/uint256"
 
 	"github.com/bytom/bytom/math/checked"
@@ -89,40 +87,6 @@ func op2Div(vm *virtualMachine) error {
 	}
 
 	return vm.pushBigInt(n.Rsh(n, 1), true)
-}
-
-func opNegate(vm *virtualMachine) error {
-	err := vm.applyCost(2)
-	if err != nil {
-		return err
-	}
-	n, err := vm.popInt64(true)
-	if err != nil {
-		return err
-	}
-	res, ok := checked.NegateInt64(n)
-	if !ok {
-		return ErrRange
-	}
-	return vm.pushInt64(res, true)
-}
-
-func opAbs(vm *virtualMachine) error {
-	err := vm.applyCost(2)
-	if err != nil {
-		return err
-	}
-	n, err := vm.popInt64(true)
-	if err != nil {
-		return err
-	}
-	if n == math.MinInt64 {
-		return ErrRange
-	}
-	if n < 0 {
-		n = -n
-	}
-	return vm.pushInt64(n, true)
 }
 
 func opNot(vm *virtualMachine) error {
