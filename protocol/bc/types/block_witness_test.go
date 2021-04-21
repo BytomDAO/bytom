@@ -80,6 +80,7 @@ func TestBlockWitnessSet(t *testing.T) {
 			want: testutil.MustDecodeHexString("2c27ea6e848a1191f25a7f4a04deae1c5a191587e5ee61f92e408ab97dbd35c3ce613b08475f0baa300606c38695d1eb0c4b409939acaa28b82fbb87e7de3c0f"),
 		},
 	}
+
 	for i, c := range cases {
 		newbw := c.bw
 		newbw.Set(c.data)

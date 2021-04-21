@@ -132,5 +132,5 @@ func (bh *BlockHeader) writeTo(w io.Writer, serflags uint8) (err error) {
 		return err
 	}
 
-	return nil
+	return
 }
