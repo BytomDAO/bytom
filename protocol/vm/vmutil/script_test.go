@@ -224,3 +224,31 @@ func TestGetIssuanceProgramRestrictHeight(t *testing.T) {
 		}
 	}
 }
+
+func TestRegisterProgram(t *testing.T) {
+	tests := []struct {
+		contract string
+		expected string
+	}{
+		{
+			contract: "20e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c0",
+			expected: "6a4c04626372704c01014c2820e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c0",
+		},
+	}
+
+	for _, test := range tests {
+		contract, err := hex.DecodeString(test.contract)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		program, err := RegisterProgram(contract)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if hex.EncodeToString(program) != test.expected {
+			t.Errorf("got program data: %s, expect program data: %s", hex.EncodeToString(program), test.expected)
+		}
+	}
+}
