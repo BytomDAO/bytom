@@ -36,6 +36,10 @@ const (
 	BTMAlias = "BTM"
 )
 
+type CasperConfig struct {
+	BlockTimeInterval uint64 // milliseconds, the block time interval for producing a block
+}
+
 // BTMAssetID is BTM's asset id, the soul asset of Bytom
 var BTMAssetID = &bc.AssetID{
 	V0: binary.BigEndian.Uint64([]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}),
@@ -96,6 +100,9 @@ type Params struct {
 	// as one method to discover peers.
 	DNSSeeds    []string
 	Checkpoints []Checkpoint
+
+	// CasperConfig defines the casper consensus parameters
+	CasperConfig
 }
 
 // ActiveNetParams is ...
