@@ -15,14 +15,17 @@ func TestReadWriteBlockWitness(t *testing.T) {
 		hexString string
 	}{
 		{
+			// normal block witness
 			witness:   testutil.MustDecodeHexString("9dc8892df991e1d1110a5cb1bbfd57f2f5e3aa89464de50f9555c7575d9c2b21cf8f05b77b880d8ae4dd218efb15b775c32c9d77f9a2955d69dca9020c127709"),
 			hexString: "409dc8892df991e1d1110a5cb1bbfd57f2f5e3aa89464de50f9555c7575d9c2b21cf8f05b77b880d8ae4dd218efb15b775c32c9d77f9a2955d69dca9020c127709",
 		},
 		{
+			// normal block witness
 			witness:   testutil.MustDecodeHexString("e0776a3cf17b3e0f8340caeee32a75d02ecc25cf20bee9e5c7503bca3b2703c3c61fdcb4211ed59b58eb025ac81e06b138d54b5d01ea4614dd0f65e641836900"),
 			hexString: "40e0776a3cf17b3e0f8340caeee32a75d02ecc25cf20bee9e5c7503bca3b2703c3c61fdcb4211ed59b58eb025ac81e06b138d54b5d01ea4614dd0f65e641836900",
 		},
 		{
+			// empty block witness
 			witness:   BlockWitness{},
 			hexString: "00",
 		},
@@ -59,11 +62,19 @@ func TestBlockWitnessSet(t *testing.T) {
 		want BlockWitness
 	}{
 		{
-			bw:   make(BlockWitness, signatureLength),
+			// shorter than normal block witness length, there will be cut off
+			bw:   make(BlockWitness, signatureLength-2),
 			data: testutil.MustDecodeHexString("9dc8892df991e1d1110a5cb1bbfd57f2f5e3aa89464de50f9555c7575d9c2b21cf8f05b77b880d8ae4dd218efb15b775c32c9d77f9a2955d69dca9020c127709"),
-			want: testutil.MustDecodeHexString("9dc8892df991e1d1110a5cb1bbfd57f2f5e3aa89464de50f9555c7575d9c2b21cf8f05b77b880d8ae4dd218efb15b775c32c9d77f9a2955d69dca9020c127709"),
+			want: testutil.MustDecodeHexString("9dc8892df991e1d1110a5cb1bbfd57f2f5e3aa89464de50f9555c7575d9c2b21cf8f05b77b880d8ae4dd218efb15b775c32c9d77f9a2955d69dca9020c12"),
 		},
 		{
+			// longer than normal block witness length, there will be padding
+			bw:   make(BlockWitness, signatureLength+2),
+			data: testutil.MustDecodeHexString("9dc8892df991e1d1110a5cb1bbfd57f2f5e3aa89464de50f9555c7575d9c2b21cf8f05b77b880d8ae4dd218efb15b775c32c9d77f9a2955d69dca9020c127709"),
+			want: testutil.MustDecodeHexString("9dc8892df991e1d1110a5cb1bbfd57f2f5e3aa89464de50f9555c7575d9c2b21cf8f05b77b880d8ae4dd218efb15b775c32c9d77f9a2955d69dca9020c1277090000"),
+		},
+		{
+			// normal block witness
 			bw:   testutil.MustDecodeHexString("9dc8892df991e1d1110a5cb1bbfd57f2f5e3aa89464de50f9555c7575d9c2b21cf8f05b77b880d8ae4dd218efb15b775c32c9d77f9a2955d69dca9020c127709"),
 			data: testutil.MustDecodeHexString("2c27ea6e848a1191f25a7f4a04deae1c5a191587e5ee61f92e408ab97dbd35c3ce613b08475f0baa300606c38695d1eb0c4b409939acaa28b82fbb87e7de3c0f"),
 			want: testutil.MustDecodeHexString("2c27ea6e848a1191f25a7f4a04deae1c5a191587e5ee61f92e408ab97dbd35c3ce613b08475f0baa300606c38695d1eb0c4b409939acaa28b82fbb87e7de3c0f"),
