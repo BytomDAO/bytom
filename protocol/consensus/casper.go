@@ -59,9 +59,6 @@ func (c *Casper) Validators(blockHash *bc.Hash) ([]*state.Validator, error) {
 		return nil, err
 	}
 
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
 	checkpoint, err := c.store.GetCheckpoint(hash)
 	if err != nil {
 		return nil, err
