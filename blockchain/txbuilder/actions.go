@@ -112,8 +112,7 @@ func DecodeRetireAction(data []byte) (Action, error) {
 // DecodeRegisterAction convert input data to action struct
 func DecodeRegisterAction(data []byte) (Action, error) {
 	a := new(registerAction)
-	err := stdjson.Unmarshal(data, a)
-	return a, err
+	return a, stdjson.Unmarshal(data, a)
 }
 
 type retireAction struct {
@@ -165,6 +164,14 @@ func (a *registerAction) Build(ctx context.Context, b *TemplateBuilder) error {
 		return MissingFieldsError(missing...)
 	}
 
+	if a.AssetId != consensus.BTMAssetID {
+		return errors.New("register contract action asset must be BTM")
+	}
+
+	if a.Amount < consensus.BCRPRequiredBTMAmount {
+		return errors.New("less than BCRP required BTM amount")
+	}
+
 	program, err := vmutil.RegisterProgram(a.Contract)
 	if err != nil {
 		return err
@@ -174,5 +181,5 @@ func (a *registerAction) Build(ctx context.Context, b *TemplateBuilder) error {
 }
 
 func (a *registerAction) ActionType() string {
-	return "register"
+	return "register_contract"
 }
