@@ -136,15 +136,20 @@ func checkMultiSigParams(nrequired, npubkeys int64) error {
 
 // GetIssuanceProgramRestrictHeight return issuance program restrict height
 // if height invalid return 0
-func GetIssuanceProgramRestrictHeight(program []byte) int64 {
+func GetIssuanceProgramRestrictHeight(program []byte) uint64 {
 	insts, err := vm.ParseProgram(program)
 	if err != nil {
 		return 0
 	}
 
 	if len(insts) >= 4 && insts[0].IsPushdata() && insts[1].Op == vm.OP_BLOCKHEIGHT && insts[2].Op == vm.OP_GREATERTHAN && insts[3].Op == vm.OP_VERIFY {
-		height, err := vm.AsInt64(insts[0].Data)
+		heightInt, err := vm.AsBigInt(insts[0].Data)
 		if err != nil {
+			return 0
+		}
+
+		height, overflow := heightInt.Uint64WithOverflow()
+		if overflow {
 			return 0
 		}
 

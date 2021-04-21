@@ -144,13 +144,11 @@ func TestGasStatus(t *testing.T) {
 				GasLeft:    1000,
 				GasUsed:    10,
 				StorageGas: 1000,
-				GasValid:   false,
 			},
 			output: &GasState{
 				GasLeft:    0,
 				GasUsed:    1010,
 				StorageGas: 1000,
-				GasValid:   true,
 			},
 			f: func(input *GasState) error {
 				return input.setGasValid()
@@ -162,13 +160,11 @@ func TestGasStatus(t *testing.T) {
 				GasLeft:    900,
 				GasUsed:    10,
 				StorageGas: 1000,
-				GasValid:   false,
 			},
 			output: &GasState{
 				GasLeft:    -100,
 				GasUsed:    10,
 				StorageGas: 1000,
-				GasValid:   false,
 			},
 			f: func(input *GasState) error {
 				return input.setGasValid()
@@ -180,13 +176,11 @@ func TestGasStatus(t *testing.T) {
 				GasLeft:    1000,
 				GasUsed:    math.MaxInt64,
 				StorageGas: 1000,
-				GasValid:   false,
 			},
 			output: &GasState{
 				GasLeft:    0,
 				GasUsed:    0,
 				StorageGas: 1000,
-				GasValid:   false,
 			},
 			f: func(input *GasState) error {
 				return input.setGasValid()
@@ -198,13 +192,11 @@ func TestGasStatus(t *testing.T) {
 				GasLeft:    math.MinInt64,
 				GasUsed:    0,
 				StorageGas: 1000,
-				GasValid:   false,
 			},
 			output: &GasState{
 				GasLeft:    0,
 				GasUsed:    0,
 				StorageGas: 1000,
-				GasValid:   false,
 			},
 			f: func(input *GasState) error {
 				return input.setGasValid()
@@ -227,6 +219,7 @@ func TestGasStatus(t *testing.T) {
 func TestOverflow(t *testing.T) {
 	sourceID := &bc.Hash{V0: 9999}
 	ctrlProgram := []byte{byte(vm.OP_TRUE)}
+	converter := func(prog []byte) ([]byte, error) { return nil, nil }
 	newTx := func(inputs []uint64, outputs []uint64) *bc.Tx {
 		txInputs := make([]*types.TxInput, 0, len(inputs))
 		txOutputs := make([]*types.TxOutput, 0, len(outputs))
@@ -305,7 +298,7 @@ func TestOverflow(t *testing.T) {
 
 	for i, c := range cases {
 		tx := newTx(c.inputs, c.outputs)
-		if _, err := ValidateTx(tx, mockBlock()); rootErr(err) != c.err {
+		if _, err := ValidateTx(tx, mockBlock(), converter); rootErr(err) != c.err {
 			t.Fatalf("case %d test failed, want %s, have %s", i, c.err, rootErr(err))
 		}
 	}
@@ -695,6 +688,7 @@ func TestTxValidation(t *testing.T) {
 func TestCoinbase(t *testing.T) {
 	cp, _ := vmutil.DefaultCoinbaseProgram()
 	retire, _ := vmutil.RetireProgram([]byte{})
+	converter := func(prog []byte) ([]byte, error) { return nil, nil }
 	CbTx := types.MapTx(&types.TxData{
 		SerializedSize: 1,
 		Inputs: []*types.TxInput{
@@ -706,19 +700,17 @@ func TestCoinbase(t *testing.T) {
 	})
 
 	cases := []struct {
-		block    *bc.Block
-		txIndex  int
-		GasValid bool
-		err      error
+		block   *bc.Block
+		txIndex int
+		err     error
 	}{
 		{
 			block: &bc.Block{
 				BlockHeader:  &bc.BlockHeader{Height: 666},
 				Transactions: []*bc.Tx{CbTx},
 			},
-			txIndex:  0,
-			GasValid: true,
-			err:      nil,
+			txIndex: 0,
+			err:     nil,
 		},
 		{
 			block: &bc.Block{
@@ -736,9 +728,8 @@ func TestCoinbase(t *testing.T) {
 					}),
 				},
 			},
-			txIndex:  1,
-			GasValid: false,
-			err:      ErrWrongCoinbaseTransaction,
+			txIndex: 1,
+			err:     ErrWrongCoinbaseTransaction,
 		},
 		{
 			block: &bc.Block{
@@ -758,9 +749,8 @@ func TestCoinbase(t *testing.T) {
 					}),
 				},
 			},
-			txIndex:  1,
-			GasValid: false,
-			err:      ErrWrongCoinbaseTransaction,
+			txIndex: 1,
+			err:     ErrWrongCoinbaseTransaction,
 		},
 		{
 			block: &bc.Block{
@@ -780,9 +770,8 @@ func TestCoinbase(t *testing.T) {
 					}),
 				},
 			},
-			txIndex:  1,
-			GasValid: false,
-			err:      ErrWrongCoinbaseTransaction,
+			txIndex: 1,
+			err:     ErrWrongCoinbaseTransaction,
 		},
 		{
 			block: &bc.Block{
@@ -801,9 +790,8 @@ func TestCoinbase(t *testing.T) {
 					}),
 				},
 			},
-			txIndex:  0,
-			GasValid: true,
-			err:      nil,
+			txIndex: 0,
+			err:     nil,
 		},
 		{
 			block: &bc.Block{
@@ -822,20 +810,15 @@ func TestCoinbase(t *testing.T) {
 					}),
 				},
 			},
-			txIndex:  0,
-			GasValid: false,
-			err:      vm.ErrReturn,
+			txIndex: 0,
+			err:     vm.ErrReturn,
 		},
 	}
 
 	for i, c := range cases {
-		gasStatus, err := ValidateTx(c.block.Transactions[c.txIndex], c.block)
-
+		_, err := ValidateTx(c.block.Transactions[c.txIndex], c.block, converter)
 		if rootErr(err) != c.err {
 			t.Errorf("#%d got error %s, want %s", i, err, c.err)
-		}
-		if c.GasValid != gasStatus.GasValid {
-			t.Errorf("#%d got GasValid %t, want %t", i, gasStatus.GasValid, c.GasValid)
 		}
 	}
 }
@@ -935,6 +918,7 @@ func TestRuleAA(t *testing.T) {
 		ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe08fe0fae80e01160014aac0345165045e612b3d7363f39a372bead80ce700
 		00
 	*/
+	converter := func(prog []byte) ([]byte, error) { return nil, nil }
 	tx := types.Tx{}
 	if err := tx.UnmarshalText([]byte(testData)); err != nil {
 		t.Errorf("fail on unmarshal txData: %s", err)
@@ -964,7 +948,7 @@ func TestRuleAA(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		_, err := ValidateTx(tx.Tx, c.block)
+		_, err := ValidateTx(tx.Tx, c.block, converter)
 		if rootErr(err) != c.err {
 			t.Errorf("#%d got error %s, want %s", i, err, c.err)
 		}
@@ -973,6 +957,7 @@ func TestRuleAA(t *testing.T) {
 
 // TestTimeRange test the checkTimeRange function (txtest#1004)
 func TestTimeRange(t *testing.T) {
+	converter := func(prog []byte) ([]byte, error) { return nil, nil }
 	cases := []struct {
 		timeRange uint64
 		err       bool
@@ -1015,7 +1000,7 @@ func TestTimeRange(t *testing.T) {
 
 	for i, c := range cases {
 		tx.TimeRange = c.timeRange
-		if _, err := ValidateTx(tx, block); (err != nil) != c.err {
+		if _, err := ValidateTx(tx, block, converter); (err != nil) != c.err {
 			t.Errorf("#%d got error %t, want %t", i, !c.err, c.err)
 		}
 	}
@@ -1069,6 +1054,7 @@ func TestStandardTx(t *testing.T) {
 }
 
 func TestValidateTxVersion(t *testing.T) {
+	converter := func(prog []byte) ([]byte, error) { return nil, nil }
 	cases := []struct {
 		desc  string
 		block *bc.Block
@@ -1107,7 +1093,7 @@ func TestValidateTxVersion(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		if _, err := ValidateTx(c.block.Transactions[0], c.block); rootErr(err) != c.err {
+		if _, err := ValidateTx(c.block.Transactions[0], c.block, converter); rootErr(err) != c.err {
 			t.Errorf("case #%d (%s) got error %t, want %t", i, c.desc, err, c.err)
 		}
 	}

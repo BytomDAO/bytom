@@ -75,7 +75,7 @@ type AnnotatedAsset struct {
 	IssuanceProgram   chainjson.HexBytes `json:"issue_program"`
 	RawDefinitionByte chainjson.HexBytes `json:"raw_definition_byte"`
 	Definition        *json.RawMessage   `json:"definition"`
-	LimitHeight       int64              `json:"limit_height"`
+	LimitHeight       uint64              `json:"limit_height"`
 }
 
 //AnnotatedSigner means an annotated signer for asset.

@@ -1,7 +1,7 @@
 package state
 
 import (
-	"github.com/bytom/bytom/consensus/segwit"
+	"github.com/bytom/bytom/consensus/bcrp"
 	"github.com/bytom/bytom/crypto/sha3pool"
 	"github.com/bytom/bytom/protocol/bc/types"
 )
@@ -25,12 +25,11 @@ func (view *ContractViewpoint) ApplyBlock(block *types.Block) error {
 	for _, tx := range block.Transactions {
 		for _, output := range tx.Outputs {
 			program := output.ControlProgram
-			if !segwit.IsBCRPScript(program) {
-				continue
+			if bcrp.IsBCRPScript(program) {
+				var hash [32]byte
+				sha3pool.Sum256(hash[:], program)
+				view.AttachEntries[hash] = append(tx.ID.Bytes(), program...)
 			}
-			var hash [32]byte
-			sha3pool.Sum256(hash[:], program)
-			view.AttachEntries[hash] = append(tx.ID.Bytes(), program...)
 		}
 	}
 	return nil
@@ -41,12 +40,11 @@ func (view *ContractViewpoint) DetachBlock(block *types.Block) error {
 	for _, tx := range block.Transactions {
 		for _, output := range tx.Outputs {
 			program := output.ControlProgram
-			if !segwit.IsBCRPScript(program) {
-				continue
+			if bcrp.IsBCRPScript(program) {
+				var hash [32]byte
+				sha3pool.Sum256(hash[:], program)
+				view.DetachEntries[hash] = append(tx.ID.Bytes(), program...)
 			}
-			var hash [32]byte
-			sha3pool.Sum256(hash[:], program)
-			view.DetachEntries[hash] = append(tx.ID.Bytes(), program...)
 		}
 	}
 	return nil

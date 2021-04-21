@@ -216,6 +216,7 @@ func TestValidateBlockHeader(t *testing.T) {
 // TestValidateBlock test the ValidateBlock function
 func TestValidateBlock(t *testing.T) {
 	cp, _ := vmutil.DefaultCoinbaseProgram()
+	converter := func(prog []byte) ([]byte, error) { return nil, nil }
 	cases := []struct {
 		desc   string
 		block  *bc.Block
@@ -314,7 +315,7 @@ func TestValidateBlock(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		err := ValidateBlock(c.block, c.parent)
+		err := ValidateBlock(c.block, c.parent, converter)
 		if rootErr(err) != c.err {
 			t.Errorf("case #%d (%s) got error %s, want %s", i, c.desc, err, c.err)
 		}
@@ -323,8 +324,8 @@ func TestValidateBlock(t *testing.T) {
 
 // TestGasOverBlockLimit check if the gas of the block has the max limit (blocktest#1012)
 func TestGasOverBlockLimit(t *testing.T) {
-
 	cp, _ := vmutil.DefaultCoinbaseProgram()
+	converter := func(prog []byte) ([]byte, error) { return nil, nil }
 	parent := &state.BlockNode{
 		Version:   1,
 		Height:    0,
@@ -363,7 +364,7 @@ func TestGasOverBlockLimit(t *testing.T) {
 		}))
 	}
 
-	if err := ValidateBlock(block, parent); err != errOverBlockLimit {
+	if err := ValidateBlock(block, parent, converter); err != errOverBlockLimit {
 		t.Errorf("got error %s, want %s", err, errOverBlockLimit)
 	}
 }
