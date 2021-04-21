@@ -67,7 +67,7 @@ func RetireProgram(comment []byte) ([]byte, error) {
 	return builder.Build()
 }
 
-// RegisterProgram generates the script for register output
+// RegisterProgram generates the script for register contract output
 // follow BCRP(bytom contract register protocol)
 func RegisterProgram(contract []byte) ([]byte, error) {
 	builder := NewBuilder()
@@ -78,6 +78,16 @@ func RegisterProgram(contract []byte) ([]byte, error) {
 	builder.AddData([]byte{byte(bcrp.Version)})
 	builder.AddOp(vm.OP_PUSHDATA1)
 	builder.AddData(contract)
+	return builder.Build()
+}
+
+// CallContractProgram generates the script for control contract output
+// follow BCRP(bytom contract register protocol)
+func CallContractProgram(contractID []byte) ([]byte, error) {
+	builder := NewBuilder()
+	builder.AddOp(vm.OP_1)
+	builder.AddOp(vm.OP_PUSHDATA1)
+	builder.AddData(contractID)
 	return builder.Build()
 }
 
