@@ -2,6 +2,7 @@ package txbuilder
 
 import (
 	"context"
+	"crypto/ed25519"
 	"encoding/hex"
 	"encoding/json"
 	"math"
@@ -14,7 +15,6 @@ import (
 	"github.com/bytom/bytom/common"
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/crypto"
-	"github.com/bytom/bytom/crypto/ed25519"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	chainjson "github.com/bytom/bytom/encoding/json"
 	"github.com/bytom/bytom/errors"

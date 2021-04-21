@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"crypto/ed25519"
 	"fmt"
 	"net"
 	"sync"
@@ -12,7 +13,6 @@ import (
 
 	cfg "github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/consensus"
-	"github.com/bytom/bytom/crypto/ed25519"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/event"
 	"github.com/bytom/bytom/p2p/connection"

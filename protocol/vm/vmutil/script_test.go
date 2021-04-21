@@ -1,10 +1,10 @@
 package vmutil
 
 import (
+	"crypto/ed25519"
 	"encoding/hex"
 	"testing"
 
-	"github.com/bytom/bytom/crypto/ed25519"
 	"github.com/bytom/bytom/errors"
 )
 

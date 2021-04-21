@@ -1,8 +1,9 @@
 package vmutil
 
 import (
+	"crypto/ed25519"
+
 	"github.com/bytom/bytom/consensus/bcrp"
-	"github.com/bytom/bytom/crypto/ed25519"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/vm"
 )
