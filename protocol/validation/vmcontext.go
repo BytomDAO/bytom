@@ -95,7 +95,7 @@ func convertProgram(prog []byte, converter ProgramConverterFunc) []byte {
 		if witnessProg, err := segwit.ConvertP2SHProgram([]byte(prog)); err == nil {
 			return witnessProg
 		}
-	} else if bcrp.IsCallBCRPScript(prog) {
+	} else if bcrp.IsCallContractScript(prog) {
 		if contractProg, err := converter(prog); err == nil {
 			return contractProg
 		}

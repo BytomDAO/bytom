@@ -109,12 +109,6 @@ func DecodeRetireAction(data []byte) (Action, error) {
 	return a, err
 }
 
-// DecodeRegisterAction convert input data to action struct
-func DecodeRegisterAction(data []byte) (Action, error) {
-	a := new(registerAction)
-	return a, stdjson.Unmarshal(data, a)
-}
-
 type retireAction struct {
 	bc.AssetAmount
 	Arbitrary json.HexBytes `json:"arbitrary"`
@@ -142,6 +136,12 @@ func (a *retireAction) Build(ctx context.Context, b *TemplateBuilder) error {
 
 func (a *retireAction) ActionType() string {
 	return "retire"
+}
+
+// DecodeRegisterAction convert input data to action struct
+func DecodeRegisterAction(data []byte) (Action, error) {
+	a := new(registerAction)
+	return a, stdjson.Unmarshal(data, a)
 }
 
 type registerAction struct {
