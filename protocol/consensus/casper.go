@@ -60,17 +60,21 @@ func (c *Casper) BestChain() (uint64, bc.Hash) {
 // Validators return the validators by specified block hash
 // e.g. if the block num of epoch is 100, and the block height corresponding to the block hash is 130, then will return the voting results of height in 0~100
 func (c *Casper) Validators(blockHash *bc.Hash) ([]*state.Validator, error) {
-	hash, err := c.prevCheckpointHash(blockHash)
-	if err != nil {
-		return nil, err
-	}
-
-	checkpoint, err := c.store.GetCheckpoint(hash)
+	checkpoint, err := c.prevCheckpoint(blockHash)
 	if err != nil {
 		return nil, err
 	}
 
 	return checkpoint.Validators(), nil
+}
+
+func (c *Casper) prevCheckpoint(blockHash *bc.Hash) (*state.Checkpoint, error) {
+	hash, err := c.prevCheckpointHash(blockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.store.GetCheckpoint(hash)
 }
 
 // AuthVerification verify whether the Verification is legal.
@@ -85,27 +89,35 @@ func (c *Casper) AuthVerification(v *Verification) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	// root of tree is the last finalized checkpoint
+	if v.TargetHeight < c.tree.checkpoint.Height {
+		// discard the verification message which height of target less than height of last finalized checkpoint
+		// is for simplify check the vote within the span of its other votes
+		return nil
+	}
+
 	target, err := c.store.GetCheckpoint(&v.TargetHash)
 	if err != nil {
 		c.verificationCache.Add(verificationCacheKey(v.TargetHash, v.PubKey), v)
 		return nil
 	}
 
-	// root of tree is the last finalized checkpoint
-	if target.Height < c.tree.checkpoint.Height {
-		// discard the verification message which height of target less than height of last finalized checkpoint
-		// is for simplify check the vote within the span of its other votes
-		return nil
-	}
-
-	source, err := c.store.GetCheckpoint(&v.SourceHash)
+	prevCheckpoint, err := c.prevCheckpoint(&v.TargetHash)
 	if err != nil {
-		// the synchronization block is later than the arrival of the verification message
 		return err
 	}
 
-	if !target.ContainsValidator(v.PubKey) {
+	if !prevCheckpoint.ContainsValidator(v.PubKey) {
 		return errPubKeyIsNotValidator
+	}
+
+	return c.authVerification(v, target)
+}
+
+func (c *Casper) authVerification(v *Verification, target *state.Checkpoint) error {
+	source, err := c.store.GetCheckpoint(&v.SourceHash)
+	if err != nil {
+		return err
 	}
 
 	if err := c.verifyVerification(v); err != nil {
@@ -230,14 +242,20 @@ func (c *Casper) ApplyBlock(block *types.Block) error {
 
 func (c *Casper) authVerificationLoop() {
 	for checkpoint := range c.newEpochCh {
-		for _, validator := range checkpoint.Validators() {
+		validators, err := c.Validators(&checkpoint.Hash)
+		if err != nil {
+			log.WithField("err", err).Error("get validators when auth verification")
+			continue
+		}
+
+		for _, validator := range validators {
 			key := verificationCacheKey(checkpoint.Hash, validator.PubKey)
 			verification, ok := c.verificationCache.Get(key)
 			if !ok {
 				continue
 			}
 
-			if err := c.AuthVerification(verification.(*Verification)); err != nil {
+			if err := c.authVerification(verification.(*Verification), checkpoint); err != nil {
 				log.WithField("err", err).Error("auth verification in cache")
 			}
 
