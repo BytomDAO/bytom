@@ -7,6 +7,7 @@ import (
 
 	"github.com/bytom/bytom/crypto/sha3pool"
 	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/state"
 	"golang.org/x/crypto/ed25519"
 )
 
@@ -20,6 +21,18 @@ type Verification struct {
 	TargetHeight uint64
 	Signature    string
 	PubKey       string
+}
+
+func (v *Verification) validate() error {
+	if v.SourceHeight%state.BlocksOfEpoch != 0 || v.TargetHeight%state.BlocksOfEpoch != 0 {
+		return errVoteToGrowingCheckpoint
+	}
+
+	if v.SourceHeight == v.TargetHeight {
+		return errVoteToSameCheckpoint
+	}
+
+	return v.VerifySignature()
 }
 
 // EncodeMessage encode the verification for the validators to sign or verify
