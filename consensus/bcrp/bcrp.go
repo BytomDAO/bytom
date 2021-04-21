@@ -8,8 +8,11 @@ import (
 	"github.com/bytom/bytom/protocol/vm"
 )
 
-//bcrp bytom contract register protocol
-const bcrp = "bcrp"
+// BCRP bytom contract register protocol
+const BCRP = "bcrp"
+
+// Version bcrp version
+const Version = 1
 
 // IsBCRPScript checks if a control program is bytom contract register protocol
 // BCRP script format: OP_FAIL + OP_PUSHDATA1 + "04" + hex("bcrp") + OP_PUSHDATA1 + "01" + "01" + OP_PUSHDATA1 + len(contract) + contract
@@ -31,7 +34,7 @@ func IsBCRPScript(prog []byte) bool {
 		return false
 	}
 
-	if !bytes.Equal(inst[1].Data, []byte(bcrp)) {
+	if !bytes.Equal(inst[1].Data, []byte(BCRP)) {
 		return false
 	}
 
@@ -40,7 +43,7 @@ func IsBCRPScript(prog []byte) bool {
 	}
 
 	// version 1
-	if !bytes.Equal(inst[2].Data, []byte{byte(1)}) {
+	if !bytes.Equal(inst[2].Data, []byte{byte(Version)}) {
 		return false
 	}
 
