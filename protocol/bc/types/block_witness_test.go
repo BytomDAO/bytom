@@ -16,13 +16,11 @@ func TestReadWriteBlockWitness(t *testing.T) {
 		hexString string
 	}{
 		{
-			// normal block witness
 			name:      "normal block witness",
 			witness:   testutil.MustDecodeHexString("e0776a3cf17b3e0f8340caeee32a75d02ecc25cf20bee9e5c7503bca3b2703c3c61fdcb4211ed59b58eb025ac81e06b138d54b5d01ea4614dd0f65e641836900"),
 			hexString: "40e0776a3cf17b3e0f8340caeee32a75d02ecc25cf20bee9e5c7503bca3b2703c3c61fdcb4211ed59b58eb025ac81e06b138d54b5d01ea4614dd0f65e641836900",
 		},
 		{
-			// empty block witness
 			name:      "empty block witness",
 			witness:   BlockWitness{},
 			hexString: "00",
@@ -63,14 +61,12 @@ func TestBlockWitnessSet(t *testing.T) {
 		want BlockWitness
 	}{
 		{
-			// shorter than normal block witness length
 			name: "shorter than normal block witness length",
 			bw:   make(BlockWitness, signatureLength-2),
 			data: testutil.MustDecodeHexString("9dc8892df991e1d1110a5cb1bbfd57f2f5e3aa89464de50f9555c7575d9c2b21cf8f05b77b880d8ae4dd218efb15b775c32c9d77f9a2955d69dca9020c127709"),
 			want: testutil.MustDecodeHexString("9dc8892df991e1d1110a5cb1bbfd57f2f5e3aa89464de50f9555c7575d9c2b21cf8f05b77b880d8ae4dd218efb15b775c32c9d77f9a2955d69dca9020c12"),
 		},
 		{
-			// longer than normal block witness length
 			name: "longer than normal block witness length",
 			bw:   make(BlockWitness, signatureLength+2),
 			data: testutil.MustDecodeHexString("9dc8892df991e1d1110a5cb1bbfd57f2f5e3aa89464de50f9555c7575d9c2b21cf8f05b77b880d8ae4dd218efb15b775c32c9d77f9a2955d69dca9020c127709"),
