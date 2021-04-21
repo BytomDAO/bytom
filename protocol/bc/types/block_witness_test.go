@@ -63,14 +63,14 @@ func TestBlockWitnessSet(t *testing.T) {
 		want BlockWitness
 	}{
 		{
-			// shorter than normal block witness length, there will be cut off
+			// shorter than normal block witness length
 			name: "shorter than normal block witness length",
 			bw:   make(BlockWitness, signatureLength-2),
 			data: testutil.MustDecodeHexString("9dc8892df991e1d1110a5cb1bbfd57f2f5e3aa89464de50f9555c7575d9c2b21cf8f05b77b880d8ae4dd218efb15b775c32c9d77f9a2955d69dca9020c127709"),
 			want: testutil.MustDecodeHexString("9dc8892df991e1d1110a5cb1bbfd57f2f5e3aa89464de50f9555c7575d9c2b21cf8f05b77b880d8ae4dd218efb15b775c32c9d77f9a2955d69dca9020c12"),
 		},
 		{
-			// longer than normal block witness length, there will be padding
+			// longer than normal block witness length
 			name: "longer than normal block witness length",
 			bw:   make(BlockWitness, signatureLength+2),
 			data: testutil.MustDecodeHexString("9dc8892df991e1d1110a5cb1bbfd57f2f5e3aa89464de50f9555c7575d9c2b21cf8f05b77b880d8ae4dd218efb15b775c32c9d77f9a2955d69dca9020c127709"),
