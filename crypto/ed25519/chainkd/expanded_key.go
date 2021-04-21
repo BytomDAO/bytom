@@ -9,12 +9,12 @@ package chainkd
 
 import (
 	"crypto"
+	"crypto/ed25519"
 	"crypto/sha512"
 	"errors"
 	"io"
 	"strconv"
 
-	"github.com/bytom/bytom/crypto/ed25519"
 	"github.com/bytom/bytom/crypto/ed25519/internal/edwards25519"
 )
 
