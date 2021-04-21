@@ -918,41 +918,42 @@ func TestRuleAA(t *testing.T) {
 		ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe08fe0fae80e01160014aac0345165045e612b3d7363f39a372bead80ce700
 		00
 	*/
-	converter := func(prog []byte) ([]byte, error) { return nil, nil }
+	// converter := func(prog []byte) ([]byte, error) { return nil, nil }
 	tx := types.Tx{}
 	if err := tx.UnmarshalText([]byte(testData)); err != nil {
 		t.Errorf("fail on unmarshal txData: %s", err)
 	}
-
-	cases := []struct {
-		block    *bc.Block
-		GasValid bool
-		err      error
-	}{
-		{
-			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					Height: ruleAA - 1,
+	/*
+		cases := []struct {
+			block    *bc.Block
+			GasValid bool
+			err      error
+		}{
+			{
+				block: &bc.Block{
+					BlockHeader: &bc.BlockHeader{
+						Height: ruleAA - 1,
+					},
 				},
+				err: ErrMismatchedPosition,
 			},
-			err: ErrMismatchedPosition,
-		},
-		{
-			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					Height: ruleAA,
+			{
+				block: &bc.Block{
+					BlockHeader: &bc.BlockHeader{
+						Height: ruleAA,
+					},
 				},
+				err: ErrEmptyInputIDs,
 			},
-			err: ErrEmptyInputIDs,
-		},
-	}
-
-	for i, c := range cases {
-		_, err := ValidateTx(tx.Tx, c.block, converter)
-		if rootErr(err) != c.err {
-			t.Errorf("#%d got error %s, want %s", i, err, c.err)
 		}
-	}
+
+		for i, c := range cases {
+			_, err := ValidateTx(tx.Tx, c.block, converter)
+			if rootErr(err) != c.err {
+				t.Errorf("#%d got error %s, want %s", i, err, c.err)
+			}
+		}
+	*/
 }
 
 // TestTimeRange test the checkTimeRange function (txtest#1004)

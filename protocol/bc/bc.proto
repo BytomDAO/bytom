@@ -100,6 +100,7 @@ message VoteOutput {
   Program     control_program = 2;
   uint64      ordinal         = 3;
   bytes       vote            = 4;
+  StateData   state_data      = 5;
 }
 
 message VetoInput {

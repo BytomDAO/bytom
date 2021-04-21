@@ -167,13 +167,13 @@ func TestSerializationVeto(t *testing.T) {
 		[]byte("arguments2"),
 	}
 
-	vetoInput := NewVetoInput(arguments, testutil.MustDecodeHash("fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409"), testutil.MustDecodeAsset("fe9791d71b67ee62515e08723c061b5ccb952a80d804417c8aeedf7f633c524a"), 254354, 3, []byte("spendProgram"), []byte("af594006a40837d9f028daabb6d589df0b9138daefad5683e5233c2646279217294a8d532e60863bcf196625a35fb8ceeffa3c09610eb92dcfb655a947f13269"))
+	vetoInput := NewVetoInput(arguments, testutil.MustDecodeHash("fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409"), testutil.MustDecodeAsset("fe9791d71b67ee62515e08723c061b5ccb952a80d804417c8aeedf7f633c524a"), 254354, 3, []byte("spendProgram"), []byte("af594006a40837d9f028daabb6d589df0b9138daefad5683e5233c2646279217294a8d532e60863bcf196625a35fb8ceeffa3c09610eb92dcfb655a947f13269"), []byte{})
 
 	wantHex := strings.Join([]string{
 		"01",   // asset version
-		"d601", // input commitment length
+		"d701", // input commitment length
 		"03",   // veto type flag
-		"52",   // veto commitment length
+		"53",   // veto commitment length
 		"fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409", // source id
 		"fe9791d71b67ee62515e08723c061b5ccb952a80d804417c8aeedf7f633c524a", // assetID
 		"92c30f",                   // amount
@@ -181,6 +181,7 @@ func TestSerializationVeto(t *testing.T) {
 		"01",                       // vm version
 		"0c",                       // veto program length
 		"7370656e6450726f6772616d", // veto program
+		"00",                       // state length
 		"8001",                     //xpub length
 		"6166353934303036613430383337643966303238646161626236643538396466306239313338646165666164353638336535323333633236343632373932313732393461386435333265363038363362636631393636323561333566623863656566666133633039363130656239326463666236353561393437663133323639", //voter xpub
 		"17",                   // witness length

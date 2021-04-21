@@ -13,7 +13,7 @@ type VetoInput struct {
 }
 
 // NewVetoInput create a new VetoInput struct.
-func NewVetoInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amount, sourcePos uint64, controlProgram []byte, vote []byte) *TxInput {
+func NewVetoInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amount, sourcePos uint64, controlProgram []byte, vote []byte, stateData []byte) *TxInput {
 	sc := SpendCommitment{
 		AssetAmount: bc.AssetAmount{
 			AssetId: &assetID,
@@ -23,6 +23,7 @@ func NewVetoInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amou
 		SourcePosition: sourcePos,
 		VMVersion:      1,
 		ControlProgram: controlProgram,
+		StateData:      stateData,
 	}
 	return &TxInput{
 		AssetVersion: 1,
