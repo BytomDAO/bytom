@@ -3,6 +3,7 @@ package dht
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -17,7 +18,6 @@ import (
 	"github.com/bytom/bytom/common"
 	cfg "github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/crypto"
-	"github.com/bytom/bytom/crypto/ed25519"
 	"github.com/bytom/bytom/p2p/netutil"
 	"github.com/bytom/bytom/version"
 )
@@ -428,7 +428,7 @@ func encodePacket(priv ed25519.PrivateKey, ptype byte, req interface{}) (p, hash
 	nodeID := priv.Public()
 	sig := ed25519.Sign(priv, common.BytesToHash(packet[headSize:]).Bytes())
 	copy(packet, versionPrefix)
-	copy(packet[versionPrefixSize:], nodeID[:])
+	copy(packet[versionPrefixSize:], nodeID.([]byte)[:])
 	copy(packet[versionPrefixSize+nodeIDSize:], sig)
 
 	hash = common.BytesToHash(packet[versionPrefixSize:]).Bytes()

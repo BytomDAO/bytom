@@ -9,7 +9,7 @@ $(error "$$GOOS is not defined. If you are using Windows, try to re-make using '
 endif
 endif
 
-PACKAGES    := $(shell go list ./... | grep -v '/vendor/' | grep -v '/crypto/ed25519/chainkd')
+PACKAGES    := $(shell go list ./... | grep -v '/lib/')
 
 BUILD_FLAGS := -ldflags "-X github.com/bytom/bytom/version.GitCommit=`git rev-parse HEAD`"
 
@@ -109,7 +109,7 @@ target/$(BYTOMCLI_BINARY64):
 
 test:
 	@echo "====> Running go test"
-	@go test -tags "network" $(PACKAGES)
+	@go test $(PACKAGES)
 
 benchmark:
 	@go test -bench $(PACKAGES)

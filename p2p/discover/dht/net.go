@@ -2,6 +2,7 @@ package dht
 
 import (
 	"bytes"
+	"crypto"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -13,7 +14,6 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bytom/bytom/common"
-	"github.com/bytom/bytom/crypto/ed25519"
 	"github.com/bytom/bytom/p2p/netutil"
 )
 
@@ -115,9 +115,9 @@ type timeoutEvent struct {
 	node *Node
 }
 
-func newNetwork(conn transport, ourPubkey ed25519.PublicKey, dbPath string, netrestrict *netutil.Netlist) (*Network, error) {
+func newNetwork(conn transport, ourPubkey crypto.PublicKey, dbPath string, netrestrict *netutil.Netlist) (*Network, error) {
 	var ourID NodeID
-	copy(ourID[:], ourPubkey[:nodeIDBits])
+	copy(ourID[:], ourPubkey.([]byte)[:nodeIDBits])
 
 	var db *nodeDB
 	if dbPath != "<no database>" {
