@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"sync"
 
+	"github.com/bytom/bytom/common"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/math/checked"
 	"github.com/bytom/bytom/protocol"
@@ -35,6 +36,8 @@ type Casper struct {
 
 	// pubKey -> conflicting verifications
 	evilValidators map[string][]*Verification
+	// block hash -> previous checkpoint hash
+	prevCheckpointCache *common.Cache
 }
 
 // Best chain return the chain containing the justified checkpoint of the largest height
@@ -55,9 +58,6 @@ func (c *Casper) Validators(blockHash *bc.Hash) ([]*state.Validator, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	c.mu.RLock()
-	defer c.mu.RUnlock()
 
 	checkpoint, err := c.store.GetCheckpoint(hash)
 	if err != nil {
@@ -387,16 +387,26 @@ func chainOfMaxJustifiedHeight(node *treeNode, justifiedHeight uint64) (uint64, 
 }
 
 func (c *Casper) prevCheckpointHash(blockHash *bc.Hash) (*bc.Hash, error) {
+	if data, ok := c.prevCheckpointCache.Get(blockHash); ok {
+		return data.(*bc.Hash), nil
+	}
+
 	for {
 		block, err := c.store.GetBlockHeader(blockHash)
 		if err != nil {
 			return nil, err
 		}
 
-		height := block.Height - 1
-		blockHash = &block.PreviousBlockHash
-		if height%state.BlocksOfEpoch == 0 {
-			return blockHash, nil
+		prevHeight, prevHash := block.Height-1, block.PreviousBlockHash
+		if data, ok := c.prevCheckpointCache.Get(prevHash); ok {
+			return data.(*bc.Hash), nil
 		}
+
+		if prevHeight%state.BlocksOfEpoch == 0 {
+			c.prevCheckpointCache.Add(blockHash, &prevHash)
+			return &prevHash, nil
+		}
+
+		blockHash = &prevHash
 	}
 }
