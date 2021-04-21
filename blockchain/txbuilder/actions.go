@@ -102,45 +102,6 @@ func (a *controlProgramAction) ActionType() string {
 	return "control_program"
 }
 
-// DecodeControlContractAction convert input data to action struct
-func DecodeControlContractAction(data []byte) (Action, error) {
-	a := new(controlContractAction)
-	return a, stdjson.Unmarshal(data, a)
-}
-
-type controlContractAction struct {
-	bc.AssetAmount
-	ContractID json.HexBytes `json:"contract_id"`
-}
-
-func (a *controlContractAction) Build(ctx context.Context, b *TemplateBuilder) error {
-	var missing []string
-	if len(a.ContractID) == 0 {
-		missing = append(missing, "contract_id")
-	}
-	if a.AssetId.IsZero() {
-		missing = append(missing, "asset_id")
-	}
-	if a.Amount == 0 {
-		missing = append(missing, "amount")
-	}
-	if len(missing) > 0 {
-		return MissingFieldsError(missing...)
-	}
-
-	program, err := vmutil.CallContractProgram(a.ContractID)
-	if err != nil {
-		return err
-	}
-
-	out := types.NewOriginalTxOutput(*a.AssetId, a.Amount, program)
-	return b.AddOutput(out)
-}
-
-func (a *controlContractAction) ActionType() string {
-	return "control_contract"
-}
-
 // DecodeRetireAction convert input data to action struct
 func DecodeRetireAction(data []byte) (Action, error) {
 	a := new(retireAction)
