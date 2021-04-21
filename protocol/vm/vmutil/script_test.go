@@ -192,7 +192,7 @@ func TestP2SPMultiSigProgramWithHeight(t *testing.T) {
 func TestGetIssuanceProgramRestrictHeight(t *testing.T) {
 	tests := []struct {
 		issuanceProgram string
-		wantHeight      int64
+		wantHeight      uint64
 	}{
 		{
 			issuanceProgram: "",
@@ -205,6 +205,10 @@ func TestGetIssuanceProgramRestrictHeight(t *testing.T) {
 		{
 			issuanceProgram: "01c8cda069ae20f44dd85be89de08b0f894476ccc7b3eebcf0a288c79504fa7e4c8033f5b7338020c86dc682ce3ecac64e165d9b5f8cca9ee05bd0d4df07adbfd11251ad7e88f1685152ad",
 			wantHeight:      200,
+		},
+		{
+			issuanceProgram: "08c8c8c8c8c8c8c8c8cda069ae20f44dd85be89de08b0f894476ccc7b3eebcf0a288c79504fa7e4c8033f5b7338020c86dc682ce3ecac64e165d9b5f8cca9ee05bd0d4df07adbfd11251ad7e88f1685152ad",
+			wantHeight:      14468034567615334600,
 		},
 	}
 

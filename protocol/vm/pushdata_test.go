@@ -134,14 +134,14 @@ func TestPushDataBytes(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		got := PushdataBytes(c.data)
+		got := PushDataBytes(c.data)
 
 		dl := len(c.data)
 		if dl > 10 {
 			dl = 10
 		}
 		if !bytes.Equal(got, c.want) {
-			t.Errorf("PushdataBytes(%x...) = %x...[%d] want %x...[%d]", c.data[:dl], got[:dl], len(got), c.want[:dl], len(c.want))
+			t.Errorf("PushDataBytes(%x...) = %x...[%d] want %x...[%d]", c.data[:dl], got[:dl], len(got), c.want[:dl], len(c.want))
 		}
 	}
 }
@@ -179,10 +179,10 @@ func TestPushdataInt64(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		got := PushdataInt64(c.num)
+		got := PushDataInt64(c.num)
 
 		if !bytes.Equal(got, c.want) {
-			t.Errorf("PushdataInt64(%d) = %x want %x", c.num, got, c.want)
+			t.Errorf("PushDataInt64(%d) = %x want %x", c.num, got, c.want)
 		}
 	}
 }
