@@ -1,9 +1,8 @@
 package chainkd
 
 import (
+	"crypto/ed25519"
 	"io"
-
-	"github.com/bytom/bytom/crypto/ed25519"
 )
 
 // Utility functions
