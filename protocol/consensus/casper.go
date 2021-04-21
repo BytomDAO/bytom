@@ -1,9 +1,11 @@
 package consensus
 
 import (
+	"encoding/hex"
 	"sync"
 
 	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/math/checked"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
@@ -16,7 +18,12 @@ var (
 	errVoteToGrowingCheckpoint  = errors.New("validator publish vote to growing checkpoint")
 	errSameHeightInVerification = errors.New("validator publish two distinct votes for the same target height")
 	errSpanHeightInVerification = errors.New("validator publish vote within the span of its other votes")
+	errVoteToNonValidator       = errors.New("pubKey of vote is not validator")
+	errGuarantyLessThanMinimum  = errors.New("guaranty less than minimum")
+	errOverflow                 = errors.New("arithmetic overflow/underflow")
 )
+
+const minGuaranty = 1E14
 
 // Casper is BFT based proof of stack consensus algorithm, it provides safety and liveness in theory,
 // it's design mainly refers to https://github.com/ethereum/research/blob/master/papers/casper-basics/casper_basics.pdf
@@ -25,6 +32,9 @@ type Casper struct {
 	tree             *treeNode
 	rollbackNotifyCh chan bc.Hash
 	store            protocol.Store
+
+	// pubKey -> conflicting verifications
+	evilValidators map[string][]*Verification
 }
 
 // Best chain return the chain containing the justified checkpoint of the largest height
@@ -99,7 +109,7 @@ func (c *Casper) AuthVerification(v *Verification) error {
 		return err
 	}
 
-	supLink := target.AddSupLink(v.SourceHeight, v.SourceHash, v.PubKey)
+	supLink := target.AddSupLink(v.SourceHeight, v.SourceHash, v.PubKey, v.Signature)
 	if source.Status == state.Justified && supLink.Confirmed() {
 		c.setJustified(target)
 		// must direct child
@@ -131,10 +141,33 @@ func (c *Casper) setFinalized(checkpoint *state.Checkpoint) error {
 	return nil
 }
 
-// ProcessBlock used to receive a new block from upper layer, it provides idempotence
+// EvilValidator represent a validator who broadcast two distinct verification that violate the commandment
+type EvilValidator struct {
+	PubKey string
+	V1     *Verification
+	V2     *Verification
+}
+
+// EvilValidators return all evil validators
+func (c *Casper) EvilValidators() []*EvilValidator {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	var validators []*EvilValidator
+	for pubKey, verifications := range c.evilValidators {
+		validators = append(validators, &EvilValidator{
+			PubKey: pubKey,
+			V1:     verifications[0],
+			V2:     verifications[1],
+		})
+	}
+	return validators
+}
+
+// ApplyBlock used to receive a new block from upper layer, it provides idempotence
 // and parse the vote and mortgage from the transactions, then save to the checkpoint
 // the tree of checkpoint will grow with the arrival of new blocks
-func (c *Casper) ProcessBlock(block *types.Block) error {
+func (c *Casper) ApplyBlock(block *types.Block) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -148,10 +181,107 @@ func (c *Casper) ProcessBlock(block *types.Block) error {
 		return errors.Wrap(err, "apply block to checkpoint")
 	}
 
-	for range block.Transactions {
-		// process the votes and mortgages
+	for _, tx := range block.Transactions {
+		for _, input := range tx.Inputs {
+			if vetoInput, ok := input.TypedInput.(*types.VetoInput); ok {
+				if err := processVeto(vetoInput, checkpoint); err != nil {
+					return err
+				}
+			}
+
+			if isGuarantyProgram(input.ControlProgram()) {
+				if err := processWithdrawal(decodeGuarantyArgs(input.ControlProgram()), checkpoint); err != nil {
+					return err
+				}
+			}
+		}
+
+		for _, output := range tx.Outputs {
+			if _, ok := output.TypedOutput.(*types.VoteOutput); ok {
+				if err := processVote(output, checkpoint); err != nil {
+					return err
+				}
+			}
+
+			if isGuarantyProgram(output.ControlProgram) {
+				if err := processGuaranty(decodeGuarantyArgs(output.ControlProgram), checkpoint); err != nil {
+					return err
+				}
+			}
+		}
 	}
 	return c.store.SaveCheckpoints(checkpoint)
+}
+
+type guarantyArgs struct {
+	Amount uint64
+	PubKey []byte
+}
+
+func isGuarantyProgram(program []byte) bool {
+	return false
+}
+
+func decodeGuarantyArgs(program []byte) *guarantyArgs {
+	return nil
+}
+
+func processWithdrawal(guarantyArgs *guarantyArgs, checkpoint *state.Checkpoint) error {
+	pubKey := hex.EncodeToString(guarantyArgs.PubKey)
+	guarantyNum := checkpoint.Guaranties[pubKey]
+	guarantyNum, ok := checked.SubUint64(guarantyNum, guarantyArgs.Amount)
+	if !ok {
+		return errOverflow
+	}
+
+	checkpoint.Guaranties[pubKey] = guarantyNum
+	// TODO delete the evil validator when receive the confiscate transaction
+	return nil
+}
+
+func processGuaranty(guarantyArgs *guarantyArgs, checkpoint *state.Checkpoint) error {
+	if guarantyArgs.Amount < minGuaranty {
+		return errGuarantyLessThanMinimum
+	}
+
+	pubKey := hex.EncodeToString(guarantyArgs.PubKey)
+	guarantyNum := checkpoint.Guaranties[pubKey]
+	guarantyNum, ok := checked.AddUint64(guarantyNum, guarantyArgs.Amount)
+	if !ok {
+		return errOverflow
+	}
+
+	checkpoint.Guaranties[pubKey] = guarantyNum
+	return nil
+}
+
+func processVeto(input *types.VetoInput, checkpoint *state.Checkpoint) error {
+	pubKey := hex.EncodeToString(input.Vote)
+	voteNum := checkpoint.Votes[pubKey]
+	voteNum, ok := checked.SubUint64(voteNum, input.Amount)
+	if !ok {
+		return errOverflow
+	}
+
+	checkpoint.Votes[pubKey] = voteNum
+	return nil
+}
+
+func processVote(output *types.TxOutput, checkpoint *state.Checkpoint) error {
+	voteOutput := output.TypedOutput.(*types.VoteOutput)
+	pubKey := hex.EncodeToString(voteOutput.Vote)
+	if checkpoint.Guaranties[pubKey] < minGuaranty {
+		return errVoteToNonValidator
+	}
+
+	voteNum := checkpoint.Votes[pubKey]
+	voteNum, ok := checked.AddUint64(voteNum, output.Amount)
+	if !ok {
+		return errOverflow
+	}
+
+	checkpoint.Votes[pubKey] = voteNum
+	return nil
 }
 
 func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, error) {
@@ -168,7 +298,7 @@ func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, 
 			StartTimestamp: block.Timestamp,
 			Status:         state.Growing,
 			Votes:          make(map[string]uint64),
-			Mortgages:      make(map[string]uint64),
+			Guaranties:     make(map[string]uint64),
 		}
 		node.children = append(node.children, &treeNode{checkpoint: checkpoint})
 	} else if mod == 0 {
@@ -197,7 +327,8 @@ func (c *Casper) verifySameHeight(v *Verification) error {
 
 	for _, checkpoint := range checkpoints {
 		for _, supLink := range checkpoint.SupLinks {
-			if supLink.PubKeys[v.PubKey] {
+			if signature, ok := supLink.Signatures[v.PubKey]; ok {
+				c.evilValidators[v.PubKey] = []*Verification{v, makeVerification(supLink, checkpoint, signature, v.PubKey)}
 				return errSameHeightInVerification
 			}
 		}
@@ -207,17 +338,16 @@ func (c *Casper) verifySameHeight(v *Verification) error {
 
 // a validator must not vote within the span of its other votes.
 func (c *Casper) verifySpanHeight(v *Verification) error {
-	if c.tree.findOnlyOne(func(c *state.Checkpoint) bool {
-		if c.Height < v.TargetHeight {
-			for _, supLink := range c.SupLinks {
-				if supLink.PubKeys[v.PubKey] && supLink.SourceHeight > v.SourceHeight {
-					return true
-				}
-			}
+	if c.tree.findOnlyOne(func(checkpoint *state.Checkpoint) bool {
+		if checkpoint.Height == v.TargetHeight {
+			return false
 		}
-		if c.Height > v.TargetHeight {
-			for _, supLink := range c.SupLinks {
-				if supLink.PubKeys[v.PubKey] && supLink.SourceHeight < v.SourceHeight {
+
+		for _, supLink := range checkpoint.SupLinks {
+			if signature, ok := supLink.Signatures[v.PubKey]; ok {
+				if (checkpoint.Height < v.TargetHeight && supLink.SourceHeight > v.SourceHeight) ||
+					(checkpoint.Height > v.TargetHeight && supLink.SourceHeight < v.SourceHeight) {
+					c.evilValidators[v.PubKey] = []*Verification{v, makeVerification(supLink, checkpoint, signature, v.PubKey)}
 					return true
 				}
 			}
@@ -229,6 +359,17 @@ func (c *Casper) verifySpanHeight(v *Verification) error {
 	return nil
 }
 
+func makeVerification(supLink *state.SupLink, checkpoint *state.Checkpoint, signature, pubKey string) *Verification {
+	return &Verification{
+		SourceHash:   supLink.SourceHash,
+		TargetHash:   checkpoint.Hash,
+		SourceHeight: supLink.SourceHeight,
+		TargetHeight: checkpoint.Height,
+		Signature:    signature,
+		PubKey:       pubKey,
+	}
+}
+
 // justifiedHeight is the max justified height of checkpoint from node to root
 func chainOfMaxJustifiedHeight(node *treeNode, justifiedHeight uint64) (uint64, bc.Hash, uint64) {
 	checkpoint := node.checkpoint
@@ -238,7 +379,7 @@ func chainOfMaxJustifiedHeight(node *treeNode, justifiedHeight uint64) (uint64, 
 
 	bestHeight, bestHash, maxJustifiedHeight := checkpoint.Height, checkpoint.Hash, justifiedHeight
 	for _, child := range node.children {
-		if height, hash, justified := chainOfMaxJustifiedHeight(child, justifiedHeight); justified > maxJustifiedHeight {
+		if height, hash, justified := chainOfMaxJustifiedHeight(child, justifiedHeight); justified >= maxJustifiedHeight {
 			bestHeight, bestHash, maxJustifiedHeight = height, hash, justified
 		}
 	}
