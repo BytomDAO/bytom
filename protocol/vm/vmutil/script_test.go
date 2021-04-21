@@ -252,3 +252,31 @@ func TestRegisterProgram(t *testing.T) {
 		}
 	}
 }
+
+func TestCallContractProgram(t *testing.T) {
+	tests := []struct {
+		contractID string
+		expected   string
+	}{
+		{
+			contractID: "4e4f02d43bf50171f7f25d046b7f016002da410fc00d2e8902e7b170c98cf946",
+			expected:   "514c204e4f02d43bf50171f7f25d046b7f016002da410fc00d2e8902e7b170c98cf946",
+		},
+	}
+
+	for _, test := range tests {
+		contractID, err := hex.DecodeString(test.contractID)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		program, err := CallContractProgram(contractID)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if hex.EncodeToString(program) != test.expected {
+			t.Errorf("got program data: %s, expect program data: %s", hex.EncodeToString(program), test.expected)
+		}
+	}
+}
