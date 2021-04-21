@@ -410,6 +410,6 @@ func (c *Casper) prevCheckpointHash(blockHash *bc.Hash) (*bc.Hash, error) {
 			return &prevHash, nil
 		}
 
-		blockHash = &block.PreviousBlockHash
+		blockHash = &prevHash
 	}
 }
