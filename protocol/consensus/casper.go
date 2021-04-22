@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/common"
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/math/checked"
 	"github.com/bytom/bytom/protocol"
@@ -38,6 +39,7 @@ type Casper struct {
 	rollbackNotifyCh chan bc.Hash
 	newEpochCh       chan bc.Hash
 	store            protocol.Store
+	prvKey           chainkd.XPrv
 	// pubKey -> conflicting verifications
 	evilValidators map[string][]*Verification
 	// block hash -> previous checkpoint hash
@@ -115,11 +117,11 @@ func (c *Casper) authVerification(v *Verification) error {
 		return err
 	}
 
-	supLink := target.AddSupLink(v.SourceHeight, v.SourceHash, v.PubKey, v.Signature)
+	supLink := target.AddVerification(v.SourceHeight, v.SourceHash, v.PubKey, v.Signature)
 	if source.Status == state.Justified && supLink.Confirmed() {
 		c.setJustified(target)
 		// must direct child
-		if target.PrevHash == source.Hash {
+		if target.Parent.Hash == source.Hash {
 			if err := c.setFinalized(source); err != nil {
 				return err
 			}
@@ -177,31 +179,33 @@ func (c *Casper) EvilValidators() []*EvilValidator {
 // ApplyBlock used to receive a new block from upper layer, it provides idempotence
 // and parse the vote and mortgage from the transactions, then save to the checkpoint
 // the tree of checkpoint will grow with the arrival of new blocks
-func (c *Casper) ApplyBlock(block *types.Block) error {
+// it will return verification when an epoch is reached and the current node is the validator, otherwise return nil
+// the chain module must broadcast the verification
+func (c *Casper) ApplyBlock(block *types.Block) (*Verification, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	if _, err := c.tree.nodeByHash(block.Hash()); err == nil {
 		// already processed
-		return nil
+		return nil, nil
 	}
 
 	checkpoint, err := c.applyBlockToCheckpoint(block)
 	if err != nil {
-		return errors.Wrap(err, "apply block to checkpoint")
+		return nil, errors.Wrap(err, "apply block to checkpoint")
 	}
 
 	for _, tx := range block.Transactions {
 		for _, input := range tx.Inputs {
 			if vetoInput, ok := input.TypedInput.(*types.VetoInput); ok {
 				if err := processVeto(vetoInput, checkpoint); err != nil {
-					return err
+					return nil, err
 				}
 			}
 
 			if isGuarantyProgram(input.ControlProgram()) {
 				if err := processWithdrawal(decodeGuarantyArgs(input.ControlProgram()), checkpoint); err != nil {
-					return err
+					return nil, err
 				}
 			}
 		}
@@ -209,24 +213,87 @@ func (c *Casper) ApplyBlock(block *types.Block) error {
 		for _, output := range tx.Outputs {
 			if _, ok := output.TypedOutput.(*types.VoteOutput); ok {
 				if err := processVote(output, checkpoint); err != nil {
-					return err
+					return nil, err
 				}
 			}
 
 			if isGuarantyProgram(output.ControlProgram) {
 				if err := processGuaranty(decodeGuarantyArgs(output.ControlProgram), checkpoint); err != nil {
-					return err
+					return nil, err
 				}
 			}
 		}
 	}
 
+	myVerification, err := c.applyVerification(block, checkpoint)
+	if err != nil {
+		return nil, err
+	}
+
 	if err := c.store.SaveCheckpoints(checkpoint); err != nil {
-		return err
+		return nil, err
 	}
 
 	if block.Height%state.BlocksOfEpoch == 0 {
 		c.newEpochCh <- block.Hash()
+	}
+	return myVerification, nil
+}
+
+// applyVerification copy the block's verification to the checkpoint, and if the current node is validator
+// it will be find a last justified checkpoint as the source of verification
+func (c *Casper) applyVerification(block *types.Block, checkpoint *state.Checkpoint) (*Verification, error) {
+	if checkpoint.Height%state.BlocksOfEpoch != 0 {
+		return nil, nil
+	}
+
+	prevCheckpoint, err := c.prevCheckpoint(&checkpoint.Hash)
+	if err != nil {
+		return nil, err
+	}
+
+	validators := prevCheckpoint.Validators()
+	for _, supLink := range block.SupLinks {
+		for i, signature := range supLink.Signatures {
+			checkpoint.AddVerification(supLink.SourceHeight, supLink.SourceHash, validators[i].PubKey, hex.EncodeToString(signature))
+		}
+	}
+
+	pubKey := c.prvKey.XPub().String()
+	if !prevCheckpoint.ContainsValidator(pubKey) {
+		return nil, nil
+	}
+
+	// validator must broadcast verification
+	source := c.lastJustifiedCheckpointOfBranch(checkpoint)
+	if source != nil {
+		v := &Verification{
+			SourceHash:   source.Hash,
+			TargetHash:   checkpoint.Hash,
+			SourceHeight: source.Height,
+			TargetHeight: checkpoint.Height,
+			PubKey:       pubKey,
+		}
+
+		if err := v.Sign(c.prvKey); err != nil {
+			return nil, err
+		}
+
+		checkpoint.AddVerification(v.SourceHeight, v.SourceHash, v.PubKey, v.Signature)
+		return v, nil
+	}
+	return nil, nil
+}
+
+func (c *Casper) lastJustifiedCheckpointOfBranch(branch *state.Checkpoint) *state.Checkpoint {
+	parent := branch.Parent
+	for parent != nil {
+		switch parent.Status {
+		case state.Finalized:
+			return nil
+		case state.Justified:
+			return parent
+		}
 	}
 	return nil
 }
@@ -338,7 +405,7 @@ func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, 
 	if mod := block.Height % state.BlocksOfEpoch; mod == 1 {
 		parent := checkpoint
 		checkpoint = &state.Checkpoint{
-			PrevHash:       parent.Hash,
+			Parent:         parent,
 			StartTimestamp: block.Timestamp,
 			Status:         state.Growing,
 			Votes:          make(map[string]uint64),

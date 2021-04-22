@@ -50,7 +50,7 @@ func (s *SupLink) Confirmed() bool {
 type Checkpoint struct {
 	Height         uint64
 	Hash           bc.Hash
-	PrevHash       bc.Hash
+	Parent         *Checkpoint
 	StartTimestamp uint64
 	SupLinks       []*SupLink
 	Status         CheckpointStatus
@@ -59,8 +59,8 @@ type Checkpoint struct {
 	Guaranties map[string]uint64 // pubKey -> num of guaranty
 }
 
-// AddSupLink add a valid sup link to checkpoint
-func (c *Checkpoint) AddSupLink(sourceHeight uint64, sourceHash bc.Hash, pubKey, signature string) *SupLink {
+// AddVerification add a valid verification to checkpoint
+func (c *Checkpoint) AddVerification(sourceHeight uint64, sourceHash bc.Hash, pubKey, signature string) *SupLink {
 	for _, supLink := range c.SupLinks {
 		if supLink.SourceHash == sourceHash {
 			supLink.Signatures[pubKey] = signature
