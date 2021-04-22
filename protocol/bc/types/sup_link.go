@@ -46,11 +46,16 @@ func (s SupLinks) writeTo(w io.Writer) error {
 // SupLink is an ordered pair of checkpoints (a, b), also written a → b
 // the validators will sign it once considered as legal
 type SupLink struct {
-	SourceHash bc.Hash
-	Signatures [consensus.NumOfValidators][]byte
+	SourceHeight uint64
+	SourceHash   bc.Hash
+	Signatures   [consensus.NumOfValidators][]byte
 }
 
 func (s *SupLink) readFrom(r *blockchain.Reader) (err error) {
+	if s.SourceHeight, err = blockchain.ReadVarint63(r); err != nil {
+		return err
+	}
+
 	if _, err := s.SourceHash.ReadFrom(r); err != nil {
 		return err
 	}
@@ -64,6 +69,10 @@ func (s *SupLink) readFrom(r *blockchain.Reader) (err error) {
 }
 
 func (s *SupLink) writeTo(w io.Writer) error {
+	if _, err := blockchain.WriteVarint63(w, s.SourceHeight); err != nil {
+		return err
+	}
+
 	if _, err := s.SourceHash.WriteTo(w); err != nil {
 		return err
 	}
