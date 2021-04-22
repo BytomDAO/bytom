@@ -162,9 +162,9 @@ func TestValidateTx(t *testing.T) {
 					),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewOriginalTxOutput(*consensus.BTMAssetID, 1818900000, mustDecodeString("00147d6b00edfbbc758a5da6130a5fa1a4cfec8422c3"), nil),
-					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9900000000, []byte{byte(vm.OP_FAIL)}, nil),
-					types.NewOriginalTxOutput(bc.AssetID{V0: 18446744073709551615, V1: 18446744073709551615, V2: 18446744073709551615, V3: 18446744073709551615}, 10000000000, mustDecodeString("0014447e597c1c326ad1a639f8023d3f87ae22a4e049"), nil),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 1818900000, mustDecodeString("00147d6b00edfbbc758a5da6130a5fa1a4cfec8422c3"), []byte{}),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9900000000, []byte{byte(vm.OP_FAIL)}, []byte{}),
+					types.NewOriginalTxOutput(bc.AssetID{V0: 16165687434804124223, V1: 17340226640812392746, V2: 1675575172863283796, V3: 775566604270464801}, 10000000000, mustDecodeString("0014447e597c1c326ad1a639f8023d3f87ae22a4e049"), []byte{}),
 				},
 			},
 			err: nil,
