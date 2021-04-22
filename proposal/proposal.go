@@ -158,7 +158,7 @@ func (b *blockBuilder) createCoinbaseTx() (tx *types.Tx, err error) {
 		return nil, err
 	}
 
-	if err = builder.AddOutput(types.NewOriginalTxOutput(*consensus.BTMAssetID, 0, script)); err != nil {
+	if err = builder.AddOutput(types.NewOriginalTxOutput(*consensus.BTMAssetID, 0, script, []byte{})); err != nil {
 		return nil, err
 	}
 	//TODO: calculate reward to proposer
