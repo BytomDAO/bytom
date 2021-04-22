@@ -108,22 +108,28 @@ func (c *Casper) authVerification(v *Verification) error {
 		return nil
 	}
 
-	source, err := c.store.GetCheckpoint(&v.SourceHash)
-	if err != nil {
-		return err
-	}
-
 	if err := c.verifyVerification(v); err != nil {
 		return err
 	}
 
-	supLink := target.AddVerification(v.SourceHeight, v.SourceHash, v.PubKey, v.Signature)
-	if source.Status == state.Justified && supLink.Confirmed() {
-		c.setJustified(target)
-		// must direct child
-		if target.Parent.Hash == source.Hash {
-			if err := c.setFinalized(source); err != nil {
-				return err
+	return c.addSupLinkToCheckpoint(target, v.toSupLink())
+}
+
+func (c *Casper) addSupLinkToCheckpoint(target *state.Checkpoint, supLink *state.SupLink) error {
+	source, err := c.store.GetCheckpoint(&supLink.SourceHash)
+	if err != nil {
+		return err
+	}
+
+	for pubKey, signature := range supLink.Signatures {
+		supLink := target.AddVerification(supLink.SourceHeight, supLink.SourceHash, pubKey, signature)
+		if source.Status == state.Justified && target.Status != state.Justified && supLink.Confirmed() {
+			c.setJustified(target)
+			// must direct child
+			if target.Parent.Hash == source.Hash {
+				if err := c.setFinalized(source); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -230,10 +236,6 @@ func (c *Casper) ApplyBlock(block *types.Block) (*Verification, error) {
 		return nil, err
 	}
 
-	if err := c.store.SaveCheckpoints(checkpoint); err != nil {
-		return nil, err
-	}
-
 	if block.Height%state.BlocksOfEpoch == 0 {
 		c.newEpochCh <- block.Hash()
 	}
@@ -242,20 +244,20 @@ func (c *Casper) ApplyBlock(block *types.Block) (*Verification, error) {
 
 // applyVerification copy the block's verification to the checkpoint
 // and if the current node is validator, it will also make a verification
-func (c *Casper) applyVerification(block *types.Block, checkpoint *state.Checkpoint) (*Verification, error) {
-	if checkpoint.Height%state.BlocksOfEpoch != 0 {
+func (c *Casper) applyVerification(block *types.Block, target *state.Checkpoint) (*Verification, error) {
+	if target.Height%state.BlocksOfEpoch != 0 {
 		return nil, nil
 	}
 
-	prevCheckpoint, err := c.prevCheckpoint(&checkpoint.Hash)
+	prevCheckpoint, err := c.prevCheckpoint(&target.Hash)
 	if err != nil {
 		return nil, err
 	}
 
 	validators := prevCheckpoint.Validators()
 	for _, supLink := range block.SupLinks {
-		for i, signature := range supLink.Signatures {
-			checkpoint.AddVerification(supLink.SourceHeight, supLink.SourceHash, validators[i].PubKey, hex.EncodeToString(signature))
+		if err := c.addSupLinkToCheckpoint(target, state.MakeSupLink(supLink, validators)); err != nil {
+			return nil, err
 		}
 	}
 
@@ -265,13 +267,13 @@ func (c *Casper) applyVerification(block *types.Block, checkpoint *state.Checkpo
 	}
 
 	// validator must broadcast verification
-	source := c.lastJustifiedCheckpointOfBranch(checkpoint)
+	source := c.lastJustifiedCheckpointOfBranch(target)
 	if source != nil {
 		v := &Verification{
 			SourceHash:   source.Hash,
-			TargetHash:   checkpoint.Hash,
+			TargetHash:   target.Hash,
 			SourceHeight: source.Height,
-			TargetHeight: checkpoint.Height,
+			TargetHeight: target.Height,
 			PubKey:       pubKey,
 		}
 
@@ -279,8 +281,7 @@ func (c *Casper) applyVerification(block *types.Block, checkpoint *state.Checkpo
 			return nil, err
 		}
 
-		checkpoint.AddVerification(v.SourceHeight, v.SourceHash, v.PubKey, v.Signature)
-		return v, nil
+		return v, c.addSupLinkToCheckpoint(target, v.toSupLink())
 	}
 	return nil, nil
 }
@@ -438,7 +439,7 @@ func (c *Casper) verifySameHeight(v *Verification) error {
 
 	for _, checkpoint := range checkpoints {
 		for _, supLink := range checkpoint.SupLinks {
-			if _, ok := supLink.Signatures[v.PubKey]; ok {
+			if _, ok := supLink.Signatures[v.PubKey]; ok && checkpoint.Hash != v.TargetHash {
 				c.evilValidators[v.PubKey] = []*Verification{v, makeVerification(supLink, checkpoint, v.PubKey)}
 				return errSameHeightInVerification
 			}

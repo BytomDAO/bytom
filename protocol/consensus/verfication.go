@@ -35,6 +35,14 @@ func makeVerification(supLink *state.SupLink, checkpoint *state.Checkpoint, pubK
 	}
 }
 
+func (v *Verification) toSupLink() *state.SupLink {
+	return &state.SupLink{
+		SourceHeight: v.SourceHeight,
+		SourceHash:   v.SourceHash,
+		Signatures:   map[string]string{v.PubKey: v.Signature},
+	}
+}
+
 func (v *Verification) validate() error {
 	if v.SourceHeight%state.BlocksOfEpoch != 0 || v.TargetHeight%state.BlocksOfEpoch != 0 {
 		return errVoteToGrowingCheckpoint
@@ -74,7 +82,7 @@ func (v *Verification) EncodeMessage() ([]byte, error) {
 }
 
 // Sign used to sign the verification by specified xPrv
-func (v *Verification) Sign(xPrv chainkd.XPrv) error  {
+func (v *Verification) Sign(xPrv chainkd.XPrv) error {
 	message, err := v.EncodeMessage()
 	if err != nil {
 		return err

@@ -1,9 +1,11 @@
 package state
 
 import (
+	"encoding/hex"
 	"sort"
 
 	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/bc/types"
 )
 
 const (
@@ -36,6 +38,20 @@ type SupLink struct {
 	SourceHeight uint64
 	SourceHash   bc.Hash
 	Signatures   map[string]string // pubKey to signature
+}
+
+// MakeSupLink convert the types package sup link to state package sup lick
+func MakeSupLink(supLink *types.SupLink, validators []*Validator) *SupLink {
+	signatures := make(map[string]string)
+	for i, signature := range supLink.Signatures {
+		signatures[validators[i].PubKey] = hex.EncodeToString(signature)
+	}
+
+	return &SupLink{
+		SourceHeight: supLink.SourceHeight,
+		SourceHash:   supLink.SourceHash,
+		Signatures:   signatures,
+	}
 }
 
 // Confirmed if at least 2/3 of validators have published votes with sup link
