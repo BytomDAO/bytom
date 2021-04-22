@@ -4,13 +4,12 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/bytom/bytom/testcontrol"
-
 	"github.com/davecgh/go-spew/spew"
 
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/testcontrol"
 )
 
 var txs = []*types.Tx{
