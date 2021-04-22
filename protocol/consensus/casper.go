@@ -240,8 +240,8 @@ func (c *Casper) ApplyBlock(block *types.Block) (*Verification, error) {
 	return myVerification, nil
 }
 
-// applyVerification copy the block's verification to the checkpoint, and if the current node is validator
-// it will be find a last justified checkpoint as the source of verification
+// applyVerification copy the block's verification to the checkpoint
+// and if the current node is validator, it will also make a verification
 func (c *Casper) applyVerification(block *types.Block, checkpoint *state.Checkpoint) (*Verification, error) {
 	if checkpoint.Height%state.BlocksOfEpoch != 0 {
 		return nil, nil
