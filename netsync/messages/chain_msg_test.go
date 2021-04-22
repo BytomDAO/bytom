@@ -1,9 +1,10 @@
 package messages
 
 import (
-	"github.com/bytom/bytom/testcontrol"
 	"reflect"
 	"testing"
+
+	"github.com/bytom/bytom/testcontrol"
 
 	"github.com/davecgh/go-spew/spew"
 
@@ -95,6 +96,7 @@ var testBlock = &types.Block{
 		BlockCommitment: types.BlockCommitment{
 			TransactionsMerkleRoot: bc.Hash{V0: uint64(0x11)},
 		},
+		SupLinks: types.SupLinks{},
 	},
 }
 
@@ -128,6 +130,7 @@ var testHeaders = []*types.BlockHeader{
 		BlockCommitment: types.BlockCommitment{
 			TransactionsMerkleRoot: bc.Hash{V0: uint64(0x11)},
 		},
+		SupLinks: types.SupLinks{},
 	},
 	{
 		Version:   1,
@@ -136,6 +139,7 @@ var testHeaders = []*types.BlockHeader{
 		BlockCommitment: types.BlockCommitment{
 			TransactionsMerkleRoot: bc.Hash{V0: uint64(0x11)},
 		},
+		SupLinks: types.SupLinks{},
 	},
 	{
 		Version:   1,
@@ -144,6 +148,7 @@ var testHeaders = []*types.BlockHeader{
 		BlockCommitment: types.BlockCommitment{
 			TransactionsMerkleRoot: bc.Hash{V0: uint64(0x11)},
 		},
+		SupLinks: types.SupLinks{},
 	},
 }
 

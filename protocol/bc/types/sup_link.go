@@ -56,13 +56,11 @@ func (s *SupLink) readFrom(r *blockchain.Reader) (err error) {
 	}
 
 	for i := 0; i < consensus.NumOfValidators; i++ {
-		if signature, err := blockchain.ReadVarstr31(r); err != nil {
+		if s.Signatures[i], err = blockchain.ReadVarstr31(r); err != nil {
 			return err
-		} else {
-			s.Signatures[i] = signature
 		}
 	}
-	return nil
+	return
 }
 
 func (s *SupLink) writeTo(w io.Writer) error {
