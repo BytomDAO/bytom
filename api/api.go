@@ -219,6 +219,11 @@ func (a *API) buildHandler() {
 		m.Handle("/get-asset", jsonHandler(a.getAsset))
 		m.Handle("/list-assets", jsonHandler(a.listAssets))
 
+		m.Handle("/create-contract", jsonHandler(a.createContract))
+		m.Handle("/update-contract-alias", jsonHandler(a.updateContractAlias))
+		m.Handle("/get-contract", jsonHandler(a.getContract))
+		m.Handle("/list-contracts", jsonHandler(a.listContracts))
+
 		m.Handle("/create-key", jsonHandler(a.pseudohsmCreateKey))
 		m.Handle("/update-key-alias", jsonHandler(a.pseudohsmUpdateKeyAlias))
 		m.Handle("/list-keys", jsonHandler(a.pseudohsmListKeys))
