@@ -146,7 +146,7 @@ func TestValidateTx(t *testing.T) {
 				Inputs: []*types.TxInput{
 					types.NewSpendInput(
 						[][]byte{
-							mustDecodeString("2dd726cf4319eb1186cfd60a234a6efa8939577f66a1eba0e0dd675d990145ebad5c415e5b5038d2af0407f922b801a07b17e958212bd27b0cb86cc93f530d01"),
+							mustDecodeString("cbd46e05c84c23a1ef7c27dcef189f1d386088a49df1c345de5d988bbe7d557d8406c596d6caea161473f5e3467d3d1883a75a559c71a0be5f2452b8aa3e510e"),
 							mustDecodeString("7642ba797fd89d1f98a8559b4ca74123697dd4dee882955acd0da9010a80d64e"),
 						},
 						bc.Hash{V0: 14760873410800997144, V1: 1698395500822741684, V2: 5965908492734661392, V3: 9445539829830863994},
@@ -154,17 +154,17 @@ func TestValidateTx(t *testing.T) {
 					types.NewIssuanceInput(
 						mustDecodeString("fd0aec4229deb281"),
 						10000000000,
-						mustDecodeString("ae20f19f0e71c6595b989ed5e0f11bec5e3a99a3386f8289223470a96296231cda105151ad"),
+						mustDecodeString("ae20ae12def13abe1295b477c24aa8ad5f1a60a60927c355e046bcd078a133b8d94c5151ad"),
 						[][]byte{
-							mustDecodeString("cc5e66349e9b79c8a10379af3a74d223a0b6e780eeceddaa6ed235fcc0bfe7abe4e21521462ab5948ceddd076257a2584009a71904261972f0070b2b59ed1800"),
+							mustDecodeString("d6b284c40289a9417b53b3351483112ccf8a5f35cdb7812684a6df471a461774b118e546444dd16ddb469b536b96b6185430faff75ffae4661b9853657a2de0f"),
 						},
 						mustDecodeString("7b0a202022646563696d616c73223a20382c0a2020226465736372697074696f6e223a207b7d2c0a2020226e616d65223a2022222c0a20202273796d626f6c223a2022220a7d"),
 					),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewOriginalTxOutput(*consensus.BTMAssetID, 1818900000, mustDecodeString("00147d6b00edfbbc758a5da6130a5fa1a4cfec8422c3"), []byte{}),
-					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9900000000, []byte{byte(vm.OP_FAIL)}, []byte{}),
-					types.NewOriginalTxOutput(bc.AssetID{V0: 16165687434804124223, V1: 17340226640812392746, V2: 1675575172863283796, V3: 775566604270464801}, 10000000000, mustDecodeString("0014447e597c1c326ad1a639f8023d3f87ae22a4e049"), []byte{}),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 1818900000, mustDecodeString("00147d6b00edfbbc758a5da6130a5fa1a4cfec8422c3"), nil),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9900000000, []byte{byte(vm.OP_FAIL)}, nil),
+					types.NewOriginalTxOutput(bc.AssetID{V0: 18275849036764733644, V1: 7408071477801754980, V2: 2368297496240756305, V3: 216480183129600045}, 10000000000, mustDecodeString("0014447e597c1c326ad1a639f8023d3f87ae22a4e049"), nil),
 				},
 			},
 			err: nil,
