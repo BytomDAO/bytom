@@ -31,8 +31,15 @@ const (
 	BCRPContractHashDataSize       = 32
 	CoinbaseArbitrarySizeLimit     = 128
 
+	BCRPRequiredBTMAmount = uint64(100000000)
+
 	BTMAlias = "BTM"
 )
+
+type CasperConfig struct {
+	// BlockTimeInterval, milliseconds, the block time interval for producing a block
+	BlockTimeInterval uint64
+}
 
 // BTMAssetID is BTM's asset id, the soul asset of Bytom
 var BTMAssetID = &bc.AssetID{
@@ -94,6 +101,9 @@ type Params struct {
 	// as one method to discover peers.
 	DNSSeeds    []string
 	Checkpoints []Checkpoint
+
+	// CasperConfig defines the casper consensus parameters
+	CasperConfig
 }
 
 // ActiveNetParams is ...

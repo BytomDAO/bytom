@@ -1,7 +1,9 @@
 package vmutil
 
 import (
-	"github.com/bytom/bytom/crypto/ed25519"
+	"crypto/ed25519"
+
+	"github.com/bytom/bytom/consensus/bcrp"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/vm"
 )
@@ -62,6 +64,30 @@ func RetireProgram(comment []byte) ([]byte, error) {
 	if len(comment) != 0 {
 		builder.AddData(comment)
 	}
+	return builder.Build()
+}
+
+// RegisterProgram generates the script for register contract output
+// follow BCRP(bytom contract register protocol)
+func RegisterProgram(contract []byte) ([]byte, error) {
+	builder := NewBuilder()
+	builder.AddOp(vm.OP_FAIL)
+	builder.AddOp(vm.OP_PUSHDATA1)
+	builder.AddData([]byte(bcrp.BCRP))
+	builder.AddOp(vm.OP_PUSHDATA1)
+	builder.AddData([]byte{byte(bcrp.Version)})
+	builder.AddOp(vm.OP_PUSHDATA1)
+	builder.AddData(contract)
+	return builder.Build()
+}
+
+// CallContractProgram generates the script for control contract output
+// follow BCRP(bytom contract register protocol)
+func CallContractProgram(contractID []byte) ([]byte, error) {
+	builder := NewBuilder()
+	builder.AddOp(vm.OP_1)
+	builder.AddOp(vm.OP_PUSHDATA1)
+	builder.AddData(contractID)
 	return builder.Build()
 }
 

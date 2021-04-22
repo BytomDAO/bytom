@@ -3,7 +3,6 @@ module github.com/bytom/bytom
 go 1.16
 
 replace (
-	github.com/agl/ed25519 => ./lib/github.com/tendermint/ed25519
 	github.com/prometheus/prometheus/util/flock => ./lib/github.com/prometheus/prometheus/util/flock
 	github.com/tendermint/go-wire => github.com/tendermint/go-amino v0.6.2
 	github.com/zondax/ledger-goclient => github.com/Zondax/ledger-cosmos-go v0.1.0
@@ -13,7 +12,6 @@ replace (
 )
 
 require (
-	github.com/agl/ed25519 v0.0.0-00010101000000-000000000000 // indirect
 	github.com/btcsuite/btcd v0.21.0-beta // indirect
 	github.com/btcsuite/go-socks v0.0.0-20170105172521-4720035b7bfd
 	github.com/cespare/cp v1.1.1

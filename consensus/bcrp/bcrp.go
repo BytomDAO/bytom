@@ -8,8 +8,11 @@ import (
 	"github.com/bytom/bytom/protocol/vm"
 )
 
-//bcrp bytom contract register protocol
-const bcrp = "bcrp"
+// BCRP bytom contract register protocol
+const BCRP = "bcrp"
+
+// Version bcrp version
+const Version = 1
 
 // IsBCRPScript checks if a control program is bytom contract register protocol
 // BCRP script format: OP_FAIL + OP_PUSHDATA1 + "04" + hex("bcrp") + OP_PUSHDATA1 + "01" + "01" + OP_PUSHDATA1 + len(contract) + contract
@@ -31,7 +34,7 @@ func IsBCRPScript(prog []byte) bool {
 		return false
 	}
 
-	if !bytes.Equal(inst[1].Data, []byte(bcrp)) {
+	if !bytes.Equal(inst[1].Data, []byte(BCRP)) {
 		return false
 	}
 
@@ -40,7 +43,7 @@ func IsBCRPScript(prog []byte) bool {
 	}
 
 	// version 1
-	if !bytes.Equal(inst[2].Data, []byte{byte(1)}) {
+	if !bytes.Equal(inst[2].Data, []byte{byte(Version)}) {
 		return false
 	}
 
@@ -51,9 +54,9 @@ func IsBCRPScript(prog []byte) bool {
 	return true
 }
 
-// IsCallBCRPScript checks if a control program is call contract registered by bytom contract register protocol
-// call BCRP script format: OP_1 + OP_DATA_32 + SHA3-256(contract)
-func IsCallBCRPScript(prog []byte) bool {
+// IsCallContractScript checks if a program is script call contract registered by BCRP
+// call contract script format: OP_1 + OP_PUSHDATA1 + SHA3-256(contract)
+func IsCallContractScript(prog []byte) bool {
 	insts, err := vm.ParseProgram(prog)
 	if err != nil {
 		return false
@@ -67,7 +70,7 @@ func IsCallBCRPScript(prog []byte) bool {
 		return false
 	}
 
-	return insts[1].Op == vm.OP_DATA_32 && len(insts[1].Data) == consensus.BCRPContractHashDataSize
+	return insts[1].Op == vm.OP_PUSHDATA1 && len(insts[1].Data) == consensus.BCRPContractHashDataSize
 }
 
 // ParseContractHash parse contract hash from call BCRP script

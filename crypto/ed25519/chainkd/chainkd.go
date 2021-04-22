@@ -1,12 +1,12 @@
 package chainkd
 
 import (
+	"crypto/ed25519"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha512"
 	"io"
 
-	"github.com/bytom/bytom/crypto/ed25519"
 	"github.com/bytom/bytom/crypto/ed25519/ecmath"
 )
 
