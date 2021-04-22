@@ -17,11 +17,19 @@ func TestBlockCache(t *testing.T) {
 	}
 	blocks := make(map[bc.Hash]*types.Block)
 	blockIndexHashes := make(map[uint64][]*bc.Hash)
-	for i := 0; i < maxCachedBlocks + 10; i++ {
+	for i := 0; i < maxCachedBlocks+10; i++ {
 		block := newBlock(uint64(i))
 		hash := block.Hash()
 		blocks[block.Hash()] = block
 		blockIndexHashes[block.Height] = append(blockIndexHashes[block.Height], &hash)
+	}
+
+	fillBlockHeaderFn := func(hash *bc.Hash) (*types.BlockHeader, error) {
+		return &blocks[*hash].BlockHeader, nil
+	}
+
+	fillBlockTxsFn := func(hash *bc.Hash) ([]*types.Tx, error) {
+		return blocks[*hash].Transactions, nil
 	}
 
 	fillFn := func(hash *bc.Hash) (*types.Block, error) {
@@ -32,9 +40,9 @@ func TestBlockCache(t *testing.T) {
 		return blockIndexHashes[height], nil
 	}
 
-	cache := newCache(fillFn, fillBlockHashesFn)
+	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillFn, fillBlockHashesFn)
 
-	for i := 0; i < maxCachedBlocks + 10; i++ {
+	for i := 0; i < maxCachedBlocks+10; i++ {
 		block := newBlock(uint64(i))
 		hash := block.Hash()
 		cache.lookup(&hash)
@@ -48,7 +56,7 @@ func TestBlockCache(t *testing.T) {
 		}
 	}
 
-	for i := 10; i < maxCachedBlocks + 10; i++ {
+	for i := 10; i < maxCachedBlocks+10; i++ {
 		block := newBlock(uint64(i))
 		hash := block.Hash()
 		if b, _ := cache.get(&hash); b == nil {

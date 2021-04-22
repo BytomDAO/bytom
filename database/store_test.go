@@ -91,7 +91,7 @@ func TestLoadBlockIndexBestHeight(t *testing.T) {
 
 		for _, block := range savedBlocks {
 			blockHash := block.Hash()
-			if block.Height <= c.stateBestHeight != index.BlockExist(&blockHash) {
+			if existIndex := index.BlockExist(&blockHash); (block.Height <= c.stateBestHeight) != existIndex {
 				t.Errorf("Error in load block index")
 			}
 		}
