@@ -23,6 +23,17 @@ type Verification struct {
 	PubKey       string
 }
 
+func makeVerification(supLink *state.SupLink, checkpoint *state.Checkpoint, pubKey string) *Verification {
+	return &Verification{
+		SourceHash:   supLink.SourceHash,
+		TargetHash:   checkpoint.Hash,
+		SourceHeight: supLink.SourceHeight,
+		TargetHeight: checkpoint.Height,
+		Signature:    supLink.Signatures[pubKey],
+		PubKey:       pubKey,
+	}
+}
+
 func (v *Verification) validate() error {
 	if v.SourceHeight%state.BlocksOfEpoch != 0 || v.TargetHeight%state.BlocksOfEpoch != 0 {
 		return errVoteToGrowingCheckpoint

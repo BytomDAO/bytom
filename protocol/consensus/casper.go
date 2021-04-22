@@ -36,7 +36,7 @@ type Casper struct {
 	mu               sync.RWMutex
 	tree             *treeNode
 	rollbackNotifyCh chan bc.Hash
-	newEpochCh       chan *state.Checkpoint
+	newEpochCh       chan bc.Hash
 	store            protocol.Store
 	// pubKey -> conflicting verifications
 	evilValidators map[string][]*Verification
@@ -60,12 +60,7 @@ func (c *Casper) BestChain() (uint64, bc.Hash) {
 // Validators return the validators by specified block hash
 // e.g. if the block num of epoch is 100, and the block height corresponding to the block hash is 130, then will return the voting results of height in 0~100
 func (c *Casper) Validators(blockHash *bc.Hash) ([]*state.Validator, error) {
-	hash, err := c.prevCheckpointHash(blockHash)
-	if err != nil {
-		return nil, err
-	}
-
-	checkpoint, err := c.store.GetCheckpoint(hash)
+	checkpoint, err := c.prevCheckpoint(blockHash)
 	if err != nil {
 		return nil, err
 	}
@@ -85,27 +80,35 @@ func (c *Casper) AuthVerification(v *Verification) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	// root of tree is the last finalized checkpoint
+	if v.TargetHeight < c.tree.checkpoint.Height {
+		// discard the verification message which height of target less than height of last finalized checkpoint
+		// is for simplify check the vote within the span of its other votes
+		return nil
+	}
+
+	prevCheckpoint, err := c.prevCheckpoint(&v.TargetHash)
+	if err != nil {
+		return err
+	}
+
+	if !prevCheckpoint.ContainsValidator(v.PubKey) {
+		return errPubKeyIsNotValidator
+	}
+
+	return c.authVerification(v)
+}
+
+func (c *Casper) authVerification(v *Verification) error {
 	target, err := c.store.GetCheckpoint(&v.TargetHash)
 	if err != nil {
 		c.verificationCache.Add(verificationCacheKey(v.TargetHash, v.PubKey), v)
 		return nil
 	}
 
-	// root of tree is the last finalized checkpoint
-	if target.Height < c.tree.checkpoint.Height {
-		// discard the verification message which height of target less than height of last finalized checkpoint
-		// is for simplify check the vote within the span of its other votes
-		return nil
-	}
-
 	source, err := c.store.GetCheckpoint(&v.SourceHash)
 	if err != nil {
-		// the synchronization block is later than the arrival of the verification message
 		return err
-	}
-
-	if !target.ContainsValidator(v.PubKey) {
-		return errPubKeyIsNotValidator
 	}
 
 	if err := c.verifyVerification(v); err != nil {
@@ -223,23 +226,31 @@ func (c *Casper) ApplyBlock(block *types.Block) error {
 	}
 
 	if block.Height%state.BlocksOfEpoch == 0 {
-		c.newEpochCh <- checkpoint
+		c.newEpochCh <- block.Hash()
 	}
 	return nil
 }
 
 func (c *Casper) authVerificationLoop() {
-	for checkpoint := range c.newEpochCh {
-		for _, validator := range checkpoint.Validators() {
-			key := verificationCacheKey(checkpoint.Hash, validator.PubKey)
+	for blockHash := range c.newEpochCh {
+		validators, err := c.Validators(&blockHash)
+		if err != nil {
+			log.WithField("err", err).Error("get validators when auth verification")
+			continue
+		}
+
+		for _, validator := range validators {
+			key := verificationCacheKey(blockHash, validator.PubKey)
 			verification, ok := c.verificationCache.Get(key)
 			if !ok {
 				continue
 			}
 
-			if err := c.AuthVerification(verification.(*Verification)); err != nil {
+			c.mu.Lock()
+			if err := c.authVerification(verification.(*Verification)); err != nil {
 				log.WithField("err", err).Error("auth verification in cache")
 			}
+			c.mu.Unlock()
 
 			c.verificationCache.Remove(key)
 		}
@@ -360,8 +371,8 @@ func (c *Casper) verifySameHeight(v *Verification) error {
 
 	for _, checkpoint := range checkpoints {
 		for _, supLink := range checkpoint.SupLinks {
-			if signature, ok := supLink.Signatures[v.PubKey]; ok {
-				c.evilValidators[v.PubKey] = []*Verification{v, makeVerification(supLink, checkpoint, signature, v.PubKey)}
+			if _, ok := supLink.Signatures[v.PubKey]; ok {
+				c.evilValidators[v.PubKey] = []*Verification{v, makeVerification(supLink, checkpoint, v.PubKey)}
 				return errSameHeightInVerification
 			}
 		}
@@ -377,10 +388,10 @@ func (c *Casper) verifySpanHeight(v *Verification) error {
 		}
 
 		for _, supLink := range checkpoint.SupLinks {
-			if signature, ok := supLink.Signatures[v.PubKey]; ok {
+			if _, ok := supLink.Signatures[v.PubKey]; ok {
 				if (checkpoint.Height < v.TargetHeight && supLink.SourceHeight > v.SourceHeight) ||
 					(checkpoint.Height > v.TargetHeight && supLink.SourceHeight < v.SourceHeight) {
-					c.evilValidators[v.PubKey] = []*Verification{v, makeVerification(supLink, checkpoint, signature, v.PubKey)}
+					c.evilValidators[v.PubKey] = []*Verification{v, makeVerification(supLink, checkpoint, v.PubKey)}
 					return true
 				}
 			}
@@ -390,17 +401,6 @@ func (c *Casper) verifySpanHeight(v *Verification) error {
 		return errSpanHeightInVerification
 	}
 	return nil
-}
-
-func makeVerification(supLink *state.SupLink, checkpoint *state.Checkpoint, signature, pubKey string) *Verification {
-	return &Verification{
-		SourceHash:   supLink.SourceHash,
-		TargetHash:   checkpoint.Hash,
-		SourceHeight: supLink.SourceHeight,
-		TargetHeight: checkpoint.Height,
-		Signature:    signature,
-		PubKey:       pubKey,
-	}
 }
 
 // justifiedHeight is the max justified height of checkpoint from node to root
@@ -417,6 +417,15 @@ func chainOfMaxJustifiedHeight(node *treeNode, justifiedHeight uint64) (uint64, 
 		}
 	}
 	return bestHeight, bestHash, maxJustifiedHeight
+}
+
+func (c *Casper) prevCheckpoint(blockHash *bc.Hash) (*state.Checkpoint, error) {
+	hash, err := c.prevCheckpointHash(blockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.store.GetCheckpoint(hash)
 }
 
 func (c *Casper) prevCheckpointHash(blockHash *bc.Hash) (*bc.Hash, error) {
