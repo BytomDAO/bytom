@@ -37,7 +37,8 @@ const (
 )
 
 type CasperConfig struct {
-	BlockTimeInterval uint64 // milliseconds, the block time interval for producing a block
+	// BlockTimeInterval, milliseconds, the block time interval for producing a block
+	BlockTimeInterval uint64
 }
 
 // BTMAssetID is BTM's asset id, the soul asset of Bytom
