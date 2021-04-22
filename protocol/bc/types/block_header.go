@@ -19,6 +19,7 @@ type BlockHeader struct {
 	PreviousBlockHash bc.Hash // The hash of the previous block.
 	Timestamp         uint64  // The time of the block in seconds.
 	BlockWitness
+	SupLinks
 	BlockCommitment
 }
 
@@ -94,6 +95,10 @@ func (bh *BlockHeader) readFrom(r *blockchain.Reader) (serflag uint8, err error)
 		return 0, err
 	}
 
+	if _, err = blockchain.ReadExtensibleString(r, bh.SupLinks.readFrom); err != nil {
+		return 0, err
+	}
+
 	return
 }
 
@@ -129,6 +134,10 @@ func (bh *BlockHeader) writeTo(w io.Writer, serflags uint8) (err error) {
 	}
 
 	if _, err = blockchain.WriteExtensibleString(w, nil, bh.BlockWitness.writeTo); err != nil {
+		return err
+	}
+
+	if _, err = blockchain.WriteExtensibleString(w, nil, bh.SupLinks.writeTo); err != nil {
 		return err
 	}
 

@@ -15,6 +15,7 @@ const (
 	StorageGasRate   = int64(1)
 	MaxGasAmount     = int64(200000)
 	DefaultGasCredit = int64(30000)
+	NumOfValidators  = int(10)
 
 	//config parameter for coinbase reward
 	CoinbasePendingBlockNumber = uint64(100)

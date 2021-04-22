@@ -35,6 +35,7 @@ func TestBlockHeader(t *testing.T) {
 		"20",         // commitment extensible field length
 		"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03",                                                                     // transactions merkle root
 		"41403b71527c26bff856a0f247df4fce1b48780f1bd9fd55ba79fb637b0f2e897bb019c5449febf593032dd25b9027cea712c752104700e67d8813326b06d052bf00", // block witness
+		"0100", // supLinks
 	}, "")
 
 	gotHex := testutil.Serialize(t, blockHeader)
@@ -83,6 +84,7 @@ func TestMarshalBlockHeader(t *testing.T) {
 				"20",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03",                                                                     // transactions merkle root
 				"41409dc8892df991e1d1110a5cb1bbfd57f2f5e3aa89464de50f9555c7575d9c2b21cf8f05b77b880d8ae4dd218efb15b775c32c9d77f9a2955d69dca9020c127709", // block witness
+				"0100", // supLinks
 			}, ""),
 		},
 		{
@@ -128,6 +130,7 @@ func TestMarshalBlockHeader(t *testing.T) {
 				"20",         // commitment extensible field length
 				"0000000000000000000000000000000000000000000000000000000000000000",                                                                     // transactions merkle root
 				"4140ac6380a17685c48af4b0a0877d9d61e83b50bd95daa61083dd90031ae66d12d7a371c41cce24887d4d422202b747494bb0e7ca78567d6663be82b27714357407", // block witness
+				"0100", // supLinks
 			}, ""),
 		},
 		{
@@ -147,6 +150,7 @@ func TestMarshalBlockHeader(t *testing.T) {
 				"20",         // commitment extensible field length
 				"0000000000000000000000000000000000000000000000000000000000000000", // transactions merkle root
 				"0100", // block witness
+				"0100", // supLinks
 			}, ""),
 		},
 	}
@@ -190,6 +194,7 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				"20",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03",                                                                     // transactions merkle root
 				"41409dc8892df991e1d1110a5cb1bbfd57f2f5e3aa89464de50f9555c7575d9c2b21cf8f05b77b880d8ae4dd218efb15b775c32c9d77f9a2955d69dca9020c127709", // block witness
+				"0100", // supLinks
 			}, ""),
 			wantBlockHeader: &BlockHeader{
 				Version:           1,
@@ -212,6 +217,7 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				"20",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03",                                                                     // transactions merkle root
 				"41409dc8892df991e1d1110a5cb1bbfd57f2f5e3aa89464de50f9555c7575d9c2b21cf8f05b77b880d8ae4dd218efb15b775c32c9d77f9a2955d69dca9020c127709", // block witness
+				"0100", // supLinks
 			}, ""),
 			wantBlockHeader: &BlockHeader{
 				Version:           1,
@@ -258,6 +264,7 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				"20",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
 				"0100", // block witness
+				"0100", // supLinks
 			}, ""),
 			wantError: errors.New("binary: varint overflows a 64-bit integer"),
 		},
@@ -271,6 +278,7 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				"20",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03",                                                                     // transactions merkle root
 				"4140e0776a3cf17b3e0f8340caeee32a75d02ecc25cf20bee9e5c7503bca3b2703c3c61fdcb4211ed59b58eb025ac81e06b138d54b5d01ea4614dd0f65e641836900", // block witness
+				"0100", // supLinks
 			}, ""),
 			wantBlockHeader: &BlockHeader{
 				Version:           1,
