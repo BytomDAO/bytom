@@ -84,6 +84,15 @@ func (c *Casper) AuthVerification(v *Verification) error {
 		return err
 	}
 
+	validators, err := c.Validators(&v.TargetHash)
+	if err != nil {
+		return err
+	}
+
+	if !isValidator(v.PubKey, validators) {
+		return errPubKeyIsNotValidator
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -92,15 +101,6 @@ func (c *Casper) AuthVerification(v *Verification) error {
 		// discard the verification message which height of target less than height of last finalized checkpoint
 		// is for simplify check the vote within the span of its other votes
 		return nil
-	}
-
-	validators, err := c.Validators(&v.TargetHash)
-	if err != nil {
-		return err
-	}
-
-	if !isValidator(v.PubKey, validators) {
-		return errPubKeyIsNotValidator
 	}
 
 	return c.authVerification(v)
@@ -217,9 +217,10 @@ func (c *Casper) ApplyBlock(block *types.Block) (*Verification, error) {
 		return nil, err
 	}
 
-	if block.Height%state.BlocksOfEpoch == 0 {
+	if block.Height % state.BlocksOfEpoch == 0 {
 		c.newEpochCh <- block.Hash()
 	}
+
 	return c.myVerification(target, validators)
 }
 
