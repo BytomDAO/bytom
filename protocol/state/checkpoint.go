@@ -1,11 +1,9 @@
 package state
 
 import (
-	"encoding/hex"
 	"sort"
 
 	"github.com/bytom/bytom/protocol/bc"
-	"github.com/bytom/bytom/protocol/bc/types"
 )
 
 const (
@@ -22,8 +20,8 @@ const (
 	// Growing means that the checkpoint has not ended the current epoch
 	Growing CheckpointStatus = iota
 
-	// Unverified means thant the checkpoint has ended the current epoch, but not been justified
-	Unverified
+	// Unjustified means thant the checkpoint has ended the current epoch, but not been justified
+	Unjustified
 
 	// Justified if checkpoint is the root, or there exists a super link c′ → c where c′ is justified
 	Justified
@@ -40,22 +38,8 @@ type SupLink struct {
 	Signatures   map[string]string // pubKey to signature
 }
 
-// MakeSupLink convert the types package sup link to state package sup lick
-func MakeSupLink(supLink *types.SupLink, validators []*Validator) *SupLink {
-	signatures := make(map[string]string)
-	for i, signature := range supLink.Signatures {
-		signatures[validators[i].PubKey] = hex.EncodeToString(signature)
-	}
-
-	return &SupLink{
-		SourceHeight: supLink.SourceHeight,
-		SourceHash:   supLink.SourceHash,
-		Signatures:   signatures,
-	}
-}
-
-// Confirmed if at least 2/3 of validators have published votes with sup link
-func (s *SupLink) Confirmed() bool {
+// IsMajority if at least 2/3 of validators have published votes with sup link
+func (s *SupLink) IsMajority() bool {
 	return len(s.Signatures) > numOfValidators*2/3
 }
 
@@ -75,15 +59,14 @@ type Checkpoint struct {
 	Guaranties map[string]uint64 // pubKey -> num of guaranty
 }
 
-// AddVerification add a valid verification to checkpoint
-func (c *Checkpoint) AddVerification(sourceHeight uint64, sourceHash bc.Hash, pubKey, signature string) *SupLink {
+// AddVerification add a valid verification to checkpoint's supLink, return the one
+func (c *Checkpoint) AddVerification(sourceHash bc.Hash, sourceHeight uint64, pubKey, signature string) *SupLink {
 	for _, supLink := range c.SupLinks {
 		if supLink.SourceHash == sourceHash {
 			supLink.Signatures[pubKey] = signature
 			return supLink
 		}
 	}
-
 	supLink := &SupLink{
 		SourceHeight: sourceHeight,
 		SourceHash:   sourceHash,
@@ -127,14 +110,4 @@ func (c *Checkpoint) Validators() []*Validator {
 		end = len(validators)
 	}
 	return validators[:end]
-}
-
-// ContainsValidator check whether the checkpoint contains the pubKey as validator
-func (c *Checkpoint) ContainsValidator(pubKey string) bool {
-	for _, v := range c.Validators() {
-		if v.PubKey == pubKey {
-			return true
-		}
-	}
-	return false
 }
