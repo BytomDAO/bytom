@@ -20,8 +20,8 @@ const (
 	// Growing means that the checkpoint has not ended the current epoch
 	Growing CheckpointStatus = iota
 
-	// Unverified means thant the checkpoint has ended the current epoch, but not been justified
-	Unverified
+	// Unjustified means thant the checkpoint has ended the current epoch, but not been justified
+	Unjustified
 
 	// Justified if checkpoint is the root, or there exists a super link c′ → c where c′ is justified
 	Justified

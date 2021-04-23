@@ -447,7 +447,7 @@ func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, 
 		}
 		node.children = append(node.children, &treeNode{checkpoint: checkpoint})
 	} else if mod == 0 {
-		checkpoint.Status = state.Unverified
+		checkpoint.Status = state.Unjustified
 	}
 
 	checkpoint.Height = block.Height
