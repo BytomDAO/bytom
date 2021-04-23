@@ -61,10 +61,10 @@ type Checkpoint struct {
 
 // AddVerification add a valid verification to checkpoint's supLink, return the one
 func (c *Checkpoint) AddVerification(sourceHash bc.Hash, sourceHeight uint64, pubKey, signature string) *SupLink {
-	for _, s := range c.SupLinks {
-		if s.SourceHash == sourceHash {
-			s.Signatures[pubKey] = signature
-			return s
+	for _, supLink := range c.SupLinks {
+		if supLink.SourceHash == sourceHash {
+			supLink.Signatures[pubKey] = signature
+			return supLink
 		}
 	}
 	supLink := &SupLink{
@@ -72,7 +72,7 @@ func (c *Checkpoint) AddVerification(sourceHash bc.Hash, sourceHeight uint64, pu
 		SourceHash:   sourceHash,
 		Signatures:   map[string]string{pubKey: signature},
 	}
-	c.SupLinks = append(c.SupLinks, )
+	c.SupLinks = append(c.SupLinks, supLink)
 	return supLink
 }
 
