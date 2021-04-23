@@ -258,14 +258,13 @@ func (c *Casper) applyTransactions(target *state.Checkpoint, transactions []*typ
 }
 
 // applySupLinks copy the block's supLink to the checkpoint
-func (c *Casper) applySupLinks(target *state.Checkpoint, blockSupLinks []*types.SupLink, validators []*state.Validator) error {
+func (c *Casper) applySupLinks(target *state.Checkpoint, supLinks []*types.SupLink, validators []*state.Validator) error {
 	if target.Height%state.BlocksOfEpoch != 0 {
 		return nil
 	}
 
-	for _, blockSupLink := range blockSupLinks {
-		supLink := state.MakeSupLink(blockSupLink, validators)
-		for _, verification := range supLinkToVerifications(supLink, target.Hash, target.Height) {
+	for _, supLink := range supLinks {
+		for _, verification := range supLinkToVerifications(supLink, validators, target.Hash, target.Height) {
 			if err := c.verifyVerification(verification, true); err == nil {
 				if err := c.addVerificationToCheckpoint(target, verification); err != nil {
 					return err
@@ -276,16 +275,16 @@ func (c *Casper) applySupLinks(target *state.Checkpoint, blockSupLinks []*types.
 	return nil
 }
 
-func supLinkToVerifications(supLink *state.SupLink, targetHash bc.Hash, targetHeight uint64) []*Verification {
+func supLinkToVerifications(supLink *types.SupLink, validators []*state.Validator, targetHash bc.Hash, targetHeight uint64) []*Verification {
 	var result []*Verification
-	for pubKey, signature := range supLink.Signatures {
+	for i, signature := range supLink.Signatures {
 		result = append(result, &Verification{
 			SourceHash:   supLink.SourceHash,
 			TargetHash:   targetHash,
 			SourceHeight: supLink.SourceHeight,
 			TargetHeight: targetHeight,
-			Signature:    signature,
-			PubKey:       pubKey,
+			Signature:    hex.EncodeToString(signature),
+			PubKey:       validators[i].PubKey,
 		})
 	}
 	return result
