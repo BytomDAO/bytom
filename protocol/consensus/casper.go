@@ -59,7 +59,7 @@ func NewCasper(store protocol.Store, prvKey chainkd.XPrv, checkpoints []*state.C
 
 	casper := &Casper{
 		tree:                makeTree(checkpoints[0], checkpoints[1:]),
-		rollbackNotifyCh:  	 make(chan bc.Hash),
+		rollbackNotifyCh:    make(chan bc.Hash),
 		newEpochCh:          make(chan bc.Hash),
 		store:               store,
 		prvKey:              prvKey,
