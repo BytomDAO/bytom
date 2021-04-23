@@ -66,6 +66,8 @@ func (s *SupLink) Confirmed() bool {
 type Checkpoint struct {
 	Height         uint64
 	Hash           bc.Hash
+	ParentHash     bc.Hash
+	// only save in the memory, not persist
 	Parent         *Checkpoint
 	StartTimestamp uint64
 	SupLinks       []*SupLink
