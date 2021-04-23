@@ -53,7 +53,7 @@ type Casper struct {
 // the first element of checkpoints must genesis checkpoint or the last finalized checkpoint in order to reduce memory space
 // the others must successors of first one
 func NewCasper(store protocol.Store, prvKey chainkd.XPrv, checkpoints []*state.Checkpoint) *Casper {
-	if checkpoints[0].Height != 0 || checkpoints[0].Status != state.Finalized {
+	if checkpoints[0].Height != 0 && checkpoints[0].Status != state.Finalized {
 		log.Panic("first element of checkpoints must genesis or in finalized status")
 	}
 
