@@ -54,8 +54,8 @@ func MakeSupLink(supLink *types.SupLink, validators []*Validator) *SupLink {
 	}
 }
 
-// Confirmed if at least 2/3 of validators have published votes with sup link
-func (s *SupLink) Confirmed() bool {
+// IsMajority if at least 2/3 of validators have published votes with sup link
+func (s *SupLink) IsMajority() bool {
 	return len(s.Signatures) > numOfValidators*2/3
 }
 
@@ -75,19 +75,15 @@ type Checkpoint struct {
 	Guaranties map[string]uint64 // pubKey -> num of guaranty
 }
 
-// AddVerification add a valid verification to checkpoint
-func (c *Checkpoint) AddVerification(sourceHeight uint64, sourceHash bc.Hash, pubKey, signature string) *SupLink {
-	for _, supLink := range c.SupLinks {
-		if supLink.SourceHash == sourceHash {
-			supLink.Signatures[pubKey] = signature
-			return supLink
+// AddSupLink add a valid supLink to checkpoint, return the merged supLink
+func (c *Checkpoint) AddSupLink(supLink *SupLink) *SupLink {
+	for _, s := range c.SupLinks {
+		if s.SourceHash == supLink.SourceHash {
+			for pubKey, signature := range supLink.Signatures {
+				s.Signatures[pubKey] = signature
+				return s
+			}
 		}
-	}
-
-	supLink := &SupLink{
-		SourceHeight: sourceHeight,
-		SourceHash:   sourceHash,
-		Signatures:   map[string]string{pubKey: signature},
 	}
 	c.SupLinks = append(c.SupLinks, supLink)
 	return supLink
@@ -127,14 +123,4 @@ func (c *Checkpoint) Validators() []*Validator {
 		end = len(validators)
 	}
 	return validators[:end]
-}
-
-// ContainsValidator check whether the checkpoint contains the pubKey as validator
-func (c *Checkpoint) ContainsValidator(pubKey string) bool {
-	for _, v := range c.Validators() {
-		if v.PubKey == pubKey {
-			return true
-		}
-	}
-	return false
 }

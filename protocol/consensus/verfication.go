@@ -35,7 +35,8 @@ func makeVerification(supLink *state.SupLink, checkpoint *state.Checkpoint, pubK
 	}
 }
 
-func (v *Verification) toSupLink() *state.SupLink {
+// toSoloSupLink convert the verification to supLink with only single signature
+func (v *Verification) toSoloSupLink() *state.SupLink {
 	return &state.SupLink{
 		SourceHeight: v.SourceHeight,
 		SourceHash:   v.SourceHash,
