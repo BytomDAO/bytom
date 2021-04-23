@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/crypto/sha3pool"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/state"
@@ -31,6 +32,14 @@ func makeVerification(supLink *state.SupLink, checkpoint *state.Checkpoint, pubK
 		TargetHeight: checkpoint.Height,
 		Signature:    supLink.Signatures[pubKey],
 		PubKey:       pubKey,
+	}
+}
+
+func (v *Verification) toSupLink() *state.SupLink {
+	return &state.SupLink{
+		SourceHeight: v.SourceHeight,
+		SourceHash:   v.SourceHash,
+		Signatures:   map[string]string{v.PubKey: v.Signature},
 	}
 }
 
@@ -70,6 +79,17 @@ func (v *Verification) EncodeMessage() ([]byte, error) {
 	}
 
 	return sha3Hash(buff.Bytes())
+}
+
+// Sign used to sign the verification by specified xPrv
+func (v *Verification) Sign(xPrv chainkd.XPrv) error {
+	message, err := v.EncodeMessage()
+	if err != nil {
+		return err
+	}
+
+	v.Signature = hex.EncodeToString(xPrv.Sign(message))
+	return nil
 }
 
 // VerifySignature verify the signature of encode message of verification

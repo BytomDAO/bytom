@@ -1,9 +1,11 @@
 package state
 
 import (
+	"encoding/hex"
 	"sort"
 
 	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/bc/types"
 )
 
 const (
@@ -38,6 +40,20 @@ type SupLink struct {
 	Signatures   map[string]string // pubKey to signature
 }
 
+// MakeSupLink convert the types package sup link to state package sup lick
+func MakeSupLink(supLink *types.SupLink, validators []*Validator) *SupLink {
+	signatures := make(map[string]string)
+	for i, signature := range supLink.Signatures {
+		signatures[validators[i].PubKey] = hex.EncodeToString(signature)
+	}
+
+	return &SupLink{
+		SourceHeight: supLink.SourceHeight,
+		SourceHash:   supLink.SourceHash,
+		Signatures:   signatures,
+	}
+}
+
 // Confirmed if at least 2/3 of validators have published votes with sup link
 func (s *SupLink) Confirmed() bool {
 	return len(s.Signatures) > numOfValidators*2/3
@@ -50,7 +66,7 @@ func (s *SupLink) Confirmed() bool {
 type Checkpoint struct {
 	Height         uint64
 	Hash           bc.Hash
-	PrevHash       bc.Hash
+	Parent         *Checkpoint
 	StartTimestamp uint64
 	SupLinks       []*SupLink
 	Status         CheckpointStatus
@@ -59,8 +75,8 @@ type Checkpoint struct {
 	Guaranties map[string]uint64 // pubKey -> num of guaranty
 }
 
-// AddSupLink add a valid sup link to checkpoint
-func (c *Checkpoint) AddSupLink(sourceHeight uint64, sourceHash bc.Hash, pubKey, signature string) *SupLink {
+// AddVerification add a valid verification to checkpoint
+func (c *Checkpoint) AddVerification(sourceHeight uint64, sourceHash bc.Hash, pubKey, signature string) *SupLink {
 	for _, supLink := range c.SupLinks {
 		if supLink.SourceHash == sourceHash {
 			supLink.Signatures[pubKey] = signature
