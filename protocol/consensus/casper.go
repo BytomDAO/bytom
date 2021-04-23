@@ -48,6 +48,29 @@ type Casper struct {
 	verificationCache *common.Cache
 }
 
+// NewCasper create a new instance of Casper
+// argument checkpoints load the checkpoints from leveldb
+// the first element of checkpoints must genesis checkpoint or the last finalized checkpoint in order to reduce memory space
+// the others must successors of first one
+func NewCasper(store protocol.Store, prvKey chainkd.XPrv, checkpoints []*state.Checkpoint) *Casper {
+	if checkpoints[0].Height != 0 && checkpoints[0].Status != state.Finalized {
+		log.Panic("first element of checkpoints must genesis or in finalized status")
+	}
+
+	casper := &Casper{
+		tree:                makeTree(checkpoints[0], checkpoints[1:]),
+		rollbackNotifyCh:    make(chan bc.Hash),
+		newEpochCh:          make(chan bc.Hash),
+		store:               store,
+		prvKey:              prvKey,
+		evilValidators:      make(map[string][]*Verification),
+		prevCheckpointCache: common.NewCache(1024),
+		verificationCache:   common.NewCache(1024),
+	}
+	go casper.authVerificationLoop()
+	return casper
+}
+
 // Best chain return the chain containing the justified checkpoint of the largest height
 func (c *Casper) BestChain() (uint64, bc.Hash) {
 	c.mu.RLock()
@@ -439,6 +462,7 @@ func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, 
 	if mod := block.Height % state.BlocksOfEpoch; mod == 1 {
 		parent := checkpoint
 		checkpoint = &state.Checkpoint{
+			ParentHash:     parent.Hash,
 			Parent:         parent,
 			StartTimestamp: block.Timestamp,
 			Status:         state.Growing,
