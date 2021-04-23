@@ -75,17 +75,20 @@ type Checkpoint struct {
 	Guaranties map[string]uint64 // pubKey -> num of guaranty
 }
 
-// AddSupLink add a valid supLink to checkpoint, return the merged supLink
-func (c *Checkpoint) AddSupLink(supLink *SupLink) *SupLink {
+// AddVerification add a valid verification to checkpoint's supLink, return the one
+func (c *Checkpoint) AddVerification(sourceHash bc.Hash, sourceHeight uint64, pubKey, signature string) *SupLink {
 	for _, s := range c.SupLinks {
-		if s.SourceHash == supLink.SourceHash {
-			for pubKey, signature := range supLink.Signatures {
-				s.Signatures[pubKey] = signature
-				return s
-			}
+		if s.SourceHash == sourceHash {
+			s.Signatures[pubKey] = signature
+			return s
 		}
 	}
-	c.SupLinks = append(c.SupLinks, supLink)
+	supLink := &SupLink{
+		SourceHeight: sourceHeight,
+		SourceHash:   sourceHash,
+		Signatures:   map[string]string{pubKey: signature},
+	}
+	c.SupLinks = append(c.SupLinks, )
 	return supLink
 }
 

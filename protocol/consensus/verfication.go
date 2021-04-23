@@ -35,15 +35,6 @@ func makeVerification(supLink *state.SupLink, checkpoint *state.Checkpoint, pubK
 	}
 }
 
-// toSoloSupLink convert the verification to supLink with only single signature
-func (v *Verification) toSoloSupLink() *state.SupLink {
-	return &state.SupLink{
-		SourceHeight: v.SourceHeight,
-		SourceHash:   v.SourceHash,
-		Signatures:   map[string]string{v.PubKey: v.Signature},
-	}
-}
-
 func (v *Verification) validate() error {
 	if v.SourceHeight%state.BlocksOfEpoch != 0 || v.TargetHeight%state.BlocksOfEpoch != 0 {
 		return errVoteToGrowingCheckpoint

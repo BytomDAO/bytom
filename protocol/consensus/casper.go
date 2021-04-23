@@ -117,16 +117,16 @@ func (c *Casper) authVerification(v *Verification) error {
 		return err
 	}
 
-	return c.addSupLinkToCheckpoint(target, v.toSoloSupLink())
+	return c.addVerificationToCheckpoint(target, v)
 }
 
-func (c *Casper) addSupLinkToCheckpoint(target *state.Checkpoint, supLink *state.SupLink) error {
-	source, err := c.store.GetCheckpoint(&supLink.SourceHash)
+func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, v *Verification) error {
+	source, err := c.store.GetCheckpoint(&v.SourceHash)
 	if err != nil {
 		return err
 	}
 
-	supLink = target.AddSupLink(supLink)
+	supLink := target.AddVerification(v.SourceHash, v.SourceHeight, v.PubKey, v.Signature)
 	if source.Status == state.Justified && target.Status != state.Justified && supLink.IsMajority() {
 		c.setJustified(target)
 		// must direct child
@@ -266,7 +266,7 @@ func (c *Casper) applySupLinks(target *state.Checkpoint, blockSupLinks []*types.
 		supLink := state.MakeSupLink(blockSupLink, validators)
 		for _, verification := range supLinkToVerifications(supLink, target.Hash, target.Height) {
 			if err := c.verifyVerification(verification, true); err == nil {
-				if err := c.addSupLinkToCheckpoint(target, verification.toSoloSupLink()); err != nil {
+				if err := c.addVerificationToCheckpoint(target, verification); err != nil {
 					return err
 				}
 			}
@@ -314,7 +314,7 @@ func (c *Casper) myVerification(target *state.Checkpoint, validators []*state.Va
 			return nil, nil
 		}
 
-		return v, c.addSupLinkToCheckpoint(target, v.toSoloSupLink())
+		return v, c.addVerificationToCheckpoint(target, v)
 	}
 	return nil, nil
 }
