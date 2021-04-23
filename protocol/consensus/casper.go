@@ -546,6 +546,7 @@ func (c *Casper) prevCheckpointHash(blockHash *bc.Hash) (*bc.Hash, error) {
 
 		prevHeight, prevHash := block.Height-1, block.PreviousBlockHash
 		if data, ok := c.prevCheckpointCache.Get(prevHash); ok {
+			c.prevCheckpointCache.Add(blockHash, data)
 			return data.(*bc.Hash), nil
 		}
 
