@@ -2,7 +2,6 @@ package contract
 
 import (
 	"encoding/json"
-	"strings"
 	"sync"
 
 	dbm "github.com/bytom/bytom/database/leveldb"
@@ -16,10 +15,8 @@ var (
 
 // pre-define errors for supporting bytom errorFormatter
 var (
-	ErrDuplicateContract = errors.New("duplicate contract id")
-	ErrMarshalContract   = errors.New("failed marshal contract")
-	ErrFindContract      = errors.New("fail to find contract")
-	ErrNullContractAlias = errors.New("null contract alias")
+	ErrContractDuplicated = errors.New("contract is duplicated")
+	ErrContractNotFound   = errors.New("contract not found")
 )
 
 // userContractKey return user contract key
@@ -56,12 +53,12 @@ func (reg *Registry) SaveContract(contract *Contract) error {
 
 	contractKey := userContractKey(contract.Hash)
 	if existContract := reg.db.Get(contractKey); existContract != nil {
-		return ErrDuplicateContract
+		return ErrContractDuplicated
 	}
 
 	rawContract, err := json.Marshal(contract)
 	if err != nil {
-		return ErrMarshalContract
+		return err
 	}
 
 	storeBatch := reg.db.NewBatch()
@@ -74,11 +71,6 @@ func (reg *Registry) SaveContract(contract *Contract) error {
 func (reg *Registry) UpdateContract(hash chainjson.HexBytes, alias string) error {
 	reg.contractMu.Lock()
 	defer reg.contractMu.Unlock()
-
-	alias = strings.TrimSpace(alias)
-	if alias == "" {
-		return ErrNullContractAlias
-	}
 
 	contract, err := reg.GetContract(hash)
 	if err != nil {
@@ -107,7 +99,7 @@ func (reg *Registry) GetContract(hash chainjson.HexBytes) (*Contract, error) {
 
 		return contract, nil
 	}
-	return nil, errors.WithDetailf(ErrFindContract, "no such contract")
+	return nil, ErrContractNotFound
 }
 
 // ListContracts returns user contracts

@@ -219,11 +219,6 @@ func (a *API) buildHandler() {
 		m.Handle("/get-asset", jsonHandler(a.getAsset))
 		m.Handle("/list-assets", jsonHandler(a.listAssets))
 
-		m.Handle("/create-contract", jsonHandler(a.createContract))
-		m.Handle("/update-contract-alias", jsonHandler(a.updateContractAlias))
-		m.Handle("/get-contract", jsonHandler(a.getContract))
-		m.Handle("/list-contracts", jsonHandler(a.listContracts))
-
 		m.Handle("/create-key", jsonHandler(a.pseudohsmCreateKey))
 		m.Handle("/update-key-alias", jsonHandler(a.pseudohsmUpdateKeyAlias))
 		m.Handle("/list-keys", jsonHandler(a.pseudohsmListKeys))
@@ -261,6 +256,11 @@ func (a *API) buildHandler() {
 	m.Handle("/list-access-tokens", jsonHandler(a.listAccessTokens))
 	m.Handle("/delete-access-token", jsonHandler(a.deleteAccessToken))
 	m.Handle("/check-access-token", jsonHandler(a.checkAccessToken))
+
+	m.Handle("/create-contract", jsonHandler(a.createContract))
+	m.Handle("/update-contract-alias", jsonHandler(a.updateContractAlias))
+	m.Handle("/get-contract", jsonHandler(a.getContract))
+	m.Handle("/list-contracts", jsonHandler(a.listContracts))
 
 	m.Handle("/create-transaction-feed", jsonHandler(a.createTxFeed))
 	m.Handle("/get-transaction-feed", jsonHandler(a.getTxFeed))
