@@ -67,7 +67,7 @@ type Checkpoint struct {
 	Height         uint64
 	Hash           bc.Hash
 	ParentHash     bc.Hash
-	// only save in the memory, not persist
+	// only save in the memory, not be persisted
 	Parent         *Checkpoint
 	StartTimestamp uint64
 	SupLinks       []*SupLink
