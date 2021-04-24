@@ -628,7 +628,7 @@ func TestTxOutToUtxos(t *testing.T) {
 			for k, v := range gotUtxos {
 
 				data, _ := json.Marshal(v)
-				fmt.Println(k, string(data))
+				fmt.Println("got:", k, string(data))
 			}
 			for k, v := range c.wantUtxos {
 				data, _ := json.Marshal(v)
