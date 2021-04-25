@@ -38,7 +38,6 @@ func (to *TxOutput) readFrom(r *blockchain.Reader) (err error) {
 		return errors.Wrap(err, "reading asset version")
 	}
 
-
 	typedOutput, err := parseTypedOutput(r)
 	if err != nil {
 		return errors.Wrap(err, "parse typedOutput")
@@ -118,7 +117,7 @@ func ComputeOutputID(sc *SpendCommitment) (h bc.Hash, err error) {
 		Value:    &sc.AssetAmount,
 		Position: sc.SourcePosition,
 	}
-	o := bc.NewOutput(src, &bc.Program{VmVersion: sc.VMVersion, Code: sc.ControlProgram}, 0)
+	o := bc.NewOutput(src, &bc.Program{VmVersion: sc.VMVersion, Code: sc.ControlProgram}, &bc.StateData{StateData: sc.StateData}, 0)
 
 	h = bc.EntryID(o)
 	return h, nil

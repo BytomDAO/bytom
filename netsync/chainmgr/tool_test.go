@@ -219,8 +219,8 @@ func mockTxs(txCount int) ([]*types.Tx, []*bc.Tx) {
 	for i := uint64(0); i < uint64(txCount); i++ {
 		tx := types.NewTx(types.TxData{
 			Version: 1,
-			Inputs:  []*types.TxInput{types.NewSpendInput(nil, bc.Hash{V0: i + 1}, assetID, i, i, trueProg)},
-			Outputs: []*types.TxOutput{types.NewOriginalTxOutput(assetID, 1, trueProg)},
+			Inputs:  []*types.TxInput{types.NewSpendInput(nil, bc.Hash{V0: i + 1}, assetID, i, i, trueProg, nil)},
+			Outputs: []*types.TxOutput{types.NewOriginalTxOutput(assetID, 1, trueProg, nil)},
 		})
 		txs = append(txs, tx)
 		bcTxs = append(bcTxs, tx.Tx)

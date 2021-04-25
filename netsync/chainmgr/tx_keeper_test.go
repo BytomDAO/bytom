@@ -10,13 +10,13 @@ import (
 	"github.com/davecgh/go-spew/spew"
 
 	"github.com/bytom/bytom/consensus"
-	"github.com/bytom/bytom/testcontrol"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/protocol"
 	core "github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/test/mock"
+	"github.com/bytom/bytom/testcontrol"
 )
 
 const txsNumber = 2000
@@ -27,7 +27,7 @@ type mempool struct {
 func (m *mempool) GetTransactions() []*core.TxDesc {
 	txs := []*core.TxDesc{}
 	for i := 0; i < txsNumber; i++ {
-		txInput := types.NewSpendInput(nil, bc.NewHash([32]byte{0x01}), *consensus.BTMAssetID, uint64(i), 1, []byte{0x51})
+		txInput := types.NewSpendInput(nil, bc.NewHash([32]byte{0x01}), *consensus.BTMAssetID, uint64(i), 1, []byte{0x51}, []byte{})
 		txInput.CommitmentSuffix = []byte{0, 1, 2}
 		txInput.WitnessSuffix = []byte{0, 1, 2}
 
@@ -39,7 +39,7 @@ func (m *mempool) GetTransactions() []*core.TxDesc {
 					txInput,
 				},
 				Outputs: []*types.TxOutput{
-					types.NewOriginalTxOutput(*consensus.BTMAssetID, uint64(i), []byte{0x6a}),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, uint64(i), []byte{0x6a}, []byte{}),
 				},
 				SerializedSize: 1000,
 			},

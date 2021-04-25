@@ -15,10 +15,10 @@ func TestMapSpendTx(t *testing.T) {
 	cases := []*TxData{
 		&TxData{
 			Inputs: []*TxInput{
-				NewSpendInput(nil, testutil.MustDecodeHash("fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409"), *consensus.BTMAssetID, 88, 3, []byte{1}),
+				NewSpendInput(nil, testutil.MustDecodeHash("fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409"), *consensus.BTMAssetID, 88, 3, []byte{1}, []byte{2}),
 			},
 			Outputs: []*TxOutput{
-				NewOriginalTxOutput(*consensus.BTMAssetID, 80, []byte{1}),
+				NewOriginalTxOutput(*consensus.BTMAssetID, 80, []byte{1}, []byte{2}),
 			},
 		},
 		&TxData{
@@ -26,17 +26,17 @@ func TestMapSpendTx(t *testing.T) {
 				NewIssuanceInput([]byte("nonce"), 254354, []byte("issuanceProgram"), [][]byte{[]byte("arguments1"), []byte("arguments2")}, []byte("assetDefinition")),
 			},
 			Outputs: []*TxOutput{
-				NewOriginalTxOutput(*consensus.BTMAssetID, 80, []byte{1}),
+				NewOriginalTxOutput(*consensus.BTMAssetID, 80, []byte{1}, []byte{2}),
 			},
 		},
 		&TxData{
 			Inputs: []*TxInput{
 				NewIssuanceInput([]byte("nonce"), 254354, []byte("issuanceProgram"), [][]byte{[]byte("arguments1"), []byte("arguments2")}, []byte("assetDefinition")),
-				NewSpendInput(nil, testutil.MustDecodeHash("db7b16ac737440d6e38559996ddabb207d7ce84fbd6f3bfd2525d234761dc863"), *consensus.BTMAssetID, 88, 3, []byte{1}),
+				NewSpendInput(nil, testutil.MustDecodeHash("db7b16ac737440d6e38559996ddabb207d7ce84fbd6f3bfd2525d234761dc863"), *consensus.BTMAssetID, 88, 3, []byte{1}, []byte{2}),
 			},
 			Outputs: []*TxOutput{
-				NewOriginalTxOutput(*consensus.BTMAssetID, 80, []byte{1}),
-				NewOriginalTxOutput(*consensus.BTMAssetID, 80, []byte{1}),
+				NewOriginalTxOutput(*consensus.BTMAssetID, 80, []byte{1}, []byte{2}),
+				NewOriginalTxOutput(*consensus.BTMAssetID, 80, []byte{1}, []byte{2}),
 			},
 		},
 	}
@@ -89,6 +89,9 @@ func TestMapSpendTx(t *testing.T) {
 			if !bytes.Equal(newOut.ControlProgram.Code, oldOut.ControlProgram) {
 				t.Errorf("header.ResultIds[%d].(*output).ControlProgram.Code is %x, expected %x", i, newOut.ControlProgram.Code, oldOut.ControlProgram)
 			}
+			if !bytes.Equal(newOut.StateData.StateData, oldOut.StateData) {
+				t.Errorf("header.ResultIds[%d].(*output).StateData.StateData is %x, expected %x", i, newOut.StateData.StateData, oldOut.StateData)
+			}
 
 		}
 	}
@@ -100,7 +103,7 @@ func TestMapCoinbaseTx(t *testing.T) {
 			NewCoinbaseInput([]byte("TestMapCoinbaseTx")),
 		},
 		Outputs: []*TxOutput{
-			NewOriginalTxOutput(*consensus.BTMAssetID, 800000000000, []byte{1}),
+			NewOriginalTxOutput(*consensus.BTMAssetID, 800000000000, []byte{1}, []byte{2}),
 		},
 	}
 	oldOut := txData.Outputs[0]

@@ -10,9 +10,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
-	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 const desireUtxoCount = 5
@@ -34,6 +34,7 @@ type UTXO struct {
 	Amount              uint64
 	SourcePos           uint64
 	ControlProgram      []byte
+	StateData           []byte
 	AccountID           string
 	Address             string
 	ControlProgramIndex uint64
