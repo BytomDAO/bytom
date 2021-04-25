@@ -61,9 +61,7 @@ func (reg *Registry) SaveContract(contract *Contract) error {
 		return err
 	}
 
-	storeBatch := reg.db.NewBatch()
-	storeBatch.Set(contractKey, rawContract)
-	storeBatch.Write()
+	reg.db.Set(contractKey, rawContract)
 	return nil
 }
 
@@ -83,9 +81,7 @@ func (reg *Registry) UpdateContract(hash chainjson.HexBytes, alias string) error
 		return err
 	}
 
-	storeBatch := reg.db.NewBatch()
-	storeBatch.Set(userContractKey(hash), rawContract)
-	storeBatch.Write()
+	reg.db.Set(userContractKey(hash), rawContract)
 	return nil
 }
 
@@ -93,11 +89,7 @@ func (reg *Registry) UpdateContract(hash chainjson.HexBytes, alias string) error
 func (reg *Registry) GetContract(hash chainjson.HexBytes) (*Contract, error) {
 	contract := &Contract{}
 	if rawContract := reg.db.Get(userContractKey(hash)); rawContract != nil {
-		if err := json.Unmarshal(rawContract, contract); err != nil {
-			return nil, err
-		}
-
-		return contract, nil
+		return contract, json.Unmarshal(rawContract, contract)
 	}
 	return nil, ErrContractNotFound
 }
