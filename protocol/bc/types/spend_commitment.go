@@ -16,6 +16,7 @@ type SpendCommitment struct {
 	SourcePosition uint64
 	VMVersion      uint64
 	ControlProgram []byte
+	StateData      []byte
 }
 
 func (sc *SpendCommitment) writeExtensibleString(w io.Writer, suffix []byte, assetVersion uint64) error {
@@ -41,6 +42,9 @@ func (sc *SpendCommitment) writeContents(w io.Writer, suffix []byte, assetVersio
 		}
 		if _, err = blockchain.WriteVarstr31(w, sc.ControlProgram); err != nil {
 			return errors.Wrap(err, "writing control program")
+		}
+		if _, err = blockchain.WriteVarstr31(w, sc.StateData); err != nil {
+			return errors.Wrap(err, "writing state data")
 		}
 	}
 	if len(suffix) > 0 {
@@ -69,6 +73,9 @@ func (sc *SpendCommitment) readFrom(r *blockchain.Reader, assetVersion uint64) (
 			}
 			if sc.ControlProgram, err = blockchain.ReadVarstr31(r); err != nil {
 				return errors.Wrap(err, "reading control program")
+			}
+			if sc.StateData, err = blockchain.ReadVarstr31(r); err != nil {
+				return errors.Wrap(err, "reading state data")
 			}
 			return nil
 		}

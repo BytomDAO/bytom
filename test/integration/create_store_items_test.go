@@ -2,13 +2,15 @@ package integration
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/bytom/bytom/database"
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/testutil"
-	"testing"
 )
 
 func TestCreateStoreItems(t *testing.T) {
+	t.Skip("Skipping testing in CI environment")
 	mainChainIndex := []int{0, 1, 2}
 	blocks := []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][3]}
 	itme := &storeItem{
@@ -19,4 +21,3 @@ func TestCreateStoreItems(t *testing.T) {
 	items := createStoreItems(mainChainIndex, blocks, itme)
 	fmt.Println(items)
 }
-

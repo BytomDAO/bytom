@@ -14,7 +14,7 @@ func (o *originalTxOutput) readFrom(*blockchain.Reader) error { return nil }
 func (o *originalTxOutput) writeTo(io.Writer) error           { return nil }
 
 // NewOriginalTxOutput create a new original output struct
-func NewOriginalTxOutput(assetID bc.AssetID, amount uint64, controlProgram []byte) *TxOutput {
+func NewOriginalTxOutput(assetID bc.AssetID, amount uint64, controlProgram []byte, stateData []byte) *TxOutput {
 	return &TxOutput{
 		AssetVersion: 1,
 		OutputCommitment: OutputCommitment{
@@ -24,6 +24,7 @@ func NewOriginalTxOutput(assetID bc.AssetID, amount uint64, controlProgram []byt
 			},
 			VMVersion:      1,
 			ControlProgram: controlProgram,
+			StateData:      stateData,
 		},
 		TypedOutput: &originalTxOutput{},
 	}

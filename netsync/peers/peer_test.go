@@ -96,10 +96,10 @@ func TestAddFilterAddresses(t *testing.T) {
 	peer := newPeer(&basePeer{})
 	tx := types.NewTx(types.TxData{
 		Inputs: []*types.TxInput{
-			types.NewSpendInput(nil, bc.Hash{}, bc.NewAssetID([32]byte{1}), 5, 1, []byte("spendProgram")),
+			types.NewSpendInput(nil, bc.Hash{}, bc.NewAssetID([32]byte{1}), 5, 1, []byte("spendProgram"), []byte{}),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewOriginalTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("outProgram")),
+			types.NewOriginalTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("outProgram"), []byte{}),
 		},
 	})
 
@@ -118,10 +118,10 @@ func TestFilterClear(t *testing.T) {
 	peer := newPeer(&basePeer{})
 	tx := types.NewTx(types.TxData{
 		Inputs: []*types.TxInput{
-			types.NewSpendInput(nil, bc.Hash{}, bc.NewAssetID([32]byte{1}), 5, 1, []byte("spendProgram")),
+			types.NewSpendInput(nil, bc.Hash{}, bc.NewAssetID([32]byte{1}), 5, 1, []byte("spendProgram"), []byte{}),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewOriginalTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("outProgram")),
+			types.NewOriginalTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("outProgram"), []byte{}),
 		},
 	})
 
@@ -141,32 +141,32 @@ func TestGetRelatedTxAndStatus(t *testing.T) {
 	txs := []*types.Tx{
 		types.NewTx(types.TxData{
 			Inputs: []*types.TxInput{
-				types.NewSpendInput(nil, bc.Hash{}, bc.NewAssetID([32]byte{1}), 5, 1, []byte("spendProgram1")),
+				types.NewSpendInput(nil, bc.Hash{}, bc.NewAssetID([32]byte{1}), 5, 1, []byte("spendProgram1"), []byte{}),
 			},
 			Outputs: []*types.TxOutput{
-				types.NewOriginalTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("outProgram1")),
+				types.NewOriginalTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("outProgram1"), []byte{}),
 			},
 		}),
 		types.NewTx(types.TxData{
 			Inputs: []*types.TxInput{
-				types.NewSpendInput(nil, bc.Hash{}, bc.NewAssetID([32]byte{1}), 5, 1, []byte("spendProgram2")),
+				types.NewSpendInput(nil, bc.Hash{}, bc.NewAssetID([32]byte{1}), 5, 1, []byte("spendProgram2"), []byte{}),
 			},
 			Outputs: []*types.TxOutput{
-				types.NewOriginalTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("outProgram2")),
+				types.NewOriginalTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("outProgram2"), []byte{}),
 			},
 		}),
 		types.NewTx(types.TxData{
 			Inputs: []*types.TxInput{
-				types.NewSpendInput(nil, bc.Hash{}, bc.NewAssetID([32]byte{1}), 5, 1, []byte("spendProgram3")),
+				types.NewSpendInput(nil, bc.Hash{}, bc.NewAssetID([32]byte{1}), 5, 1, []byte("spendProgram3"), []byte{}),
 			},
 			Outputs: []*types.TxOutput{
-				types.NewOriginalTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("outProgram3")),
+				types.NewOriginalTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("outProgram3"), []byte{}),
 			},
 		}),
 	}
 
 	peer.AddFilterAddresses([][]byte{[]byte("spendProgram1"), []byte("outProgram3")})
-	gotTxs  := peer.getRelatedTxs(txs)
+	gotTxs := peer.getRelatedTxs(txs)
 	if len(gotTxs) != 2 {
 		t.Error("TestGetRelatedTxAndStatus txs size error")
 	}

@@ -16,10 +16,10 @@ import (
 	"github.com/bytom/bytom/common"
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
-	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 // MockBlock mock a block
@@ -58,7 +58,7 @@ func MockSimpleUtxo(index uint64, assetID *bc.AssetID, amount uint64, ctrlProg *
 }
 
 func AddTxOutput(assetID bc.AssetID, amount uint64, controlProgram []byte) *types.TxOutput {
-	out := types.NewOriginalTxOutput(assetID, amount, controlProgram)
+	out := types.NewOriginalTxOutput(assetID, amount, controlProgram, nil)
 	return out
 }
 
