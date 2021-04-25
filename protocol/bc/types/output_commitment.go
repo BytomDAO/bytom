@@ -14,6 +14,7 @@ type OutputCommitment struct {
 	bc.AssetAmount
 	VMVersion      uint64
 	ControlProgram []byte
+	StateData      []byte
 }
 
 func (oc *OutputCommitment) writeTo(w io.Writer, assetVersion uint64) (err error) {
@@ -26,6 +27,9 @@ func (oc *OutputCommitment) writeTo(w io.Writer, assetVersion uint64) (err error
 		}
 		if _, err = blockchain.WriteVarstr31(w, oc.ControlProgram); err != nil {
 			return errors.Wrap(err, "writing control program")
+		}
+		if _, err = blockchain.WriteVarstr31(w, oc.StateData); err != nil {
+			return errors.Wrap(err, "writing state data")
 		}
 	}
 	return errors.Wrap(err, "writing suffix")
@@ -44,7 +48,11 @@ func (oc *OutputCommitment) readFrom(r *blockchain.Reader, assetVersion uint64) 
 			return fmt.Errorf("unrecognized VM version %d for asset version 1", oc.VMVersion)
 		}
 		oc.ControlProgram, err = blockchain.ReadVarstr31(r)
-		return errors.Wrap(err, "reading control program")
+		if err != nil {
+			return errors.Wrap(err, "reading control program")
+		}
+		oc.StateData, err = blockchain.ReadVarstr31(r)
+		return errors.Wrap(err, "reading state data")
 	}
 	return nil
 }

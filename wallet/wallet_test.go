@@ -357,9 +357,9 @@ func mockTxData(utxos []*account.UTXO, testAccount *account.Account) (*txbuilder
 
 		out := &types.TxOutput{}
 		if utxo.AssetID == *consensus.BTMAssetID {
-			out = types.NewOriginalTxOutput(utxo.AssetID, 100, utxo.ControlProgram)
+			out = types.NewOriginalTxOutput(utxo.AssetID, 100, utxo.ControlProgram, nil)
 		} else {
-			out = types.NewOriginalTxOutput(utxo.AssetID, utxo.Amount, utxo.ControlProgram)
+			out = types.NewOriginalTxOutput(utxo.AssetID, utxo.Amount, utxo.ControlProgram, nil)
 		}
 		tplBuilder.AddOutput(out)
 	}
