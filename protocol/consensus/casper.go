@@ -152,8 +152,8 @@ func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, v *Verifi
 		return err
 	}
 
-	target.AddVerification(v.SourceHash, v.SourceHeight, v.PubKey, v.Signature)
-	if target.Status != state.Unjustified || !target.IsMajority() || source.Status == state.Finalized {
+	supLink := target.AddVerification(v.SourceHash, v.SourceHeight, v.PubKey, v.Signature)
+	if target.Status != state.Unjustified || !supLink.IsMajority() || source.Status == state.Finalized {
 		return nil
 	}
 
