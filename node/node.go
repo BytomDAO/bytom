@@ -8,6 +8,8 @@ import (
 	_ "net/http/pprof"
 	"path/filepath"
 
+	"github.com/bytom/bytom/proposal/blockproposer"
+
 	"github.com/prometheus/prometheus/util/flock"
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
@@ -52,6 +54,7 @@ type Node struct {
 	api             *api.API
 	chain           *protocol.Chain
 	txfeed          *txfeed.Tracker
+	blockProposer   *blockproposer.BlockProposer
 }
 
 // NewNode create bytom node
@@ -151,6 +154,7 @@ func NewNode(config *cfg.Config) *Node {
 	}
 
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
+	node.blockProposer = blockproposer.NewBlockProposer(chain, accounts, dispatcher)
 
 	return node
 }
@@ -187,7 +191,7 @@ func launchWebBrowser(port string) {
 }
 
 func (n *Node) initAndstartAPIServer() {
-	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.chain, n.config, n.accessTokens, n.eventDispatcher, n.notificationMgr)
+	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.chain, n.config, n.accessTokens, n.eventDispatcher, n.notificationMgr, n.blockProposer)
 
 	listenAddr := env.String("LISTEN", n.config.ApiAddress)
 	env.Parse()

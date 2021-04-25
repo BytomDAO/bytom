@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bytom/bytom/proposal/blockproposer"
+
 	"github.com/kr/secureheader"
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
@@ -114,6 +116,7 @@ type API struct {
 	txFeedTracker   *txfeed.Tracker
 	notificationMgr *websocket.WSNotificationManager
 	eventDispatcher *event.Dispatcher
+	blockProposer   *blockproposer.BlockProposer
 }
 
 func (a *API) initServer(config *cfg.Config) {
@@ -178,7 +181,7 @@ type NetSync interface {
 }
 
 // NewAPI create and initialize the API
-func NewAPI(sync NetSync, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, dispatcher *event.Dispatcher, notificationMgr *websocket.WSNotificationManager) *API {
+func NewAPI(sync NetSync, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, dispatcher *event.Dispatcher, notificationMgr *websocket.WSNotificationManager, blockProposer *blockproposer.BlockProposer) *API {
 	api := &API{
 		sync:            sync,
 		wallet:          wallet,
@@ -187,6 +190,7 @@ func NewAPI(sync NetSync, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, chain 
 		txFeedTracker:   txfeeds,
 		eventDispatcher: dispatcher,
 		notificationMgr: notificationMgr,
+		blockProposer:   blockProposer,
 	}
 	api.buildHandler()
 	api.initServer(config)
@@ -245,6 +249,13 @@ func (a *API) buildHandler() {
 		m.Handle("/rescan-wallet", jsonHandler(a.rescanWallet))
 		m.Handle("/wallet-info", jsonHandler(a.getWalletInfo))
 		m.Handle("/recovery-wallet", jsonHandler(a.recoveryFromRootXPubs))
+
+		m.Handle("/set-proposing", jsonHandler(a.setProposing))
+		m.Handle("/is-proposing", jsonHandler(a.isProposing()))
+		m.Handle("/set-proposer-address", jsonHandler(a.setProposerAddress))
+		m.Handle("/get-proposer-address", jsonHandler(a.getProposerAddress))
+		m.Handle("/get-coinbase-arbitrary", jsonHandler(a.getCoinbaseArbitrary))
+		m.Handle("/set-coinbase-arbitrary", jsonHandler(a.setCoinbaseArbitrary))
 	} else {
 		log.Warn("Please enable wallet")
 	}

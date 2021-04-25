@@ -41,7 +41,7 @@ var (
 	aliasPrefix         = []byte("AccountAlias:")
 	contractIndexPrefix = []byte("ContractIndex")
 	contractPrefix      = []byte("Contract:")
-	miningAddressKey    = []byte("MiningAddress")
+	proposerAddressKey  = []byte("proposerAddress")
 	CoinbaseAbKey       = []byte("CoinbaseArbitrary")
 )
 
@@ -475,7 +475,7 @@ func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
 
 // GetCoinbaseCtrlProgram will return the coinbase CtrlProgram
 func (m *Manager) GetCoinbaseCtrlProgram() (*CtrlProgram, error) {
-	if data := m.db.Get(miningAddressKey); data != nil {
+	if data := m.db.Get(proposerAddressKey); data != nil {
 		cp := &CtrlProgram{}
 		return cp, json.Unmarshal(data, cp)
 	}
@@ -501,7 +501,7 @@ func (m *Manager) GetCoinbaseCtrlProgram() (*CtrlProgram, error) {
 		return nil, err
 	}
 
-	m.db.Set(miningAddressKey, rawCP)
+	m.db.Set(proposerAddressKey, rawCP)
 	return program, nil
 }
 
@@ -759,4 +759,34 @@ func (m *Manager) SaveControlPrograms(progs ...*CtrlProgram) error {
 		m.saveControlProgram(prog, prog.KeyIndex > currentIndex)
 	}
 	return nil
+}
+
+// GetProposerAddress will return the address of proposer who propose and sign block
+func (m *Manager) GetProposerAddress() (string, error) {
+	cp, err := m.GetCoinbaseCtrlProgram()
+	if err != nil {
+		return "", err
+	}
+
+	return cp.Address, nil
+}
+
+// SetProposerAddress will set the proposer address
+func (m *Manager) SetProposerAddress(proposerAddress string) (string, error) {
+	program, err := m.getProgramByAddress(proposerAddress)
+	if err != nil {
+		return "", err
+	}
+
+	cp := &CtrlProgram{
+		Address:        proposerAddress,
+		ControlProgram: program,
+	}
+	rawCP, err := json.Marshal(cp)
+	if err != nil {
+		return "", err
+	}
+
+	m.db.Set(proposerAddressKey, rawCP)
+	return m.GetProposerAddress()
 }
