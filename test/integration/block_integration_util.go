@@ -93,8 +93,9 @@ func getDeserialFun(key []byte) (deserialFun, error) {
 		},
 	}
 
+	keyStr := string(key)
 	for prefix, converter := range funMap {
-		if strings.HasPrefix(string(key), prefix) {
+		if strings.HasPrefix(keyStr, prefix) {
 			return converter, nil
 		}
 	}
