@@ -173,21 +173,27 @@ func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, v *Verifi
 }
 
 func (c *Casper) setJustified(source, target *state.Checkpoint) []*state.Checkpoint {
-	var affectedCheckpoints []*state.Checkpoint
+	affectedCheckpoints := make(map[bc.Hash]*state.Checkpoint)
 	target.Status = state.Justified
-	affectedCheckpoints = append(affectedCheckpoints, target)
+	affectedCheckpoints[target.Hash] = target
 	// must direct child
 	if target.Parent.Hash == source.Hash {
 		c.setFinalized(source)
-		affectedCheckpoints = append(affectedCheckpoints, source)
+		affectedCheckpoints[source.Hash] = source
 	}
 
 	for _, checkpoint := range c.justifyingCheckpoints[target.Hash] {
-		affectedCheckpoints = append(affectedCheckpoints, c.setJustified(target, checkpoint)...)
+		for _, c := range c.setJustified(target, checkpoint) {
+			affectedCheckpoints[c.Hash] = c
+		}
 	}
 	delete(c.justifyingCheckpoints, target.Hash)
 
-	return affectedCheckpoints
+	var result []*state.Checkpoint
+	for _, c := range affectedCheckpoints {
+		result = append(result, c)
+	}
+	return result
 }
 
 func verificationCacheKey(blockHash bc.Hash, pubKey string) string {
