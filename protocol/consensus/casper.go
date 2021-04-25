@@ -46,26 +46,29 @@ type Casper struct {
 	prevCheckpointCache *common.Cache
 	// block hash + pubKey -> verification
 	verificationCache *common.Cache
+	// put the checkpoints which exist a majority supLink but the source checkpoint is not justified
+	justifyingCheckpoints map[bc.Hash][]*state.Checkpoint
 }
 
 // NewCasper create a new instance of Casper
 // argument checkpoints load the checkpoints from leveldb
 // the first element of checkpoints must genesis checkpoint or the last finalized checkpoint in order to reduce memory space
-// the others must successors of first one
+// the others must be successors of first one
 func NewCasper(store protocol.Store, prvKey chainkd.XPrv, checkpoints []*state.Checkpoint) *Casper {
 	if checkpoints[0].Height != 0 && checkpoints[0].Status != state.Finalized {
 		log.Panic("first element of checkpoints must genesis or in finalized status")
 	}
 
 	casper := &Casper{
-		tree:                makeTree(checkpoints[0], checkpoints[1:]),
-		rollbackNotifyCh:    make(chan bc.Hash),
-		newEpochCh:          make(chan bc.Hash),
-		store:               store,
-		prvKey:              prvKey,
-		evilValidators:      make(map[string][]*Verification),
-		prevCheckpointCache: common.NewCache(1024),
-		verificationCache:   common.NewCache(1024),
+		tree:                  makeTree(checkpoints[0], checkpoints[1:]),
+		rollbackNotifyCh:      make(chan bc.Hash),
+		newEpochCh:            make(chan bc.Hash),
+		store:                 store,
+		prvKey:                prvKey,
+		evilValidators:        make(map[string][]*Verification),
+		prevCheckpointCache:   common.NewCache(1024),
+		verificationCache:     common.NewCache(1024),
+		justifyingCheckpoints: make(map[bc.Hash][]*state.Checkpoint),
 	}
 	go casper.authVerificationLoop()
 	return casper
@@ -150,39 +153,61 @@ func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, v *Verifi
 	}
 
 	supLink := target.AddVerification(v.SourceHash, v.SourceHeight, v.PubKey, v.Signature)
-	if source.Status == state.Justified && target.Status != state.Justified && supLink.IsMajority() {
-		c.setJustified(target)
-		// must direct child
-		if target.Parent.Hash == source.Hash {
-			if err := c.setFinalized(source); err != nil {
-				return err
-			}
+	if target.Status != state.Unjustified || !supLink.IsMajority() || source.Status == state.Finalized {
+		return nil
+	}
+
+	if source.Status == state.Unjustified {
+		c.justifyingCheckpoints[source.Hash] = append(c.justifyingCheckpoints[source.Hash], target)
+		return nil
+	}
+
+	_, oldBestHash := c.BestChain()
+	affectedCheckpoints := c.setJustified(source, target)
+	_, newBestHash := c.BestChain()
+	if oldBestHash != newBestHash {
+		c.rollbackNotifyCh <- newBestHash
+	}
+
+	return c.store.SaveCheckpoints(affectedCheckpoints...)
+}
+
+func (c *Casper) setJustified(source, target *state.Checkpoint) []*state.Checkpoint {
+	affectedCheckpoints := make(map[bc.Hash]*state.Checkpoint)
+	target.Status = state.Justified
+	affectedCheckpoints[target.Hash] = target
+	// must direct child
+	if target.Parent.Hash == source.Hash {
+		c.setFinalized(source)
+		affectedCheckpoints[source.Hash] = source
+	}
+
+	for _, checkpoint := range c.justifyingCheckpoints[target.Hash] {
+		for _, c := range c.setJustified(target, checkpoint) {
+			affectedCheckpoints[c.Hash] = c
 		}
 	}
-	return c.store.SaveCheckpoints(source, target)
+	delete(c.justifyingCheckpoints, target.Hash)
+
+	var result []*state.Checkpoint
+	for _, c := range affectedCheckpoints {
+		result = append(result, c)
+	}
+	return result
 }
 
 func verificationCacheKey(blockHash bc.Hash, pubKey string) string {
 	return fmt.Sprintf("%s:%s", blockHash.String(), pubKey)
 }
 
-func (c *Casper) setJustified(checkpoint *state.Checkpoint) {
-	_, oldBestHash := c.BestChain()
-	checkpoint.Status = state.Justified
-	if _, bestHash := c.BestChain(); bestHash != oldBestHash {
-		c.rollbackNotifyCh <- bestHash
-	}
-}
-
-func (c *Casper) setFinalized(checkpoint *state.Checkpoint) error {
+func (c *Casper) setFinalized(checkpoint *state.Checkpoint) {
 	checkpoint.Status = state.Finalized
 	newRoot, err := c.tree.nodeByHash(checkpoint.Hash)
 	if err != nil {
-		return err
+		log.WithField("err", err).Panic("fail to set checkpoint finalized")
 	}
 
 	c.tree = newRoot
-	return nil
 }
 
 // EvilValidator represent a validator who broadcast two distinct verification that violate the commandment
@@ -240,7 +265,7 @@ func (c *Casper) ApplyBlock(block *types.Block) (*Verification, error) {
 		return nil, err
 	}
 
-	if block.Height % state.BlocksOfEpoch == 0 {
+	if block.Height%state.BlocksOfEpoch == 0 {
 		c.newEpochCh <- block.Hash()
 	}
 
