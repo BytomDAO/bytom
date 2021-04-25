@@ -20,8 +20,8 @@ const (
 	// Growing means that the checkpoint has not ended the current epoch
 	Growing CheckpointStatus = iota
 
-	// Unverified means thant the checkpoint has ended the current epoch, but not been justified
-	Unverified
+	// Unjustified means thant the checkpoint has ended the current epoch, but not been justified
+	Unjustified
 
 	// Justified if checkpoint is the root, or there exists a super link c′ → c where c′ is justified
 	Justified
@@ -38,8 +38,8 @@ type SupLink struct {
 	Signatures   map[string]string // pubKey to signature
 }
 
-// Confirmed if at least 2/3 of validators have published votes with sup link
-func (s *SupLink) Confirmed() bool {
+// IsMajority if at least 2/3 of validators have published votes with sup link
+func (s *SupLink) IsMajority() bool {
 	return len(s.Signatures) > numOfValidators*2/3
 }
 
@@ -50,7 +50,9 @@ func (s *SupLink) Confirmed() bool {
 type Checkpoint struct {
 	Height         uint64
 	Hash           bc.Hash
-	PrevHash       bc.Hash
+	ParentHash     bc.Hash
+	// only save in the memory, not be persisted
+	Parent         *Checkpoint
 	StartTimestamp uint64
 	SupLinks       []*SupLink
 	Status         CheckpointStatus
@@ -59,15 +61,14 @@ type Checkpoint struct {
 	Guaranties map[string]uint64 // pubKey -> num of guaranty
 }
 
-// AddSupLink add a valid sup link to checkpoint
-func (c *Checkpoint) AddSupLink(sourceHeight uint64, sourceHash bc.Hash, pubKey, signature string) *SupLink {
+// AddVerification add a valid verification to checkpoint's supLink, return the one
+func (c *Checkpoint) AddVerification(sourceHash bc.Hash, sourceHeight uint64, pubKey, signature string) *SupLink {
 	for _, supLink := range c.SupLinks {
 		if supLink.SourceHash == sourceHash {
 			supLink.Signatures[pubKey] = signature
 			return supLink
 		}
 	}
-
 	supLink := &SupLink{
 		SourceHeight: sourceHeight,
 		SourceHash:   sourceHash,
@@ -111,14 +112,4 @@ func (c *Checkpoint) Validators() []*Validator {
 		end = len(validators)
 	}
 	return validators[:end]
-}
-
-// ContainsValidator check whether the checkpoint contains the pubKey as validator
-func (c *Checkpoint) ContainsValidator(pubKey string) bool {
-	for _, v := range c.Validators() {
-		if v.PubKey == pubKey {
-			return true
-		}
-	}
-	return false
 }

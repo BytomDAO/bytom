@@ -99,6 +99,7 @@ var testBlock = &types.Block{
 		BlockCommitment: types.BlockCommitment{
 			TransactionsMerkleRoot: bc.Hash{V0: uint64(0x11)},
 		},
+		SupLinks: types.SupLinks{},
 	},
 }
 

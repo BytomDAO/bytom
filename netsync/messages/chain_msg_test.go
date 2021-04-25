@@ -1,7 +1,6 @@
 package messages
 
 import (
-	"github.com/bytom/bytom/testcontrol"
 	"reflect"
 	"testing"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/testcontrol"
 )
 
 var txs = []*types.Tx{
@@ -95,6 +95,7 @@ var testBlock = &types.Block{
 		BlockCommitment: types.BlockCommitment{
 			TransactionsMerkleRoot: bc.Hash{V0: uint64(0x11)},
 		},
+		SupLinks: types.SupLinks{},
 	},
 }
 
@@ -128,6 +129,7 @@ var testHeaders = []*types.BlockHeader{
 		BlockCommitment: types.BlockCommitment{
 			TransactionsMerkleRoot: bc.Hash{V0: uint64(0x11)},
 		},
+		SupLinks: types.SupLinks{},
 	},
 	{
 		Version:   1,
@@ -136,6 +138,7 @@ var testHeaders = []*types.BlockHeader{
 		BlockCommitment: types.BlockCommitment{
 			TransactionsMerkleRoot: bc.Hash{V0: uint64(0x11)},
 		},
+		SupLinks: types.SupLinks{},
 	},
 	{
 		Version:   1,
@@ -144,6 +147,7 @@ var testHeaders = []*types.BlockHeader{
 		BlockCommitment: types.BlockCommitment{
 			TransactionsMerkleRoot: bc.Hash{V0: uint64(0x11)},
 		},
+		SupLinks: types.SupLinks{},
 	},
 }
 
