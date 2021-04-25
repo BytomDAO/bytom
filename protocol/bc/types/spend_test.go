@@ -24,11 +24,11 @@ func TestSerializationSpendCommitment(t *testing.T) {
 		SourcePosition: 3,
 		VMVersion:      1,
 		ControlProgram: []byte("TestSerializationSpendCommitment"),
-		StateData:      []byte("TestStateData"),
+		StateData:      [][]byte{[]byte("TestStateData")},
 	}
 
 	wantHex := strings.Join([]string{
-		"74", // serialization length
+		"75", // serialization length
 		"bef8ff450b877df84174ac5c279fc97da0f507ffe7beef7badf116ea9e2ff041", // sourceID
 		"81756fdab39a17163b0ce582ee4ee256fb4d1e156c692b997d608a42ecb38d47", // assetID
 		"92c30f", // amount
@@ -36,7 +36,7 @@ func TestSerializationSpendCommitment(t *testing.T) {
 		"01",     // version
 		"20",     // control program length
 		"5465737453657269616c697a6174696f6e5370656e64436f6d6d69746d656e74", // control program
-		"0d",                         // stata data length
+		"010d",                       // stata data length
 		"54657374537461746544617461", // state data
 	}, "")
 

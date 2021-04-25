@@ -176,7 +176,7 @@ func (a *registerAction) Build(ctx context.Context, b *TemplateBuilder) error {
 	if err != nil {
 		return err
 	}
-	out := types.NewOriginalTxOutput(*a.AssetId, a.Amount, program, []byte{})
+	out := types.NewOriginalTxOutput(*a.AssetId, a.Amount, program, [][]byte{})
 	return b.AddOutput(out)
 }
 
