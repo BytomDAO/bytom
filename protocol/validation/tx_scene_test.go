@@ -29,10 +29,10 @@ func TestValidateTx(t *testing.T) {
 							mustDecodeString("32fa23244a69e5524d190ad62391c2fc654685a740e00e9a316b78c95028363f"),
 						},
 						bc.Hash{V0: 2},
-						*consensus.BTMAssetID, 1000000000, 0, mustDecodeString("00149dd32abe4756676cc310470457edefce8b3bd7e7"), []byte{}),
+						*consensus.BTMAssetID, 1000000000, 0, mustDecodeString("00149dd32abe4756676cc310470457edefce8b3bd7e7"), [][]byte{}),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewOriginalTxOutput(*consensus.BTMAssetID, 100, mustDecodeString("00149dd32abe4756676cc310470457edefce8b3bd7e7"), []byte{}),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 100, mustDecodeString("00149dd32abe4756676cc310470457edefce8b3bd7e7"), [][]byte{}),
 				},
 			},
 			err: nil,
@@ -150,7 +150,7 @@ func TestValidateTx(t *testing.T) {
 							mustDecodeString("7642ba797fd89d1f98a8559b4ca74123697dd4dee882955acd0da9010a80d64e"),
 						},
 						bc.Hash{V0: 14760873410800997144, V1: 1698395500822741684, V2: 5965908492734661392, V3: 9445539829830863994},
-						*consensus.BTMAssetID, 11818900000, 0, mustDecodeString("0014f233267911e94dc74df706fe3b697273e212d545"), []byte{}),
+						*consensus.BTMAssetID, 11818900000, 0, mustDecodeString("0014f233267911e94dc74df706fe3b697273e212d545"), [][]byte{}),
 					types.NewIssuanceInput(
 						mustDecodeString("fd0aec4229deb281"),
 						10000000000,

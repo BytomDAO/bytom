@@ -57,25 +57,25 @@ func TestBlock(t *testing.T) {
 				Transactions: []*Tx{
 					NewTx(TxData{
 						Version:        1,
-						SerializedSize: uint64(282),
+						SerializedSize: uint64(284),
 						TimeRange:      654,
 						Inputs: []*TxInput{
 							NewIssuanceInput([]byte("nonce"), 254354, []byte("issuanceProgram"), [][]byte{[]byte("arguments1"), []byte("arguments2")}, []byte("assetDefinition")),
-							NewSpendInput([][]byte{[]byte("arguments3"), []byte("arguments4")}, testutil.MustDecodeHash("fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409"), *consensus.BTMAssetID, 254354, 3, []byte("spendProgram"), []byte("stateData")),
+							NewSpendInput([][]byte{[]byte("arguments3"), []byte("arguments4")}, testutil.MustDecodeHash("fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409"), *consensus.BTMAssetID, 254354, 3, []byte("spendProgram"), [][]byte{[]byte("stateData")}),
 						},
 						Outputs: []*TxOutput{
-							NewOriginalTxOutput(testutil.MustDecodeAsset("a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf"), 254354, []byte("true"), []byte("stateData")),
+							NewOriginalTxOutput(testutil.MustDecodeAsset("a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf"), 254354, []byte("true"), [][]byte{[]byte("stateData")}),
 						},
 					}),
 					NewTx(TxData{
 						Version:        1,
-						SerializedSize: uint64(130),
+						SerializedSize: uint64(132),
 						Inputs: []*TxInput{
 							NewCoinbaseInput([]byte("arbitrary")),
 						},
 						Outputs: []*TxOutput{
-							NewOriginalTxOutput(*consensus.BTMAssetID, 254354, []byte("true"), []byte("stateData")),
-							NewOriginalTxOutput(*consensus.BTMAssetID, 254354, []byte("false"), []byte("stateData")),
+							NewOriginalTxOutput(*consensus.BTMAssetID, 254354, []byte("true"), [][]byte{[]byte("stateData")}),
+							NewOriginalTxOutput(*consensus.BTMAssetID, 254354, []byte("false"), [][]byte{[]byte("stateData")}),
 						},
 					}),
 				},
@@ -91,8 +91,8 @@ func TestBlock(t *testing.T) {
 				"0100", // block witness
 				"0100", // sup links
 				"02",   // num transactions
-				"07018e0502012a00056e6f6e6365a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf92c30f380f6173736574446566696e6974696f6e010f69737375616e636550726f6772616d020a617267756d656e7473310a617267756d656e747332015e015cfad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff92c30f03010c7370656e6450726f6772616d0973746174654461746117020a617267756d656e7473330a617267756d656e74733401010033a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf92c30f0104747275650973746174654461746100",
-				"07010001010b02096172626974726172790002010033ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff92c30f0104747275650973746174654461746100010034ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff92c30f010566616c73650973746174654461746100",
+				"07018e0502012a00056e6f6e6365a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf92c30f380f6173736574446566696e6974696f6e010f69737375616e636550726f6772616d020a617267756d656e7473310a617267756d656e747332015f015dfad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff92c30f03010c7370656e6450726f6772616d010973746174654461746117020a617267756d656e7473330a617267756d656e74733401010034a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf92c30f010474727565010973746174654461746100",
+				"07010001010b02096172626974726172790002010034ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff92c30f010474727565010973746174654461746100010035ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff92c30f010566616c7365010973746174654461746100",
 			}, ""),
 			hash: testutil.MustDecodeHash("6076fc8a96b08a4842f4bdc805606e9775ce6dbe4e371e88c70b75ea4283e942"),
 		},
