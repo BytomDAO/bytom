@@ -61,21 +61,29 @@ type Checkpoint struct {
 	Guaranties map[string]uint64 // pubKey -> num of guaranty
 }
 
-// AddVerification add a valid verification to checkpoint's supLink, return the one
-func (c *Checkpoint) AddVerification(sourceHash bc.Hash, sourceHeight uint64, pubKey, signature string) *SupLink {
+// AddVerification add a valid verification to checkpoint's supLink
+func (c *Checkpoint) AddVerification(sourceHash bc.Hash, sourceHeight uint64, pubKey, signature string) {
 	for _, supLink := range c.SupLinks {
 		if supLink.SourceHash == sourceHash {
 			supLink.Signatures[pubKey] = signature
-			return supLink
+			return
 		}
 	}
-	supLink := &SupLink{
+	c.SupLinks = append(c.SupLinks, &SupLink{
 		SourceHeight: sourceHeight,
 		SourceHash:   sourceHash,
 		Signatures:   map[string]string{pubKey: signature},
+	})
+}
+
+// IsMajority return true as long as there is one majority supLink
+func (c *Checkpoint) IsMajority() bool {
+	for _, supLink := range c.SupLinks {
+		if supLink.IsMajority() {
+			return true
+		}
 	}
-	c.SupLinks = append(c.SupLinks, supLink)
-	return supLink
+	return false
 }
 
 // Validator represent the participants of the PoS network
