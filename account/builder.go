@@ -115,7 +115,7 @@ func (m *Manager) buildBtmTxChain(utxos []*UTXO, signer *signers.Signer) ([]*txb
 		}
 
 		outAmount := buildAmount - txbuilder.ChainTxMergeGas
-		output := types.NewOriginalTxOutput(*consensus.BTMAssetID, outAmount, acp.ControlProgram)
+		output := types.NewOriginalTxOutput(*consensus.BTMAssetID, outAmount, acp.ControlProgram, utxos[index].StateData)
 		if err := builder.AddOutput(output); err != nil {
 			return nil, nil, err
 		}
@@ -135,6 +135,7 @@ func (m *Manager) buildBtmTxChain(utxos []*UTXO, signer *signers.Signer) ([]*txb
 			AssetID:             *consensus.BTMAssetID,
 			Amount:              outAmount,
 			ControlProgram:      acp.ControlProgram,
+			StateData:           utxos[index].StateData,
 			SourceID:            *bcOut.Source.Ref,
 			SourcePos:           bcOut.Source.Position,
 			ControlProgramIndex: acp.KeyIndex,
@@ -187,7 +188,7 @@ func SpendAccountChain(ctx context.Context, builder *txbuilder.TemplateBuilder, 
 	}
 
 	if utxo.Amount > act.Amount {
-		if err = builder.AddOutput(types.NewOriginalTxOutput(*consensus.BTMAssetID, utxo.Amount-act.Amount, utxo.ControlProgram)); err != nil {
+		if err = builder.AddOutput(types.NewOriginalTxOutput(*consensus.BTMAssetID, utxo.Amount-act.Amount, utxo.ControlProgram, utxo.StateData)); err != nil {
 			return nil, errors.Wrap(err, "adding change output")
 		}
 	}
@@ -240,7 +241,8 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 
 		// Don't insert the control program until callbacks are executed.
 		a.accounts.insertControlProgramDelayed(b, acp)
-		if err = b.AddOutput(types.NewOriginalTxOutput(*a.AssetId, res.change, acp.ControlProgram)); err != nil {
+		// TODL: fill account state data
+		if err = b.AddOutput(types.NewOriginalTxOutput(*a.AssetId, res.change, acp.ControlProgram, nil)); err != nil {
 			return errors.Wrap(err, "adding change output")
 		}
 	}
@@ -304,7 +306,7 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 
 // UtxoToInputs convert an utxo to the txinput
 func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.SigningInstruction, error) {
-	txInput := types.NewSpendInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram)
+	txInput := types.NewSpendInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram, u.StateData)
 	sigInst := &txbuilder.SigningInstruction{}
 	if signer == nil {
 		return txInput, sigInst, nil
