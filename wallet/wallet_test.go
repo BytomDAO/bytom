@@ -15,6 +15,7 @@ import (
 	"github.com/bytom/bytom/blockchain/txbuilder"
 	"github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/contract"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/database"
 	dbm "github.com/bytom/bytom/database/leveldb"
@@ -290,6 +291,7 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 	controlProg.KeyIndex = 1
 
 	reg := asset.NewRegistry(testDB, chain)
+	contractReg := contract.NewRegistry(testDB)
 	asset, err := reg.Define([]chainkd.XPub{xpub1.XPub}, 1, nil, 0, "TESTASSET", nil)
 	if err != nil {
 		t.Fatal(err)
@@ -308,7 +310,7 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 
 	tx := types.NewTx(*txData)
 	//block := mockSingleBlock(tx)
-	w, err := NewWallet(testDB, accountManager, reg, hsm, chain, dispatcher, false)
+	w, err := NewWallet(testDB, accountManager, reg, contractReg, hsm, chain, dispatcher, false)
 	go w.memPoolTxQueryLoop()
 	w.eventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: protocol.MsgNewTx}})
 	time.Sleep(time.Millisecond * 10)

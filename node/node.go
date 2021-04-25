@@ -21,6 +21,7 @@ import (
 	"github.com/bytom/bytom/blockchain/txfeed"
 	cfg "github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/contract"
 	"github.com/bytom/bytom/database"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/env"
@@ -107,7 +108,8 @@ func NewNode(config *cfg.Config) *Node {
 		walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
 		accounts = account.NewManager(walletDB, chain)
 		assets = asset.NewRegistry(walletDB, chain)
-		wallet, err = w.NewWallet(walletDB, accounts, assets, hsm, chain, dispatcher, config.Wallet.TxIndex)
+		contracts := contract.NewRegistry(walletDB)
+		wallet, err = w.NewWallet(walletDB, accounts, assets, contracts, hsm, chain, dispatcher, config.Wallet.TxIndex)
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "error": err}).Error("init NewWallet")
 		}

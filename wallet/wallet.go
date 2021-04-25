@@ -9,6 +9,7 @@ import (
 	"github.com/bytom/bytom/account"
 	"github.com/bytom/bytom/asset"
 	"github.com/bytom/bytom/blockchain/pseudohsm"
+	"github.com/bytom/bytom/contract"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/event"
@@ -48,6 +49,7 @@ type Wallet struct {
 	TxIndexFlag     bool
 	AccountMgr      *account.Manager
 	AssetReg        *asset.Registry
+	ContractReg     *contract.Registry
 	Hsm             *pseudohsm.HSM
 	chain           *protocol.Chain
 	RecoveryMgr     *recoveryManager
@@ -58,11 +60,12 @@ type Wallet struct {
 }
 
 //NewWallet return a new wallet instance
-func NewWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) (*Wallet, error) {
+func NewWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry, contract *contract.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) (*Wallet, error) {
 	w := &Wallet{
 		DB:              walletDB,
 		AccountMgr:      account,
 		AssetReg:        asset,
+		ContractReg:     contract,
 		chain:           chain,
 		Hsm:             hsm,
 		RecoveryMgr:     newRecoveryManager(walletDB, account),

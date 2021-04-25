@@ -83,11 +83,11 @@ func RegisterProgram(contract []byte) ([]byte, error) {
 
 // CallContractProgram generates the script for control contract output
 // follow BCRP(bytom contract register protocol)
-func CallContractProgram(contractID []byte) ([]byte, error) {
+func CallContractProgram(hash []byte) ([]byte, error) {
 	builder := NewBuilder()
 	builder.AddOp(vm.OP_1)
 	builder.AddOp(vm.OP_PUSHDATA1)
-	builder.AddData(contractID)
+	builder.AddData(hash)
 	return builder.Build()
 }
 
