@@ -14,7 +14,7 @@ type OutputCommitment struct {
 	bc.AssetAmount
 	VMVersion      uint64
 	ControlProgram []byte
-	StateData      []byte
+	StateData      [][]byte
 }
 
 func (oc *OutputCommitment) writeTo(w io.Writer, assetVersion uint64) (err error) {
@@ -28,7 +28,7 @@ func (oc *OutputCommitment) writeTo(w io.Writer, assetVersion uint64) (err error
 		if _, err = blockchain.WriteVarstr31(w, oc.ControlProgram); err != nil {
 			return errors.Wrap(err, "writing control program")
 		}
-		if _, err = blockchain.WriteVarstr31(w, oc.StateData); err != nil {
+		if _, err = blockchain.WriteVarstrList(w, oc.StateData); err != nil {
 			return errors.Wrap(err, "writing state data")
 		}
 	}
@@ -51,7 +51,7 @@ func (oc *OutputCommitment) readFrom(r *blockchain.Reader, assetVersion uint64) 
 		if err != nil {
 			return errors.Wrap(err, "reading control program")
 		}
-		oc.StateData, err = blockchain.ReadVarstr31(r)
+		oc.StateData, err = blockchain.ReadVarstrList(r)
 		return errors.Wrap(err, "reading state data")
 	}
 	return nil

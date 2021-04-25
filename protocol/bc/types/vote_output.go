@@ -14,7 +14,7 @@ type VoteOutput struct {
 }
 
 // NewVoteOutput create a new output struct
-func NewVoteOutput(assetID bc.AssetID, amount uint64, controlProgram []byte, vote []byte, state []byte) *TxOutput {
+func NewVoteOutput(assetID bc.AssetID, amount uint64, controlProgram []byte, vote []byte, state [][]byte) *TxOutput {
 	return &TxOutput{
 		AssetVersion: 1,
 		OutputCommitment: OutputCommitment{

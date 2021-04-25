@@ -15,7 +15,7 @@ message Program {
 }
 
 message StateData {
-  bytes  state_data       = 1;
+  repeated bytes  state_data       = 1;
 }
 
 // This message type duplicates Hash, above. One alternative is to

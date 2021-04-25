@@ -72,13 +72,13 @@ func TestSerializationSpend(t *testing.T) {
 		[]byte("arguments1"),
 		[]byte("arguments2"),
 	}
-	spend := NewSpendInput(arguments, testutil.MustDecodeHash("fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409"), testutil.MustDecodeAsset("fe9791d71b67ee62515e08723c061b5ccb952a80d804417c8aeedf7f633c524a"), 254354, 3, []byte("spendProgram"), []byte("stateData"))
+	spend := NewSpendInput(arguments, testutil.MustDecodeHash("fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409"), testutil.MustDecodeAsset("fe9791d71b67ee62515e08723c061b5ccb952a80d804417c8aeedf7f633c524a"), 254354, 3, []byte("spendProgram"), [][]byte{[]byte("stateData")})
 
 	wantHex := strings.Join([]string{
 		"01", // asset version
-		"5e", // input commitment length
+		"5f", // input commitment length
 		"01", // spend type flag
-		"5c", // spend commitment length
+		"5d", // spend commitment length
 		"fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409", // source id
 		"fe9791d71b67ee62515e08723c061b5ccb952a80d804417c8aeedf7f633c524a", // assetID
 		"92c30f",                   // amount
@@ -86,7 +86,7 @@ func TestSerializationSpend(t *testing.T) {
 		"01",                       // vm version
 		"0c",                       // spend program length
 		"7370656e6450726f6772616d", // spend program
-		"09",                       // state length
+		"0109",                     // state length
 		"737461746544617461",       // state
 		"17",                       // witness length
 		"02",                       // argument array length
@@ -167,7 +167,7 @@ func TestSerializationVeto(t *testing.T) {
 		[]byte("arguments2"),
 	}
 
-	vetoInput := NewVetoInput(arguments, testutil.MustDecodeHash("fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409"), testutil.MustDecodeAsset("fe9791d71b67ee62515e08723c061b5ccb952a80d804417c8aeedf7f633c524a"), 254354, 3, []byte("spendProgram"), []byte("af594006a40837d9f028daabb6d589df0b9138daefad5683e5233c2646279217294a8d532e60863bcf196625a35fb8ceeffa3c09610eb92dcfb655a947f13269"), []byte{})
+	vetoInput := NewVetoInput(arguments, testutil.MustDecodeHash("fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409"), testutil.MustDecodeAsset("fe9791d71b67ee62515e08723c061b5ccb952a80d804417c8aeedf7f633c524a"), 254354, 3, []byte("spendProgram"), []byte("af594006a40837d9f028daabb6d589df0b9138daefad5683e5233c2646279217294a8d532e60863bcf196625a35fb8ceeffa3c09610eb92dcfb655a947f13269"), [][]byte{})
 
 	wantHex := strings.Join([]string{
 		"01",   // asset version

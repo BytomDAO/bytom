@@ -34,7 +34,7 @@ type UTXO struct {
 	Amount              uint64
 	SourcePos           uint64
 	ControlProgram      []byte
-	StateData           []byte
+	StateData           [][]byte
 	AccountID           string
 	Address             string
 	ControlProgramIndex uint64

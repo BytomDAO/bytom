@@ -12,7 +12,7 @@ type SpendInput struct {
 }
 
 // NewSpendInput create a new SpendInput struct.
-func NewSpendInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amount, sourcePos uint64, controlProgram []byte, stateData []byte) *TxInput {
+func NewSpendInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amount, sourcePos uint64, controlProgram []byte, stateData [][]byte) *TxInput {
 	sc := SpendCommitment{
 		AssetAmount: bc.AssetAmount{
 			AssetId: &assetID,

@@ -12,7 +12,7 @@ func BenchmarkEntryID(b *testing.B) {
 		NewIssuance(nil, &AssetAmount{}, 0),
 		m,
 		NewTxHeader(1, 1, 0, nil),
-		NewOutput(&ValueSource{}, &Program{Code: []byte{1}, VmVersion: 1}, &StateData{StateData: []byte{1}}, 0),
+		NewOutput(&ValueSource{}, &Program{Code: []byte{1}, VmVersion: 1}, &StateData{StateData: [][]byte{{1}}}, 0),
 		NewRetirement(&ValueSource{}, 1),
 		NewSpend(&Hash{}, 0),
 	}
@@ -57,10 +57,10 @@ func TestEntryID(t *testing.T) {
 					Position: 10,
 				},
 				&Program{VmVersion: 1, Code: []byte{5, 5, 5, 5}},
-				&StateData{StateData: []byte{3, 4}},
+				&StateData{StateData: [][]byte{{3, 4}}},
 				1,
 			),
-			expectEntryID: "cb520fa0697ecdbd6380bcd31d0d88f2727f7acf9e5af1fc192074f973e5a840",
+			expectEntryID: "02c6841bcbdc3231a7beecefdfb4785876153080ebdc04bcd3dab308d18c8846",
 		},
 		{
 			entry: NewRetirement(
