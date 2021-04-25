@@ -81,7 +81,7 @@ func getDeserialFun(key []byte) (deserialFun, error) {
 			sortSpendOutputID(block)
 			return block, err
 		},
-		string(database.BlockHeaderPrefix): func(data []byte) (interface{}, error) {
+		string(database.BlockHeaderIndexPrefix): func(data []byte) (interface{}, error) {
 			bh := types.BlockHeader{}
 			err := bh.UnmarshalText(data)
 			return bh, err

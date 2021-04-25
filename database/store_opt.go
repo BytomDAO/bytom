@@ -85,6 +85,7 @@ func (s *Store) SaveBlock(block *types.Block) error {
 	batch.Set(calcBlockHashesPrefix(block.Height), binaryBlockHashes)
 	batch.Set(calcBlockHeaderKey(&blockHash), binaryBlockHeader)
 	batch.Set(calcBlockTransactionsKey(&blockHash), binaryBlockTxs)
+	batch.Set(CalcBlockHeaderIndexKey(block.Height, &blockHash), binaryBlockHeader)
 	batch.Write()
 
 	s.cache.removeBlockHashes(block.Height)
@@ -117,7 +118,7 @@ func (s *Store) GetBlockTransactions(hash *bc.Hash) ([]*types.Tx, error) {
 }
 
 // GetBlock return the block by given hash
-func (s *Store) GetBlockEx(hash *bc.Hash) (*types.Block, error) {
+func (s *Store) GetBlock(hash *bc.Hash) (*types.Block, error) {
 	blockHeader, err := s.GetBlockHeader(hash)
 	if err != nil {
 		return nil, err

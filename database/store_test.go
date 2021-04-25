@@ -190,7 +190,6 @@ func TestSaveBlock(t *testing.T) {
 	}
 
 	blockHash := block.Hash()
-	//todo:
 	gotBlock, err := store.GetBlock(&blockHash)
 	if err != nil {
 		t.Fatal(err)
@@ -202,7 +201,7 @@ func TestSaveBlock(t *testing.T) {
 		t.Errorf("got block:%v, expect block:%v", gotBlock, block)
 	}
 
-	data := store.db.Get(CalcBlockHeaderKey(block.Height, &blockHash))
+	data := store.db.Get(CalcBlockHeaderIndexKey(block.Height, &blockHash))
 	gotBlockHeader := types.BlockHeader{}
 	if err := gotBlockHeader.UnmarshalText(data); err != nil {
 		t.Fatal(err)

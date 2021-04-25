@@ -182,3 +182,4 @@ func (tx *TxData) writeTo(w io.Writer, serflags byte) error {
 	}
 	return nil
 }
+

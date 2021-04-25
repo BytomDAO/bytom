@@ -20,10 +20,10 @@ import (
 const logModule = "leveldb"
 
 var (
-	BlockStoreKey     = []byte("blockStore")
-	BlockPrefix       = []byte("B:")
-	BlockHeaderPrefix = []byte("BH:")
-	TxStatusPrefix    = []byte("BTS:")
+	BlockStoreKey          = []byte("blockStore")
+	BlockPrefix            = []byte("B:")
+	BlockHeaderIndexPrefix = []byte("BH:")
+	TxStatusPrefix         = []byte("BTS:")
 )
 
 func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
@@ -50,10 +50,10 @@ func CalcBlockKey(hash *bc.Hash) []byte {
 	return append(BlockPrefix, hash.Bytes()...)
 }
 
-func CalcBlockHeaderKey(height uint64, hash *bc.Hash) []byte {
+func CalcBlockHeaderIndexKey(height uint64, hash *bc.Hash) []byte {
 	buf := [8]byte{}
 	binary.BigEndian.PutUint64(buf[:], height)
-	key := append(BlockHeaderPrefix, buf[:]...)
+	key := append(BlockHeaderIndexPrefix, buf[:]...)
 	return append(key, hash.Bytes()...)
 }
 
@@ -142,11 +142,6 @@ func (s *Store) BlockExist(hash *bc.Hash) bool {
 	return err == nil && block != nil
 }
 
-// GetBlock return the block by given hash
-func (s *Store) GetBlock(hash *bc.Hash) (*types.Block, error) {
-	return s.cache.lookup(hash)
-}
-
 // GetTransactionsUtxo will return all the utxo that related to the input txs
 func (s *Store) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) error {
 	return getTransactionsUtxo(s.db, view, txs)
@@ -160,7 +155,7 @@ func (s *Store) GetStoreStatus() *protocol.BlockStoreState {
 func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error) {
 	startTime := time.Now()
 	blockIndex := state.NewBlockIndex()
-	bhIter := s.db.IteratorPrefix(BlockHeaderPrefix)
+	bhIter := s.db.IteratorPrefix(BlockHeaderIndexPrefix)
 	defer bhIter.Release()
 
 	var lastNode *state.BlockNode
