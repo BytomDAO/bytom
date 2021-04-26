@@ -771,7 +771,7 @@ func (m *Manager) GetProposerAddress() (string, error) {
 	return cp.Address, nil
 }
 
-// SetProposerAddress will set the proposer address
+// SetProposerAddress will set the proposer address and control program
 func (m *Manager) SetProposerAddress(proposerAddress string) (string, error) {
 	program, err := m.getProgramByAddress(proposerAddress)
 	if err != nil {
