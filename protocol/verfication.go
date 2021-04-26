@@ -1,16 +1,18 @@
-package consensus
+package protocol
 
 import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/crypto/sha3pool"
 	"github.com/bytom/bytom/protocol/bc"
-	"github.com/bytom/bytom/protocol/state"
 	"golang.org/x/crypto/ed25519"
 )
+
+var errVerifySignature = errors.New("signature of verification message is invalid")
 
 // Verification represent a verification message for the block
 // source hash and target hash point to the checkpoint, and the source checkpoint is the target checkpoint's parent(not be directly)
@@ -22,29 +24,6 @@ type Verification struct {
 	TargetHeight uint64
 	Signature    string
 	PubKey       string
-}
-
-func makeVerification(supLink *state.SupLink, checkpoint *state.Checkpoint, pubKey string) *Verification {
-	return &Verification{
-		SourceHash:   supLink.SourceHash,
-		TargetHash:   checkpoint.Hash,
-		SourceHeight: supLink.SourceHeight,
-		TargetHeight: checkpoint.Height,
-		Signature:    supLink.Signatures[pubKey],
-		PubKey:       pubKey,
-	}
-}
-
-func (v *Verification) validate() error {
-	if v.SourceHeight%state.BlocksOfEpoch != 0 || v.TargetHeight%state.BlocksOfEpoch != 0 {
-		return errVoteToGrowingCheckpoint
-	}
-
-	if v.SourceHeight == v.TargetHeight {
-		return errVoteToSameCheckpoint
-	}
-
-	return v.VerifySignature()
 }
 
 // EncodeMessage encode the verification for the validators to sign or verify

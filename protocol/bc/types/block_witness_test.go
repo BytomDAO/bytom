@@ -53,28 +53,23 @@ func TestReadWriteBlockWitness(t *testing.T) {
 }
 
 func TestBlockWitnessSet(t *testing.T) {
-	signatureLength := 64
 	cases := []struct {
 		name string
-		bw   BlockWitness
 		data []byte
 		want BlockWitness
 	}{
 		{
 			name: "shorter than normal block witness length",
-			bw:   make(BlockWitness, signatureLength-2),
-			data: testutil.MustDecodeHexString("9dc8892df991e1d1110a5cb1bbfd57f2f5e3aa89464de50f9555c7575d9c2b21cf8f05b77b880d8ae4dd218efb15b775c32c9d77f9a2955d69dca9020c127709"),
-			want: testutil.MustDecodeHexString("9dc8892df991e1d1110a5cb1bbfd57f2f5e3aa89464de50f9555c7575d9c2b21cf8f05b77b880d8ae4dd218efb15b775c32c9d77f9a2955d69dca9020c12"),
+			data: testutil.MustDecodeHexString("9dc8892df991e1d1110a5cb1bbfd57f2f5e3aa89464de50f9555c7575d9c2b21cf8f05b77b880d8ae4dd218efb15b775c32c9d77f9a2955d69dca9020c12"),
+			want: testutil.MustDecodeHexString("9dc8892df991e1d1110a5cb1bbfd57f2f5e3aa89464de50f9555c7575d9c2b21cf8f05b77b880d8ae4dd218efb15b775c32c9d77f9a2955d69dca9020c120000"),
 		},
 		{
 			name: "longer than normal block witness length",
-			bw:   make(BlockWitness, signatureLength+2),
-			data: testutil.MustDecodeHexString("9dc8892df991e1d1110a5cb1bbfd57f2f5e3aa89464de50f9555c7575d9c2b21cf8f05b77b880d8ae4dd218efb15b775c32c9d77f9a2955d69dca9020c127709"),
-			want: testutil.MustDecodeHexString("9dc8892df991e1d1110a5cb1bbfd57f2f5e3aa89464de50f9555c7575d9c2b21cf8f05b77b880d8ae4dd218efb15b775c32c9d77f9a2955d69dca9020c1277090000"),
+			data: testutil.MustDecodeHexString("9dc8892df991e1d1110a5cb1bbfd57f2f5e3aa89464de50f9555c7575d9c2b21cf8f05b77b880d8ae4dd218efb15b775c32c9d77f9a2955d69dca9020c1277091111"),
+			want: testutil.MustDecodeHexString("9dc8892df991e1d1110a5cb1bbfd57f2f5e3aa89464de50f9555c7575d9c2b21cf8f05b77b880d8ae4dd218efb15b775c32c9d77f9a2955d69dca9020c127709"),
 		},
 		{
 			name: "normal block witness",
-			bw:   testutil.MustDecodeHexString("9dc8892df991e1d1110a5cb1bbfd57f2f5e3aa89464de50f9555c7575d9c2b21cf8f05b77b880d8ae4dd218efb15b775c32c9d77f9a2955d69dca9020c127709"),
 			data: testutil.MustDecodeHexString("2c27ea6e848a1191f25a7f4a04deae1c5a191587e5ee61f92e408ab97dbd35c3ce613b08475f0baa300606c38695d1eb0c4b409939acaa28b82fbb87e7de3c0f"),
 			want: testutil.MustDecodeHexString("2c27ea6e848a1191f25a7f4a04deae1c5a191587e5ee61f92e408ab97dbd35c3ce613b08475f0baa300606c38695d1eb0c4b409939acaa28b82fbb87e7de3c0f"),
 		},
@@ -82,10 +77,10 @@ func TestBlockWitnessSet(t *testing.T) {
 
 	for i, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			newbw := c.bw
-			newbw.Set(c.data)
-			if !testutil.DeepEqual(c.want, newbw) {
-				t.Errorf("update result mismatch: %v, got:%v, want:%v", i, newbw, c.want)
+			witness := &BlockWitness{}
+			witness.Set(c.data)
+			if !testutil.DeepEqual(c.want, *witness) {
+				t.Errorf("update result mismatch: %v, got:%v, want:%v", i, witness, c.want)
 			}
 		})
 	}
