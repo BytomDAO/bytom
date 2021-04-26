@@ -57,7 +57,6 @@ func newBlockBuilder(chain *protocol.Chain, accountManager *account.Manager, tim
 			PreviousBlockHash: preBlockHeader.Hash(),
 			Timestamp:         timestamp,
 			BlockCommitment:   types.BlockCommitment{},
-			BlockWitness:      make([]byte, protocol.SignatureLength),
 		},
 	}
 

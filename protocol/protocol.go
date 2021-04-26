@@ -120,6 +120,14 @@ func (c *Chain) GetBlockIndex() *state.BlockIndex {
 	return c.index
 }
 
+func (c *Chain) SignBlockHeader(blockHeader *types.BlockHeader) {
+	c.cond.L.Lock()
+	defer c.cond.L.Unlock()
+	xprv := config.CommonConfig.PrivateKey()
+	signature := xprv.Sign(blockHeader.Hash().Bytes())
+	blockHeader.Set(signature)
+}
+
 // This function must be called with mu lock in above level
 func (c *Chain) setState(node *state.BlockNode, view *state.UtxoViewpoint, contractView *state.ContractViewpoint) error {
 	if err := c.store.SaveChainStatus(node, view, contractView); err != nil {

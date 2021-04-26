@@ -20,5 +20,7 @@ func (bw *BlockWitness) writeTo(w io.Writer) error {
 }
 
 func (bw *BlockWitness) Set(data []byte) {
-	copy(*bw, data)
+	witness := make([]byte, len(data))
+	copy(witness, data)
+	*bw = witness
 }

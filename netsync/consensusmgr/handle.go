@@ -5,12 +5,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/event"
 	"github.com/bytom/bytom/netsync/peers"
 	"github.com/bytom/bytom/p2p"
 	"github.com/bytom/bytom/p2p/security"
-	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 )
@@ -111,9 +109,7 @@ func (m *Manager) handleBlockSignatureMsg(peerID string, msg *BlockSignatureMsg)
 	m.peers.MarkBlockSignature(peerID, msg.Signature)
 	blockHash := bc.NewHash(msg.BlockHash)
 	if err := m.chain.ProcessBlockSignature(msg.Signature, msg.PubKey, &blockHash); err != nil {
-		if errors.Root(err) != protocol.ErrDoubleSignBlock {
-			m.peers.ProcessIllegal(peerID, security.LevelMsgIllegal, err.Error())
-		}
+		m.peers.ProcessIllegal(peerID, security.LevelMsgIllegal, err.Error())
 	}
 }
 

@@ -1,27 +1,23 @@
 package protocol
 
 import (
-	"crypto/ed25519"
-
-	"github.com/bytom/bytom/config"
-	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/protocol/state"
 )
 
-var (
-	// ErrDoubleSignBlock represent the consensus is double sign in same height of different block
-	ErrDoubleSignBlock  = errors.New("the consensus is double sign in same height of different block")
-	errInvalidSignature = errors.New("the signature of block is invalid")
-)
+// Casper is BFT based proof of stack consensus algorithm, it provides safety and liveness in theory
+type CasperConsensus interface {
 
-var (
-	SignatureLength = ed25519.SignatureSize
-)
+	// Best chain return the chain containing the justified checkpoint of the largest height
+	BestChain() (uint64, bc.Hash)
 
-func (c *Chain) SignBlockHeader(blockHeader *types.BlockHeader) {
-	c.cond.L.Lock()
-	defer c.cond.L.Unlock()
-	xprv := config.CommonConfig.PrivateKey()
-	signature := xprv.Sign(blockHeader.Hash().Bytes())
-	blockHeader.Set(signature)
+	// AuthVerification verify whether the Verification is legal.
+	AuthVerification(v *Verification) error
+
+	// ApplyBlock apply block to the consensus module
+	ApplyBlock(block *types.Block) (*Verification, error)
+
+	// Validators return the validators by specified block hash
+	Validators(blockHash *bc.Hash) ([]*state.Validator, error)
 }
