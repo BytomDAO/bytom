@@ -10,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/consensus/bcrp"
 	"github.com/bytom/bytom/event"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
@@ -209,8 +210,19 @@ func isTransactionZeroOutput(tx *types.Tx) bool {
 	return false
 }
 
+func isInvalidBCRPTx(tx *types.Tx) bool {
+	for _, output := range tx.TxData.Outputs {
+		if bcrp.IsBCRPScript(output.ControlProgram) {
+			if output.AssetId != consensus.BTMAssetID || output.Amount < consensus.BCRPRequiredBTMAmount {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (tp *TxPool) IsDust(tx *types.Tx) bool {
-	return isTransactionNoBtmInput(tx) || isTransactionZeroOutput(tx)
+	return isTransactionNoBtmInput(tx) || isTransactionZeroOutput(tx) || isInvalidBCRPTx(tx)
 }
 
 func (tp *TxPool) processTransaction(tx *types.Tx, height, fee uint64) (bool, error) {
