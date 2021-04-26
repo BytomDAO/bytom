@@ -473,7 +473,8 @@ func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
 	return cp.ControlProgram, nil
 }
 
-// GetCoinbaseCtrlProgram will return the coinbase CtrlProgram
+// GetCoinbaseCtrlProgram will return the coinbase CtrlProgram.
+// It will get the first account control program if not set coinbase control program
 func (m *Manager) GetCoinbaseCtrlProgram() (*CtrlProgram, error) {
 	if data := m.db.Get(proposerAddressKey); data != nil {
 		cp := &CtrlProgram{}
@@ -771,7 +772,8 @@ func (m *Manager) GetProposerAddress() (string, error) {
 	return cp.Address, nil
 }
 
-// SetProposerAddress will set the proposer address and control program
+// SetProposerAddress will set the proposer address and control program.
+// It is the coinbase address to receive block reward, not to sign the block
 func (m *Manager) SetProposerAddress(proposerAddress string) (string, error) {
 	program, err := m.getProgramByAddress(proposerAddress)
 	if err != nil {
