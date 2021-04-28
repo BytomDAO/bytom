@@ -6,13 +6,14 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/golang/protobuf/proto"
+
 	"github.com/bytom/bytom/database"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/testutil"
-	"github.com/golang/protobuf/proto"
 )
 
 type storeEntry struct {
@@ -20,7 +21,7 @@ type storeEntry struct {
 	val []byte
 }
 
-func SerialItem(item *storeItem) ([]storeEntry, error) {
+func serialItem(item *storeItem) ([]storeEntry, error) {
 	var storeEntrys []storeEntry
 	switch item.val.(type) {
 	case *protocol.BlockStoreState:

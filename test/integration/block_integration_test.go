@@ -1216,7 +1216,7 @@ func createStoreEntries(mainChainIndexes []int, attachBlocks []*attachBlock, ext
 	storeItems := createStoreItems(mainChainIndexes, attachBlocks, extralItem...)
 	var storeEntries []storeEntry
 	for _, item := range storeItems {
-		entrys, err := SerialItem(item)
+		entrys, err := serialItem(item)
 		if err != nil {
 			panic(err)
 		}
