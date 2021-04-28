@@ -12,6 +12,9 @@ type CasperConsensus interface {
 	// Best chain return the chain containing the justified checkpoint of the largest height
 	BestChain() (uint64, bc.Hash)
 
+	// LastFinalized return the block height and block hash which is finalized ast last
+	LastFinalized() (uint64, bc.Hash)
+
 	// AuthVerification verify whether the Verification is legal.
 	AuthVerification(v *Verification) error
 

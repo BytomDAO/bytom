@@ -13,6 +13,7 @@ import (
 	"github.com/bytom/bytom/event"
 	"github.com/bytom/bytom/netsync/peers"
 	"github.com/bytom/bytom/p2p"
+	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 )
@@ -94,7 +95,7 @@ func (c *mockChain) ProcessBlock(*types.Block) (bool, error) {
 	return false, nil
 }
 
-func (c *mockChain) ProcessBlockSignature(signature, pubkey []byte, blockHash *bc.Hash) error {
+func (c *mockChain) ProcessBlockVerification(*protocol.Verification) error {
 	return nil
 }
 
@@ -129,7 +130,7 @@ func (ps *mockPeers) MarkBlock(peerID string, hash *bc.Hash) {
 	*ps.knownBlock = *hash
 }
 
-func (ps *mockPeers) MarkBlockSignature(peerID string, signature []byte) {
+func (ps *mockPeers) MarkBlockVerification(peerID string, signature []byte) {
 	*ps.knownSignature = append(*ps.knownSignature, signature...)
 }
 
@@ -162,7 +163,7 @@ func TestBlockProposeMsgBroadcastLoop(t *testing.T) {
 	}
 }
 
-func TestBlockSignatureMsgBroadcastLoop(t *testing.T) {
+func TestBlockVerificationMsgBroadcastLoop(t *testing.T) {
 	dispatcher := event.NewDispatcher()
 	msgCount := 0
 	blockHeight := 100
@@ -173,7 +174,7 @@ func TestBlockSignatureMsgBroadcastLoop(t *testing.T) {
 	defer mgr.Stop()
 	time.Sleep(10 * time.Millisecond)
 	for _, block := range blocks {
-		mgr.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: block.Hash(), Signature: []byte{0x1, 0x2}, XPub: []byte{0x011, 0x022}})
+		mgr.eventDispatcher.Post(event.BlockVerificationEvent{TargetHash: block.Hash(), Signature: []byte{0x1, 0x2}, PubKey: []byte{0x011, 0x022}})
 	}
 	time.Sleep(10 * time.Millisecond)
 	if msgCount != blockHeight+1 {
@@ -210,7 +211,7 @@ func TestProcessBlockProposeMsg(t *testing.T) {
 	}
 }
 
-func TestProcessBlockSignatureMsg(t *testing.T) {
+func TestProcessBlockVerificationMsg(t *testing.T) {
 	dispatcher := event.NewDispatcher()
 	msgCount := 0
 	knownSignature := []byte{}
@@ -225,7 +226,7 @@ func TestProcessBlockSignatureMsg(t *testing.T) {
 	}
 
 	signature := []byte{0x01, 0x02}
-	msg := NewBlockSignatureMsg(block.Hash(), signature, []byte{0x03, 0x04})
+	msg := NewBlockVerificationMsg(100, 200, block.Hash(),  block.Hash(), []byte{0x03, 0x04}, signature)
 
 	mgr.processMsg(peerID, 0, msg)
 

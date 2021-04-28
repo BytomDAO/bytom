@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/bytom/bytom/netsync/peers"
+	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 )
@@ -45,7 +46,7 @@ func (c *chain) ProcessBlock(block *types.Block) (bool, error) {
 	return false, nil
 }
 
-func (c *chain) ProcessBlockSignature(signature, pubkey []byte, blockHash *bc.Hash) error {
+func (c *chain) ProcessBlockVerification(*protocol.Verification) error {
 	return nil
 }
 

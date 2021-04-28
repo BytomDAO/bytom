@@ -13,7 +13,7 @@ import (
 
 var _ = wire.RegisterInterface(
 	struct{ ConsensusMessage }{},
-	wire.ConcreteType{O: &BlockSignatureMsg{}, Byte: blockSignatureByte},
+	wire.ConcreteType{O: &BlockVerificationMsg{}, Byte: blockSignatureByte},
 	wire.ConcreteType{O: &BlockProposeMsg{}, Byte: blockProposeByte},
 )
 
@@ -23,10 +23,13 @@ func TestDecodeMessage(t *testing.T) {
 		msgType byte
 	}{
 		{
-			msg: &BlockSignatureMsg{
-				BlockHash: [32]byte{0x01},
-				Signature: []byte{0x00},
-				PubKey:    []byte{0x01},
+			msg: &BlockVerificationMsg{
+				SourceHeight: 100,
+				SourceHash:   bc.Hash{V0: 1, V1: 1, V2: 1, V3: 1},
+				TargetHeight: 200,
+				TargetHash:   bc.Hash{V0: 2, V1: 2, V2: 2, V3: 2},
+				Signature:    []byte{0x00},
+				PubKey:       []byte{0x01},
 			},
 			msgType: blockSignatureByte,
 		},
@@ -52,15 +55,18 @@ func TestDecodeMessage(t *testing.T) {
 	}
 }
 
-func TestBlockSignBroadcastMsg(t *testing.T) {
-	blockSignMsg := &BlockSignatureMsg{
-		BlockHash: [32]byte{0x01},
-		Signature: []byte{0x00},
-		PubKey:    []byte{0x01},
+func TestBlockVerificationBroadcastMsg(t *testing.T) {
+	blockSignMsg := &BlockVerificationMsg{
+		SourceHeight: 100,
+		SourceHash:   bc.Hash{V0: 1, V1: 1, V2: 1, V3: 1},
+		TargetHeight: 200,
+		TargetHash:   bc.Hash{V0: 2, V1: 2, V2: 2, V3: 2},
+		Signature:    []byte{0x00},
+		PubKey:       []byte{0x01},
 	}
-	signatureBroadcastMsg := NewBroadcastMsg(NewBlockSignatureMsg(bc.NewHash(blockSignMsg.BlockHash), blockSignMsg.Signature, blockSignMsg.PubKey), consensusChannel)
+	verificationBroadcastMsg := NewBroadcastMsg(NewBlockVerificationMsg(blockSignMsg.SourceHeight, blockSignMsg.TargetHeight, blockSignMsg.SourceHash, blockSignMsg.TargetHash, blockSignMsg.PubKey, blockSignMsg.Signature), consensusChannel)
 
-	binMsg := wire.BinaryBytes(signatureBroadcastMsg.GetMsg())
+	binMsg := wire.BinaryBytes(verificationBroadcastMsg.GetMsg())
 	gotMsgType, gotMsg, err := decodeMessage(binMsg)
 	if err != nil {
 		t.Fatalf("decode Message err %s", err)
@@ -135,19 +141,22 @@ func TestBlockProposeMsg(t *testing.T) {
 	}
 }
 
-func TestBlockSignatureMsg(t *testing.T) {
-	msg := &BlockSignatureMsg{
-		BlockHash: [32]byte{0x01},
-		Signature: []byte{0x00},
-		PubKey:    []byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+func TestBlockVerificationMsg(t *testing.T) {
+	msg := &BlockVerificationMsg{
+		SourceHeight: 100,
+		SourceHash:   bc.Hash{V0: 1, V1: 1, V2: 1, V3: 1},
+		TargetHeight: 200,
+		TargetHash:   bc.Hash{V0: 2, V1: 2, V2: 2, V3: 2},
+		Signature:    []byte{0x00},
+		PubKey:       []byte{0x01},
 	}
-	gotMsg := NewBlockSignatureMsg(bc.NewHash(msg.BlockHash), msg.Signature, msg.PubKey)
+	gotMsg := NewBlockVerificationMsg(msg.SourceHeight, msg.TargetHeight, msg.SourceHash, msg.TargetHash, msg.PubKey, msg.Signature)
 
 	if !reflect.DeepEqual(gotMsg, msg) {
-		t.Fatalf("test block signature message err. got:%s\n want:%s", spew.Sdump(gotMsg), spew.Sdump(msg))
+		t.Fatalf("test block verification message err. got:%s\n want:%s", spew.Sdump(gotMsg), spew.Sdump(msg))
 	}
-	wantString := "{block_hash: 0100000000000000000000000000000000000000000000000000000000000000,signature:00,pubkey:01000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000}"
+	wantString := "{sourceHeight:100,targetHeight:200,sourceHash:0000000000000001000000000000000100000000000000010000000000000001,targetHash:0000000000000002000000000000000200000000000000020000000000000002,signature:00,pubkey:01}"
 	if gotMsg.String() != wantString {
-		t.Fatalf("test block signature message err. got string:%s\n want string:%s", gotMsg.String(), wantString)
+		t.Fatalf("test block verification message err. got string:%s\n want string:%s", gotMsg.String(), wantString)
 	}
 }

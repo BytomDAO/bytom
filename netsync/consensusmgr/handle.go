@@ -1,6 +1,7 @@
 package consensusmgr
 
 import (
+	"encoding/hex"
 	"reflect"
 
 	"github.com/sirupsen/logrus"
@@ -9,6 +10,7 @@ import (
 	"github.com/bytom/bytom/netsync/peers"
 	"github.com/bytom/bytom/p2p"
 	"github.com/bytom/bytom/p2p/security"
+	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 )
@@ -23,7 +25,7 @@ type Chain interface {
 	BestBlockHeight() uint64
 	GetHeaderByHash(*bc.Hash) (*types.BlockHeader, error)
 	ProcessBlock(*types.Block) (bool, error)
-	ProcessBlockSignature(signature, pubkey []byte, blockHash *bc.Hash) error
+	ProcessBlockVerification(*protocol.Verification) error
 }
 
 type Peers interface {
@@ -31,7 +33,7 @@ type Peers interface {
 	BroadcastMsg(bm peers.BroadcastMsg) error
 	GetPeer(id string) *peers.Peer
 	MarkBlock(peerID string, hash *bc.Hash)
-	MarkBlockSignature(peerID string, signature []byte)
+	MarkBlockVerification(peerID string, signature []byte)
 	ProcessIllegal(peerID string, level byte, reason string)
 	RemovePeer(peerID string)
 	SetStatus(peerID string, height uint64, hash *bc.Hash)
@@ -84,8 +86,8 @@ func (m *Manager) processMsg(peerID string, msgType byte, msg ConsensusMessage) 
 	case *BlockProposeMsg:
 		m.handleBlockProposeMsg(peerID, msg)
 
-	case *BlockSignatureMsg:
-		m.handleBlockSignatureMsg(peerID, msg)
+	case *BlockVerificationMsg:
+		m.handleBlockVerificationMsg(peerID, msg)
 
 	default:
 		logrus.WithFields(logrus.Fields{"module": logModule, "peer": peerID, "message_type": reflect.TypeOf(msg)}).Error("unhandled message type")
@@ -105,76 +107,64 @@ func (m *Manager) handleBlockProposeMsg(peerID string, msg *BlockProposeMsg) {
 	m.peers.SetStatus(peerID, block.Height, &hash)
 }
 
-func (m *Manager) handleBlockSignatureMsg(peerID string, msg *BlockSignatureMsg) {
-	m.peers.MarkBlockSignature(peerID, msg.Signature)
-	blockHash := bc.NewHash(msg.BlockHash)
-	if err := m.chain.ProcessBlockSignature(msg.Signature, msg.PubKey, &blockHash); err != nil {
+func (m *Manager) handleBlockVerificationMsg(peerID string, msg *BlockVerificationMsg) {
+	m.peers.MarkBlockVerification(peerID, msg.Signature)
+	if err := m.chain.ProcessBlockVerification(&protocol.Verification{
+		SourceHash:   msg.SourceHash,
+		TargetHash:   msg.TargetHash,
+		SourceHeight: msg.SourceHeight,
+		TargetHeight: msg.TargetHeight,
+		Signature:    hex.EncodeToString(msg.Signature),
+		PubKey:       hex.EncodeToString(msg.PubKey),
+	}); err != nil {
 		m.peers.ProcessIllegal(peerID, security.LevelMsgIllegal, err.Error())
 	}
 }
 
 func (m *Manager) blockProposeMsgBroadcastLoop() {
-	blockProposeMsgSub, err := m.eventDispatcher.Subscribe(event.NewProposedBlockEvent{})
-	if err != nil {
-		logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on subscribe NewBlockProposeEvent")
-		return
-	}
-	defer blockProposeMsgSub.Unsubscribe()
-
-	for {
-		select {
-		case obj, ok := <-blockProposeMsgSub.Chan():
-			if !ok {
-				logrus.WithFields(logrus.Fields{"module": logModule}).Warning("blockProposeMsgSub channel closed")
-				return
-			}
-
-			ev, ok := obj.Data.(event.NewProposedBlockEvent)
-			if !ok {
-				logrus.WithFields(logrus.Fields{"module": logModule}).Error("event type error")
-				continue
-			}
-			proposeMsg, err := NewBlockProposeMsg(&ev.Block)
-			if err != nil {
-				logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on create BlockProposeMsg")
-				return
-			}
-
-			if err := m.peers.BroadcastMsg(NewBroadcastMsg(proposeMsg, consensusChannel)); err != nil {
-				logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on broadcast BlockProposeBroadcastMsg")
-				continue
-			}
-
-		case <-m.quit:
-			return
-		}
-	}
+	m.msgBroadcastLoop(event.NewProposedBlockEvent{}, func(data interface{}) (ConsensusMessage, error) {
+		ev := data.(event.NewProposedBlockEvent)
+		return NewBlockProposeMsg(&ev.Block)
+	})
 }
 
-func (m *Manager) blockSignatureMsgBroadcastLoop() {
-	blockSignatureMsgSub, err := m.eventDispatcher.Subscribe(event.BlockSignatureEvent{})
+func (m *Manager) blockVerificationMsgBroadcastLoop() {
+	m.msgBroadcastLoop(event.BlockVerificationEvent{}, func(data interface{}) (ConsensusMessage, error) {
+		ev := data.(event.BlockVerificationEvent)
+		return NewBlockVerificationMsg(ev.SourceHeight, ev.TargetHeight, ev.SourceHash, ev.TargetHash, ev.PubKey, ev.Signature), nil
+	})
+}
+
+func (m *Manager) msgBroadcastLoop(msgType interface{}, newMsg func(event interface{}) (ConsensusMessage, error)) {
+	subscribeType := reflect.TypeOf(msgType)
+	msgSub, err := m.eventDispatcher.Subscribe(msgType)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on subscribe BlockSignatureEvent")
+		logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Errorf("failed on subscribe %s", subscribeType)
 		return
 	}
-	defer blockSignatureMsgSub.Unsubscribe()
+	defer msgSub.Unsubscribe()
 	for {
 		select {
-		case obj, ok := <-blockSignatureMsgSub.Chan():
+		case obj, ok := <-msgSub.Chan():
 			if !ok {
-				logrus.WithFields(logrus.Fields{"module": logModule}).Warning("blockProposeMsgSub channel closed")
+				logrus.WithFields(logrus.Fields{"module": logModule}).Warningf("%sSub channel closed", subscribeType)
 				return
 			}
 
-			ev, ok := obj.Data.(event.BlockSignatureEvent)
-			if !ok {
+			if reflect.TypeOf(obj.Data) != subscribeType {
 				logrus.WithFields(logrus.Fields{"module": logModule}).Error("event type error")
 				continue
 			}
 
-			blockSignatureMsg := NewBroadcastMsg(NewBlockSignatureMsg(ev.BlockHash, ev.Signature, ev.XPub), consensusChannel)
-			if err := m.peers.BroadcastMsg(blockSignatureMsg); err != nil {
-				logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on broadcast BlockSignBroadcastMsg.")
+			msg, err := newMsg(obj.Data)
+			if err != nil {
+				logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Errorf("failed on create %s message", subscribeType)
+				return
+			}
+
+			message := NewBroadcastMsg(msg, consensusChannel)
+			if err := m.peers.BroadcastMsg(message); err != nil {
+				logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Errorf("failed on broadcast %s message.", subscribeType)
 				continue
 			}
 
@@ -188,15 +178,15 @@ func (m *Manager) removePeer(peerID string) {
 	m.peers.RemovePeer(peerID)
 }
 
-//Start consensus manager service.
+// Start consensus manager service.
 func (m *Manager) Start() error {
 	go m.blockFetcher.blockProcessorLoop()
 	go m.blockProposeMsgBroadcastLoop()
-	go m.blockSignatureMsgBroadcastLoop()
+	go m.blockVerificationMsgBroadcastLoop()
 	return nil
 }
 
-//Stop consensus manager service.
+// Stop consensus manager service.
 func (m *Manager) Stop() {
 	close(m.quit)
 }

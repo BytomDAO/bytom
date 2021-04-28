@@ -18,7 +18,7 @@ const (
 	blockProposeByte   = byte(0x11)
 )
 
-//ConsensusMessage is a generic message for consensus reactor.
+// ConsensusMessage is a generic message for consensus reactor.
 type ConsensusMessage interface {
 	String() string
 	BroadcastMarkSendRecord(ps *peers.PeerSet, peers []string)
@@ -27,11 +27,11 @@ type ConsensusMessage interface {
 
 var _ = wire.RegisterInterface(
 	struct{ ConsensusMessage }{},
-	wire.ConcreteType{O: &BlockSignatureMsg{}, Byte: blockSignatureByte},
+	wire.ConcreteType{O: &BlockVerificationMsg{}, Byte: blockSignatureByte},
 	wire.ConcreteType{O: &BlockProposeMsg{}, Byte: blockProposeByte},
 )
 
-//decodeMessage decode msg
+// decodeMessage decode msg
 func decodeMessage(bz []byte) (msgType byte, msg ConsensusMessage, err error) {
 	msgType = bz[0]
 	n := int(0)
@@ -43,33 +43,43 @@ func decodeMessage(bz []byte) (msgType byte, msg ConsensusMessage, err error) {
 	return
 }
 
-// BlockSignatureMsg block signature message transferred between nodes.
-type BlockSignatureMsg struct {
-	BlockHash [32]byte
-	Signature []byte
-	PubKey    []byte
+// BlockVerificationMsg block verification message transferred between nodes.
+type BlockVerificationMsg struct {
+	SourceHeight uint64
+	SourceHash   bc.Hash
+	TargetHeight uint64
+	TargetHash   bc.Hash
+	PubKey       []byte
+	Signature    []byte
 }
 
-//NewBlockSignatureMsg create new block signature msg.
-func NewBlockSignatureMsg(blockHash bc.Hash, signature, pubKey []byte) ConsensusMessage {
-	hash := blockHash.Byte32()
-	return &BlockSignatureMsg{BlockHash: hash, Signature: signature, PubKey: pubKey}
+// NewBlockVerificationMsg create new block verification msg.
+func NewBlockVerificationMsg(sourceHeight, targetHeight uint64, sourceHash, targetHash bc.Hash, pubKey, signature []byte) ConsensusMessage {
+	return &BlockVerificationMsg{
+		SourceHeight: sourceHeight,
+		SourceHash:   sourceHash,
+		TargetHeight: targetHeight,
+		TargetHash:   targetHash,
+		PubKey:       pubKey,
+		Signature:    signature,
+	}
 }
 
-func (bs *BlockSignatureMsg) String() string {
-	return fmt.Sprintf("{block_hash: %s,signature:%s,pubkey:%s}", hex.EncodeToString(bs.BlockHash[:]), hex.EncodeToString(bs.Signature), hex.EncodeToString(bs.PubKey[:]))
+func (b *BlockVerificationMsg) String() string {
+	return fmt.Sprintf("{sourceHeight:%d,targetHeight:%d,sourceHash:%s,targetHash:%s,signature:%s,pubkey:%s}",
+		b.SourceHeight, b.TargetHeight, b.SourceHash.String(), b.TargetHash.String(), hex.EncodeToString(b.Signature), hex.EncodeToString(b.PubKey[:]))
 }
 
 // BroadcastMarkSendRecord mark send message record to prevent messages from being sent repeatedly.
-func (bs *BlockSignatureMsg) BroadcastMarkSendRecord(ps *peers.PeerSet, peers []string) {
+func (b *BlockVerificationMsg) BroadcastMarkSendRecord(ps *peers.PeerSet, peers []string) {
 	for _, peer := range peers {
-		ps.MarkBlockSignature(peer, bs.Signature)
+		ps.MarkBlockVerification(peer, b.Signature)
 	}
 }
 
 // BroadcastFilterTargetPeers filter target peers to filter the nodes that need to send messages.
-func (bs *BlockSignatureMsg) BroadcastFilterTargetPeers(ps *peers.PeerSet) []string {
-	return ps.PeersWithoutSignature(bs.Signature)
+func (b *BlockVerificationMsg) BroadcastFilterTargetPeers(ps *peers.PeerSet) []string {
+	return ps.PeersWithoutSignature(b.Signature)
 }
 
 // BlockProposeMsg block propose message transferred between nodes.
@@ -77,7 +87,7 @@ type BlockProposeMsg struct {
 	RawBlock []byte
 }
 
-//NewBlockProposeMsg create new block propose msg.
+// NewBlockProposeMsg create new block propose msg.
 func NewBlockProposeMsg(block *types.Block) (ConsensusMessage, error) {
 	rawBlock, err := block.MarshalText()
 	if err != nil {
@@ -86,7 +96,7 @@ func NewBlockProposeMsg(block *types.Block) (ConsensusMessage, error) {
 	return &BlockProposeMsg{RawBlock: rawBlock}, nil
 }
 
-//GetProposeBlock get propose block from msg.
+// GetProposeBlock get propose block from msg.
 func (bp *BlockProposeMsg) GetProposeBlock() (*types.Block, error) {
 	block := &types.Block{}
 	if err := block.UnmarshalText(bp.RawBlock); err != nil {

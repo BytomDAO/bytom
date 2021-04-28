@@ -1,9 +1,12 @@
 package protocol
 
 import (
+	"encoding/hex"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/event"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
@@ -83,6 +86,15 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		return err
 	}
 
+	verification, err := c.casper.ApplyBlock(block)
+	if err != nil {
+		return err
+	}
+
+	if err := c.broadcastVerification(verification); err != nil {
+		return err
+	}
+
 	contractView := state.NewContractViewpoint()
 	if err := contractView.ApplyBlock(block); err != nil {
 		return err
@@ -141,7 +153,17 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 		if err := c.store.GetTransactionsUtxo(utxoView, attachBlock.Transactions); err != nil {
 			return err
 		}
+
 		if err := utxoView.ApplyBlock(attachBlock); err != nil {
+			return err
+		}
+
+		verification, err := c.casper.ApplyBlock(b)
+		if err != nil {
+			return err
+		}
+
+		if err := c.broadcastVerification(verification); err != nil {
 			return err
 		}
 
@@ -182,6 +204,27 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 	}
 
 	return nil
+}
+
+func (c *Chain) broadcastVerification(v *Verification) error {
+	pubKey, err := hex.DecodeString(v.PubKey)
+	if err != nil {
+		return err
+	}
+
+	signature, err := hex.DecodeString(v.Signature)
+	if err != nil {
+		return err
+	}
+
+	return c.eventDispatcher.Post(event.BlockVerificationEvent{
+		SourceHeight: v.SourceHeight,
+		SourceHash:   v.SourceHash,
+		TargetHeight: v.TargetHeight,
+		TargetHash:   v.TargetHash,
+		PubKey:       pubKey,
+		Signature:    signature,
+	})
 }
 
 // SaveBlock will validate and save block into storage
@@ -252,9 +295,17 @@ func (c *Chain) ProcessBlock(block *types.Block) (bool, error) {
 }
 
 func (c *Chain) blockProcesser() {
-	for msg := range c.processBlockCh {
-		isOrphan, err := c.processBlock(msg.block)
-		msg.reply <- processBlockResponse{isOrphan: isOrphan, err: err}
+	for {
+		select {
+		case msg := <-c.processBlockCh:
+			isOrphan, err := c.processBlock(msg.block)
+			msg.reply <- processBlockResponse{isOrphan: isOrphan, err: err}
+		case blockHash := <-c.rollbackBlockCh:
+			if err := c.rollback(&blockHash); err != nil {
+				log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on rollback block")
+				c.rollbackBlockCh <- blockHash
+			}
+		}
 	}
 }
 
@@ -283,10 +334,11 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 		log.WithFields(log.Fields{"module": logModule}).Debug("append block to the end of mainchain")
 		return false, c.connectBlock(bestBlock)
 	}
-
-	if bestNode.Height > c.bestNode.Height {
-		log.WithFields(log.Fields{"module": logModule}).Debug("start to reorganize chain")
-		return false, c.reorganizeChain(bestNode)
-	}
 	return false, nil
+}
+
+func (c *Chain) rollback(bestBlockHash *bc.Hash) error {
+	node := c.index.GetNode(bestBlockHash)
+	log.WithFields(log.Fields{"module": logModule}).Debug("start to reorganize chain")
+	return c.reorganizeChain(node)
 }
