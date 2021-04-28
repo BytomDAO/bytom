@@ -124,8 +124,8 @@ func (s1 storeItems) equals(s2 storeItems) bool {
 
 type processBlockTestCase struct {
 	desc             string
-	initStore        []*storeItem
-	wantStore        []*storeItem
+	initStore        []storeEntry
+	wantStore        []storeEntry
 	wantBlockIndex   *state.BlockIndex
 	initOrphanManage *protocol.OrphanManage
 	wantOrphanManage *protocol.OrphanManage
@@ -137,7 +137,7 @@ type processBlockTestCase struct {
 func (p *processBlockTestCase) Run() error {
 	defer os.RemoveAll(dbDir)
 	if p.initStore == nil {
-		p.initStore = make([]*storeItem, 0)
+		p.initStore = make([]storeEntry, 0)
 	}
 	store, db, err := initStore(p)
 	if err != nil {
@@ -165,39 +165,18 @@ func (p *processBlockTestCase) Run() error {
 	}
 
 	if p.wantStore != nil {
-		gotStoreItems, err := loadStoreItems(db)
-		if err != nil {
-			return err
-		}
-
-		if !storeItems(gotStoreItems).equals(p.wantStore) {
-			gots := make(map[string]bool)
-			for _, gotItem := range gotStoreItems {
-				gotItemKey := hex.EncodeToString(gotItem.key)
-				gots[gotItemKey] = true
+		gotStoreEntries := loadStoreEntries(db)
+		if !equalsStoreEntries(p.wantStore, gotStoreEntries) {
+			gotMap := make(map[string]string)
+			for _, entry := range gotStoreEntries {
+				gotMap[hex.EncodeToString(entry.key)] = hex.EncodeToString(entry.val)
 			}
 
-			wants := make(map[string]bool)
-			for _, wantItem := range p.wantStore {
-				wantItemKey := hex.EncodeToString(wantItem.key)
-				wants[wantItemKey] = true
+			wantMap := make(map[string]string)
+			for _, entry := range p.wantStore {
+				wantMap[hex.EncodeToString(entry.key)] = hex.EncodeToString(entry.val)
 			}
-
-			fmt.Println("only in want:")
-			for wantItemKey, _ := range wants {
-				if !gots[wantItemKey] {
-					fmt.Println(wantItemKey)
-				}
-			}
-
-			fmt.Println("only in got:")
-			for wantItemKey, _ := range gots {
-				if !wants[wantItemKey] {
-					fmt.Println(wantItemKey)
-				}
-			}
-
-			return fmt.Errorf("#case(%s) want store:%v, got store:%v", p.desc, p.wantStore, gotStoreItems)
+			return fmt.Errorf("#case(%s) want store:%v, got store:%v", p.desc, p.wantStore, gotStoreEntries)
 		}
 	}
 
@@ -242,18 +221,8 @@ func loadStoreItems(db dbm.DB) ([]*storeItem, error) {
 func initStore(c *processBlockTestCase) (protocol.Store, dbm.DB, error) {
 	testDB := dbm.NewDB("testdb", "leveldb", dbDir)
 	batch := testDB.NewBatch()
-	for _, item := range c.initStore {
-		fun, err := getSerialFun(item.val)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		bytes, err := fun(item.val)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		batch.Set(item.key, bytes)
+	for _, entry := range c.initStore {
+		batch.Set(entry.key, entry.val)
 	}
 	batch.Write()
 	return database.NewStore(testDB), testDB, nil

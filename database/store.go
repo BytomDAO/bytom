@@ -59,7 +59,7 @@ func CalcBlockHeaderIndexKey(height uint64, hash *bc.Hash) []byte {
 
 // GetBlockHeader return the block header by given hash
 func GetBlockHeader(db dbm.DB, hash *bc.Hash) (*types.BlockHeader, error) {
-	binaryBlockHeader := db.Get(calcBlockHeaderKey(hash))
+	binaryBlockHeader := db.Get(CalcBlockHeaderKey(hash))
 	if binaryBlockHeader == nil {
 		return nil, fmt.Errorf("There are no blockHeader with given hash %s", hash.String())
 	}
@@ -73,7 +73,7 @@ func GetBlockHeader(db dbm.DB, hash *bc.Hash) (*types.BlockHeader, error) {
 
 // GetBlockTransactions return the block transactions by given hash
 func GetBlockTransactions(db dbm.DB, hash *bc.Hash) ([]*types.Tx, error) {
-	binaryBlockTxs := db.Get(calcBlockTransactionsKey(hash))
+	binaryBlockTxs := db.Get(CalcBlockTransactionsKey(hash))
 	if binaryBlockTxs == nil {
 		return nil, fmt.Errorf("There are no block transactions with given hash %s", hash.String())
 	}

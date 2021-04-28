@@ -22,17 +22,21 @@ const (
 	blockTransactons
 )
 
-func calcBlockHeaderKey(hash *bc.Hash) []byte {
+func CalcBlockHeaderKey(hash *bc.Hash) []byte {
 	return append([]byte{blockHeader, colon}, hash.Bytes()...)
 }
 
-func calcBlockHashesPrefix(height uint64) []byte {
+func CalcBlockHashesPrefix(height uint64) []byte {
 	buf := [8]byte{}
 	binary.BigEndian.PutUint64(buf[:], height)
-	return append([]byte{blockHashes, colon}, buf[:]...)
+	return append(BlockHashesPrefix(), buf[:]...)
 }
 
-func calcBlockTransactionsKey(hash *bc.Hash) []byte {
+func BlockHashesPrefix() []byte {
+	return []byte{blockHashes, colon}
+}
+
+func CalcBlockTransactionsKey(hash *bc.Hash) []byte {
 	return append([]byte{blockTransactons, colon}, hash.Bytes()...)
 }
 
@@ -44,7 +48,7 @@ func (s *Store) SaveBlockHeader(blockHeader *types.BlockHeader) error {
 	}
 
 	blockHash := blockHeader.Hash()
-	s.db.Set(calcBlockHeaderKey(&blockHash), binaryBlockHeader)
+	s.db.Set(CalcBlockHeaderKey(&blockHash), binaryBlockHeader)
 	s.cache.removeBlockHeader(blockHeader)
 	return nil
 }
@@ -82,9 +86,9 @@ func (s *Store) SaveBlock(block *types.Block) error {
 	}
 
 	batch := s.db.NewBatch()
-	batch.Set(calcBlockHashesPrefix(block.Height), binaryBlockHashes)
-	batch.Set(calcBlockHeaderKey(&blockHash), binaryBlockHeader)
-	batch.Set(calcBlockTransactionsKey(&blockHash), binaryBlockTxs)
+	batch.Set(CalcBlockHashesPrefix(block.Height), binaryBlockHashes)
+	batch.Set(CalcBlockHeaderKey(&blockHash), binaryBlockHeader)
+	batch.Set(CalcBlockTransactionsKey(&blockHash), binaryBlockTxs)
 	batch.Set(CalcBlockHeaderIndexKey(block.Height, &blockHash), binaryBlockHeader)
 	batch.Write()
 
@@ -100,7 +104,7 @@ func (s *Store) SaveBlock(block *types.Block) error {
 
 // GetBlockHashesByHeight return block hashes by given height
 func GetBlockHashesByHeight(db dbm.DB, height uint64) ([]*bc.Hash, error) {
-	binaryHashes := db.Get(calcBlockHashesPrefix(height))
+	binaryHashes := db.Get(CalcBlockHashesPrefix(height))
 	if binaryHashes == nil {
 		return []*bc.Hash{}, nil
 	}
