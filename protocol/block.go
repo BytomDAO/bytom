@@ -301,8 +301,10 @@ func (c *Chain) blockProcesser() {
 			isOrphan, err := c.processBlock(msg.block)
 			msg.reply <- processBlockResponse{isOrphan: isOrphan, err: err}
 		case blockHash := <-c.rollbackBlockCh:
-			// TODO
-			c.rollback(&blockHash)
+			if err := c.rollback(&blockHash); err != nil {
+				log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on rollback block")
+				c.rollbackBlockCh <- blockHash
+			}
 		}
 	}
 }
