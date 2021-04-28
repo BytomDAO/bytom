@@ -130,7 +130,7 @@ func (ps *mockPeers) MarkBlock(peerID string, hash *bc.Hash) {
 	*ps.knownBlock = *hash
 }
 
-func (ps *mockPeers) MarkBlockSignature(peerID string, signature []byte) {
+func (ps *mockPeers) MarkBlockVerification(peerID string, signature []byte) {
 	*ps.knownSignature = append(*ps.knownSignature, signature...)
 }
 
@@ -163,7 +163,7 @@ func TestBlockProposeMsgBroadcastLoop(t *testing.T) {
 	}
 }
 
-func TestBlockSignatureMsgBroadcastLoop(t *testing.T) {
+func TestBlockVerificationMsgBroadcastLoop(t *testing.T) {
 	dispatcher := event.NewDispatcher()
 	msgCount := 0
 	blockHeight := 100
@@ -211,7 +211,7 @@ func TestProcessBlockProposeMsg(t *testing.T) {
 	}
 }
 
-func TestProcessBlockSignatureMsg(t *testing.T) {
+func TestProcessBlockVerificationMsg(t *testing.T) {
 	dispatcher := event.NewDispatcher()
 	msgCount := 0
 	knownSignature := []byte{}

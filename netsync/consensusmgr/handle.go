@@ -33,7 +33,7 @@ type Peers interface {
 	BroadcastMsg(bm peers.BroadcastMsg) error
 	GetPeer(id string) *peers.Peer
 	MarkBlock(peerID string, hash *bc.Hash)
-	MarkBlockSignature(peerID string, signature []byte)
+	MarkBlockVerification(peerID string, signature []byte)
 	ProcessIllegal(peerID string, level byte, reason string)
 	RemovePeer(peerID string)
 	SetStatus(peerID string, height uint64, hash *bc.Hash)
@@ -108,7 +108,7 @@ func (m *Manager) handleBlockProposeMsg(peerID string, msg *BlockProposeMsg) {
 }
 
 func (m *Manager) handleBlockVerificationMsg(peerID string, msg *BlockVerificationMsg) {
-	m.peers.MarkBlockSignature(peerID, msg.Signature)
+	m.peers.MarkBlockVerification(peerID, msg.Signature)
 	if err := m.chain.ProcessBlockVerification(&protocol.Verification{
 		SourceHash:   msg.SourceHash,
 		TargetHash:   msg.TargetHash,

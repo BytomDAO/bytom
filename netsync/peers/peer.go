@@ -553,7 +553,7 @@ func (ps *PeerSet) MarkBlock(peerID string, hash *bc.Hash) {
 	peer.MarkBlock(hash)
 }
 
-func (ps *PeerSet) MarkBlockSignature(peerID string, signature []byte) {
+func (ps *PeerSet) MarkBlockVerification(peerID string, signature []byte) {
 	peer := ps.GetPeer(peerID)
 	if peer == nil {
 		return

@@ -73,7 +73,7 @@ func (b *BlockVerificationMsg) String() string {
 // BroadcastMarkSendRecord mark send message record to prevent messages from being sent repeatedly.
 func (b *BlockVerificationMsg) BroadcastMarkSendRecord(ps *peers.PeerSet, peers []string) {
 	for _, peer := range peers {
-		ps.MarkBlockSignature(peer, b.Signature)
+		ps.MarkBlockVerification(peer, b.Signature)
 	}
 }
 
