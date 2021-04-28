@@ -266,7 +266,7 @@ func TestMarkBlockSignature(t *testing.T) {
 	ps.AddPeer(&basePeer{id: peer3ID})
 
 	signature := []byte{0x01, 0x02}
-	ps.MarkBlockSignature(peer1ID, signature)
+	ps.MarkBlockVerification(peer1ID, signature)
 	targetPeers := []string{peer2ID, peer3ID}
 
 	peers := ps.PeersWithoutSignature(signature)

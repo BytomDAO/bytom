@@ -80,6 +80,15 @@ func (c *Casper) BestChain() (uint64, bc.Hash) {
 	return bestHeight, bestHash
 }
 
+// LastFinalized return the block height and block hash which is finalized ast last
+func (c *Casper) LastFinalized() (uint64, bc.Hash) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	root := c.tree.checkpoint
+	return root.Height, root.Hash
+}
+
 // Validators return the validators by specified block hash
 // e.g. if the block num of epoch is 100, and the block height corresponding to the block hash is 130, then will return the voting results of height in 0~100
 func (c *Casper) Validators(blockHash *bc.Hash) ([]*state.Validator, error) {
