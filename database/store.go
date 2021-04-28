@@ -54,15 +54,11 @@ func NewStore(db dbm.DB) *Store {
 		return GetBlockTransactions(db, hash)
 	}
 
-	fillFn := func(hash *bc.Hash) (*types.Block, error) {
-		return GetBlock(db, hash)
-	}
-
 	fillBlockHashesFn := func(height uint64) ([]*bc.Hash, error) {
 		return GetBlockHashesByHeight(db, height)
 	}
 
-	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillFn, fillBlockHashesFn)
+	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillBlockHashesFn)
 	return &Store{
 		db:    db,
 		cache: cache,
@@ -85,8 +81,8 @@ func (s *Store) GetContract(hash [32]byte) ([]byte, error) {
 
 // BlockExist check if the block is stored in disk
 func (s *Store) BlockExist(hash *bc.Hash) bool {
-	block, err := s.cache.lookup(hash)
-	return err == nil && block != nil
+	_, err := s.cache.lookupBlockHeader(hash)
+	return err == nil
 }
 
 // GetTransactionsUtxo will return all the utxo that related to the input txs

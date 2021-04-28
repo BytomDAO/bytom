@@ -20,6 +20,7 @@ func TestBlockCache(t *testing.T) {
 	for i := 0; i < maxCachedBlocks+10; i++ {
 		block := newBlock(uint64(i))
 		hash := block.Hash()
+
 		blocks[block.Hash()] = block
 		blockIndexHashes[block.Height] = append(blockIndexHashes[block.Height], &hash)
 	}
@@ -32,35 +33,15 @@ func TestBlockCache(t *testing.T) {
 		return blocks[*hash].Transactions, nil
 	}
 
-	fillFn := func(hash *bc.Hash) (*types.Block, error) {
-		return blocks[*hash], nil
-	}
-
 	fillBlockHashesFn := func(height uint64) ([]*bc.Hash, error) {
 		return blockIndexHashes[height], nil
 	}
 
-	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillFn, fillBlockHashesFn)
+	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillBlockHashesFn)
 
 	for i := 0; i < maxCachedBlocks+10; i++ {
 		block := newBlock(uint64(i))
 		hash := block.Hash()
-		cache.lookup(&hash)
-	}
-
-	for i := 0; i < 10; i++ {
-		block := newBlock(uint64(i))
-		hash := block.Hash()
-		if b, _ := cache.get(&hash); b != nil {
-			t.Fatalf("find old block")
-		}
-	}
-
-	for i := 10; i < maxCachedBlocks+10; i++ {
-		block := newBlock(uint64(i))
-		hash := block.Hash()
-		if b, _ := cache.get(&hash); b == nil {
-			t.Fatalf("can't find new block")
-		}
+		cache.lookupBlockHeader(&hash)
 	}
 }
