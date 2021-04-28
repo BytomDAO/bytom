@@ -6,6 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/config"
+	"github.com/bytom/bytom/event"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
@@ -15,11 +16,14 @@ const maxProcessBlockChSize = 1024
 
 // Chain provides functions for working with the Bytom block chain.
 type Chain struct {
-	index          *state.BlockIndex
-	orphanManage   *OrphanManage
-	txPool         *TxPool
-	store          Store
-	processBlockCh chan *processBlockMsg
+	index           *state.BlockIndex
+	orphanManage    *OrphanManage
+	txPool          *TxPool
+	store           Store
+	processBlockCh  chan *processBlockMsg
+	rollbackBlockCh chan bc.Hash
+	casper          CasperConsensus
+	eventDispatcher *event.Dispatcher
 
 	cond     sync.Cond
 	bestNode *state.BlockNode
@@ -81,14 +85,14 @@ func (c *Chain) initChainStatus() error {
 
 // BestBlockHeight returns the last irreversible block header of the blockchain
 func (c *Chain) LastIrreversibleHeader() *types.BlockHeader {
-	// TODO: LastIrreversibleHeader
-	return nil
+	_, hash := c.casper.LastFinalized()
+	node := c.index.GetNode(&hash)
+	return node.BlockHeader()
 }
 
-// ProcessBlockSignature process blockchain signature
-func (c *Chain) ProcessBlockSignature(signature, pubkey []byte, blockHash *bc.Hash) error {
-	// TODO: ProcessBlockSignature
-	return nil
+// ProcessBlockVerification process block verification
+func (c *Chain) ProcessBlockVerification(v *Verification) error {
+	return c.casper.AuthVerification(v)
 }
 
 // BestBlockHeight returns the current height of the blockchain.
