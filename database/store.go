@@ -1,9 +1,7 @@
 package database
 
 import (
-	"encoding/binary"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -46,62 +44,6 @@ type Store struct {
 	cache cache
 }
 
-func CalcBlockKey(hash *bc.Hash) []byte {
-	return append(BlockPrefix, hash.Bytes()...)
-}
-
-func CalcBlockHeaderIndexKey(height uint64, hash *bc.Hash) []byte {
-	buf := [8]byte{}
-	binary.BigEndian.PutUint64(buf[:], height)
-	key := append(BlockHeaderIndexPrefix, buf[:]...)
-	return append(key, hash.Bytes()...)
-}
-
-// GetBlockHeader return the block header by given hash
-func GetBlockHeader(db dbm.DB, hash *bc.Hash) (*types.BlockHeader, error) {
-	binaryBlockHeader := db.Get(CalcBlockHeaderKey(hash))
-	if binaryBlockHeader == nil {
-		return nil, fmt.Errorf("There are no blockHeader with given hash %s", hash.String())
-	}
-
-	blockHeader := &types.BlockHeader{}
-	if err := blockHeader.UnmarshalText(binaryBlockHeader); err != nil {
-		return nil, err
-	}
-	return blockHeader, nil
-}
-
-// GetBlockTransactions return the block transactions by given hash
-func GetBlockTransactions(db dbm.DB, hash *bc.Hash) ([]*types.Tx, error) {
-	binaryBlockTxs := db.Get(CalcBlockTransactionsKey(hash))
-	if binaryBlockTxs == nil {
-		return nil, fmt.Errorf("There are no block transactions with given hash %s", hash.String())
-	}
-
-	block := &types.Block{}
-	if err := block.UnmarshalText(binaryBlockTxs); err != nil {
-		return nil, err
-	}
-	return block.Transactions, nil
-}
-
-// GetBlockHeader return the BlockHeader by given hash
-func (s *Store) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
-	return s.cache.lookupBlockHeader(hash)
-}
-
-// GetBlock return the block by given hash
-func GetBlock(db dbm.DB, hash *bc.Hash) (*types.Block, error) {
-	bytez := db.Get(CalcBlockKey(hash))
-	if bytez == nil {
-		return nil, nil
-	}
-
-	block := &types.Block{}
-	err := block.UnmarshalText(bytez)
-	return block, err
-}
-
 // NewStore creates and returns a new Store object.
 func NewStore(db dbm.DB) *Store {
 	fillBlockHeaderFn := func(hash *bc.Hash) (*types.BlockHeader, error) {
@@ -125,6 +67,11 @@ func NewStore(db dbm.DB) *Store {
 		db:    db,
 		cache: cache,
 	}
+}
+
+// GetBlockHeader return the BlockHeader by given hash
+func (s *Store) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
+	return s.cache.lookupBlockHeader(hash)
 }
 
 // GetUtxo will search the utxo in db
