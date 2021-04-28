@@ -1,14 +1,18 @@
-package consensus
+package protocol
 
 import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/crypto/sha3pool"
 	"github.com/bytom/bytom/protocol/bc"
 	"golang.org/x/crypto/ed25519"
 )
+
+var errVerifySignature = errors.New("signature of verification message is invalid")
 
 // Verification represent a verification message for the block
 // source hash and target hash point to the checkpoint, and the source checkpoint is the target checkpoint's parent(not be directly)
@@ -46,6 +50,17 @@ func (v *Verification) EncodeMessage() ([]byte, error) {
 	}
 
 	return sha3Hash(buff.Bytes())
+}
+
+// Sign used to sign the verification by specified xPrv
+func (v *Verification) Sign(xPrv chainkd.XPrv) error {
+	message, err := v.EncodeMessage()
+	if err != nil {
+		return err
+	}
+
+	v.Signature = hex.EncodeToString(xPrv.Sign(message))
+	return nil
 }
 
 // VerifySignature verify the signature of encode message of verification

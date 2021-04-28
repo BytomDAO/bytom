@@ -1,7 +1,6 @@
 package messages
 
 import (
-	"github.com/bytom/bytom/testcontrol"
 	"reflect"
 	"testing"
 
@@ -10,33 +9,34 @@ import (
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/testcontrol"
 )
 
 var txs = []*types.Tx{
 	types.NewTx(types.TxData{
 		SerializedSize: uint64(52),
 		Inputs:         []*types.TxInput{types.NewCoinbaseInput([]byte{0x01})},
-		Outputs:        []*types.TxOutput{types.NewOriginalTxOutput(*consensus.BTMAssetID, 5000, nil)},
+		Outputs:        []*types.TxOutput{types.NewOriginalTxOutput(*consensus.BTMAssetID, 5000, nil, nil)},
 	}),
 	types.NewTx(types.TxData{
 		SerializedSize: uint64(53),
 		Inputs:         []*types.TxInput{types.NewCoinbaseInput([]byte{0x01, 0x02})},
-		Outputs:        []*types.TxOutput{types.NewOriginalTxOutput(*consensus.BTMAssetID, 5000, nil)},
+		Outputs:        []*types.TxOutput{types.NewOriginalTxOutput(*consensus.BTMAssetID, 5000, nil, nil)},
 	}),
 	types.NewTx(types.TxData{
 		SerializedSize: uint64(54),
 		Inputs:         []*types.TxInput{types.NewCoinbaseInput([]byte{0x01, 0x02, 0x03})},
-		Outputs:        []*types.TxOutput{types.NewOriginalTxOutput(*consensus.BTMAssetID, 5000, nil)},
+		Outputs:        []*types.TxOutput{types.NewOriginalTxOutput(*consensus.BTMAssetID, 5000, nil, nil)},
 	}),
 	types.NewTx(types.TxData{
 		SerializedSize: uint64(54),
 		Inputs:         []*types.TxInput{types.NewCoinbaseInput([]byte{0x01, 0x02, 0x03})},
-		Outputs:        []*types.TxOutput{types.NewOriginalTxOutput(*consensus.BTMAssetID, 2000, nil)},
+		Outputs:        []*types.TxOutput{types.NewOriginalTxOutput(*consensus.BTMAssetID, 2000, nil, nil)},
 	}),
 	types.NewTx(types.TxData{
 		SerializedSize: uint64(54),
 		Inputs:         []*types.TxInput{types.NewCoinbaseInput([]byte{0x01, 0x02, 0x03})},
-		Outputs:        []*types.TxOutput{types.NewOriginalTxOutput(*consensus.BTMAssetID, 10000, nil)},
+		Outputs:        []*types.TxOutput{types.NewOriginalTxOutput(*consensus.BTMAssetID, 10000, nil, nil)},
 	}),
 }
 
@@ -95,6 +95,7 @@ var testBlock = &types.Block{
 		BlockCommitment: types.BlockCommitment{
 			TransactionsMerkleRoot: bc.Hash{V0: uint64(0x11)},
 		},
+		SupLinks: types.SupLinks{},
 	},
 }
 
@@ -128,6 +129,7 @@ var testHeaders = []*types.BlockHeader{
 		BlockCommitment: types.BlockCommitment{
 			TransactionsMerkleRoot: bc.Hash{V0: uint64(0x11)},
 		},
+		SupLinks: types.SupLinks{},
 	},
 	{
 		Version:   1,
@@ -136,6 +138,7 @@ var testHeaders = []*types.BlockHeader{
 		BlockCommitment: types.BlockCommitment{
 			TransactionsMerkleRoot: bc.Hash{V0: uint64(0x11)},
 		},
+		SupLinks: types.SupLinks{},
 	},
 	{
 		Version:   1,
@@ -144,6 +147,7 @@ var testHeaders = []*types.BlockHeader{
 		BlockCommitment: types.BlockCommitment{
 			TransactionsMerkleRoot: bc.Hash{V0: uint64(0x11)},
 		},
+		SupLinks: types.SupLinks{},
 	},
 }
 

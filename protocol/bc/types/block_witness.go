@@ -4,6 +4,7 @@ import (
 	"io"
 
 	"github.com/bytom/bytom/encoding/blockchain"
+	"golang.org/x/crypto/ed25519"
 )
 
 // BlockWitness save the consensus node sign
@@ -20,5 +21,7 @@ func (bw *BlockWitness) writeTo(w io.Writer) error {
 }
 
 func (bw *BlockWitness) Set(data []byte) {
-	copy(*bw, data)
+	witness := make([]byte, ed25519.SignatureSize)
+	copy(witness, data)
+	*bw = witness
 }

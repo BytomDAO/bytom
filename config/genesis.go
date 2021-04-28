@@ -22,7 +22,7 @@ func GenesisTx() *types.Tx {
 			types.NewCoinbaseInput([]byte("Information is power. -- Jan/11/2013. Computing is power. -- Apr/24/2018.")),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewOriginalTxOutput(*consensus.BTMAssetID, consensus.InitialBlockSubsidy, contract),
+			types.NewOriginalTxOutput(*consensus.BTMAssetID, consensus.InitialBlockSubsidy, contract, nil),
 		},
 	}
 	return types.NewTx(txData)

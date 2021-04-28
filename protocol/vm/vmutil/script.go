@@ -1,7 +1,9 @@
 package vmutil
 
 import (
-	"github.com/bytom/bytom/crypto/ed25519"
+	"crypto/ed25519"
+
+	"github.com/bytom/bytom/consensus/bcrp"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/vm"
 )
@@ -62,6 +64,30 @@ func RetireProgram(comment []byte) ([]byte, error) {
 	if len(comment) != 0 {
 		builder.AddData(comment)
 	}
+	return builder.Build()
+}
+
+// RegisterProgram generates the script for register contract output
+// follow BCRP(bytom contract register protocol)
+func RegisterProgram(contract []byte) ([]byte, error) {
+	builder := NewBuilder()
+	builder.AddOp(vm.OP_FAIL)
+	builder.AddOp(vm.OP_PUSHDATA1)
+	builder.AddData([]byte(bcrp.BCRP))
+	builder.AddOp(vm.OP_PUSHDATA1)
+	builder.AddData([]byte{byte(bcrp.Version)})
+	builder.AddOp(vm.OP_PUSHDATA1)
+	builder.AddData(contract)
+	return builder.Build()
+}
+
+// CallContractProgram generates the script for control contract output
+// follow BCRP(bytom contract register protocol)
+func CallContractProgram(hash []byte) ([]byte, error) {
+	builder := NewBuilder()
+	builder.AddOp(vm.OP_1)
+	builder.AddOp(vm.OP_PUSHDATA1)
+	builder.AddData(hash)
 	return builder.Build()
 }
 
@@ -136,15 +162,20 @@ func checkMultiSigParams(nrequired, npubkeys int64) error {
 
 // GetIssuanceProgramRestrictHeight return issuance program restrict height
 // if height invalid return 0
-func GetIssuanceProgramRestrictHeight(program []byte) int64 {
+func GetIssuanceProgramRestrictHeight(program []byte) uint64 {
 	insts, err := vm.ParseProgram(program)
 	if err != nil {
 		return 0
 	}
 
 	if len(insts) >= 4 && insts[0].IsPushdata() && insts[1].Op == vm.OP_BLOCKHEIGHT && insts[2].Op == vm.OP_GREATERTHAN && insts[3].Op == vm.OP_VERIFY {
-		height, err := vm.AsInt64(insts[0].Data)
+		heightInt, err := vm.AsBigInt(insts[0].Data)
 		if err != nil {
+			return 0
+		}
+
+		height, overflow := heightInt.Uint64WithOverflow()
+		if overflow {
 			return 0
 		}
 

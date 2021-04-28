@@ -1,13 +1,13 @@
 package vm
 
 import (
+	"crypto/ed25519"
 	"crypto/sha256"
 	"hash"
 
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bytom/bytom/crypto"
-	"github.com/bytom/bytom/crypto/ed25519"
 	"github.com/bytom/bytom/math/checked"
 )
 

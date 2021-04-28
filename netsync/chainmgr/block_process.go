@@ -8,7 +8,6 @@ import (
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/netsync/peers"
 	"github.com/bytom/bytom/p2p/security"
-	"github.com/bytom/bytom/protocol"
 )
 
 var errOrphanBlock = errors.New("fast sync inserting orphan block")
@@ -34,7 +33,7 @@ func (bp *blockProcessor) insert(blockStorage *blockStorage) error {
 		return errOrphanBlock
 	}
 
-	if err != nil && errors.Root(err) != protocol.ErrDoubleSignBlock {
+	if err != nil {
 		bp.peers.ProcessIllegal(blockStorage.peerID, security.LevelMsgIllegal, err.Error())
 	}
 	return err
