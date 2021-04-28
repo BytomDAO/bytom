@@ -1,6 +1,7 @@
 package database
 
 import (
+	"strconv"
 	"sync"
 
 	"github.com/golang/groupcache/lru"
@@ -44,10 +45,79 @@ type cache struct {
 	fillBlockHashesFn      func(uint64) ([]*bc.Hash, error)
 	fillBlockTransactionFn func(hash *bc.Hash) ([]*types.Tx, error)
 	fillBlockHeaderFn      func(hash *bc.Hash) (*types.BlockHeader, error)
-	fillFn                 func(hash *bc.Hash) (*types.Block, error)
 
 	sf singleflight.Group
 
 	mu  sync.Mutex
 	lru *lru.Cache
 }
+
+func (c *cache) removeBlockHeader(blockHeader *types.BlockHeader) {
+	c.lruBlockHeaders.Remove(blockHeader.Hash())
+}
+
+func (c *cache) lookupBlockHashesByHeight(height uint64) ([]*bc.Hash, error) {
+	if hashes, ok := c.lruBlockHashes.Get(height); ok {
+		return hashes.([]*bc.Hash), nil
+	}
+
+	heightStr := strconv.FormatUint(height, 10)
+	hashes, err := c.sf.Do("BlockHashesByHeight:"+heightStr, func() (interface{}, error) {
+		hashes, err := c.fillBlockHashesFn(height)
+		if err != nil {
+			return nil, err
+		}
+
+		c.lruBlockHashes.Add(height, hashes)
+		return hashes, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return hashes.([]*bc.Hash), nil
+}
+
+func (c *cache) removeBlockHashes(height uint64) {
+	c.lruBlockHashes.Remove(height)
+}
+
+func (c *cache) lookupBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
+	if data, ok := c.lruBlockHeaders.Get(*hash); ok {
+		return data.(*types.BlockHeader), nil
+	}
+
+	blockHeader, err := c.sf.Do("BlockHeader:"+hash.String(), func() (interface{}, error) {
+		blockHeader, err := c.fillBlockHeaderFn(hash)
+		if err != nil {
+			return nil, err
+		}
+
+		c.lruBlockHeaders.Add(blockHeader.Hash(), blockHeader)
+		return blockHeader, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return blockHeader.(*types.BlockHeader), nil
+}
+
+func (c *cache) lookupBlockTxs(hash *bc.Hash) ([]*types.Tx, error) {
+	if data, ok := c.lruBlockTxs.Get(*hash); ok {
+		return data.([]*types.Tx), nil
+	}
+
+	blockTxs, err := c.sf.Do("BlockTxs:"+hash.String(), func() (interface{}, error) {
+		blockTxs, err := c.fillBlockTransactionFn(hash)
+		if err != nil {
+			return nil, err
+		}
+
+		c.lruBlockTxs.Add(*hash, blockTxs)
+		return blockTxs, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return blockTxs.([]*types.Tx), nil
+}
+
