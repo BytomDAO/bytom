@@ -35,7 +35,6 @@ func TestBlock(t *testing.T) {
 				"01", // block height
 				"0000000000000000000000000000000000000000000000000000000000000000", // prev block hash
 				"00",   // timestamp
-				"0100", // BlockWitness
 				"20",   // commitment extensible field length
 				"0000000000000000000000000000000000000000000000000000000000000000", // transactions merkle root
 				"0100", // block witness
@@ -87,7 +86,6 @@ func TestBlock(t *testing.T) {
 				"eab01a", // block height
 				"c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0", // prev block hash
 				"f3f896d605", // timestamp
-				"0100",       // BlockWitness
 				"20",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
 				"0100", // block witness
