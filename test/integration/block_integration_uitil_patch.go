@@ -88,7 +88,7 @@ func loadStoreEntries(db dbm.DB) []storeEntry {
 	iter := db.Iterator()
 	defer iter.Release()
 	for iter.Next() {
-		if strings.HasPrefix(string(iter.Key()), string(database.BlockHashesPrefix())) {
+		if strings.HasPrefix(string(iter.Key()), string(database.BlockHashesKeyPrefix)) {
 			continue
 		}
 
@@ -97,4 +97,3 @@ func loadStoreEntries(db dbm.DB) []storeEntry {
 	}
 	return entries
 }
-
