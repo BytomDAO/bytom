@@ -67,11 +67,9 @@ var BTMDefinitionMap = map[string]interface{}{
 }
 
 // BlockSubsidy calculate the coinbase rewards on given block height
-func BlockSubsidy(height uint64) uint64 {
-	if height == 0 {
-		return InitialBlockSubsidy
-	}
-	return baseSubsidy >> uint(height/subsidyReductionInterval)
+// pledge is the number of vote and guaranty that validator have
+func BlockSubsidy(height uint64, pledge uint64) uint64 {
+	return 0
 }
 
 // IsBech32SegwitPrefix returns whether the prefix is a known prefix for segwit
