@@ -80,7 +80,8 @@ func (c *Chain) initChainStatus() error {
 	}
 
 	contractView := state.NewContractViewpoint()
-	return c.store.SaveChainStatus(node, utxoView, contractView)
+	statisticsReward := state.NewRewardStatistics(genesisBlock.Hash(), genesisBlock.Height)
+	return c.store.SaveChainStatus(node, utxoView, contractView, statisticsReward)
 }
 
 // BestBlockHeight returns the last irreversible block header of the blockchain
@@ -133,8 +134,8 @@ func (c *Chain) SignBlockHeader(blockHeader *types.BlockHeader) {
 }
 
 // This function must be called with mu lock in above level
-func (c *Chain) setState(node *state.BlockNode, view *state.UtxoViewpoint, contractView *state.ContractViewpoint) error {
-	if err := c.store.SaveChainStatus(node, view, contractView); err != nil {
+func (c *Chain) setState(node *state.BlockNode, view *state.UtxoViewpoint, contractView *state.ContractViewpoint, statisticsReward *state.RewardStatistics) error {
+	if err := c.store.SaveChainStatus(node, view, contractView, statisticsReward); err != nil {
 		return err
 	}
 

@@ -15,32 +15,40 @@ type RewardAndProgram struct {
 	controlProgram []byte
 }
 
-// StatisticsReward
-type StatisticsReward struct {
+// RewardStatistics
+type RewardStatistics struct {
 	rewards     map[string]uint64
 	BlockHash   bc.Hash
 	BlockHeight uint64
 }
 
-func (sr *StatisticsReward) AttachBlock(block *types.Block) error {
-	if block.PreviousBlockHash != sr.BlockHash {
+func NewRewardStatistics(blockHash bc.Hash, BlockHeight uint64) *RewardStatistics {
+	return &RewardStatistics{
+		rewards:     map[string]uint64{},
+		BlockHash:   blockHash,
+		BlockHeight: BlockHeight,
+	}
+}
+
+func (rs *RewardStatistics) ApplyBlock(block *types.Block) error {
+	if block.PreviousBlockHash != rs.BlockHash {
 		return errors.New("block previous hash is not equal to reward hash")
 	}
 
 	if block.Height%BlocksOfEpoch == 1 {
-		sr.rewards = map[string]uint64{}
+		rs.rewards = map[string]uint64{}
 	}
 
-	if err := sr.calculateReward(block, true); err != nil {
+	if err := rs.calculateReward(block, true); err != nil {
 		return err
 	}
 
-	sr.BlockHash = block.Hash()
-	sr.BlockHeight++
+	rs.BlockHash = block.Hash()
+	rs.BlockHeight++
 	return nil
 }
 
-func (sr *StatisticsReward) calculateReward(block *types.Block, isAdd bool) error {
+func (rs *RewardStatistics) calculateReward(block *types.Block, isAdd bool) error {
 	blockReward, err := calculateReward(block)
 	if err != nil {
 		return err
@@ -48,30 +56,33 @@ func (sr *StatisticsReward) calculateReward(block *types.Block, isAdd bool) erro
 
 	hexControlProgram := hex.EncodeToString(blockReward.controlProgram)
 	if isAdd {
-		sr.rewards[hexControlProgram] += blockReward.reward
+		rs.rewards[hexControlProgram] += blockReward.reward
 	} else {
-		sr.rewards[hexControlProgram] -= blockReward.reward
+		rs.rewards[hexControlProgram] -= blockReward.reward
+		if rs.rewards[hexControlProgram] == 0 {
+			delete(rs.rewards, hexControlProgram)
+		}
 	}
 
 	return nil
 }
 
-func (sr *StatisticsReward) DetachBlock(block *types.Block) error {
-	if block.Hash() != sr.BlockHash {
+func (rs *RewardStatistics) DetachBlock(block *types.Block) error {
+	if block.Hash() != rs.BlockHash {
 		return errors.New("the block %s is not exist in reward")
 	}
 
-	if err := sr.calculateReward(block, false); err != nil {
+	if err := rs.calculateReward(block, false); err != nil {
 		return err
 	}
 
-	sr.BlockHash = block.PreviousBlockHash
-	sr.BlockHeight--
+	rs.BlockHash = block.PreviousBlockHash
+	rs.BlockHeight--
 	return nil
 }
 
-func (sr *StatisticsReward) getRewards() (rewards []RewardAndProgram) {
-	for hexProgram, rewardAmount := range sr.rewards {
+func (rs *RewardStatistics) getRewards() (rewards []RewardAndProgram) {
+	for hexProgram, rewardAmount := range rs.rewards {
 		program, _ := hex.DecodeString(hexProgram)
 		rewards = append(rewards, RewardAndProgram{
 			reward:         rewardAmount,

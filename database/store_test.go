@@ -150,7 +150,8 @@ func TestSaveChainStatus(t *testing.T) {
 	}
 
 	contractView := state.NewContractViewpoint()
-	if err := store.SaveChainStatus(node, view, contractView); err != nil {
+	rewardStatistics := state.NewRewardStatistics(node.Hash, node.Height)
+	if err := store.SaveChainStatus(node, view, contractView, rewardStatistics); err != nil {
 		t.Fatal(err)
 	}
 
@@ -197,7 +198,7 @@ func TestSaveBlock(t *testing.T) {
 		t.Errorf("got block:%v, expect block:%v", gotBlock, block)
 	}
 
-	data := store.db.Get(CalcBlockHeaderKey(block.Height, &blockHash))
+	data := store.db.Get(BlockHeaderKey(block.Height, &blockHash))
 	gotBlockHeader := types.BlockHeader{}
 	if err := gotBlockHeader.UnmarshalText(data); err != nil {
 		t.Fatal(err)

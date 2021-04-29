@@ -83,7 +83,8 @@ func ValidateBlock(b *bc.Block, parent *state.BlockNode, converter ProgramConver
 	}
 
 	blockGasSum := uint64(0)
-	coinbaseAmount := consensus.BlockSubsidy(b.BlockHeader.Height)
+	//TODO: get guaranty and vote of the block validator
+	coinbaseAmount := consensus.BlockSubsidy(b.BlockHeader.Height, 100)
 	validateResults := ValidateTxs(b.Transactions, b, converter)
 	for i, validateResult := range validateResults {
 		if validateResult.err != nil {

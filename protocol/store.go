@@ -17,6 +17,7 @@ type Store interface {
 	GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error
 	GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)
 	GetContract(hash [32]byte) ([]byte, error)
+	GetRewardStatistics(height uint64) (*state.RewardStatistics, error)
 
 	GetCheckpoint(*bc.Hash) (*state.Checkpoint, error)
 	GetCheckpointsByHeight(uint64) ([]*state.Checkpoint, error)
@@ -24,7 +25,7 @@ type Store interface {
 
 	LoadBlockIndex(uint64) (*state.BlockIndex, error)
 	SaveBlock(*types.Block) error
-	SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint, *state.ContractViewpoint) error
+	SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint, *state.ContractViewpoint, *state.RewardStatistics) error
 }
 
 // BlockStoreState represents the core's db status

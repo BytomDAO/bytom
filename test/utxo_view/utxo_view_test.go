@@ -288,16 +288,17 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
 		store := database.NewStore(testDB)
 
-		utxoViewpoint0 := state.NewUtxoViewpoint()
+		utxoViewpoint := state.NewUtxoViewpoint()
 		for k, v := range c.before {
-			utxoViewpoint0.Entries[k] = v
+			utxoViewpoint.Entries[k] = v
 		}
 		contractView := state.NewContractViewpoint()
-		if err := store.SaveChainStatus(node, utxoViewpoint0, contractView); err != nil {
+		rewardStatistics := state.NewRewardStatistics(bc.Hash{}, 0)
+		if err := store.SaveChainStatus(node, utxoViewpoint, contractView, rewardStatistics); err != nil {
 			t.Error(err)
 		}
 
-		utxoViewpoint := state.NewUtxoViewpoint()
+		utxoViewpoint = state.NewUtxoViewpoint()
 		for _, block := range c.detachBlock {
 			if err := store.GetTransactionsUtxo(utxoViewpoint, block.Transactions); err != nil {
 				t.Error(err)
@@ -315,7 +316,7 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 				t.Error(err)
 			}
 		}
-		if err := store.SaveChainStatus(node, utxoViewpoint, contractView); err != nil {
+		if err := store.SaveChainStatus(node, utxoViewpoint, contractView, rewardStatistics); err != nil {
 			t.Error(err)
 		}
 

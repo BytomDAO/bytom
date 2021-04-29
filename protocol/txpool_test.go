@@ -97,6 +97,9 @@ var testTxs = []*types.Tx{
 
 type mockStore struct{}
 
+func (s *mockStore) GetRewardStatistics(height uint64) (*state.RewardStatistics, error) {
+	return nil, nil
+}
 func (s *mockStore) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error)     { return nil, nil }
 func (s *mockStore) GetCheckpoint(hash *bc.Hash) (*state.Checkpoint, error)       { return nil, nil }
 func (s *mockStore) GetCheckpointsByHeight(u uint64) ([]*state.Checkpoint, error) { return nil, nil }
@@ -109,7 +112,7 @@ func (s *mockStore) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)               
 func (s *mockStore) GetContract(hash [32]byte) ([]byte, error)                    { return nil, nil }
 func (s *mockStore) LoadBlockIndex(uint64) (*state.BlockIndex, error)             { return nil, nil }
 func (s *mockStore) SaveBlock(*types.Block) error                                 { return nil }
-func (s *mockStore) SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint, *state.ContractViewpoint) error {
+func (s *mockStore) SaveChainStatus(node *state.BlockNode, viewpoint *state.UtxoViewpoint, viewpoint2 *state.ContractViewpoint, statistics *state.RewardStatistics) error {
 	return nil
 }
 
@@ -592,6 +595,9 @@ func TestRemoveOrphan(t *testing.T) {
 
 type mockStore1 struct{}
 
+func (s *mockStore1) GetRewardStatistics(uint642 uint64) (*state.RewardStatistics, error) {
+	return nil, nil
+}
 func (s *mockStore1) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error)     { return nil, nil }
 func (s *mockStore1) GetCheckpoint(hash *bc.Hash) (*state.Checkpoint, error)       { return nil, nil }
 func (s *mockStore1) GetCheckpointsByHeight(u uint64) ([]*state.Checkpoint, error) { return nil, nil }
@@ -606,11 +612,13 @@ func (s *mockStore1) GetTransactionsUtxo(utxoView *state.UtxoViewpoint, tx []*bc
 	}
 	return nil
 }
-func (s *mockStore1) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)        { return nil, nil }
-func (s *mockStore1) GetContract(hash [32]byte) ([]byte, error)           { return nil, nil }
-func (s *mockStore1) LoadBlockIndex(uint64) (*state.BlockIndex, error)    { return nil, nil }
-func (s *mockStore1) SaveBlock(*types.Block) error { return nil }
-func (s *mockStore1) SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint, *state.ContractViewpoint) error { return nil}
+func (s *mockStore1) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)     { return nil, nil }
+func (s *mockStore1) GetContract(hash [32]byte) ([]byte, error)        { return nil, nil }
+func (s *mockStore1) LoadBlockIndex(uint64) (*state.BlockIndex, error) { return nil, nil }
+func (s *mockStore1) SaveBlock(*types.Block) error                     { return nil }
+func (s *mockStore1) SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint, *state.ContractViewpoint, *state.RewardStatistics) error {
+	return nil
+}
 
 func TestProcessTransaction(t *testing.T) {
 	txPool := &TxPool{

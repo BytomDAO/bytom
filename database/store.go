@@ -3,6 +3,7 @@ package database
 import (
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -20,10 +21,11 @@ import (
 const logModule = "leveldb"
 
 var (
-	BlockStoreKey     = []byte("blockStore")
-	BlockPrefix       = []byte("B:")
-	BlockHeaderPrefix = []byte("BH:")
-	TxStatusPrefix    = []byte("BTS:")
+	BlockStoreKey          = []byte("blockStore")
+	BlockPrefix            = []byte("B:")
+	BlockHeaderPrefix      = []byte("BH:")
+	TxStatusPrefix         = []byte("BTS:")
+	RewardStatisticsPrefix = []byte("RS:")
 )
 
 func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
@@ -46,15 +48,22 @@ type Store struct {
 	cache blockCache
 }
 
-func CalcBlockKey(hash *bc.Hash) []byte {
+func encodeNumber(number uint64) []byte {
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf[:], number)
+	return buf
+}
+
+func BlockKey(hash *bc.Hash) []byte {
 	return append(BlockPrefix, hash.Bytes()...)
 }
 
-func CalcBlockHeaderKey(height uint64, hash *bc.Hash) []byte {
-	buf := [8]byte{}
-	binary.BigEndian.PutUint64(buf[:], height)
-	key := append(BlockHeaderPrefix, buf[:]...)
-	return append(key, hash.Bytes()...)
+func BlockHeaderKey(height uint64, hash *bc.Hash) []byte {
+	return append(append(BlockHeaderPrefix, encodeNumber(height)...), hash.Bytes()...)
+}
+
+func rewardStatisticsKey(height uint64) []byte {
+	return append(RewardStatisticsPrefix, encodeNumber(height)...)
 }
 
 // GetBlockHeader return the BlockHeader by given hash
@@ -64,7 +73,7 @@ func (s *Store) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
 
 // GetBlock return the block by given hash
 func GetBlock(db dbm.DB, hash *bc.Hash) (*types.Block, error) {
-	bytez := db.Get(CalcBlockKey(hash))
+	bytez := db.Get(BlockKey(hash))
 	if bytez == nil {
 		return nil, nil
 	}
@@ -72,6 +81,20 @@ func GetBlock(db dbm.DB, hash *bc.Hash) (*types.Block, error) {
 	block := &types.Block{}
 	err := block.UnmarshalText(bytez)
 	return block, err
+}
+
+func (s *Store) GetRewardStatistics(height uint64) (*state.RewardStatistics, error) {
+	bytes := s.db.Get(rewardStatisticsKey(height))
+	if len(bytes) == 0 {
+		return nil, errors.New(fmt.Sprintf("height(%d): can't find the reward statistics", height))
+	}
+
+	rewardStatistics := new(state.RewardStatistics)
+	if err := json.Unmarshal(bytes, rewardStatistics); err != nil {
+		return nil, err
+	}
+
+	return rewardStatistics, nil
 }
 
 // NewStore creates and returns a new Store object.
@@ -173,8 +196,8 @@ func (s *Store) SaveBlock(block *types.Block) error {
 
 	blockHash := block.Hash()
 	batch := s.db.NewBatch()
-	batch.Set(CalcBlockKey(&blockHash), binaryBlock)
-	batch.Set(CalcBlockHeaderKey(block.Height, &blockHash), binaryBlockHeader)
+	batch.Set(BlockKey(&blockHash), binaryBlock)
+	batch.Set(BlockHeaderKey(block.Height, &blockHash), binaryBlockHeader)
 	batch.Write()
 
 	log.WithFields(log.Fields{
@@ -187,7 +210,7 @@ func (s *Store) SaveBlock(block *types.Block) error {
 }
 
 // SaveChainStatus save the core's newest status && delete old status
-func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint, contractView *state.ContractViewpoint) error {
+func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint, contractView *state.ContractViewpoint, rewardStatistics *state.RewardStatistics) error {
 	batch := s.db.NewBatch()
 	if err := saveUtxoView(batch, view); err != nil {
 		return err
@@ -201,12 +224,22 @@ func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint
 		return err
 	}
 
+	//save current block node height and hash
 	bytes, err := json.Marshal(protocol.BlockStoreState{Height: node.Height, Hash: &node.Hash})
 	if err != nil {
 		return err
 	}
 
 	batch.Set(BlockStoreKey, bytes)
+
+	// save reward statistics
+	bytes, err = json.Marshal(rewardStatistics)
+	if err != nil {
+		return err
+	}
+
+	batch.Set(rewardStatisticsKey(rewardStatistics.BlockHeight), bytes)
+
 	batch.Write()
 	return nil
 }
