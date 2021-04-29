@@ -255,7 +255,7 @@ func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint
 		return err
 	}
 
-	batch.Set(calcRewardStatisticsKey(rewardStatistics.BlockHeight), bytes)
+	batch.Set(rewardStatisticsKey(rewardStatistics.BlockHeight), bytes)
 
 	batch.Write()
 	return nil

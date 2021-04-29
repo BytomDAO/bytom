@@ -41,9 +41,7 @@ func CalcBlockHeaderKey(hash *bc.Hash) []byte {
 
 // CalcBlockHashesKey make up hashes key with prefix + height
 func CalcBlockHashesKey(height uint64) []byte {
-	buf := [8]byte{}
-	binary.BigEndian.PutUint64(buf[:], height)
-	return append(BlockHashesKeyPrefix, buf[:]...)
+	return append(BlockHashesKeyPrefix, encodeNumber(height)...)
 }
 
 // CalcBlockTransactionsKey make up txs key with prefix + hash
@@ -53,13 +51,10 @@ func CalcBlockTransactionsKey(hash *bc.Hash) []byte {
 
 // CalcBlockHeaderIndexKey make up BlockHeaderIndexKey with prefix + hash
 func CalcBlockHeaderIndexKey(height uint64, hash *bc.Hash) []byte {
-	buf := [8]byte{}
-	binary.BigEndian.PutUint64(buf[:], height)
-	key := append(BlockHeaderIndexPrefix, buf[:]...)
-	return append(key, hash.Bytes()...)
+	return append(append(BlockHeaderIndexPrefix, encodeNumber(height)...), hash.Bytes()...)
 }
 
-func calcRewardStatisticsKey(height uint64) []byte {
+func rewardStatisticsKey(height uint64) []byte {
 	return append(RewardStatisticsPrefix, encodeNumber(height)...)
 }
 
@@ -107,7 +102,7 @@ func GetBlockHashesByHeight(db dbm.DB, height uint64) ([]*bc.Hash, error) {
 
 // GetRewardStatistics return reward statistics by block height
 func (s *Store) GetRewardStatistics(height uint64) (*state.RewardStatistics, error) {
-	bytes := s.db.Get(calcRewardStatisticsKey(height))
+	bytes := s.db.Get(rewardStatisticsKey(height))
 	if len(bytes) == 0 {
 		return nil, errors.New(fmt.Sprintf("height(%d): can't find the reward statistics", height))
 	}
