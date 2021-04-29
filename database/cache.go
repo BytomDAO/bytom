@@ -2,7 +2,6 @@ package database
 
 import (
 	"strconv"
-	"sync"
 
 	"github.com/golang/groupcache/singleflight"
 
@@ -43,8 +42,6 @@ type cache struct {
 	fillBlockHeaderFn      func(hash *bc.Hash) (*types.BlockHeader, error)
 
 	sf singleflight.Group
-
-	mu  sync.Mutex
 }
 
 func (c *cache) removeBlockHeader(blockHeader *types.BlockHeader) {
@@ -115,4 +112,3 @@ func (c *cache) lookupBlockTxs(hash *bc.Hash) ([]*types.Tx, error) {
 	}
 	return blockTxs.([]*types.Tx), nil
 }
-
