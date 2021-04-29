@@ -11,6 +11,9 @@ import (
 	"github.com/bytom/bytom/protocol/bc/types"
 )
 
+// RewardAndProgram a reward record
+// 		reward: reward amount for every 100 blocks
+//		controlProgram: who gets the reward
 type RewardAndProgram struct {
 	reward         uint64
 	controlProgram []byte
