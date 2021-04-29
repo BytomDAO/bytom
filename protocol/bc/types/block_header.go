@@ -57,16 +57,29 @@ func (bh *BlockHeader) UnmarshalText(text []byte) error {
 		return err
 	}
 
-	_, err := bh.readFrom(blockchain.NewReader(decoded))
-	return err
+	serflag, err := bh.readFrom(blockchain.NewReader(decoded))
+	if err != nil {
+		return err
+	}
+
+	if serflag == SerBlockTransactions {
+		return fmt.Errorf("unsupported serialization flags 0x%02x", serflag)
+	}
+
+	return nil
 }
 
 func (bh *BlockHeader) readFrom(r *blockchain.Reader) (serflag uint8, err error) {
 	var serflags [1]byte
-	io.ReadFull(r, serflags[:])
+	if _, err := io.ReadFull(r, serflags[:]); err != nil {
+		return 0, err
+	}
+
 	serflag = serflags[0]
 	switch serflag {
 	case SerBlockHeader, SerBlockFull:
+	case SerBlockTransactions:
+		return
 	default:
 		return 0, fmt.Errorf("unsupported serialization flags 0x%x", serflags)
 	}
@@ -113,6 +126,10 @@ func (bh *BlockHeader) WriteTo(w io.Writer) (int64, error) {
 
 func (bh *BlockHeader) writeTo(w io.Writer, serflags uint8) (err error) {
 	w.Write([]byte{serflags})
+	if serflags == SerBlockTransactions {
+		return nil
+	}
+
 	if _, err = blockchain.WriteVarint63(w, bh.Version); err != nil {
 		return err
 	}
