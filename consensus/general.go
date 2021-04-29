@@ -69,7 +69,7 @@ var BTMDefinitionMap = map[string]interface{}{
 // BlockSubsidy calculate the coinbase rewards on given block height
 // validatorPledge is the vote and guaranty of a validator
 func BlockSubsidy(height uint64, validatorPledge uint64) uint64 {
-	//TODO: calculate bock subsidy
+	//TODO: calculate btm2.0 bock subsidy
 	if height == 0 {
 		return InitialBlockSubsidy
 	}
