@@ -49,7 +49,7 @@ func CalcBlockTransactionsKey(hash *bc.Hash) []byte {
 	return append(blockTransactionsKey, hash.Bytes()...)
 }
 
-// CalcBlockHeaderIndexKey make up BlockHeaderIndexKey with prefix + hash
+// CalcBlockHeaderIndexKey make up BlockHeaderIndexKey with prefix + height + hash
 func CalcBlockHeaderIndexKey(height uint64, hash *bc.Hash) []byte {
 	return append(append(BlockHeaderIndexPrefix, encodeNumber(height)...), hash.Bytes()...)
 }
