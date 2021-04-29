@@ -4,7 +4,6 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/golang/groupcache/lru"
 	"github.com/golang/groupcache/singleflight"
 
 	"github.com/bytom/bytom/common"
@@ -13,7 +12,6 @@ import (
 )
 
 const (
-	maxCachedBlocks            = 30
 	maxCachedBlockHeaders      = 4096
 	maxCachedBlockTransactions = 1024
 	maxCachedBlockHashes       = 8192
@@ -32,8 +30,6 @@ func newCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransacti
 		fillBlockHeaderFn:      fillBlockHeader,
 		fillBlockTransactionFn: fillBlockTxs,
 		fillBlockHashesFn:      fillBlockHashes,
-
-		lru: lru.New(maxCachedBlocks),
 	}
 }
 
@@ -49,7 +45,6 @@ type cache struct {
 	sf singleflight.Group
 
 	mu  sync.Mutex
-	lru *lru.Cache
 }
 
 func (c *cache) removeBlockHeader(blockHeader *types.BlockHeader) {
