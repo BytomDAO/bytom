@@ -91,7 +91,7 @@ func TestLoadBlockIndexBestHeight(t *testing.T) {
 
 		for _, block := range savedBlocks {
 			blockHash := block.Hash()
-			if block.Height <= c.stateBestHeight != index.BlockExist(&blockHash) {
+			if existIndex := index.BlockExist(&blockHash); (block.Height <= c.stateBestHeight) != existIndex {
 				t.Errorf("Error in load block index")
 			}
 		}
@@ -135,6 +135,7 @@ func TestLoadBlockIndexEquals(t *testing.T) {
 		t.Errorf("got block index:%v, expect block index:%v", index, expectBlockIndex)
 	}
 }
+
 func TestSaveChainStatus(t *testing.T) {
 	defer os.RemoveAll("temp")
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
@@ -176,10 +177,13 @@ func TestSaveChainStatus(t *testing.T) {
 }
 
 func TestSaveBlock(t *testing.T) {
-	defer os.RemoveAll("temp")
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	store := NewStore(testDB)
+	defer func() {
+		testDB.Close()
+		os.RemoveAll("temp")
+	}()
 
+	store := NewStore(testDB)
 	block := config.GenesisBlock()
 	if err := store.SaveBlock(block); err != nil {
 		t.Fatal(err)
@@ -197,7 +201,7 @@ func TestSaveBlock(t *testing.T) {
 		t.Errorf("got block:%v, expect block:%v", gotBlock, block)
 	}
 
-	data := store.db.Get(CalcBlockHeaderKey(block.Height, &blockHash))
+	data := store.db.Get(CalcBlockHeaderIndexKey(block.Height, &blockHash))
 	gotBlockHeader := types.BlockHeader{}
 	if err := gotBlockHeader.UnmarshalText(data); err != nil {
 		t.Fatal(err)
@@ -207,3 +211,4 @@ func TestSaveBlock(t *testing.T) {
 		t.Errorf("got block header:%v, expect block header:%v", gotBlockHeader, block.BlockHeader)
 	}
 }
+

@@ -158,5 +158,9 @@ func (ls *levelDBStorage) readBlock(height uint64) (*types.Block, error) {
 	}
 
 	block := &types.Block{}
-	return block, block.UnmarshalText(binaryBlock)
+	if err := block.UnmarshalText(binaryBlock); err != nil {
+		return nil, err
+	}
+
+	return block, nil
 }

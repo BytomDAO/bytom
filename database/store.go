@@ -1,7 +1,6 @@
 package database
 
 import (
-	"encoding/binary"
 	"encoding/json"
 	"time"
 
@@ -20,10 +19,10 @@ import (
 const logModule = "leveldb"
 
 var (
-	BlockStoreKey     = []byte("blockStore")
-	BlockPrefix       = []byte("B:")
-	BlockHeaderPrefix = []byte("BH:")
-	TxStatusPrefix    = []byte("BTS:")
+	// BlockStoreKey block store key
+	BlockStoreKey          = []byte("blockStore")
+	// BlockHeaderIndexPrefix  block header index with height
+	BlockHeaderIndexPrefix = []byte("BH:")
 )
 
 func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
@@ -43,46 +42,33 @@ func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
 // methods for querying current data.
 type Store struct {
 	db    dbm.DB
-	cache blockCache
-}
-
-func CalcBlockKey(hash *bc.Hash) []byte {
-	return append(BlockPrefix, hash.Bytes()...)
-}
-
-func CalcBlockHeaderKey(height uint64, hash *bc.Hash) []byte {
-	buf := [8]byte{}
-	binary.BigEndian.PutUint64(buf[:], height)
-	key := append(BlockHeaderPrefix, buf[:]...)
-	return append(key, hash.Bytes()...)
-}
-
-// GetBlockHeader return the BlockHeader by given hash
-func (s *Store) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
-	return nil, nil
-}
-
-// GetBlock return the block by given hash
-func GetBlock(db dbm.DB, hash *bc.Hash) (*types.Block, error) {
-	bytez := db.Get(CalcBlockKey(hash))
-	if bytez == nil {
-		return nil, nil
-	}
-
-	block := &types.Block{}
-	err := block.UnmarshalText(bytez)
-	return block, err
+	cache cache
 }
 
 // NewStore creates and returns a new Store object.
 func NewStore(db dbm.DB) *Store {
-	cache := newBlockCache(func(hash *bc.Hash) (*types.Block, error) {
-		return GetBlock(db, hash)
-	})
+	fillBlockHeaderFn := func(hash *bc.Hash) (*types.BlockHeader, error) {
+		return GetBlockHeader(db, hash)
+	}
+
+	fillBlockTxsFn := func(hash *bc.Hash) ([]*types.Tx, error) {
+		return GetBlockTransactions(db, hash)
+	}
+
+	fillBlockHashesFn := func(height uint64) ([]*bc.Hash, error) {
+		return GetBlockHashesByHeight(db, height)
+	}
+
+	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillBlockHashesFn)
 	return &Store{
 		db:    db,
 		cache: cache,
 	}
+}
+
+// GetBlockHeader return the BlockHeader by given hash
+func (s *Store) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
+	return s.cache.lookupBlockHeader(hash)
 }
 
 // GetUtxo will search the utxo in db
@@ -96,13 +82,93 @@ func (s *Store) GetContract(hash [32]byte) ([]byte, error) {
 
 // BlockExist check if the block is stored in disk
 func (s *Store) BlockExist(hash *bc.Hash) bool {
-	block, err := s.cache.lookup(hash)
-	return err == nil && block != nil
+	_, err := s.cache.lookupBlockHeader(hash)
+	return err == nil
+}
+
+// SaveBlockHeader persists a new block header in the protocol.
+func (s *Store) SaveBlockHeader(blockHeader *types.BlockHeader) error {
+	binaryBlockHeader, err := blockHeader.MarshalText()
+	if err != nil {
+		return errors.Wrap(err, "Marshal block header")
+	}
+
+	blockHash := blockHeader.Hash()
+	s.db.Set(CalcBlockHeaderKey(&blockHash), binaryBlockHeader)
+	s.cache.removeBlockHeader(blockHeader)
+	return nil
+}
+
+// GetBlockHashesByHeight return the block hash by the specified height
+func (s *Store) GetBlockHashesByHeight(height uint64) ([]*bc.Hash, error) {
+	return s.cache.lookupBlockHashesByHeight(height)
+}
+
+// SaveBlock persists a new block in the protocol.
+func (s *Store) SaveBlock(block *types.Block) error {
+	startTime := time.Now()
+	binaryBlockHeader, err := block.MarshalTextForBlockHeader()
+	if err != nil {
+		return errors.Wrap(err, "Marshal block header")
+	}
+
+	binaryBlockTxs, err := block.MarshalTextForTransactions()
+	if err != nil {
+		return errors.Wrap(err, "Marshal block transactions")
+	}
+
+	blockHashes := []*bc.Hash{}
+	hashes, err := s.GetBlockHashesByHeight(block.Height)
+	if err != nil {
+		return err
+	}
+
+	blockHashes = append(blockHashes, hashes...)
+	blockHash := block.Hash()
+	blockHashes = append(blockHashes, &blockHash)
+	binaryBlockHashes, err := json.Marshal(blockHashes)
+	if err != nil {
+		return errors.Wrap(err, "Marshal block hashes")
+	}
+
+	batch := s.db.NewBatch()
+	batch.Set(CalcBlockHashesKey(block.Height), binaryBlockHashes)
+	batch.Set(CalcBlockHeaderKey(&blockHash), binaryBlockHeader)
+	batch.Set(CalcBlockTransactionsKey(&blockHash), binaryBlockTxs)
+	batch.Set(CalcBlockHeaderIndexKey(block.Height, &blockHash), binaryBlockHeader)
+	batch.Write()
+
+	s.cache.removeBlockHashes(block.Height)
+	log.WithFields(log.Fields{
+		"module":   logModule,
+		"height":   block.Height,
+		"hash":     blockHash.String(),
+		"duration": time.Since(startTime),
+	}).Info("block saved on disk")
+	return nil
+}
+
+// GetBlockTransactions return the Block transactions by given hash
+func (s *Store) GetBlockTransactions(hash *bc.Hash) ([]*types.Tx, error) {
+	return s.cache.lookupBlockTxs(hash)
 }
 
 // GetBlock return the block by given hash
 func (s *Store) GetBlock(hash *bc.Hash) (*types.Block, error) {
-	return s.cache.lookup(hash)
+	blockHeader, err := s.GetBlockHeader(hash)
+	if err != nil {
+		return nil, err
+	}
+
+	txs, err := s.GetBlockTransactions(hash)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.Block{
+		BlockHeader:  *blockHeader,
+		Transactions: txs,
+	}, nil
 }
 
 // GetTransactionsUtxo will return all the utxo that related to the input txs
@@ -115,10 +181,11 @@ func (s *Store) GetStoreStatus() *protocol.BlockStoreState {
 	return loadBlockStoreStateJSON(s.db)
 }
 
+// LoadBlockIndex loadblockIndex by bestHeight
 func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error) {
 	startTime := time.Now()
 	blockIndex := state.NewBlockIndex()
-	bhIter := s.db.IteratorPrefix(BlockHeaderPrefix)
+	bhIter := s.db.IteratorPrefix(BlockHeaderIndexPrefix)
 	defer bhIter.Release()
 
 	var lastNode *state.BlockNode
@@ -156,34 +223,6 @@ func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error
 		"duration": time.Since(startTime),
 	}).Debug("initialize load history block index from database")
 	return blockIndex, nil
-}
-
-// SaveBlock persists a new block in the protocol.
-func (s *Store) SaveBlock(block *types.Block) error {
-	startTime := time.Now()
-	binaryBlock, err := block.MarshalText()
-	if err != nil {
-		return errors.Wrap(err, "Marshal block meta")
-	}
-
-	binaryBlockHeader, err := block.BlockHeader.MarshalText()
-	if err != nil {
-		return errors.Wrap(err, "Marshal block header")
-	}
-
-	blockHash := block.Hash()
-	batch := s.db.NewBatch()
-	batch.Set(CalcBlockKey(&blockHash), binaryBlock)
-	batch.Set(CalcBlockHeaderKey(block.Height, &blockHash), binaryBlockHeader)
-	batch.Write()
-
-	log.WithFields(log.Fields{
-		"module":   logModule,
-		"height":   block.Height,
-		"hash":     blockHash.String(),
-		"duration": time.Since(startTime),
-	}).Info("block saved on disk")
-	return nil
 }
 
 // SaveChainStatus save the core's newest status && delete old status
