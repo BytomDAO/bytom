@@ -2,6 +2,7 @@ package state
 
 import (
 	"encoding/hex"
+	"fmt"
 
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/errors"
@@ -69,7 +70,8 @@ func (rs *RewardStatistics) calculateReward(block *types.Block, isAdd bool) erro
 
 func (rs *RewardStatistics) DetachBlock(block *types.Block) error {
 	if block.Hash() != rs.BlockHash {
-		return errors.New("the block %s is not exist in reward")
+		hash := block.Hash()
+		return errors.New(fmt.Sprintf("the block %s is not exist in reward", (&hash).String()))
 	}
 
 	if err := rs.calculateReward(block, false); err != nil {
