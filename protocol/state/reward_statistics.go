@@ -141,11 +141,21 @@ func calculateFee(tx *types.Tx) (uint64, error) {
 		if input.TypedInput.InputType() == types.CoinbaseInputType {
 			continue
 		}
+
+		if input.AssetID() != *consensus.BTMAssetID {
+			continue
+		}
+
 		if fee, ok = checked.AddUint64(input.Amount(), fee); !ok {
 			return 0, checked.ErrOverflow
 		}
 	}
+
 	for _, output := range tx.Outputs {
+		if *output.AssetAmount.AssetId != *consensus.BTMAssetID {
+			continue
+		}
+
 		if fee, ok = checked.SubUint64(fee, output.Amount); !ok {
 			return 0, checked.ErrOverflow
 		}
