@@ -16,7 +16,7 @@ type RewardAndProgram struct {
 	controlProgram []byte
 }
 
-// RewardStatistics
+// RewardStatistics represents reward statistics every 100 blocks
 type RewardStatistics struct {
 	rewards     map[string]uint64
 	BlockHash   bc.Hash
@@ -31,6 +31,7 @@ func NewRewardStatistics(blockHash bc.Hash, BlockHeight uint64) *RewardStatistic
 	}
 }
 
+// ApplyBlock calculate a new block reward for reward statistics
 func (rs *RewardStatistics) ApplyBlock(block *types.Block) error {
 	if block.PreviousBlockHash != rs.BlockHash {
 		return errors.New("block previous hash is not equal to reward hash")
@@ -68,6 +69,7 @@ func (rs *RewardStatistics) calculateReward(block *types.Block, isAdd bool) erro
 	return nil
 }
 
+// DetachBlock delete a block reward from reward statistics
 func (rs *RewardStatistics) DetachBlock(block *types.Block) error {
 	if block.Hash() != rs.BlockHash {
 		hash := block.Hash()
@@ -95,6 +97,7 @@ func (rs *RewardStatistics) getRewards() (rewards []RewardAndProgram) {
 	return
 }
 
+// calculateReward calculate block subsidy and transaction fee
 func calculateReward(block *types.Block) (RewardAndProgram, error) {
 	var rp RewardAndProgram
 	if txs := block.Transactions; len(txs) > 0 {
@@ -121,6 +124,7 @@ func calculateReward(block *types.Block) (RewardAndProgram, error) {
 	return rp, nil
 }
 
+// calculateFee calculate the fee of a transaction
 func calculateFee(tx *types.Tx) (uint64, error) {
 	var fee uint64
 	var ok bool
