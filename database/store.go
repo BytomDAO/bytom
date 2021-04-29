@@ -19,7 +19,9 @@ import (
 const logModule = "leveldb"
 
 var (
+	// BlockStoreKey block store key
 	BlockStoreKey          = []byte("blockStore")
+	// BlockHeaderIndexPrefix  block header index with height
 	BlockHeaderIndexPrefix = []byte("BH:")
 )
 
