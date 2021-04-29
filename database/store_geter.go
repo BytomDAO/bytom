@@ -43,11 +43,6 @@ func CalcBlockTransactionsKey(hash *bc.Hash) []byte {
 	return append(blockTransactionsKey, hash.Bytes()...)
 }
 
-// CalcBlockKey make up block key with prefix + hash
-func CalcBlockKey(hash *bc.Hash) []byte {
-	return append(BlockPrefix, hash.Bytes()...)
-}
-
 // CalcBlockHeaderIndexKey make up BlockHeaderIndexKey with prefix + hash
 func CalcBlockHeaderIndexKey(height uint64, hash *bc.Hash) []byte {
 	buf := [8]byte{}

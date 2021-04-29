@@ -20,9 +20,7 @@ const logModule = "leveldb"
 
 var (
 	BlockStoreKey          = []byte("blockStore")
-	BlockPrefix            = []byte("B:")
 	BlockHeaderIndexPrefix = []byte("BH:")
-	TxStatusPrefix         = []byte("BTS:")
 )
 
 func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {

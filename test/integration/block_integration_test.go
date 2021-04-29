@@ -1094,7 +1094,6 @@ func createStoreItems(mainChainIndexes []int, attachBlocks []*attachBlock, extra
 		block := attachBlock.block
 		blockHash := block.Hash()
 		items = append(items, &storeItem{
-			key: database.CalcBlockKey(&blockHash),
 			val: block,
 		})
 		items = append(items, &storeItem{
