@@ -85,7 +85,13 @@ func (rs *RewardStatistics) DetachBlock(block *types.Block) error {
 	return nil
 }
 
-func (rs *RewardStatistics) getRewards() (rewards []RewardAndProgram) {
+// GetRewards return a list rewards for creating coinbase transaction.
+// It return every 100 blocks for cutting down coinbase outputs.
+func (rs *RewardStatistics) GetRewards(height uint64) (rewards []RewardAndProgram) {
+	if height%BlocksOfEpoch != 0 {
+		return
+	}
+
 	for hexProgram, rewardAmount := range rs.rewards {
 		program, _ := hex.DecodeString(hexProgram)
 		rewards = append(rewards, RewardAndProgram{
