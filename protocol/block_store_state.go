@@ -24,14 +24,14 @@ type BlockStoreState struct {
 	// the reward statistics of validator
 	//   key: control program who gets the reward
 	//	 value: reward amount
-	rewards map[string]uint64
+	Rewards map[string]uint64
 }
 
 func NewBlockStoreState(height uint64, hash *bc.Hash) *BlockStoreState {
 	return &BlockStoreState{
 		Height:  height,
 		Hash:    hash,
-		rewards: map[string]uint64{},
+		Rewards: map[string]uint64{},
 	}
 }
 
@@ -59,11 +59,11 @@ func (rs *BlockStoreState) calculateReward(block *types.Block, isAdd bool) error
 
 	hexControlProgram := hex.EncodeToString(blockReward.controlProgram)
 	if isAdd {
-		rs.rewards[hexControlProgram] += blockReward.reward
+		rs.Rewards[hexControlProgram] += blockReward.reward
 	} else {
-		rs.rewards[hexControlProgram] -= blockReward.reward
-		if rs.rewards[hexControlProgram] == 0 {
-			delete(rs.rewards, hexControlProgram)
+		rs.Rewards[hexControlProgram] -= blockReward.reward
+		if rs.Rewards[hexControlProgram] == 0 {
+			delete(rs.Rewards, hexControlProgram)
 		}
 	}
 
@@ -87,9 +87,9 @@ func (rs *BlockStoreState) DetachBlock(block *types.Block, validatorPledge uint6
 	return nil
 }
 
-// GetRewards return a list rewards for creating coinbase transaction.
+// GetRewards return a list Rewards for creating coinbase transaction.
 func (rs *BlockStoreState) GetRewards() (rewards []RewardAndProgram) {
-	for hexProgram, rewardAmount := range rs.rewards {
+	for hexProgram, rewardAmount := range rs.Rewards {
 		program, _ := hex.DecodeString(hexProgram)
 		rewards = append(rewards, RewardAndProgram{
 			reward:         rewardAmount,
