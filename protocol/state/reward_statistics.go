@@ -89,12 +89,7 @@ func (rs *RewardStatistics) DetachBlock(block *types.Block) error {
 }
 
 // GetRewards return a list rewards for creating coinbase transaction.
-// It return every 100 blocks for cutting down coinbase outputs.
-func (rs *RewardStatistics) GetRewards(height uint64) (rewards []RewardAndProgram) {
-	if height%BlocksOfEpoch != 0 {
-		return
-	}
-
+func (rs *RewardStatistics) GetRewards() (rewards []RewardAndProgram) {
 	for hexProgram, rewardAmount := range rs.rewards {
 		program, _ := hex.DecodeString(hexProgram)
 		rewards = append(rewards, RewardAndProgram{
@@ -109,25 +104,15 @@ func (rs *RewardStatistics) GetRewards(height uint64) (rewards []RewardAndProgra
 // calculateReward calculate block subsidy and transaction fee
 func calculateReward(block *types.Block) (RewardAndProgram, error) {
 	var rp RewardAndProgram
-	if txs := block.Transactions; len(txs) > 0 {
-		if len(txs[0].Outputs) == 0 {
-			return rp, errors.New("not found coinbase receiver")
-		}
 
-		rp.controlProgram = txs[0].Outputs[0].ControlProgram
-	} else {
-		return rp, errors.New("not found coinbase receiver")
-	}
-
+	rp.controlProgram = block.Transactions[0].Outputs[0].ControlProgram
 	rp.reward = consensus.BlockSubsidy(block.Height, 100)
 	for _, tx := range block.Transactions {
-		var fee uint64
-		var err error
-		if fee, err = calculateFee(tx); err != nil {
+		if fee, err := calculateFee(tx); err != nil {
 			return rp, errors.Wrap(checked.ErrOverflow, "calculate transaction fee")
+		} else {
+			rp.reward += fee
 		}
-
-		rp.reward += fee
 	}
 
 	return rp, nil
@@ -139,7 +124,7 @@ func calculateFee(tx *types.Tx) (uint64, error) {
 	var ok bool
 	for _, input := range tx.Inputs {
 		if input.TypedInput.InputType() == types.CoinbaseInputType {
-			continue
+			return 0, nil
 		}
 
 		if input.AssetID() != *consensus.BTMAssetID {
