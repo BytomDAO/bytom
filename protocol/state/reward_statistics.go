@@ -11,15 +11,15 @@ import (
 	"github.com/bytom/bytom/protocol/bc/types"
 )
 
-// RewardAndProgram a reward record
-// 		reward: reward amount for every 100 blocks
-//		controlProgram: who gets the reward
+// RewardAndProgram a Reward record
+// 		Reward: Reward amount for every 100 blocks
+//		ControlProgram: who gets the Reward
 type RewardAndProgram struct {
-	reward         uint64
-	controlProgram []byte
+	Reward         uint64
+	ControlProgram []byte
 }
 
-// RewardStatistics represents reward statistics every 100 blocks
+// RewardStatistics represents Reward statistics every 100 blocks
 type RewardStatistics struct {
 	rewards     map[string]uint64
 	BlockHash   bc.Hash
@@ -34,10 +34,10 @@ func NewRewardStatistics(blockHash bc.Hash, BlockHeight uint64) *RewardStatistic
 	}
 }
 
-// ApplyBlock calculate a new block reward for reward statistics
+// ApplyBlock calculate a new block Reward for Reward statistics
 func (rs *RewardStatistics) ApplyBlock(block *types.Block) error {
 	if block.PreviousBlockHash != rs.BlockHash {
-		return errors.New("block previous hash is not equal to reward hash")
+		return errors.New("block previous hash is not equal to Reward hash")
 	}
 
 	if block.Height%BlocksOfEpoch == 1 {
@@ -59,11 +59,11 @@ func (rs *RewardStatistics) calculateReward(block *types.Block, isAdd bool) erro
 		return err
 	}
 
-	hexControlProgram := hex.EncodeToString(blockReward.controlProgram)
+	hexControlProgram := hex.EncodeToString(blockReward.ControlProgram)
 	if isAdd {
-		rs.rewards[hexControlProgram] += blockReward.reward
+		rs.rewards[hexControlProgram] += blockReward.Reward
 	} else {
-		rs.rewards[hexControlProgram] -= blockReward.reward
+		rs.rewards[hexControlProgram] -= blockReward.Reward
 		if rs.rewards[hexControlProgram] == 0 {
 			delete(rs.rewards, hexControlProgram)
 		}
@@ -72,11 +72,11 @@ func (rs *RewardStatistics) calculateReward(block *types.Block, isAdd bool) erro
 	return nil
 }
 
-// DetachBlock delete a block reward from reward statistics
+// DetachBlock delete a block Reward from Reward statistics
 func (rs *RewardStatistics) DetachBlock(block *types.Block) error {
 	if block.Hash() != rs.BlockHash {
 		hash := block.Hash()
-		return errors.New(fmt.Sprintf("the block %s is not exist in reward", (&hash).String()))
+		return errors.New(fmt.Sprintf("the block %s is not exist in Reward", (&hash).String()))
 	}
 
 	if err := rs.calculateReward(block, false); err != nil {
@@ -93,8 +93,8 @@ func (rs *RewardStatistics) GetRewards() (rewards []RewardAndProgram) {
 	for hexProgram, rewardAmount := range rs.rewards {
 		program, _ := hex.DecodeString(hexProgram)
 		rewards = append(rewards, RewardAndProgram{
-			reward:         rewardAmount,
-			controlProgram: program,
+			Reward:         rewardAmount,
+			ControlProgram: program,
 		})
 	}
 
@@ -105,15 +105,15 @@ func (rs *RewardStatistics) GetRewards() (rewards []RewardAndProgram) {
 func calculateReward(block *types.Block) (RewardAndProgram, error) {
 	var rp RewardAndProgram
 
-	rp.controlProgram = block.Transactions[0].Outputs[0].ControlProgram
-	rp.reward = consensus.BlockSubsidy(block.Height, 100)
+	rp.ControlProgram = block.Transactions[0].Outputs[0].ControlProgram
+	rp.Reward = consensus.BlockSubsidy(block.Height, 100)
 	for _, tx := range block.Transactions {
 		fee, err := calculateFee(tx)
 		if err != nil {
 			return rp, errors.Wrap(checked.ErrOverflow, "calculate transaction fee")
 		}
 
-		rp.reward += fee
+		rp.Reward += fee
 	}
 
 	return rp, nil
