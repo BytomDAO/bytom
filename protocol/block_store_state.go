@@ -38,7 +38,7 @@ func NewBlockStoreState(height uint64, hash *bc.Hash) *BlockStoreState {
 // ApplyBlock calculate a new block reward for reward statistics
 func (rs *BlockStoreState) ApplyBlock(block *types.Block, validatorPledge uint64) error {
 	if block.PreviousBlockHash != *rs.Hash {
-		return errors.New("block previous hash is not equal to reward hash")
+		panic("block previous hash is not equal to BlockStoreState hash")
 	}
 
 	if err := rs.calculateReward(block, true); err != nil {
@@ -74,7 +74,7 @@ func (rs *BlockStoreState) calculateReward(block *types.Block, isAdd bool) error
 func (rs *BlockStoreState) DetachBlock(block *types.Block, validatorPledge uint64) error {
 	if block.Hash() != *rs.Hash {
 		hash := block.Hash()
-		return errors.New(fmt.Sprintf("the block %s is not exist in reward", (&hash).String()))
+		panic(fmt.Sprintf("the block %s is not exist in BlockStoreState", (&hash).String()))
 	}
 
 	if err := rs.calculateReward(block, false); err != nil {
