@@ -82,7 +82,7 @@ func (rs *BlockStoreState) DetachBlock(block *types.Block, validatorPledge uint6
 	}
 
 	rs.Height--
-	hash := block.Hash()
+	hash := block.PreviousBlockHash
 	rs.Hash = &hash
 	return nil
 }
