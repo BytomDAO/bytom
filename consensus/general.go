@@ -68,6 +68,7 @@ var BTMDefinitionMap = map[string]interface{}{
 
 // BlockSubsidy calculate the coinbase rewards on given block height
 func BlockSubsidy(height uint64) uint64 {
+	//TODO: calculate block btm2.0
 	if height == 0 {
 		return InitialBlockSubsidy
 	}

@@ -11,6 +11,9 @@ import (
 	"github.com/bytom/bytom/protocol/bc/types"
 )
 
+// RewardAndProgram a reward record
+// 		reward: reward amount
+//		controlProgram: who gets the reward
 type RewardAndProgram struct {
 	Reward         uint64
 	ControlProgram []byte
@@ -36,12 +39,12 @@ func NewBlockStoreState(height uint64, hash *bc.Hash) *BlockStoreState {
 }
 
 // ApplyBlock calculate a new block reward for reward statistics
-func (rs *BlockStoreState) ApplyBlock(block *types.Block, validatorPledge uint64) error {
+func (rs *BlockStoreState) ApplyBlock(block *types.Block) error {
 	if block.PreviousBlockHash != *rs.Hash {
-		panic("block previous hash is not equal to BlockStoreState hash")
+		return errors.New("block previous hash is not equal to BlockStoreState hash")
 	}
 
-	if err := rs.calculateReward(block, true); err != nil {
+	if err := rs.applyReward(block); err != nil {
 		return err
 	}
 
@@ -50,22 +53,28 @@ func (rs *BlockStoreState) ApplyBlock(block *types.Block, validatorPledge uint64
 	return nil
 }
 
-func (rs *BlockStoreState) calculateReward(block *types.Block, isAdd bool) error {
+func (rs *BlockStoreState) applyReward(block *types.Block) error {
 	blockReward, err := calculateReward(block)
 	if err != nil {
 		return err
 	}
 
 	hexControlProgram := hex.EncodeToString(blockReward.ControlProgram)
-	if isAdd {
-		rs.Rewards[hexControlProgram] += blockReward.Reward
-	} else {
-		rs.Rewards[hexControlProgram] -= blockReward.Reward
-		if rs.Rewards[hexControlProgram] == 0 {
-			delete(rs.Rewards, hexControlProgram)
-		}
+	rs.Rewards[hexControlProgram] += blockReward.Reward
+	return nil
+}
+
+func (rs *BlockStoreState) detachReward(block *types.Block) error {
+	blockReward, err := calculateReward(block)
+	if err != nil {
+		return err
 	}
 
+	hexControlProgram := hex.EncodeToString(blockReward.ControlProgram)
+	rs.Rewards[hexControlProgram] -= blockReward.Reward
+	if rs.Rewards[hexControlProgram] == 0 {
+		delete(rs.Rewards, hexControlProgram)
+	}
 	return nil
 }
 
@@ -73,10 +82,10 @@ func (rs *BlockStoreState) calculateReward(block *types.Block, isAdd bool) error
 func (rs *BlockStoreState) DetachBlock(block *types.Block, validatorPledge uint64) error {
 	if block.Hash() != *rs.Hash {
 		hash := block.Hash()
-		panic(fmt.Sprintf("the block %s is not exist in BlockStoreState", (&hash).String()))
+		return errors.New(fmt.Sprintf("the block %s is not exist in BlockStoreState", (&hash).String()))
 	}
 
-	if err := rs.calculateReward(block, false); err != nil {
+	if err := rs.detachReward(block); err != nil {
 		return err
 	}
 
@@ -88,6 +97,7 @@ func (rs *BlockStoreState) DetachBlock(block *types.Block, validatorPledge uint6
 // GetRewards return a list Rewards for creating coinbase transaction.
 func (rs *BlockStoreState) GetRewards() (rewards []RewardAndProgram) {
 	for hexProgram, rewardAmount := range rs.Rewards {
+		// the write of hexProgram must be a hex string, so ignore error here
 		program, _ := hex.DecodeString(hexProgram)
 		rewards = append(rewards, RewardAndProgram{
 			Reward:         rewardAmount,
@@ -115,7 +125,6 @@ func calculateReward(block *types.Block) (RewardAndProgram, error) {
 	return rp, nil
 }
 
-// calculateFee calculate the fee of a transaction
 func calculateFee(tx *types.Tx) (uint64, error) {
 	var fee uint64
 	var ok bool

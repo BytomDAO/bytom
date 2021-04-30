@@ -102,7 +102,7 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 
 	node := c.index.GetNode(&bcBlock.ID)
 	blockStoreState := c.store.GetStoreStatus()
-	if err := blockStoreState.ApplyBlock(block, 100); err != nil {
+	if err := blockStoreState.ApplyBlock(block); err != nil {
 		return err
 	}
 
@@ -182,7 +182,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			return err
 		}
 
-		if err := blockStoreState.ApplyBlock(b, 100); err != nil {
+		if err := blockStoreState.ApplyBlock(b); err != nil {
 			return err
 		}
 
