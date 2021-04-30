@@ -12,8 +12,8 @@ import (
 )
 
 type RewardAndProgram struct {
-	reward         uint64
-	controlProgram []byte
+	Reward         uint64
+	ControlProgram []byte
 }
 
 // BlockStoreState represents the core's db status
@@ -57,11 +57,11 @@ func (rs *BlockStoreState) calculateReward(block *types.Block, isAdd bool) error
 		return err
 	}
 
-	hexControlProgram := hex.EncodeToString(blockReward.controlProgram)
+	hexControlProgram := hex.EncodeToString(blockReward.ControlProgram)
 	if isAdd {
-		rs.Rewards[hexControlProgram] += blockReward.reward
+		rs.Rewards[hexControlProgram] += blockReward.Reward
 	} else {
-		rs.Rewards[hexControlProgram] -= blockReward.reward
+		rs.Rewards[hexControlProgram] -= blockReward.Reward
 		if rs.Rewards[hexControlProgram] == 0 {
 			delete(rs.Rewards, hexControlProgram)
 		}
@@ -92,8 +92,8 @@ func (rs *BlockStoreState) GetRewards() (rewards []RewardAndProgram) {
 	for hexProgram, rewardAmount := range rs.Rewards {
 		program, _ := hex.DecodeString(hexProgram)
 		rewards = append(rewards, RewardAndProgram{
-			reward:         rewardAmount,
-			controlProgram: program,
+			Reward:         rewardAmount,
+			ControlProgram: program,
 		})
 	}
 
@@ -104,13 +104,13 @@ func (rs *BlockStoreState) GetRewards() (rewards []RewardAndProgram) {
 func calculateReward(block *types.Block) (RewardAndProgram, error) {
 	var rp RewardAndProgram
 
-	rp.controlProgram = block.Transactions[0].Outputs[0].ControlProgram
-	rp.reward = consensus.BlockSubsidy(block.Height)
+	rp.ControlProgram = block.Transactions[0].Outputs[0].ControlProgram
+	rp.Reward = consensus.BlockSubsidy(block.Height)
 	for _, tx := range block.Transactions {
 		if fee, err := calculateFee(tx); err != nil {
 			return rp, errors.Wrap(checked.ErrOverflow, "calculate transaction fee")
 		} else {
-			rp.reward += fee
+			rp.Reward += fee
 		}
 	}
 
