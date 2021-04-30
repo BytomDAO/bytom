@@ -7,6 +7,7 @@ func (o *VoteOutput) writeForHash(w io.Writer) {
 	mustWriteForHash(w, o.Source)
 	mustWriteForHash(w, o.ControlProgram)
 	mustWriteForHash(w, o.Vote)
+	mustWriteForHash(w, o.StateData)
 }
 
 // NewCrossChainOutput creates a new CrossChainOutput.
