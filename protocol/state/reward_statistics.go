@@ -108,11 +108,12 @@ func calculateReward(block *types.Block) (RewardAndProgram, error) {
 	rp.controlProgram = block.Transactions[0].Outputs[0].ControlProgram
 	rp.reward = consensus.BlockSubsidy(block.Height, 100)
 	for _, tx := range block.Transactions {
-		if fee, err := calculateFee(tx); err != nil {
+		fee, err := calculateFee(tx)
+		if err != nil {
 			return rp, errors.Wrap(checked.ErrOverflow, "calculate transaction fee")
-		} else {
-			rp.reward += fee
 		}
+
+		rp.reward += fee
 	}
 
 	return rp, nil
