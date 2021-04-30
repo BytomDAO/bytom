@@ -4,6 +4,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/bytom/bytom/protocol"
+
 	"github.com/golang/protobuf/proto"
 
 	"github.com/bytom/bytom/database"
@@ -293,7 +295,7 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 			utxoViewpoint0.Entries[k] = v
 		}
 		contractView := state.NewContractViewpoint()
-		if err := store.SaveChainStatus(node, utxoViewpoint0, contractView); err != nil {
+		if err := store.SaveChainStatus(node, utxoViewpoint0, contractView, protocol.NewBlockStoreState(0, nil)); err != nil {
 			t.Error(err)
 		}
 
@@ -315,7 +317,7 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 				t.Error(err)
 			}
 		}
-		if err := store.SaveChainStatus(node, utxoViewpoint, contractView); err != nil {
+		if err := store.SaveChainStatus(node, utxoViewpoint, contractView, protocol.NewBlockStoreState(0, nil)); err != nil {
 			t.Error(err)
 		}
 

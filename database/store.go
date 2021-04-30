@@ -20,7 +20,7 @@ const logModule = "leveldb"
 
 var (
 	// BlockStoreKey block store key
-	BlockStoreKey          = []byte("blockStore")
+	BlockStoreKey = []byte("blockStore")
 	// BlockHeaderIndexPrefix  block header index with height
 	BlockHeaderIndexPrefix = []byte("BH:")
 )
@@ -226,7 +226,7 @@ func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error
 }
 
 // SaveChainStatus save the core's newest status && delete old status
-func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint, contractView *state.ContractViewpoint) error {
+func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint, contractView *state.ContractViewpoint, blockStoreState *protocol.BlockStoreState) error {
 	batch := s.db.NewBatch()
 	if err := saveUtxoView(batch, view); err != nil {
 		return err
@@ -240,7 +240,7 @@ func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint
 		return err
 	}
 
-	bytes, err := json.Marshal(protocol.BlockStoreState{Height: node.Height, Hash: &node.Hash})
+	bytes, err := json.Marshal(blockStoreState)
 	if err != nil {
 		return err
 	}

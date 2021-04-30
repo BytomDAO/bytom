@@ -24,11 +24,5 @@ type Store interface {
 
 	LoadBlockIndex(uint64) (*state.BlockIndex, error)
 	SaveBlock(*types.Block) error
-	SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint, *state.ContractViewpoint) error
-}
-
-// BlockStoreState represents the core's db status
-type BlockStoreState struct {
-	Height uint64
-	Hash   *bc.Hash
+	SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint, *state.ContractViewpoint, *BlockStoreState) error
 }

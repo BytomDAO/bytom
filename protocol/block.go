@@ -101,7 +101,12 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 	}
 
 	node := c.index.GetNode(&bcBlock.ID)
-	if err := c.setState(node, utxoView, contractView); err != nil {
+	blockStoreState := c.store.GetStoreStatus()
+	if err := blockStoreState.ApplyBlock(block, 100); err != nil {
+		return err
+	}
+
+	if err := c.setState(node, utxoView, contractView, blockStoreState); err != nil {
 		return err
 	}
 
@@ -115,6 +120,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 	attachNodes, detachNodes := c.calcReorganizeNodes(node)
 	utxoView := state.NewUtxoViewpoint()
 	contractView := state.NewContractViewpoint()
+	blockStoreState := c.store.GetStoreStatus()
 
 	txsToRestore := map[bc.Hash]*types.Tx{}
 	for _, detachNode := range detachNodes {
@@ -133,6 +139,11 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 		}
 
 		if err := contractView.DetachBlock(b); err != nil {
+			return err
+		}
+
+		// update current block store state.
+		if err := blockStoreState.ApplyBlock(b, 100); err != nil {
 			return err
 		}
 
@@ -171,6 +182,10 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			return err
 		}
 
+		if err := blockStoreState.ApplyBlock(b, 100); err != nil {
+			return err
+		}
+
 		for _, tx := range b.Transactions {
 			if _, ok := txsToRestore[tx.ID]; !ok {
 				txsToRemove[tx.ID] = tx
@@ -182,7 +197,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Debug("attach from mainchain")
 	}
 
-	if err := c.setState(node, utxoView, contractView); err != nil {
+	if err := c.setState(node, utxoView, contractView, blockStoreState); err != nil {
 		return err
 	}
 

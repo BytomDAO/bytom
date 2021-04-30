@@ -151,7 +151,7 @@ func TestSaveChainStatus(t *testing.T) {
 	}
 
 	contractView := state.NewContractViewpoint()
-	if err := store.SaveChainStatus(node, view, contractView); err != nil {
+	if err := store.SaveChainStatus(node, view, contractView, protocol.NewBlockStoreState(node.Height, &node.Hash)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -211,4 +211,3 @@ func TestSaveBlock(t *testing.T) {
 		t.Errorf("got block header:%v, expect block header:%v", gotBlockHeader, block.BlockHeader)
 	}
 }
-
