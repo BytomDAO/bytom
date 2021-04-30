@@ -143,7 +143,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 		}
 
 		// update current block store state.
-		if err := blockStoreState.ApplyBlock(b, 100); err != nil {
+		if err := blockStoreState.DetachBlock(b, 100); err != nil {
 			return err
 		}
 
