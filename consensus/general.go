@@ -67,15 +67,17 @@ var BTMDefinitionMap = map[string]interface{}{
 }
 var (
 	// neu, total BTM
-	initialTotalBTM uint64 = 100000
+	initialTotalBTM uint64 = 15.66 * 1e8 * 1e8
 	// the amount of blocks is confirmed annually
-	annualBlocks      uint64 = 1000
+	annualBlocks      uint64 = 365 * 24 * 60 * 60 * 1000 / ActiveNetParams.BlockTimeInterval
 	annualGenerateBTM uint64 = 3 * 1e7 * 1e8
 )
 
 // BlockSubsidyV2 calculate BTM2.0 coinbase reward
+// validatorPledge validator's vote and guaranty
 func BlockSubsidyV2(height uint64, validatorPledge uint64) uint64 {
 	totalBTM := height*annualBlocks + initialTotalBTM
+	// x is Pledge rate
 	x := float64(validatorPledge) / float64(totalBTM)
 	if x <= 0.5 {
 		return uint64((x+0.5)*float64(annualGenerateBTM)) / annualBlocks
