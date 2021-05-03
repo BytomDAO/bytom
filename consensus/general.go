@@ -69,7 +69,7 @@ var (
 	// neu, total BTM
 	initialTotalBTM uint64 = 15.66 * 1e8 * 1e8
 	// the amount of blocks is confirmed annually
-	annualBlocks      uint64 = 365 * 24 * 60 * 60 * 1000 / ActiveNetParams.BlockTimeInterval
+	annualBlocks      uint64 = 365 * 24 * 60 * 60 * 1000 / 5000
 	annualGenerateBTM uint64 = 3 * 1e7 * 1e8
 )
 
