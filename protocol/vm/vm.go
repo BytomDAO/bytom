@@ -68,6 +68,10 @@ func Verify(context *Context, gasLimit int64) (gasLeft int64, err error) {
 		}
 	}
 
+	if err = vm.pushAlt(context.StateData, false); err != nil {
+		return vm.runLimit, errors.Wrapf(err, "pushing initial statedata")
+	}
+
 	err = vm.run()
 	if err == nil && vm.falseResult() {
 		err = ErrFalseVMResult
@@ -152,6 +156,22 @@ func (vm *virtualMachine) push(data []byte, deferred bool) error {
 	return nil
 }
 
+func (vm *virtualMachine) pushAlt(data [][]byte, deferred bool) error {
+	for _, d := range data {
+		cost := 8 + int64(len(d))
+		if deferred {
+			vm.deferCost(cost)
+		} else {
+			err := vm.applyCost(cost)
+			if err != nil {
+				return err
+			}
+		}
+		vm.altStack = append(vm.altStack, d)
+	}
+	return nil
+}
+
 func (vm *virtualMachine) pushBool(b bool, deferred bool) error {
 	return vm.push(BoolBytes(b), deferred)
 }
@@ -179,6 +199,24 @@ func (vm *virtualMachine) pop(deferred bool) ([]byte, error) {
 	}
 
 	return res, nil
+}
+
+func (vm *virtualMachine) popAlt(deferred bool) ([][]byte, error) {
+	if len(vm.altStack) == 0 {
+		return nil, ErrAltStackUnderflow
+	}
+	var altData [][]byte
+	for _, d := range vm.altStack {
+		cost := 8 + int64(len(d))
+		if deferred {
+			vm.deferCost(-cost)
+		} else {
+			vm.runLimit += cost
+		}
+		altData = append(altData, d)
+	}
+	vm.altStack = vm.altStack[:0]
+	return altData, nil
 }
 
 func (vm *virtualMachine) popInt64(deferred bool) (int64, error) {

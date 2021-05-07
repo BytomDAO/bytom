@@ -106,16 +106,18 @@ func TestIntrospectionOps(t *testing.T) {
 				{1},
 				[]byte("missingprog"),
 			},
+			altStack: [][]byte{[]byte("statedata")},
 			context: &Context{
-				CheckOutput: func(uint64, uint64, []byte, uint64, []byte, bool) (bool, error) {
+				CheckOutput: func(uint64, uint64, []byte, uint64, []byte, [][]byte, bool) (bool, error) {
 					return false, nil
 				},
 			},
 		},
 		wantVM: &virtualMachine{
-			runLimit:     50062,
-			deferredCost: -78,
+			runLimit:     50079,
+			deferredCost: -95,
 			dataStack:    [][]byte{{}},
+			altStack:     [][]byte{},
 		},
 	}, {
 		op: OP_CHECKOUTPUT,
@@ -128,7 +130,8 @@ func TestIntrospectionOps(t *testing.T) {
 				Int64Bytes(-1),
 				[]byte("controlprog"),
 			},
-			context: &Context{},
+			altStack: [][]byte{[]byte("statedata")},
+			context:  &Context{},
 		},
 		wantErr: ErrBadValue,
 	}, {
@@ -142,7 +145,8 @@ func TestIntrospectionOps(t *testing.T) {
 				{1},
 				[]byte("controlprog"),
 			},
-			context: &Context{},
+			altStack: [][]byte{[]byte("statedata")},
+			context:  &Context{},
 		},
 		wantErr: ErrBadValue,
 	}, {
@@ -156,7 +160,8 @@ func TestIntrospectionOps(t *testing.T) {
 				{1},
 				[]byte("controlprog"),
 			},
-			context: &Context{},
+			altStack: [][]byte{[]byte("statedata")},
+			context:  &Context{},
 		},
 		wantErr: ErrBadValue,
 	}, {
@@ -170,8 +175,9 @@ func TestIntrospectionOps(t *testing.T) {
 				{1},
 				[]byte("controlprog"),
 			},
+			altStack: [][]byte{[]byte("statedata")},
 			context: &Context{
-				CheckOutput: func(uint64, uint64, []byte, uint64, []byte, bool) (bool, error) {
+				CheckOutput: func(uint64, uint64, []byte, uint64, []byte, [][]byte, bool) (bool, error) {
 					return false, ErrBadValue
 				},
 			},
@@ -189,7 +195,8 @@ func TestIntrospectionOps(t *testing.T) {
 				{1},
 				[]byte("controlprog"),
 			},
-			context: &Context{},
+			altStack: [][]byte{[]byte("statedata")},
+			context:  &Context{},
 		},
 		wantErr: ErrRunLimitExceeded,
 	}, {

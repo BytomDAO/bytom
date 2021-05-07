@@ -234,7 +234,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errors.WithDetailf(ErrMismatchedAssetID, "asset ID is %x, issuance wants %x", computedAssetID.Bytes(), e.Value.AssetId.Bytes())
 		}
 
-		gasLeft, err := vm.Verify(NewTxVMContext(vs, e, e.WitnessAssetDefinition.IssuanceProgram, e.WitnessArguments), vs.gasStatus.GasLeft)
+		gasLeft, err := vm.Verify(NewTxVMContext(vs, e, e.WitnessAssetDefinition.IssuanceProgram, &bc.StateData{}, e.WitnessArguments), vs.gasStatus.GasLeft)
 		if err != nil {
 			return errors.Wrap(err, "checking issuance program")
 		}
@@ -257,7 +257,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errors.Wrap(err, "getting spend prevout")
 		}
 
-		gasLeft, err := vm.Verify(NewTxVMContext(vs, e, spentOutput.ControlProgram, e.WitnessArguments), vs.gasStatus.GasLeft)
+		gasLeft, err := vm.Verify(NewTxVMContext(vs, e, spentOutput.ControlProgram, spentOutput.StateData, e.WitnessArguments), vs.gasStatus.GasLeft)
 		if err != nil {
 			return errors.Wrap(err, "checking control program")
 		}
