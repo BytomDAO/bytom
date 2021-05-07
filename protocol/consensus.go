@@ -23,4 +23,7 @@ type CasperConsensus interface {
 
 	// Validators return the validators by specified block hash
 	Validators(blockHash *bc.Hash) ([]*state.Validator, error)
+
+	// NotifyRollback return the rollback notify channel
+	NotifyRollback() chan interface{}
 }

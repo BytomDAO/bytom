@@ -31,10 +31,10 @@ const minGuaranty = 1E14
 type Casper struct {
 	mu               sync.RWMutex
 	tree             *treeNode
-	rollbackNotifyCh chan bc.Hash
+	rollbackNotifyCh chan interface{}
 	newEpochCh       chan bc.Hash
 	store            protocol.Store
-	prvKey           chainkd.XPrv
+	prvKey           *chainkd.XPrv
 	// pubKey -> conflicting verifications
 	evilValidators map[string][]*protocol.Verification
 	// block hash -> previous checkpoint hash
@@ -49,14 +49,14 @@ type Casper struct {
 // argument checkpoints load the checkpoints from leveldb
 // the first element of checkpoints must genesis checkpoint or the last finalized checkpoint in order to reduce memory space
 // the others must be successors of first one
-func NewCasper(store protocol.Store, prvKey chainkd.XPrv, checkpoints []*state.Checkpoint) *Casper {
+func NewCasper(store protocol.Store, prvKey *chainkd.XPrv, checkpoints []*state.Checkpoint, rollbackNotifyCh chan interface{}) *Casper {
 	if checkpoints[0].Height != 0 && checkpoints[0].Status != state.Finalized {
 		log.Panic("first element of checkpoints must genesis or in finalized status")
 	}
 
 	casper := &Casper{
 		tree:                  makeTree(checkpoints[0], checkpoints[1:]),
-		rollbackNotifyCh:      make(chan bc.Hash),
+		rollbackNotifyCh:      rollbackNotifyCh,
 		newEpochCh:            make(chan bc.Hash),
 		store:                 store,
 		prvKey:                prvKey,
@@ -87,6 +87,11 @@ func (c *Casper) LastFinalized() (uint64, bc.Hash) {
 
 	root := c.tree.checkpoint
 	return root.Height, root.Hash
+}
+
+// NotifyRollback return the rollback notify channel
+func (c *Casper) NotifyRollback() chan interface{} {
+	return c.rollbackNotifyCh
 }
 
 // Validators return the validators by specified block hash

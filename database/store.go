@@ -187,7 +187,7 @@ func (s *Store) SaveBlock(block *types.Block) error {
 }
 
 // SaveChainStatus save the core's newest status && delete old status
-func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint, contractView *state.ContractViewpoint) error {
+func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint, contractView *state.ContractViewpoint, finalizedHeight uint64) error {
 	batch := s.db.NewBatch()
 	if err := saveUtxoView(batch, view); err != nil {
 		return err
@@ -201,7 +201,7 @@ func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint
 		return err
 	}
 
-	bytes, err := json.Marshal(protocol.BlockStoreState{Height: node.Height, Hash: &node.Hash})
+	bytes, err := json.Marshal(protocol.BlockStoreState{Height: node.Height, Hash: &node.Hash, FinalizedHeight: finalizedHeight})
 	if err != nil {
 		return err
 	}
@@ -217,6 +217,11 @@ func (s *Store) GetCheckpoint(*bc.Hash) (*state.Checkpoint, error) {
 
 // GetCheckpointsByHeight return all checkpoints of specified block height
 func (s *Store) GetCheckpointsByHeight(uint64) ([]*state.Checkpoint, error) {
+	return nil, nil
+}
+
+// CheckpointsFromHeight return all checkpoints from specified block height
+func (s *Store) CheckpointsFromHeight(uint64) ([]*state.Checkpoint, error) {
 	return nil, nil
 }
 

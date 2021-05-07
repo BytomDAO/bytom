@@ -8,10 +8,12 @@ import (
 	_ "net/http/pprof"
 	"path/filepath"
 
-	"github.com/prometheus/prometheus/util/flock"
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
 	browser "github.com/toqueteos/webbrowser"
+
+	protocolConsensus "github.com/bytom/bytom/protocol/consensus"
+	"github.com/prometheus/prometheus/util/flock"
 
 	"github.com/bytom/bytom/accesstoken"
 	"github.com/bytom/bytom/account"
@@ -81,7 +83,12 @@ func NewNode(config *cfg.Config) *Node {
 
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
-	chain, err := protocol.NewChain(store, txPool)
+	casper, err := newCasper(store)
+	if err != nil {
+		log.WithField("err", err).Fatalln("init casper failed")
+	}
+
+	chain, err := protocol.NewChain(store, txPool, casper)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
 	}
@@ -155,6 +162,22 @@ func NewNode(config *cfg.Config) *Node {
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 
 	return node
+}
+
+func newCasper(store *database.Store) (*protocolConsensus.Casper, error) {
+	var finalizedHeight uint64 = 0
+	status := store.GetStoreStatus()
+	if status != nil {
+		finalizedHeight = status.FinalizedHeight
+	}
+
+	checkpoints, err := store.CheckpointsFromHeight(finalizedHeight)
+	if err != nil {
+		return nil, err
+	}
+
+	prvKey := cfg.CommonConfig.PrivateKey()
+	return protocolConsensus.NewCasper(store, prvKey, checkpoints, make(chan interface{})), nil
 }
 
 // Lock data directory after daemonization

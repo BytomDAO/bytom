@@ -75,7 +75,7 @@ func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, v *protoc
 	affectedCheckpoints := c.setJustified(source, target)
 	_, newBestHash := c.BestChain()
 	if oldBestHash != newBestHash {
-		c.rollbackNotifyCh <- newBestHash
+		c.rollbackNotifyCh <- nil
 	}
 
 	return c.store.SaveCheckpoints(affectedCheckpoints...)

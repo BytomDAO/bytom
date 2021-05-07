@@ -144,7 +144,7 @@ func (c *Casper) myVerification(target *state.Checkpoint, validators []*state.Va
 			PubKey:       pubKey,
 		}
 
-		if err := v.Sign(c.prvKey); err != nil {
+		if err := v.Sign(*c.prvKey); err != nil {
 			return nil, err
 		}
 
