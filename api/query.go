@@ -88,6 +88,7 @@ func (a *API) listAssets(ctx context.Context, filter struct {
 }
 
 // POST /list-balances
+// Deprecated: advice use listAddressBalances fn
 func (a *API) listBalances(ctx context.Context, filter struct {
 	AccountID    string `json:"account_id"`
 	AccountAlias string `json:"account_alias"`

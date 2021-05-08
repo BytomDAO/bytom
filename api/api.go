@@ -245,6 +245,10 @@ func (a *API) buildHandler() {
 		m.Handle("/rescan-wallet", jsonHandler(a.rescanWallet))
 		m.Handle("/wallet-info", jsonHandler(a.getWalletInfo))
 		m.Handle("/recovery-wallet", jsonHandler(a.recoveryFromRootXPubs))
+
+		//---------------分割线-------------------------------------------------
+		// address 一个地址下，多个资产的余额
+		m.Handle("/list-address-balances", jsonHandler(a.listAddressBalances))
 	} else {
 		log.Warn("Please enable wallet")
 	}

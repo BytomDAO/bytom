@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"encoding/json"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/account"
@@ -22,23 +23,19 @@ func (w *Wallet) GetAccountUtxos(accountID string, id string, unconfirmed, isSma
 
 	accountUtxos := []*account.UTXO{}
 	if unconfirmed {
-		accountUtxos = w.AccountMgr.ListUnconfirmedUtxo(accountID, isSmartContract)
+		accountUtxos = w.AccountMgr.ListUnconfirmedUTXO(func(utxo *account.UTXO) bool {
+			return segwit.IsP2WScript(utxo.ControlProgram) != isSmartContract && (accountID == utxo.AccountID || accountID == "")
+		})
 	}
 
 	accountUtxoIter := w.DB.IteratorPrefix([]byte(prefix + id))
 	defer accountUtxoIter.Release()
 
-	for accountUtxoIter.Next() {
-		accountUtxo := &account.UTXO{}
-		if err := json.Unmarshal(accountUtxoIter.Value(), accountUtxo); err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Warn("GetAccountUtxos fail on unmarshal utxo")
-			continue
-		}
+	utxos := getUTXOs(accountUtxoIter, func(utxo *account.UTXO) bool {
+		return accountID == utxo.AccountID || accountID == ""
+	})
+	accountUtxos = append(accountUtxos, utxos...)
 
-		if accountID == accountUtxo.AccountID || accountID == "" {
-			accountUtxos = append(accountUtxos, accountUtxo)
-		}
-	}
 	return accountUtxos
 }
 
@@ -191,4 +188,20 @@ func txOutToUtxos(tx *types.Tx, vaildHeight uint64) []*account.UTXO {
 		utxos = append(utxos, utxo)
 	}
 	return utxos
+}
+
+func getUTXOs(accountUTXOIter dbm.Iterator, isWant func(*account.UTXO) bool) []*account.UTXO {
+	var accountUTXOs []*account.UTXO
+	for accountUTXOIter.Next() {
+		accountUTXO := &account.UTXO{}
+		if err := json.Unmarshal(accountUTXOIter.Value(), accountUTXO); err != nil {
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Warn("GetAccountUtxos fail on unmarshal utxo")
+			continue
+		}
+
+		if isWant(accountUTXO) {
+			accountUTXOs = append(accountUTXOs, accountUTXO)
+		}
+	}
+	return accountUTXOs
 }

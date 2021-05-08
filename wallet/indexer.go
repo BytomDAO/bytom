@@ -313,6 +313,7 @@ type AccountBalance struct {
 	AssetDefinition map[string]interface{} `json:"asset_definition"`
 }
 
+// Deprecated: indexBalances
 func (w *Wallet) indexBalances(accountUTXOs []*account.UTXO) ([]AccountBalance, error) {
 	accBalance := make(map[string]map[string]uint64)
 	balances := []AccountBalance{}
