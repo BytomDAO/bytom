@@ -89,11 +89,6 @@ func (c *Casper) LastFinalized() (uint64, bc.Hash) {
 	return root.Height, root.Hash
 }
 
-// NotifyRollback return the rollback notify channel
-func (c *Casper) NotifyRollback() chan interface{} {
-	return c.rollbackNotifyCh
-}
-
 // Validators return the validators by specified block hash
 // e.g. if the block num of epoch is 100, and the block height corresponding to the block hash is 130, then will return the voting results of height in 0~100
 func (c *Casper) Validators(blockHash *bc.Hash) ([]*state.Validator, error) {

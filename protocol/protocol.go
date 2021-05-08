@@ -21,6 +21,7 @@ type Chain struct {
 	txPool           *TxPool
 	store            Store
 	processBlockCh   chan *processBlockMsg
+	rollbackNotifyCh chan interface{}
 	casper           CasperConsensus
 	eventDispatcher  *event.Dispatcher
 
@@ -29,17 +30,18 @@ type Chain struct {
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
-func NewChain(store Store, txPool *TxPool, casper CasperConsensus) (*Chain, error) {
-	return NewChainWithOrphanManage(store, txPool, NewOrphanManage(), casper)
+func NewChain(store Store, txPool *TxPool, casper CasperConsensus, rollbackNotifyCh chan interface{}) (*Chain, error) {
+	return NewChainWithOrphanManage(store, txPool, NewOrphanManage(), casper, rollbackNotifyCh)
 }
 
-func NewChainWithOrphanManage(store Store, txPool *TxPool, manage *OrphanManage, casper CasperConsensus) (*Chain, error) {
+func NewChainWithOrphanManage(store Store, txPool *TxPool, manage *OrphanManage, casper CasperConsensus, rollbackNotifyCh chan interface{}) (*Chain, error) {
 	c := &Chain{
-		orphanManage:   manage,
-		txPool:         txPool,
-		store:          store,
-		casper:         casper,
-		processBlockCh: make(chan *processBlockMsg, maxProcessBlockChSize),
+		orphanManage:     manage,
+		txPool:           txPool,
+		store:            store,
+		casper:           casper,
+		processBlockCh:   make(chan *processBlockMsg, maxProcessBlockChSize),
+		rollbackNotifyCh: rollbackNotifyCh,
 	}
 	c.cond.L = new(sync.Mutex)
 

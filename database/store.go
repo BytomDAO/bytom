@@ -24,6 +24,7 @@ var (
 	BlockPrefix       = []byte("B:")
 	BlockHeaderPrefix = []byte("BH:")
 	TxStatusPrefix    = []byte("BTS:")
+	CheckpointPrefix  = []byte("CP:")
 )
 
 func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
@@ -211,21 +212,69 @@ func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint
 	return nil
 }
 
-func (s *Store) GetCheckpoint(*bc.Hash) (*state.Checkpoint, error) {
-	return nil, nil
+func calcCheckpointKey(height uint64, hash *bc.Hash) []byte {
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, height)
+	key := append(CheckpointPrefix, buf...)
+	if hash != nil {
+		key = append(key, hash.Bytes()...)
+	}
+	return key
+}
+
+func (s *Store) GetCheckpoint(hash *bc.Hash) (*state.Checkpoint, error) {
+	header, err := s.GetBlockHeader(hash)
+	if err != nil {
+		return nil, err
+	}
+
+	data := s.db.Get(calcCheckpointKey(header.Height, hash))
+	checkpoint := &state.Checkpoint{}
+	if err := json.Unmarshal(data, checkpoint); err != nil {
+		return nil, err
+	}
+
+	return checkpoint, nil
 }
 
 // GetCheckpointsByHeight return all checkpoints of specified block height
-func (s *Store) GetCheckpointsByHeight(uint64) ([]*state.Checkpoint, error) {
-	return nil, nil
+func (s *Store) GetCheckpointsByHeight(height uint64) ([]*state.Checkpoint, error) {
+	iter := s.db.IteratorPrefix(calcCheckpointKey(height, nil))
+	defer iter.Release()
+	return loadCheckpointsFromIter(iter)
 }
 
 // CheckpointsFromHeight return all checkpoints from specified block height
-func (s *Store) CheckpointsFromHeight(uint64) ([]*state.Checkpoint, error) {
-	return nil, nil
+func (s *Store) CheckpointsFromHeight(height uint64) ([]*state.Checkpoint, error) {
+	startKey := calcCheckpointKey(height, nil)
+	iter := s.db.IteratorPrefixWithStart(CheckpointPrefix, startKey, false)
+	return loadCheckpointsFromIter(iter)
+}
+
+func loadCheckpointsFromIter(iter dbm.Iterator) ([]*state.Checkpoint, error) {
+	var checkpoints []*state.Checkpoint
+	for iter.Next() {
+		checkpoint := &state.Checkpoint{}
+		if err := json.Unmarshal(iter.Value(), checkpoint); err != nil {
+			return nil, err
+		}
+
+		checkpoints = append(checkpoints, checkpoint)
+	}
+	return checkpoints, nil
 }
 
 // SaveCheckpoints bulk save multiple checkpoint
-func (s *Store) SaveCheckpoints(...*state.Checkpoint) error {
+func (s *Store) SaveCheckpoints(checkpoints ...*state.Checkpoint) error {
+	batch := s.db.NewBatch()
+	for _, checkpoint := range checkpoints {
+		data, err := json.Marshal(checkpoint)
+		if err != nil {
+			return err
+		}
+
+		batch.Set(calcCheckpointKey(checkpoint.Height, &checkpoint.Hash), data)
+	}
+	batch.Write()
 	return nil
 }

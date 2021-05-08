@@ -300,7 +300,7 @@ func (c *Chain) blockProcessor() {
 		case msg := <-c.processBlockCh:
 			isOrphan, err := c.processBlock(msg.block)
 			msg.reply <- processBlockResponse{isOrphan: isOrphan, err: err}
-		case <-c.casper.NotifyRollback():
+		case <-c.rollbackNotifyCh:
 			if err := c.rollback(); err != nil {
 				log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on rollback block")
 			}

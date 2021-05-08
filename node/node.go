@@ -11,8 +11,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
 	browser "github.com/toqueteos/webbrowser"
-
-	protocolConsensus "github.com/bytom/bytom/protocol/consensus"
 	"github.com/prometheus/prometheus/util/flock"
 
 	"github.com/bytom/bytom/accesstoken"
@@ -29,10 +27,10 @@ import (
 	"github.com/bytom/bytom/env"
 	"github.com/bytom/bytom/event"
 	bytomLog "github.com/bytom/bytom/log"
-
 	"github.com/bytom/bytom/net/websocket"
 	"github.com/bytom/bytom/netsync"
 	"github.com/bytom/bytom/protocol"
+	protocolConsensus "github.com/bytom/bytom/protocol/consensus"
 	w "github.com/bytom/bytom/wallet"
 )
 
@@ -83,12 +81,14 @@ func NewNode(config *cfg.Config) *Node {
 
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
-	casper, err := newCasper(store)
+
+	rollbackNotifyCh := make(chan interface{})
+	casper, err := newCasper(store, rollbackNotifyCh)
 	if err != nil {
 		log.WithField("err", err).Fatalln("init casper failed")
 	}
 
-	chain, err := protocol.NewChain(store, txPool, casper)
+	chain, err := protocol.NewChain(store, txPool, casper, rollbackNotifyCh)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
 	}
@@ -164,7 +164,7 @@ func NewNode(config *cfg.Config) *Node {
 	return node
 }
 
-func newCasper(store *database.Store) (*protocolConsensus.Casper, error) {
+func newCasper(store *database.Store, rollbackNotifyCh chan interface{}) (*protocolConsensus.Casper, error) {
 	var finalizedHeight uint64 = 0
 	status := store.GetStoreStatus()
 	if status != nil {
@@ -177,7 +177,7 @@ func newCasper(store *database.Store) (*protocolConsensus.Casper, error) {
 	}
 
 	prvKey := cfg.CommonConfig.PrivateKey()
-	return protocolConsensus.NewCasper(store, prvKey, checkpoints, make(chan interface{})), nil
+	return protocolConsensus.NewCasper(store, prvKey, checkpoints, rollbackNotifyCh), nil
 }
 
 // Lock data directory after daemonization

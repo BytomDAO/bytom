@@ -149,7 +149,7 @@ func (p *processBlockTestCase) Run() error {
 	}
 
 	txPool := protocol.NewTxPool(store, event.NewDispatcher())
-	chain, err := protocol.NewChainWithOrphanManage(store, txPool, orphanManage)
+	chain, err := protocol.NewChainWithOrphanManage(store, txPool, orphanManage, nil, make(chan interface{}))
 	if err != nil {
 		return err
 	}

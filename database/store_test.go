@@ -150,7 +150,7 @@ func TestSaveChainStatus(t *testing.T) {
 	}
 
 	contractView := state.NewContractViewpoint()
-	if err := store.SaveChainStatus(node, view, contractView); err != nil {
+	if err := store.SaveChainStatus(node, view, contractView, 0); err != nil {
 		t.Fatal(err)
 	}
 
