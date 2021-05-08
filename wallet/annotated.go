@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -265,10 +266,37 @@ func (w *Wallet) BuildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOut
 		Address:         w.getAddressFromControlProgram(orig.ControlProgram),
 	}
 
-	if vmutil.IsUnspendable(out.ControlProgram) {
+	switch {
+	// must deal with retirement first due to cases' priorities in the switch statement
+	case vmutil.IsUnspendable(out.ControlProgram):
+		// retirement
 		out.Type = "retire"
-	} else {
+	case orig.OutputType() == types.OriginalOutputType:
 		out.Type = "control"
+		if e, ok := tx.Entries[*outid]; ok {
+			if output, ok := e.(*bc.Output); ok {
+				out.StateData = stateDataStrings(output.StateData)
+			}
+		}
+	case orig.OutputType() == types.VoteOutputType:
+		out.Type = "vote"
+		if e, ok := tx.Entries[*outid]; ok {
+			if output, ok := e.(*bc.VoteOutput); ok {
+				out.Vote = hex.EncodeToString(output.Vote)
+				out.StateData = stateDataStrings(output.StateData)
+			}
+		}
+	default:
+		log.Warn("unknown outType")
 	}
+
 	return out
+}
+
+func stateDataStrings(stateData *bc.StateData) []string {
+	ss := make([]string, 0, len(stateData.StateData))
+	for _, bytes := range stateData.StateData {
+		ss = append(ss, hex.EncodeToString(bytes))
+	}
+	return ss
 }
