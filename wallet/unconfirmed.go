@@ -44,8 +44,8 @@ func (w *Wallet) AddUnconfirmedTx(txD *protocol.TxDesc) {
 	w.AccountMgr.AddUnconfirmedUtxo(utxos)
 }
 
-// GetUnconfirmedTxs get account unconfirmed transactions, filter transactions by accountID when accountID is not empty
-func (w *Wallet) GetUnconfirmedTxs(accountID string) ([]*query.AnnotatedTx, error) {
+// GetUnconfirmedTxs get account unconfirmed transactions, filter transactions by accountID when address is not empty
+func (w *Wallet) GetUnconfirmedTxs(address string) ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
 	txIter := w.DB.IteratorPrefix([]byte(UnconfirmedTxPrefix))
 	defer txIter.Release()
@@ -56,7 +56,7 @@ func (w *Wallet) GetUnconfirmedTxs(accountID string) ([]*query.AnnotatedTx, erro
 			return nil, err
 		}
 
-		if accountID == "" || findTransactionsByAccount(annotatedTx, accountID) {
+		if address == "" || findTransactionsByAddress(annotatedTx, address) {
 			annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 			annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
 		}

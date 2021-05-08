@@ -261,15 +261,15 @@ func (w *Wallet) GetTransactionsSummary(transactions []*query.AnnotatedTx) []TxS
 	return Txs
 }
 
-func findTransactionsByAccount(annotatedTx *query.AnnotatedTx, accountID string) bool {
+func findTransactionsByAddress(annotatedTx *query.AnnotatedTx, address string) bool {
 	for _, input := range annotatedTx.Inputs {
-		if input.AccountID == accountID {
+		if input.Address == address {
 			return true
 		}
 	}
 
 	for _, output := range annotatedTx.Outputs {
-		if output.AccountID == accountID {
+		if output.Address == address {
 			return true
 		}
 	}
@@ -277,8 +277,8 @@ func findTransactionsByAccount(annotatedTx *query.AnnotatedTx, accountID string)
 	return false
 }
 
-// GetTransactions get all walletDB transactions, and filter transactions by accountID optional
-func (w *Wallet) GetTransactions(accountID string) ([]*query.AnnotatedTx, error) {
+// GetTransactions get all walletDB transactions, and filter transactions by address optional
+func (w *Wallet) GetTransactions(address string) ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
 
 	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
@@ -289,7 +289,7 @@ func (w *Wallet) GetTransactions(accountID string) ([]*query.AnnotatedTx, error)
 			return nil, err
 		}
 
-		if accountID == "" || findTransactionsByAccount(annotatedTx, accountID) {
+		if address == "" || findTransactionsByAddress(annotatedTx, address) {
 			annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 			annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
 		}

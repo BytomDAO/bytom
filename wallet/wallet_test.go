@@ -319,7 +319,8 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 	}
 	w.eventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: protocol.MsgRemoveTx}})
 	time.Sleep(time.Millisecond * 10)
-	txs, err := w.GetUnconfirmedTxs(testAccount.ID)
+
+	txs, err := w.GetUnconfirmedTxs(controlProg.Address)
 	if err != nil {
 		t.Fatal("get unconfirmed tx error:", err)
 	}

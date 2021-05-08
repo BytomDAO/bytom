@@ -130,7 +130,7 @@ func (a *API) getTransaction(ctx context.Context, txInfo struct {
 // POST /list-transactions
 func (a *API) listTransactions(ctx context.Context, filter struct {
 	ID          string `json:"id"`
-	AccountID   string `json:"account_id"`
+	Address     string `json:"address"`
 	Detail      bool   `json:"detail"`
 	Unconfirmed bool   `json:"unconfirmed"`
 	From        uint   `json:"from"`
@@ -151,13 +151,13 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 		}
 		transactions = []*query.AnnotatedTx{transaction}
 	} else {
-		transactions, err = a.wallet.GetTransactions(filter.AccountID)
+		transactions, err = a.wallet.GetTransactions(filter.Address)
 		if err != nil {
 			return NewErrorResponse(err)
 		}
 
 		if filter.Unconfirmed {
-			unconfirmedTxs, err := a.wallet.GetUnconfirmedTxs(filter.AccountID)
+			unconfirmedTxs, err := a.wallet.GetUnconfirmedTxs(filter.Address)
 			if err != nil {
 				return NewErrorResponse(err)
 			}
