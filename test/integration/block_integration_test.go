@@ -485,7 +485,7 @@ func TestProcessBlock(t *testing.T) {
 					PreviousBlockHash: blockMap[0][0].block.Hash(),
 				},
 			},
-			wantStore: createStoreItems([]int{0}, []*attachBlock{blockMap[0][0]}),
+			wantStore: createStoreEntries([]int{0}, []*attachBlock{blockMap[0][0]}),
 			wantBlockIndex: state.NewBlockIndexWithData(
 				map[bc.Hash]*state.BlockNode{
 					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
@@ -500,7 +500,7 @@ func TestProcessBlock(t *testing.T) {
 		{
 			desc:      "process a orphan block normally",
 			newBlock:  blockMap[2][0].block,
-			wantStore: createStoreItems([]int{0}, []*attachBlock{blockMap[0][0]}),
+			wantStore: createStoreEntries([]int{0}, []*attachBlock{blockMap[0][0]}),
 			wantBlockIndex: state.NewBlockIndexWithData(
 				map[bc.Hash]*state.BlockNode{
 					blockMap[0][0].block.Hash(): mustNewBlockNode(&blockMap[0][0].block.BlockHeader, nil),
@@ -519,7 +519,7 @@ func TestProcessBlock(t *testing.T) {
 		{
 			desc:      "attach a block normally",
 			newBlock:  blockMap[1][0].block,
-			wantStore: createStoreItems([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}),
+			wantStore: createStoreEntries([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}),
 			wantBlockIndex: state.NewBlockIndexWithData(
 				map[bc.Hash]*state.BlockNode{
 					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
@@ -537,8 +537,8 @@ func TestProcessBlock(t *testing.T) {
 		{
 			desc:      "init genesis block from db",
 			newBlock:  blockMap[1][0].block,
-			initStore: createStoreItems([]int{0}, []*attachBlock{blockMap[0][0]}),
-			wantStore: createStoreItems([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}),
+			initStore: createStoreEntries([]int{0}, []*attachBlock{blockMap[0][0]}),
+			wantStore: createStoreEntries([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}),
 			wantBlockIndex: state.NewBlockIndexWithData(
 				map[bc.Hash]*state.BlockNode{
 					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
@@ -556,8 +556,8 @@ func TestProcessBlock(t *testing.T) {
 		{
 			desc:      "attach a block to fork chain normally, not rollback",
 			newBlock:  blockMap[2][0].block,
-			initStore: createStoreItems([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[1][1]}),
-			wantStore: createStoreItems([]int{0, 1, 3}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[1][1], blockMap[2][0]}),
+			initStore: createStoreEntries([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[1][1]}),
+			wantStore: createStoreEntries([]int{0, 1, 3}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[1][1], blockMap[2][0]}),
 			wantBlockIndex: state.NewBlockIndexWithData(
 				map[bc.Hash]*state.BlockNode{
 					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
@@ -578,11 +578,11 @@ func TestProcessBlock(t *testing.T) {
 		{
 			desc:     "attach a block with btm transaction normally",
 			newBlock: blockMap[2][1].block,
-			initStore: createStoreItems([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}, &storeItem{
+			initStore: createStoreEntries([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}),
-			wantStore: createStoreItems([]int{0, 1, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][1]}, &storeItem{
+			wantStore: createStoreEntries([]int{0, 1, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][1]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}),
@@ -605,11 +605,11 @@ func TestProcessBlock(t *testing.T) {
 		{
 			desc:     "attach a block with retire transaction normally",
 			newBlock: blockMap[2][2].block,
-			initStore: createStoreItems([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}, &storeItem{
+			initStore: createStoreEntries([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}),
-			wantStore: createStoreItems([]int{0, 1, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][2]}, &storeItem{
+			wantStore: createStoreEntries([]int{0, 1, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][2]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}),
@@ -632,11 +632,11 @@ func TestProcessBlock(t *testing.T) {
 		{
 			desc:     "attach a block with issuance transaction normally",
 			newBlock: blockMap[2][3].block,
-			initStore: createStoreItems([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}, &storeItem{
+			initStore: createStoreEntries([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}),
-			wantStore: createStoreItems([]int{0, 1, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][3]}, &storeItem{
+			wantStore: createStoreEntries([]int{0, 1, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][3]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}),
@@ -659,11 +659,11 @@ func TestProcessBlock(t *testing.T) {
 		{
 			desc:     "attach a block with issuance transaction but status fail is true",
 			newBlock: blockMap[2][4].block,
-			initStore: createStoreItems([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}, &storeItem{
+			initStore: createStoreEntries([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}),
-			wantStore: createStoreItems([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}, &storeItem{
+			wantStore: createStoreEntries([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}),
@@ -684,14 +684,14 @@ func TestProcessBlock(t *testing.T) {
 		{
 			desc:     "attach a block with non btm transaction",
 			newBlock: blockMap[2][5].block,
-			initStore: createStoreItems([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}, &storeItem{
+			initStore: createStoreEntries([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("be164edbce8bcd1d890c1164541b8418fdcb257499757d3b88561bca06e97e29"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}),
-			wantStore: createStoreItems([]int{0, 1, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][5]}, &storeItem{
+			wantStore: createStoreEntries([]int{0, 1, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][5]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("be164edbce8bcd1d890c1164541b8418fdcb257499757d3b88561bca06e97e29"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}, &storeItem{
@@ -717,14 +717,14 @@ func TestProcessBlock(t *testing.T) {
 		{
 			desc:     "attach a block with non btm transaction but status fail is true",
 			newBlock: blockMap[2][6].block,
-			initStore: createStoreItems([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}, &storeItem{
+			initStore: createStoreEntries([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("be164edbce8bcd1d890c1164541b8418fdcb257499757d3b88561bca06e97e29"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}),
-			wantStore: createStoreItems([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}, &storeItem{
+			wantStore: createStoreEntries([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("be164edbce8bcd1d890c1164541b8418fdcb257499757d3b88561bca06e97e29"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}, &storeItem{
@@ -748,8 +748,8 @@ func TestProcessBlock(t *testing.T) {
 		{
 			desc:      "rollback a block only has coinbase transaction",
 			newBlock:  blockMap[2][0].block,
-			initStore: createStoreItems([]int{0, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[1][1]}),
-			wantStore: createStoreItems([]int{0, 1, 3}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[1][1], blockMap[2][0]}),
+			initStore: createStoreEntries([]int{0, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[1][1]}),
+			wantStore: createStoreEntries([]int{0, 1, 3}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[1][1], blockMap[2][0]}),
 			wantBlockIndex: state.NewBlockIndexWithData(
 				map[bc.Hash]*state.BlockNode{
 					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
@@ -770,11 +770,11 @@ func TestProcessBlock(t *testing.T) {
 		{
 			desc:     "rollback a block has spend btm transaction",
 			newBlock: blockMap[3][0].block,
-			initStore: createStoreItems([]int{0, 1, 3}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][1]}, &storeItem{
+			initStore: createStoreEntries([]int{0, 1, 3}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][1]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}),
-			wantStore: createStoreItems([]int{0, 1, 2, 4}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][1], blockMap[3][0]}, &storeItem{
+			wantStore: createStoreEntries([]int{0, 1, 2, 4}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][1], blockMap[3][0]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 0, Spent: false},
 			}),
@@ -800,11 +800,11 @@ func TestProcessBlock(t *testing.T) {
 		{
 			desc:     "rollback a block has issuance transaction",
 			newBlock: blockMap[3][0].block,
-			initStore: createStoreItems([]int{0, 1, 3}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][3]}, &storeItem{
+			initStore: createStoreEntries([]int{0, 1, 3}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][3]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}),
-			wantStore: createStoreItems([]int{0, 1, 2, 4}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][3], blockMap[3][0]}, &storeItem{
+			wantStore: createStoreEntries([]int{0, 1, 2, 4}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][3], blockMap[3][0]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 0, Spent: false},
 			}),
@@ -830,7 +830,7 @@ func TestProcessBlock(t *testing.T) {
 		{
 			desc:     "rollback a block has issuance transaction but status fail is true",
 			newBlock: blockMap[3][0].block,
-			initStore: createStoreItems([]int{0, 1, 3}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][4]}, &storeItem{
+			initStore: createStoreEntries([]int{0, 1, 3}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][4]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}),
@@ -843,14 +843,14 @@ func TestProcessBlock(t *testing.T) {
 		{
 			desc:     "rollback a block has spend non btm",
 			newBlock: blockMap[3][0].block,
-			initStore: createStoreItems([]int{0, 1, 3}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][5]}, &storeItem{
+			initStore: createStoreEntries([]int{0, 1, 3}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][5]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("be164edbce8bcd1d890c1164541b8418fdcb257499757d3b88561bca06e97e29"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}),
-			wantStore: createStoreItems([]int{0, 1, 2, 4}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][5], blockMap[3][0]}, &storeItem{
+			wantStore: createStoreEntries([]int{0, 1, 2, 4}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][5], blockMap[3][0]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 0, Spent: false},
 			}, &storeItem{
@@ -879,7 +879,7 @@ func TestProcessBlock(t *testing.T) {
 		{
 			desc:     "rollback a block has spend non btm but status fail is true",
 			newBlock: blockMap[3][0].block,
-			initStore: createStoreItems([]int{0, 1, 3}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][6]}, &storeItem{
+			initStore: createStoreEntries([]int{0, 1, 3}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][6]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}, &storeItem{
@@ -895,14 +895,14 @@ func TestProcessBlock(t *testing.T) {
 		{
 			desc:      "rollback a block only has coinbase tx, and from orphan manage",
 			newBlock:  blockMap[1][0].block,
-			initStore: createStoreItems([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][1]}),
+			initStore: createStoreEntries([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][1]}),
 			initOrphanManage: protocol.NewOrphanManageWithData(
 				map[bc.Hash]*protocol.OrphanBlock{
 					blockMap[2][0].block.Hash(): protocol.NewOrphanBlock(blockMap[2][0].block, time.Now().Add(time.Minute*60)),
 				},
 				map[bc.Hash][]*bc.Hash{blockMap[2][0].block.PreviousBlockHash: {hashPtr(blockMap[2][0].block.Hash())}},
 			),
-			wantStore: createStoreItems([]int{0, 1, 3}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[1][1], blockMap[2][0]}),
+			wantStore: createStoreEntries([]int{0, 1, 3}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[1][1], blockMap[2][0]}),
 			wantBlockIndex: state.NewBlockIndexWithData(
 				map[bc.Hash]*state.BlockNode{
 					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
@@ -923,7 +923,7 @@ func TestProcessBlock(t *testing.T) {
 		{
 			desc:     "rollback a block has spend btm tx, and from orphan manage",
 			newBlock: blockMap[2][0].block,
-			initStore: createStoreItems([]int{0, 1, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][1]}, &storeItem{
+			initStore: createStoreEntries([]int{0, 1, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][1]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}),
@@ -933,7 +933,7 @@ func TestProcessBlock(t *testing.T) {
 				},
 				map[bc.Hash][]*bc.Hash{blockMap[3][0].block.PreviousBlockHash: {hashPtr(blockMap[3][0].block.Hash())}},
 			),
-			wantStore: createStoreItems([]int{0, 1, 2, 4}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][1], blockMap[3][0]}, &storeItem{
+			wantStore: createStoreEntries([]int{0, 1, 2, 4}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][1], blockMap[3][0]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 0, Spent: false},
 			}),
@@ -959,7 +959,7 @@ func TestProcessBlock(t *testing.T) {
 		{
 			desc:     "rollback a block has retire tx, and from orphan manage",
 			newBlock: blockMap[2][0].block,
-			initStore: createStoreItems([]int{0, 1, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][2]}, &storeItem{
+			initStore: createStoreEntries([]int{0, 1, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][2]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}),
@@ -969,7 +969,7 @@ func TestProcessBlock(t *testing.T) {
 				},
 				map[bc.Hash][]*bc.Hash{blockMap[3][0].block.PreviousBlockHash: {hashPtr(blockMap[3][0].block.Hash())}},
 			),
-			wantStore: createStoreItems([]int{0, 1, 2, 4}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][2], blockMap[3][0]}, &storeItem{
+			wantStore: createStoreEntries([]int{0, 1, 2, 4}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][2], blockMap[3][0]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 0, Spent: false},
 			}),
@@ -995,7 +995,7 @@ func TestProcessBlock(t *testing.T) {
 		{
 			desc:     "rollback a block has issuance tx, and from orphan manage",
 			newBlock: blockMap[2][0].block,
-			initStore: createStoreItems([]int{0, 1, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][3]}, &storeItem{
+			initStore: createStoreEntries([]int{0, 1, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][3]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}),
@@ -1005,7 +1005,7 @@ func TestProcessBlock(t *testing.T) {
 				},
 				map[bc.Hash][]*bc.Hash{blockMap[3][0].block.PreviousBlockHash: {hashPtr(blockMap[3][0].block.Hash())}},
 			),
-			wantStore: createStoreItems([]int{0, 1, 2, 4}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][3], blockMap[3][0]}, &storeItem{
+			wantStore: createStoreEntries([]int{0, 1, 2, 4}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][3], blockMap[3][0]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 0, Spent: false},
 			}),
@@ -1031,7 +1031,7 @@ func TestProcessBlock(t *testing.T) {
 		{
 			desc:     "rollback a block has non btm tx, and from orphan manage",
 			newBlock: blockMap[2][0].block,
-			initStore: createStoreItems([]int{0, 1, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][5]}, &storeItem{
+			initStore: createStoreEntries([]int{0, 1, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][5]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
 			}, &storeItem{
@@ -1044,7 +1044,7 @@ func TestProcessBlock(t *testing.T) {
 				},
 				map[bc.Hash][]*bc.Hash{blockMap[3][0].block.PreviousBlockHash: {hashPtr(blockMap[3][0].block.Hash())}},
 			),
-			wantStore: createStoreItems([]int{0, 1, 2, 4}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][5], blockMap[3][0]}, &storeItem{
+			wantStore: createStoreEntries([]int{0, 1, 2, 4}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][5], blockMap[3][0]}, &storeItem{
 				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
 				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 0, Spent: false},
 			}, &storeItem{
@@ -1094,11 +1094,10 @@ func createStoreItems(mainChainIndexes []int, attachBlocks []*attachBlock, extra
 		block := attachBlock.block
 		blockHash := block.Hash()
 		items = append(items, &storeItem{
-			key: database.CalcBlockKey(&blockHash),
 			val: block,
 		})
 		items = append(items, &storeItem{
-			key: database.CalcBlockHeaderKey(block.Height, &blockHash),
+			key: database.CalcBlockHeaderIndexKey(block.Height, &blockHash),
 			val: block.BlockHeader,
 		})
 		if _, ok := mainChainIndexMap[i]; !ok {
@@ -1210,4 +1209,19 @@ func spendUTXO(spendOutputID bc.Hash, items storeItems, blockHeight uint64) int 
 		return i
 	}
 	panic("can not find available utxo")
+}
+
+func createStoreEntries(mainChainIndexes []int, attachBlocks []*attachBlock, extralItem ...*storeItem) []storeEntry {
+	storeItems := createStoreItems(mainChainIndexes, attachBlocks, extralItem...)
+	var storeEntries []storeEntry
+	for _, item := range storeItems {
+		entrys, err := serialItem(item)
+		if err != nil {
+			panic(err)
+		}
+
+		storeEntries = append(storeEntries, entrys...)
+	}
+
+	return storeEntries
 }

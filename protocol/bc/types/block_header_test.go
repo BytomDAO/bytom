@@ -154,7 +154,6 @@ func TestMarshalBlockHeader(t *testing.T) {
 			}, ""),
 		},
 	}
-
 	for i, test := range cases {
 		got, err := test.blockHeader.MarshalText()
 		if err != nil && err != test.wantError {
@@ -237,6 +236,7 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				"904e", // block height
 				"c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0", // prev block hash
 				"e8b287d905", // timestamp
+				"0100",       // BlockWitness
 				"20",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
 			}, ""),
@@ -249,6 +249,7 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				"908", // block height (error with odd length)
 				"c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0", // prev block hash
 				"e8b287d905", // timestamp
+				"0100",       // BlockWitness
 				"20",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
 			}, ""),
@@ -261,6 +262,7 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				"ffffffffffffffffff", // block height
 				"c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0", // prev block hash
 				"e8b287d905", // timestamp
+				"0100",       // BlockWitness
 				"20",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
 				"0100", // block witness

@@ -34,8 +34,8 @@ func TestBlock(t *testing.T) {
 				"01", // version
 				"01", // block height
 				"0000000000000000000000000000000000000000000000000000000000000000", // prev block hash
-				"00", // timestamp
-				"20", // commitment extensible field length
+				"00",   // timestamp
+				"20",   // commitment extensible field length
 				"0000000000000000000000000000000000000000000000000000000000000000", // transactions merkle root
 				"0100", // block witness
 				"0100", // sup links
@@ -200,7 +200,6 @@ func TestReadFrom(t *testing.T) {
 	}
 
 	for _, c := range cases {
-
 		blockBytes, err := hex.DecodeString(c.rawBlock)
 		if err != nil {
 			t.Fatal(err)
