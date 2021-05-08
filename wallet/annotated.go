@@ -206,6 +206,15 @@ func (w *Wallet) BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInp
 	case *bc.Coinbase:
 		in.Type = "coinbase"
 		in.Arbitrary = e.Arbitrary
+	case *bc.VetoInput:
+		in.Type = "veto"
+		in.ControlProgram = orig.ControlProgram()
+		in.Address = w.getAddressFromControlProgram(in.ControlProgram)
+		in.SpentOutputID = e.SpentOutputId
+		arguments := orig.Arguments()
+		for _, arg := range arguments {
+			in.WitnessArguments = append(in.WitnessArguments, arg)
+		}
 	}
 	return in
 }
