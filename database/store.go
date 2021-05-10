@@ -3,6 +3,7 @@ package database
 import (
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -229,7 +230,7 @@ func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error
 }
 
 // SaveChainStatus save the core's newest status && delete old status
-func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint, contractView *state.ContractViewpoint, finalizedHeight uint64) error {
+func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint, contractView *state.ContractViewpoint, finalizedHeight uint64, finalizedHash *bc.Hash) error {
 	batch := s.db.NewBatch()
 	if err := saveUtxoView(batch, view); err != nil {
 		return err
@@ -243,7 +244,7 @@ func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint
 		return err
 	}
 
-	bytes, err := json.Marshal(protocol.BlockStoreState{Height: node.Height, Hash: &node.Hash, FinalizedHeight: finalizedHeight})
+	bytes, err := json.Marshal(protocol.BlockStoreState{Height: node.Height, Hash: &node.Hash, FinalizedHeight: finalizedHeight, FinalizedHash: finalizedHash})
 	if err != nil {
 		return err
 	}
@@ -285,16 +286,32 @@ func (s *Store) GetCheckpointsByHeight(height uint64) ([]*state.Checkpoint, erro
 	return loadCheckpointsFromIter(iter)
 }
 
-// CheckpointsFromHeight return all checkpoints from specified block height
-func (s *Store) CheckpointsFromHeight(height uint64) ([]*state.Checkpoint, error) {
-	startKey := calcCheckpointKey(height, nil)
+// CheckpointsFromNode return all checkpoints from specified block height and hash
+func (s *Store) CheckpointsFromNode(height uint64, hash *bc.Hash) ([]*state.Checkpoint, error) {
+	startKey := calcCheckpointKey(height, hash)
 	iter := s.db.IteratorPrefixWithStart(CheckpointPrefix, startKey, false)
-	return loadCheckpointsFromIter(iter)
+	fmt.Printf("prefix:%s\n", string(CheckpointPrefix))
+
+	finalizedCheckpoint := &state.Checkpoint{}
+	if err := json.Unmarshal(iter.Value(), finalizedCheckpoint); err != nil {
+		return nil, err
+	}
+
+	checkpoints := []*state.Checkpoint{finalizedCheckpoint}
+	subs, err := loadCheckpointsFromIter(iter)
+	if err != nil {
+		return nil, err
+	}
+
+	checkpoints = append(checkpoints, subs...)
+	return checkpoints, nil
 }
 
 func loadCheckpointsFromIter(iter dbm.Iterator) ([]*state.Checkpoint, error) {
 	var checkpoints []*state.Checkpoint
+	defer iter.Release()
 	for iter.Next() {
+		fmt.Printf("key:%s, val:%s\n", string(iter.Key()), string(iter.Value()))
 		checkpoint := &state.Checkpoint{}
 		if err := json.Unmarshal(iter.Value(), checkpoint); err != nil {
 			return nil, err

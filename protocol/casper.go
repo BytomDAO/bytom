@@ -1,4 +1,4 @@
-package consensus
+package protocol
 
 import (
 	"sync"
@@ -6,9 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/common"
-	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/errors"
-	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/state"
 )
@@ -33,10 +31,9 @@ type Casper struct {
 	tree             *treeNode
 	rollbackNotifyCh chan interface{}
 	newEpochCh       chan bc.Hash
-	store            protocol.Store
-	prvKey           *chainkd.XPrv
+	store            Store
 	// pubKey -> conflicting verifications
-	evilValidators map[string][]*protocol.Verification
+	evilValidators map[string][]*Verification
 	// block hash -> previous checkpoint hash
 	prevCheckpointCache *common.Cache
 	// block hash + pubKey -> verification
@@ -49,7 +46,7 @@ type Casper struct {
 // argument checkpoints load the checkpoints from leveldb
 // the first element of checkpoints must genesis checkpoint or the last finalized checkpoint in order to reduce memory space
 // the others must be successors of first one
-func NewCasper(store protocol.Store, prvKey *chainkd.XPrv, checkpoints []*state.Checkpoint, rollbackNotifyCh chan interface{}) *Casper {
+func NewCasper(store Store, checkpoints []*state.Checkpoint, rollbackNotifyCh chan interface{}) *Casper {
 	if checkpoints[0].Height != 0 && checkpoints[0].Status != state.Finalized {
 		log.Panic("first element of checkpoints must genesis or in finalized status")
 	}
@@ -59,8 +56,7 @@ func NewCasper(store protocol.Store, prvKey *chainkd.XPrv, checkpoints []*state.
 		rollbackNotifyCh:      rollbackNotifyCh,
 		newEpochCh:            make(chan bc.Hash),
 		store:                 store,
-		prvKey:                prvKey,
-		evilValidators:        make(map[string][]*protocol.Verification),
+		evilValidators:        make(map[string][]*Verification),
 		prevCheckpointCache:   common.NewCache(1024),
 		verificationCache:     common.NewCache(1024),
 		justifyingCheckpoints: make(map[bc.Hash][]*state.Checkpoint),
@@ -108,8 +104,8 @@ func (c *Casper) Validators(blockHash *bc.Hash) ([]*state.Validator, error) {
 // EvilValidator represent a validator who broadcast two distinct verification that violate the commandment
 type EvilValidator struct {
 	PubKey string
-	V1     *protocol.Verification
-	V2     *protocol.Verification
+	V1     *Verification
+	V2     *Verification
 }
 
 // EvilValidators return all evil validators

@@ -30,7 +30,6 @@ import (
 	"github.com/bytom/bytom/net/websocket"
 	"github.com/bytom/bytom/netsync"
 	"github.com/bytom/bytom/protocol"
-	protocolConsensus "github.com/bytom/bytom/protocol/consensus"
 	w "github.com/bytom/bytom/wallet"
 )
 
@@ -82,13 +81,7 @@ func NewNode(config *cfg.Config) *Node {
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
 
-	rollbackNotifyCh := make(chan interface{})
-	casper, err := newCasper(store, rollbackNotifyCh)
-	if err != nil {
-		log.WithField("err", err).Fatalln("init casper failed")
-	}
-
-	chain, err := protocol.NewChain(store, txPool, casper, rollbackNotifyCh)
+	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
 	}
@@ -162,22 +155,6 @@ func NewNode(config *cfg.Config) *Node {
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 
 	return node
-}
-
-func newCasper(store *database.Store, rollbackNotifyCh chan interface{}) (*protocolConsensus.Casper, error) {
-	var finalizedHeight uint64 = 0
-	status := store.GetStoreStatus()
-	if status != nil {
-		finalizedHeight = status.FinalizedHeight
-	}
-
-	checkpoints, err := store.CheckpointsFromHeight(finalizedHeight)
-	if err != nil {
-		return nil, err
-	}
-
-	prvKey := cfg.CommonConfig.PrivateKey()
-	return protocolConsensus.NewCasper(store, prvKey, checkpoints, rollbackNotifyCh), nil
 }
 
 // Lock data directory after daemonization

@@ -211,12 +211,12 @@ func mockAccountManager(t *testing.T) *Manager {
 	}
 	defer os.RemoveAll(dirPath)
 
-	testDB := dbm.NewDB("testdb", "memdb", dirPath)
+	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
 	dispatcher := event.NewDispatcher()
 
 	store := database.NewStore(testDB)
 	txPool := protocol.NewTxPool(store, dispatcher)
-	chain, err := protocol.NewChain(store, txPool, nil, make(chan interface{}))
+	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
 		t.Fatal(err)
 	}
