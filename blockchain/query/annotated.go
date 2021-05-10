@@ -38,6 +38,9 @@ type AnnotatedInput struct {
 	InputID          bc.Hash              `json:"input_id"`
 	WitnessArguments []chainjson.HexBytes `json:"witness_arguments"`
 	SignData         bc.Hash              `json:"sign_data,omitempty"`
+
+	// Vote assign value only input is vote type
+	Vote string `json:"vote,omitempty"`
 }
 
 //AnnotatedOutput means an annotated transaction output.

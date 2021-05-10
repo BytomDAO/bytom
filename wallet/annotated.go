@@ -216,6 +216,10 @@ func (w *Wallet) BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInp
 		for _, arg := range arguments {
 			in.WitnessArguments = append(in.WitnessArguments, arg)
 		}
+		if vetoInput, ok := orig.TypedInput.(*types.VetoInput); ok {
+			in.Vote = hex.EncodeToString(vetoInput.Vote)
+			in.Amount = vetoInput.Amount
+		}
 	}
 	return in
 }
