@@ -1,4 +1,4 @@
-package consensus
+package protocol
 
 import (
 	"errors"

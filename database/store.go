@@ -1,6 +1,7 @@
 package database
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"time"
 
@@ -19,8 +20,10 @@ import (
 const logModule = "leveldb"
 
 var (
+	// CheckpointPrefix represent the namespace of checkpoints in db
+	CheckpointPrefix = []byte("CP:")
 	// BlockStoreKey block store key
-	BlockStoreKey          = []byte("blockStore")
+	BlockStoreKey = []byte("blockStore")
 	// BlockHeaderIndexPrefix  block header index with height
 	BlockHeaderIndexPrefix = []byte("BH:")
 )
@@ -226,7 +229,7 @@ func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error
 }
 
 // SaveChainStatus save the core's newest status && delete old status
-func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint, contractView *state.ContractViewpoint) error {
+func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint, contractView *state.ContractViewpoint, finalizedHeight uint64, finalizedHash *bc.Hash) error {
 	batch := s.db.NewBatch()
 	if err := saveUtxoView(batch, view); err != nil {
 		return err
@@ -240,7 +243,7 @@ func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint
 		return err
 	}
 
-	bytes, err := json.Marshal(protocol.BlockStoreState{Height: node.Height, Hash: &node.Hash})
+	bytes, err := json.Marshal(protocol.BlockStoreState{Height: node.Height, Hash: &node.Hash, FinalizedHeight: finalizedHeight, FinalizedHash: finalizedHash})
 	if err != nil {
 		return err
 	}
@@ -250,16 +253,83 @@ func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint
 	return nil
 }
 
-func (s *Store) GetCheckpoint(*bc.Hash) (*state.Checkpoint, error) {
-	return nil, nil
+func calcCheckpointKey(height uint64, hash *bc.Hash) []byte {
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, height)
+	key := append(CheckpointPrefix, buf...)
+	if hash != nil {
+		key = append(key, hash.Bytes()...)
+	}
+	return key
+}
+
+func (s *Store) GetCheckpoint(hash *bc.Hash) (*state.Checkpoint, error) {
+	header, err := s.GetBlockHeader(hash)
+	if err != nil {
+		return nil, err
+	}
+
+	data := s.db.Get(calcCheckpointKey(header.Height, hash))
+	checkpoint := &state.Checkpoint{}
+	if err := json.Unmarshal(data, checkpoint); err != nil {
+		return nil, err
+	}
+
+	return checkpoint, nil
 }
 
 // GetCheckpointsByHeight return all checkpoints of specified block height
-func (s *Store) GetCheckpointsByHeight(uint64) ([]*state.Checkpoint, error) {
-	return nil, nil
+func (s *Store) GetCheckpointsByHeight(height uint64) ([]*state.Checkpoint, error) {
+	iter := s.db.IteratorPrefix(calcCheckpointKey(height, nil))
+	defer iter.Release()
+	return loadCheckpointsFromIter(iter)
+}
+
+// CheckpointsFromNode return all checkpoints from specified block height and hash
+func (s *Store) CheckpointsFromNode(height uint64, hash *bc.Hash) ([]*state.Checkpoint, error) {
+	startKey := calcCheckpointKey(height, hash)
+	iter := s.db.IteratorPrefixWithStart(CheckpointPrefix, startKey, false)
+
+	finalizedCheckpoint := &state.Checkpoint{}
+	if err := json.Unmarshal(iter.Value(), finalizedCheckpoint); err != nil {
+		return nil, err
+	}
+
+	checkpoints := []*state.Checkpoint{finalizedCheckpoint}
+	subs, err := loadCheckpointsFromIter(iter)
+	if err != nil {
+		return nil, err
+	}
+
+	checkpoints = append(checkpoints, subs...)
+	return checkpoints, nil
+}
+
+func loadCheckpointsFromIter(iter dbm.Iterator) ([]*state.Checkpoint, error) {
+	var checkpoints []*state.Checkpoint
+	defer iter.Release()
+	for iter.Next() {
+		checkpoint := &state.Checkpoint{}
+		if err := json.Unmarshal(iter.Value(), checkpoint); err != nil {
+			return nil, err
+		}
+
+		checkpoints = append(checkpoints, checkpoint)
+	}
+	return checkpoints, nil
 }
 
 // SaveCheckpoints bulk save multiple checkpoint
-func (s *Store) SaveCheckpoints(...*state.Checkpoint) error {
+func (s *Store) SaveCheckpoints(checkpoints ...*state.Checkpoint) error {
+	batch := s.db.NewBatch()
+	for _, checkpoint := range checkpoints {
+		data, err := json.Marshal(checkpoint)
+		if err != nil {
+			return err
+		}
+
+		batch.Set(calcCheckpointKey(checkpoint.Height, &checkpoint.Hash), data)
+	}
+	batch.Write()
 	return nil
 }

@@ -211,7 +211,7 @@ func mockAccountManager(t *testing.T) *Manager {
 	}
 	defer os.RemoveAll(dirPath)
 
-	testDB := dbm.NewDB("testdb", "memdb", dirPath)
+	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
 	dispatcher := event.NewDispatcher()
 
 	store := database.NewStore(testDB)
