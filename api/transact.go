@@ -189,15 +189,15 @@ type submitTxResp struct {
 }
 
 // POST /submit-transaction
-func (a *API) submit(ctx context.Context, ins struct {
+func (a *API) submit(ctx context.Context, req struct {
 	Tx types.Tx `json:"raw_transaction"`
 }) Response {
-	if err := txbuilder.FinalizeTx(ctx, a.chain, &ins.Tx); err != nil {
+	if err := txbuilder.FinalizeTx(ctx, a.chain, &req.Tx); err != nil {
 		return NewErrorResponse(err)
 	}
 
-	log.WithField("tx_id", ins.Tx.ID.String()).Info("submit single tx")
-	return NewSuccessResponse(&submitTxResp{TxID: &ins.Tx.ID})
+	log.WithField("tx_id", req.Tx.ID.String()).Info("submit single tx")
+	return NewSuccessResponse(&submitTxResp{TxID: &req.Tx.ID})
 }
 
 type submitTxsResp struct {
@@ -213,6 +213,7 @@ func (a *API) submitTxs(ctx context.Context, ins struct {
 		if err := txbuilder.FinalizeTx(ctx, a.chain, &ins.Tx[i]); err != nil {
 			return NewErrorResponse(err)
 		}
+
 		log.WithField("tx_id", ins.Tx[i].ID.String()).Info("submit single tx")
 		txHashs = append(txHashs, &ins.Tx[i].ID)
 	}

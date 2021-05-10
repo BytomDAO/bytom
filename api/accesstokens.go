@@ -14,6 +14,7 @@ func (a *API) createAccessToken(ctx context.Context, x struct {
 	if err != nil {
 		return NewErrorResponse(err)
 	}
+
 	return NewSuccessResponse(token)
 }
 
@@ -34,6 +35,7 @@ func (a *API) deleteAccessToken(ctx context.Context, x struct {
 	if err := a.accessTokens.Delete(x.ID); err != nil {
 		return NewErrorResponse(err)
 	}
+
 	return NewSuccessResponse(nil)
 }
 

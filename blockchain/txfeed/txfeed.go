@@ -107,17 +107,21 @@ func parseFilter(ft string) (filter, error) {
 		if param == "" {
 			continue
 		}
+
 		if strings.Contains(value, "asset_id") {
 			res.AssetID = param
 		}
+
 		if strings.Contains(value, "amount_lower_limit") {
 			tmp, _ := strconv.ParseInt(param, 10, 64)
 			res.AmountLowerLimit = uint64(tmp)
 		}
+
 		if strings.Contains(value, "amount_upper_limit") {
 			tmp, _ := strconv.ParseInt(param, 10, 64)
 			res.AmountUpperLimit = uint64(tmp)
 		}
+
 		if strings.Contains(value, "trans_type") {
 			res.TransType = param
 		}
@@ -189,7 +193,6 @@ func (t *Tracker) GetTxfeedCh() chan *types.Tx {
 //Create create a txfeed filter.
 func (t *Tracker) Create(ctx context.Context, alias, fil string) error {
 	// Validate the filter.
-
 	if err := query.ValidateTransactionFilter(fil); err != nil {
 		return err
 	}
@@ -217,6 +220,7 @@ func (t *Tracker) Create(ctx context.Context, alias, fil string) error {
 	if err != nil {
 		return err
 	}
+
 	feed.Param = filter
 	t.TxFeeds = append(t.TxFeeds, feed)
 	return insertTxFeed(t.DB, feed)

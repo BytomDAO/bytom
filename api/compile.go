@@ -79,5 +79,6 @@ func (a *API) compileEquity(req compileReq) Response {
 	if err != nil {
 		return NewErrorResponse(err)
 	}
+
 	return NewSuccessResponse(&resp)
 }

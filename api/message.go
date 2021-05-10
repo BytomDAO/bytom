@@ -82,5 +82,6 @@ func (a *API) verifyMessage(ctx context.Context, ins struct {
 	if ed25519.Verify(ins.DerivedXPub.PublicKey(), ins.Message, sig) {
 		return NewSuccessResponse(VerifyMsgResp{VerifyResult: true})
 	}
+
 	return NewSuccessResponse(VerifyMsgResp{VerifyResult: false})
 }

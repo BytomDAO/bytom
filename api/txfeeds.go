@@ -26,15 +26,16 @@ func (a *API) createTxFeed(ctx context.Context, in struct {
 func (a *API) getTxFeed(ctx context.Context, in struct {
 	Alias string `json:"alias,omitempty"`
 }) Response {
+	rawTxFeed, err := a.GetTxFeedByAlias(ctx, in.Alias)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
 	var tmpTxFeed interface{}
-	rawTxfeed, err := a.GetTxFeedByAlias(ctx, in.Alias)
-	if err != nil {
+	if err := json.Unmarshal(rawTxFeed, &tmpTxFeed); err != nil {
 		return NewErrorResponse(err)
 	}
-	err = json.Unmarshal(rawTxfeed, &tmpTxFeed)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
+
 	data := map[string]interface{}{"txfeed": tmpTxFeed}
 	return NewSuccessResponse(data)
 }
@@ -46,6 +47,7 @@ func (a *API) deleteTxFeed(ctx context.Context, in struct {
 	if err := a.txFeedTracker.Delete(ctx, in.Alias); err != nil {
 		return NewErrorResponse(err)
 	}
+
 	return NewSuccessResponse(nil)
 }
 
@@ -57,6 +59,7 @@ func (a *API) updateTxFeed(ctx context.Context, in struct {
 	if err := a.txFeedTracker.Delete(ctx, in.Alias); err != nil {
 		return NewErrorResponse(err)
 	}
+
 	if err := a.txFeedTracker.Create(ctx, in.Alias, in.Filter); err != nil {
 		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("Update TxFeed Failed")
 		return NewErrorResponse(err)
@@ -75,6 +78,7 @@ func (a *API) getTxFeeds() ([]txfeed.TxFeed, error) {
 		if err := json.Unmarshal(iter.Value(), &txFeed); err != nil {
 			return nil, err
 		}
+
 		txFeeds = append(txFeeds, txFeed)
 	}
 
@@ -83,7 +87,7 @@ func (a *API) getTxFeeds() ([]txfeed.TxFeed, error) {
 
 // listTxFeeds is an http handler for listing txfeeds. It does not take a filter.
 // POST /list-transaction-feeds
-func (a *API) listTxFeeds(ctx context.Context) Response {
+func (a *API) listTxFeeds(_ context.Context) Response {
 	txFeeds, err := a.getTxFeeds()
 	if err != nil {
 		return NewErrorResponse(err)
@@ -92,13 +96,14 @@ func (a *API) listTxFeeds(ctx context.Context) Response {
 	return NewSuccessResponse(txFeeds)
 }
 
-func (a *API) GetTxFeedByAlias(ctx context.Context, filter string) ([]byte, error) {
-	jf, err := json.Marshal(filter)
+// GetTxFeedByAlias get tx feed by alias
+func (a *API) GetTxFeedByAlias(_ context.Context, alias string) ([]byte, error) {
+	aliasBytes, err := json.Marshal(alias)
 	if err != nil {
 		return nil, err
 	}
 
-	value := a.txFeedTracker.DB.Get(jf)
+	value := a.txFeedTracker.DB.Get(aliasBytes)
 	if value == nil {
 		return nil, errors.New("No transaction feed")
 	}

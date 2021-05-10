@@ -26,9 +26,11 @@ func (a *API) restoreWalletImage(ctx context.Context, image WalletImage) Respons
 	if err := a.wallet.Hsm.Restore(image.KeyImages); err != nil {
 		return NewErrorResponse(errors.Wrap(err, "restore key images"))
 	}
+
 	if err := a.wallet.AssetReg.Restore(image.AssetImage); err != nil {
 		return NewErrorResponse(errors.Wrap(err, "restore asset image"))
 	}
+
 	if err := a.wallet.AccountMgr.Restore(image.AccountImage); err != nil {
 		return NewErrorResponse(errors.Wrap(err, "restore account image"))
 	}
@@ -51,10 +53,12 @@ func (a *API) backupWalletImage() Response {
 	if err != nil {
 		return NewErrorResponse(errors.Wrap(err, "backup key images"))
 	}
+
 	assetImage, err := a.wallet.AssetReg.Backup()
 	if err != nil {
 		return NewErrorResponse(errors.Wrap(err, "backup asset image"))
 	}
+
 	accountImage, err := a.wallet.AccountMgr.Backup()
 	if err != nil {
 		return NewErrorResponse(errors.Wrap(err, "backup account image"))

@@ -29,6 +29,7 @@ type EstimateTxGasInfo struct {
 	ChainTxNeu  int64 `json:"chain_tx_neu"`
 }
 
+// EstimateChainTxGas estimate chain tx gas
 func EstimateChainTxGas(templates []Template) (*EstimateTxGasInfo, error) {
 	estimated, err := EstimateTxGas(templates[len(templates)-1])
 	if err != nil {
