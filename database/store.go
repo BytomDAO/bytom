@@ -290,7 +290,6 @@ func (s *Store) GetCheckpointsByHeight(height uint64) ([]*state.Checkpoint, erro
 func (s *Store) CheckpointsFromNode(height uint64, hash *bc.Hash) ([]*state.Checkpoint, error) {
 	startKey := calcCheckpointKey(height, hash)
 	iter := s.db.IteratorPrefixWithStart(CheckpointPrefix, startKey, false)
-	fmt.Printf("prefix:%s\n", string(CheckpointPrefix))
 
 	finalizedCheckpoint := &state.Checkpoint{}
 	if err := json.Unmarshal(iter.Value(), finalizedCheckpoint); err != nil {
