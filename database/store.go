@@ -310,7 +310,6 @@ func loadCheckpointsFromIter(iter dbm.Iterator) ([]*state.Checkpoint, error) {
 	var checkpoints []*state.Checkpoint
 	defer iter.Release()
 	for iter.Next() {
-		fmt.Printf("key:%s, val:%s\n", string(iter.Key()), string(iter.Value()))
 		checkpoint := &state.Checkpoint{}
 		if err := json.Unmarshal(iter.Value(), checkpoint); err != nil {
 			return nil, err
