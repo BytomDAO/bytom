@@ -2,7 +2,6 @@ package validation
 
 import (
 	"bytes"
-	"reflect"
 
 	"github.com/bytom/bytom/consensus/bcrp"
 	"github.com/bytom/bytom/consensus/segwit"
@@ -117,7 +116,7 @@ func (ec *entryContext) checkOutput(index uint64, amount uint64, assetID []byte,
 				bytes.Equal(prog.Code, code) &&
 				bytes.Equal(value.AssetId.Bytes(), assetID) &&
 				value.Amount == amount &&
-				reflect.DeepEqual(stateData.StateData, state))
+				bytesEqual(stateData.StateData, state))
 		}
 
 		switch e := e.(type) {
@@ -184,4 +183,22 @@ func (ec *entryContext) checkOutput(index uint64, amount uint64, assetID []byte,
 	}
 
 	return false, vm.ErrContext
+}
+
+func bytesEqual(a, b [][]byte) bool {
+	if (a == nil) != (b == nil) {
+		return false
+	}
+
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i, aa := range a {
+		if !bytes.Equal(aa, b[i]) {
+			return false
+		}
+	}
+
+	return true
 }
