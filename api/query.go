@@ -274,9 +274,11 @@ func (a *API) decodeRawTransaction(ctx context.Context, ins struct {
 }
 
 // POST /list-unspent-outputs
+// Deprecated
 func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 	AccountID     string `json:"account_id"`
 	AccountAlias  string `json:"account_alias"`
+
 	ID            string `json:"id"`
 	Unconfirmed   bool   `json:"unconfirmed"`
 	SmartContract bool   `json:"smart_contract"`

@@ -249,6 +249,7 @@ func (a *API) buildHandler() {
 		//---------------分割线-------------------------------------------------
 		// address 一个地址下，多个资产的余额
 		m.Handle("/list-address-balances", jsonHandler(a.listAddressBalances))
+		m.Handle("/list-address-unspent-outputs", jsonHandler(a.listAddressUnspentOutputs))
 	} else {
 		log.Warn("Please enable wallet")
 	}

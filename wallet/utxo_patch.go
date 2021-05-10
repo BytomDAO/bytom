@@ -6,7 +6,7 @@ import (
 )
 
 // GetAddressUTXOs return appointed address all asset  unspent UTXOs(outputs)
-func (w *Wallet) GetAddressUTXOs(address string, unconfirmed, isSmartContract bool) []*account.UTXO {
+func (w *Wallet) GetAddressUTXOs(address, id string, unconfirmed, isSmartContract bool) []*account.UTXO {
 	prefix := account.UTXOPreFix
 	if isSmartContract {
 		prefix = account.SUTXOPrefix
@@ -19,7 +19,7 @@ func (w *Wallet) GetAddressUTXOs(address string, unconfirmed, isSmartContract bo
 		})
 	}
 
-	accountUTXOIter := w.DB.IteratorPrefix([]byte(prefix))
+	accountUTXOIter := w.DB.IteratorPrefix([]byte(prefix + id))
 	defer accountUTXOIter.Release()
 
 	utxos := getUTXOs(accountUTXOIter, func(utxo *account.UTXO) bool {
