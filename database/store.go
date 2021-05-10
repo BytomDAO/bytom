@@ -3,7 +3,6 @@ package database
 import (
 	"encoding/binary"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
