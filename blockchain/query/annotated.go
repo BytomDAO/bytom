@@ -38,6 +38,9 @@ type AnnotatedInput struct {
 	InputID          bc.Hash              `json:"input_id"`
 	WitnessArguments []chainjson.HexBytes `json:"witness_arguments"`
 	SignData         bc.Hash              `json:"sign_data,omitempty"`
+
+	// Vote assign value only input is vote type
+	Vote string `json:"vote,omitempty"`
 }
 
 //AnnotatedOutput means an annotated transaction output.
@@ -54,6 +57,11 @@ type AnnotatedOutput struct {
 	AccountAlias    string             `json:"account_alias,omitempty"`
 	ControlProgram  chainjson.HexBytes `json:"control_program"`
 	Address         string             `json:"address,omitempty"`
+	// assign value only output is vote type
+	Vote string `json:"vote,omitempty"`
+
+	// assign value when output is not retirement type
+	StateData []string `json:"state_data,omitempty"`
 }
 
 //AnnotatedAccount means an annotated account.
@@ -75,7 +83,7 @@ type AnnotatedAsset struct {
 	IssuanceProgram   chainjson.HexBytes `json:"issue_program"`
 	RawDefinitionByte chainjson.HexBytes `json:"raw_definition_byte"`
 	Definition        *json.RawMessage   `json:"definition"`
-	LimitHeight       uint64              `json:"limit_height"`
+	LimitHeight       uint64             `json:"limit_height"`
 }
 
 //AnnotatedSigner means an annotated signer for asset.
