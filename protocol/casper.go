@@ -88,17 +88,21 @@ func (c *Casper) LastFinalized() (uint64, bc.Hash) {
 // Validators return the validators by specified block hash
 // e.g. if the block num of epoch is 100, and the block height corresponding to the block hash is 130, then will return the voting results of height in 0~100
 func (c *Casper) Validators(blockHash *bc.Hash) ([]*state.Validator, error) {
-	hash, err := c.prevCheckpointHash(blockHash)
-	if err != nil {
-		return nil, err
-	}
-
-	checkpoint, err := c.store.GetCheckpoint(hash)
+	checkpoint, err := c.prevCheckpoint(blockHash)
 	if err != nil {
 		return nil, err
 	}
 
 	return checkpoint.Validators(), nil
+}
+
+func (c *Casper) prevCheckpoint(blockHash *bc.Hash) (*state.Checkpoint, error) {
+	hash, err := c.prevCheckpointHash(blockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.store.GetCheckpoint(hash)
 }
 
 // EvilValidator represent a validator who broadcast two distinct verification that violate the commandment

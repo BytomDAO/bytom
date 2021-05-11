@@ -52,10 +52,10 @@ type Checkpoint struct {
 	Hash       bc.Hash
 	ParentHash bc.Hash
 	// only save in the memory, not be persisted
-	Parent         *Checkpoint `json:"-"`
-	StartTimestamp uint64
-	SupLinks       []*SupLink
-	Status         CheckpointStatus
+	Parent    *Checkpoint `json:"-"`
+	Timestamp uint64
+	SupLinks  []*SupLink
+	Status    CheckpointStatus
 
 	Votes      map[string]uint64 // putKey -> num of vote
 	Guaranties map[string]uint64 // pubKey -> num of guaranty

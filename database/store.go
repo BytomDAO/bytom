@@ -290,12 +290,12 @@ func (s *Store) CheckpointsFromNode(height uint64, hash *bc.Hash) ([]*state.Chec
 	startKey := calcCheckpointKey(height, hash)
 	iter := s.db.IteratorPrefixWithStart(CheckpointPrefix, startKey, false)
 
-	finalizedCheckpoint := &state.Checkpoint{}
-	if err := json.Unmarshal(iter.Value(), finalizedCheckpoint); err != nil {
+	firstCheckpoint := &state.Checkpoint{}
+	if err := json.Unmarshal(iter.Value(), firstCheckpoint); err != nil {
 		return nil, err
 	}
 
-	checkpoints := []*state.Checkpoint{finalizedCheckpoint}
+	checkpoints := []*state.Checkpoint{firstCheckpoint}
 	subs, err := loadCheckpointsFromIter(iter)
 	if err != nil {
 		return nil, err

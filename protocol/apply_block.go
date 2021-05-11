@@ -60,12 +60,11 @@ func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, 
 	if mod := block.Height % state.BlocksOfEpoch; mod == 1 {
 		parent := checkpoint
 		checkpoint = &state.Checkpoint{
-			ParentHash:     parent.Hash,
-			Parent:         parent,
-			StartTimestamp: block.Timestamp,
-			Status:         state.Growing,
-			Votes:          make(map[string]uint64),
-			Guaranties:     make(map[string]uint64),
+			ParentHash: parent.Hash,
+			Parent:     parent,
+			Status:     state.Growing,
+			Votes:      make(map[string]uint64),
+			Guaranties: make(map[string]uint64),
 		}
 		node.children = append(node.children, &treeNode{checkpoint: checkpoint})
 	} else if mod == 0 {
@@ -74,6 +73,7 @@ func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, 
 
 	checkpoint.Height = block.Height
 	checkpoint.Hash = block.Hash()
+	checkpoint.Timestamp = block.Timestamp
 	return checkpoint, nil
 }
 
@@ -117,12 +117,14 @@ func (c *Casper) applySupLinks(target *state.Checkpoint, supLinks []*types.SupLi
 	}
 
 	for _, supLink := range supLinks {
+		var validVerifications []*Verification
 		for _, verification := range supLinkToVerifications(supLink, validators, target.Hash, target.Height) {
-			if err := c.verifyVerification(verification, true); err == nil {
-				if err := c.addVerificationToCheckpoint(target, verification); err != nil {
-					return err
-				}
+			if validate(verification) == nil && c.verifyVerification(verification, true) == nil {
+				validVerifications = append(validVerifications, verification)
 			}
+		}
+		if err := c.addVerificationToCheckpoint(target, validVerifications...); err != nil {
+			return err
 		}
 	}
 	return nil

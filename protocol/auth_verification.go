@@ -54,24 +54,28 @@ func (c *Casper) authVerification(v *Verification) error {
 	return c.addVerificationToCheckpoint(target, v)
 }
 
-func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, v *Verification) error {
-	source, err := c.store.GetCheckpoint(&v.SourceHash)
-	if err != nil {
-		return err
-	}
-
-	supLink := target.AddVerification(v.SourceHash, v.SourceHeight, v.PubKey, v.Signature)
-	if target.Status != state.Unjustified || !supLink.IsMajority() || source.Status == state.Finalized {
-		return nil
-	}
-
-	if source.Status == state.Unjustified {
-		c.justifyingCheckpoints[source.Hash] = append(c.justifyingCheckpoints[source.Hash], target)
-		return nil
-	}
-
+func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, verifications ...*Verification) error {
+	var affectedCheckpoints []*state.Checkpoint
 	_, oldBestHash := c.BestChain()
-	affectedCheckpoints := c.setJustified(source, target)
+	for _, v := range verifications {
+		source, err := c.store.GetCheckpoint(&v.SourceHash)
+		if err != nil {
+			return err
+		}
+
+		supLink := target.AddVerification(v.SourceHash, v.SourceHeight, v.PubKey, v.Signature)
+		if target.Status != state.Unjustified || !supLink.IsMajority() || source.Status == state.Finalized {
+			continue
+		}
+
+		if source.Status == state.Unjustified {
+			c.justifyingCheckpoints[source.Hash] = append(c.justifyingCheckpoints[source.Hash], target)
+			continue
+		}
+
+		affectedCheckpoints = append(affectedCheckpoints, c.setJustified(source, target)...)
+	}
+
 	_, newBestHash := c.BestChain()
 	if oldBestHash != newBestHash {
 		c.rollbackNotifyCh <- nil

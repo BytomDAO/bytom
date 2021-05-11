@@ -19,7 +19,7 @@ var runNodeCmd = &cobra.Command{
 
 func init() {
 	runNodeCmd.Flags().String("prof_laddr", config.ProfListenAddress, "Use http to profile bytomd programs")
-
+	runNodeCmd.Flags().Bool("mining", config.Mining, "Enable mining")
 	runNodeCmd.Flags().Bool("simd.enable", config.Simd.Enable, "Enable SIMD mechan for tensority")
 
 	runNodeCmd.Flags().Bool("auth.disable", config.Auth.Disable, "Disable rpc access authenticate")

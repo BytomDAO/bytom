@@ -54,6 +54,7 @@ func (b *BlockProposer) generateBlocks() {
 		}
 
 		bestBlockHeader := b.chain.BestBlockHeader()
+		bestBlockHash := bestBlockHeader.Hash()
 
 		now := uint64(time.Now().UnixNano() / 1e6)
 		base := now
@@ -66,10 +67,13 @@ func (b *BlockProposer) generateBlocks() {
 			nextBlockTime += consensus.ActiveNetParams.BlockTimeInterval
 		}
 
-		//TODO: get proposer by block hash and timestamp
-		var proposer string
+		blocker, err := b.chain.GetBlocker(&bestBlockHash, nextBlockTime)
+		if err != nil {
+			log.WithFields(log.Fields{"module": logModule, "error": err, "pubKey": xpubStr}).Error("fail on check is next blocker")
+			continue
+		}
 
-		if xpubStr != proposer {
+		if xpubStr != blocker {
 			continue
 		}
 

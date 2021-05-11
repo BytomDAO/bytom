@@ -6,6 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/config"
+	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/event"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
@@ -77,10 +78,10 @@ func (c *Chain) initChainStatus() error {
 	}
 
 	checkpoint := &state.Checkpoint{
-		Height:         0,
-		Hash:           genesisBlock.Hash(),
-		StartTimestamp: genesisBlock.Timestamp,
-		Status:         state.Justified,
+		Height:    0,
+		Hash:      genesisBlock.Hash(),
+		Timestamp: genesisBlock.Timestamp,
+		Status:    state.Justified,
 	}
 	if err := c.store.SaveCheckpoints(checkpoint); err != nil {
 		return err
@@ -139,6 +140,28 @@ func (c *Chain) BestBlockHash() *bc.Hash {
 func (c *Chain) latestBestBlockHash() *bc.Hash {
 	_, hash := c.casper.BestChain()
 	return &hash
+}
+
+// GetBlocker return blocker by specified blockHash and timestamp
+func (c *Chain) GetBlocker(blockHash *bc.Hash, timeStamp uint64) (string, error) {
+	prevCheckpoint, err := c.casper.prevCheckpoint(blockHash)
+	if err != nil {
+		return "", err
+	}
+
+	validators := prevCheckpoint.Validators()
+	startTimestamp := prevCheckpoint.Timestamp + consensus.ActiveNetParams.BlockTimeInterval
+	order := getBlockerOrder(startTimestamp, timeStamp, uint64(len(validators)))
+	return validators[order].PubKey, nil
+}
+
+func getBlockerOrder(startTimestamp, blockTimestamp, numOfConsensusNode uint64) uint64 {
+	// One round of product block time for all consensus nodes
+	roundBlockTime := state.BlocksOfEpoch * numOfConsensusNode * consensus.ActiveNetParams.BlockTimeInterval
+	// The start time of the last round of product block
+	lastRoundStartTime := startTimestamp + (blockTimestamp-startTimestamp)/roundBlockTime*roundBlockTime
+	// Order of blocker
+	return (blockTimestamp - lastRoundStartTime) / (state.BlocksOfEpoch * consensus.ActiveNetParams.BlockTimeInterval)
 }
 
 // BestBlockHeader returns the chain tail block
