@@ -8,10 +8,10 @@ import (
 	_ "net/http/pprof"
 	"path/filepath"
 
-	"github.com/prometheus/prometheus/util/flock"
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
 	browser "github.com/toqueteos/webbrowser"
+	"github.com/prometheus/prometheus/util/flock"
 
 	"github.com/bytom/bytom/accesstoken"
 	"github.com/bytom/bytom/account"
@@ -27,7 +27,6 @@ import (
 	"github.com/bytom/bytom/env"
 	"github.com/bytom/bytom/event"
 	bytomLog "github.com/bytom/bytom/log"
-
 	"github.com/bytom/bytom/net/websocket"
 	"github.com/bytom/bytom/netsync"
 	"github.com/bytom/bytom/protocol"
@@ -81,6 +80,7 @@ func NewNode(config *cfg.Config) *Node {
 
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
+
 	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))

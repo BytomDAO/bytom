@@ -19,16 +19,19 @@ type Store interface {
 	GetContract(hash [32]byte) ([]byte, error)
 
 	GetCheckpoint(*bc.Hash) (*state.Checkpoint, error)
+	CheckpointsFromNode(height uint64, hash *bc.Hash) ([]*state.Checkpoint, error)
 	GetCheckpointsByHeight(uint64) ([]*state.Checkpoint, error)
 	SaveCheckpoints(...*state.Checkpoint) error
 
 	LoadBlockIndex(uint64) (*state.BlockIndex, error)
 	SaveBlock(*types.Block) error
-	SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint, *state.ContractViewpoint) error
+	SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint, *state.ContractViewpoint, uint64, *bc.Hash) error
 }
 
 // BlockStoreState represents the core's db status
 type BlockStoreState struct {
-	Height uint64
-	Hash   *bc.Hash
+	Height          uint64
+	Hash            *bc.Hash
+	FinalizedHeight uint64
+	FinalizedHash   *bc.Hash
 }
