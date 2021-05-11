@@ -235,8 +235,8 @@ func (a *API) buildHandler() {
 		m.Handle("/get-transaction", jsonHandler(a.getTransaction))
 		m.Handle("/list-transactions", jsonHandler(a.listTransactions))
 
-		m.Handle("/list-balances", jsonHandler(a.listBalances))
-		m.Handle("/list-unspent-outputs", jsonHandler(a.listUnspentOutputs))
+		m.Handle("/list-address-balances", jsonHandler(a.listAddressBalances))
+		m.Handle("/list-address-unspent-outputs", jsonHandler(a.listAddressUnspentOutputs))
 
 		m.Handle("/decode-program", jsonHandler(a.decodeProgram))
 
@@ -245,11 +245,6 @@ func (a *API) buildHandler() {
 		m.Handle("/rescan-wallet", jsonHandler(a.rescanWallet))
 		m.Handle("/wallet-info", jsonHandler(a.getWalletInfo))
 		m.Handle("/recovery-wallet", jsonHandler(a.recoveryFromRootXPubs))
-
-		//---------------分割线-------------------------------------------------
-		// address 一个地址下，多个资产的余额
-		m.Handle("/list-address-balances", jsonHandler(a.listAddressBalances))
-		m.Handle("/list-address-unspent-outputs", jsonHandler(a.listAddressUnspentOutputs))
 	} else {
 		log.Warn("Please enable wallet")
 	}

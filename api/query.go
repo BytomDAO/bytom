@@ -87,28 +87,6 @@ func (a *API) listAssets(ctx context.Context, filter struct {
 	return NewSuccessResponse(annotatedAssets)
 }
 
-// POST /list-balances
-// Deprecated: advice use listAddressBalances fn
-func (a *API) listBalances(ctx context.Context, filter struct {
-	AccountID    string `json:"account_id"`
-	AccountAlias string `json:"account_alias"`
-}) Response {
-	accountID := filter.AccountID
-	if filter.AccountAlias != "" {
-		acc, err := a.wallet.AccountMgr.FindByAlias(filter.AccountAlias)
-		if err != nil {
-			return NewErrorResponse(err)
-		}
-		accountID = acc.ID
-	}
-
-	balances, err := a.wallet.GetAccountBalances(accountID, "")
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-	return NewSuccessResponse(balances)
-}
-
 // POST /get-transaction
 func (a *API) getTransaction(ctx context.Context, txInfo struct {
 	TxID string `json:"tx_id"`
@@ -273,50 +251,6 @@ func (a *API) decodeRawTransaction(ctx context.Context, ins struct {
 	return NewSuccessResponse(tx)
 }
 
-// POST /list-unspent-outputs
-// Deprecated
-func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
-	AccountID     string `json:"account_id"`
-	AccountAlias  string `json:"account_alias"`
-
-	ID            string `json:"id"`
-	Unconfirmed   bool   `json:"unconfirmed"`
-	SmartContract bool   `json:"smart_contract"`
-	From          uint   `json:"from"`
-	Count         uint   `json:"count"`
-}) Response {
-	accountID := filter.AccountID
-	if filter.AccountAlias != "" {
-		acc, err := a.wallet.AccountMgr.FindByAlias(filter.AccountAlias)
-		if err != nil {
-			return NewErrorResponse(err)
-		}
-		accountID = acc.ID
-	}
-	accountUTXOs := a.wallet.GetAccountUtxos(accountID, filter.ID, filter.Unconfirmed, filter.SmartContract)
-
-	UTXOs := []query.AnnotatedUTXO{}
-	for _, utxo := range accountUTXOs {
-		UTXOs = append([]query.AnnotatedUTXO{{
-			AccountID:           utxo.AccountID,
-			OutputID:            utxo.OutputID.String(),
-			SourceID:            utxo.SourceID.String(),
-			AssetID:             utxo.AssetID.String(),
-			Amount:              utxo.Amount,
-			SourcePos:           utxo.SourcePos,
-			Program:             fmt.Sprintf("%x", utxo.ControlProgram),
-			ControlProgramIndex: utxo.ControlProgramIndex,
-			Address:             utxo.Address,
-			ValidHeight:         utxo.ValidHeight,
-			Alias:               a.wallet.AccountMgr.GetAliasByID(utxo.AccountID),
-			AssetAlias:          a.wallet.AssetReg.GetAliasByID(utxo.AssetID.String()),
-			Change:              utxo.Change,
-		}}, UTXOs...)
-	}
-	start, end := getPageRange(len(UTXOs), filter.From, filter.Count)
-	return NewSuccessResponse(UTXOs[start:end])
-}
-
 // return gasRate
 func (a *API) gasRate() Response {
 	gasrate := map[string]int64{"gas_rate": consensus.VMGasRate}
@@ -469,4 +403,3 @@ func (a *API) listAddressUnspentOutputs(ctx context.Context, req struct {
 	start, end := getPageRange(len(utxos), req.From, req.Count)
 	return NewSuccessResponse(utxos[start:end])
 }
-
