@@ -59,6 +59,15 @@ func Verify(context *Context, gasLimit int64) (gasLeft int64, err error) {
 		runLimit:          gasLimit,
 		context:           context,
 	}
+	stateData := context.StateData
+	if err = vm.pushAlt(stateData, false); err != nil {
+		return vm.runLimit, errors.Wrapf(err, "pushing initial statedata")
+	}
+	for range stateData {
+		if err = opFromAltStack(vm); err != nil {
+			return vm.runLimit, errors.Wrapf(err, "copying statedata from altstack")
+		}
+	}
 
 	args := context.Arguments
 	for i, arg := range args {
@@ -66,10 +75,6 @@ func Verify(context *Context, gasLimit int64) (gasLeft int64, err error) {
 		if err != nil {
 			return vm.runLimit, errors.Wrapf(err, "pushing initial argument %d", i)
 		}
-	}
-
-	if err = vm.pushAlt(context.StateData, false); err != nil {
-		return vm.runLimit, errors.Wrapf(err, "pushing initial statedata")
 	}
 
 	err = vm.run()

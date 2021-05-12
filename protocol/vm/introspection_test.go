@@ -114,10 +114,10 @@ func TestIntrospectionOps(t *testing.T) {
 			},
 		},
 		wantVM: &virtualMachine{
-			runLimit:     50079,
-			deferredCost: -95,
+			runLimit:     50062,
+			deferredCost: -78,
 			dataStack:    [][]byte{{}},
-			altStack:     [][]byte{},
+			altStack:     [][]byte{[]byte("statedata")},
 		},
 	}, {
 		op: OP_CHECKOUTPUT,
