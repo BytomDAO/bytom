@@ -48,11 +48,11 @@ func (s *SupLink) IsMajority() bool {
 // Casper only considers checkpoints for finalization. When a checkpoint is explicitly finalized,
 // all ancestor blocks of the checkpoint are implicitly finalized.
 type Checkpoint struct {
-	Height         uint64
-	Hash           bc.Hash
-	ParentHash     bc.Hash
+	Height     uint64
+	Hash       bc.Hash
+	ParentHash bc.Hash
 	// only save in the memory, not be persisted
-	Parent         *Checkpoint
+	Parent         *Checkpoint `json:"-"`
 	StartTimestamp uint64
 	SupLinks       []*SupLink
 	Status         CheckpointStatus

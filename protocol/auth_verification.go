@@ -1,11 +1,10 @@
-package consensus
+package protocol
 
 import (
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/state"
 )
@@ -14,7 +13,7 @@ import (
 // the status of source checkpoint must justified, and an individual validator ν must not publish two distinct Verification
 // ⟨ν,s1,t1,h(s1),h(t1)⟩ and ⟨ν,s2,t2,h(s2),h(t2)⟩, such that either:
 // h(t1) = h(t2) OR h(s1) < h(s2) < h(t2) < h(t1)
-func (c *Casper) AuthVerification(v *protocol.Verification) error {
+func (c *Casper) AuthVerification(v *Verification) error {
 	if err := validate(v); err != nil {
 		return err
 	}
@@ -41,7 +40,7 @@ func (c *Casper) AuthVerification(v *protocol.Verification) error {
 	return c.authVerification(v)
 }
 
-func (c *Casper) authVerification(v *protocol.Verification) error {
+func (c *Casper) authVerification(v *Verification) error {
 	target, err := c.store.GetCheckpoint(&v.TargetHash)
 	if err != nil {
 		c.verificationCache.Add(verificationCacheKey(v.TargetHash, v.PubKey), v)
@@ -55,7 +54,7 @@ func (c *Casper) authVerification(v *protocol.Verification) error {
 	return c.addVerificationToCheckpoint(target, v)
 }
 
-func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, v *protocol.Verification) error {
+func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, v *Verification) error {
 	source, err := c.store.GetCheckpoint(&v.SourceHash)
 	if err != nil {
 		return err
@@ -75,7 +74,7 @@ func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, v *protoc
 	affectedCheckpoints := c.setJustified(source, target)
 	_, newBestHash := c.BestChain()
 	if oldBestHash != newBestHash {
-		c.rollbackNotifyCh <- newBestHash
+		c.rollbackNotifyCh <- nil
 	}
 
 	return c.store.SaveCheckpoints(affectedCheckpoints...)
@@ -131,7 +130,7 @@ func (c *Casper) authVerificationLoop() {
 			}
 
 			c.mu.Lock()
-			if err := c.authVerification(verification.(*protocol.Verification)); err != nil {
+			if err := c.authVerification(verification.(*Verification)); err != nil {
 				log.WithField("err", err).Error("auth verification in cache")
 			}
 			c.mu.Unlock()
@@ -141,7 +140,7 @@ func (c *Casper) authVerificationLoop() {
 	}
 }
 
-func (c *Casper) verifyVerification(v *protocol.Verification, trackEvilValidator bool) error {
+func (c *Casper) verifyVerification(v *Verification, trackEvilValidator bool) error {
 	if err := c.verifySameHeight(v, trackEvilValidator); err != nil {
 		return err
 	}
@@ -150,7 +149,7 @@ func (c *Casper) verifyVerification(v *protocol.Verification, trackEvilValidator
 }
 
 // a validator must not publish two distinct votes for the same target height
-func (c *Casper) verifySameHeight(v *protocol.Verification, trackEvilValidator bool) error {
+func (c *Casper) verifySameHeight(v *Verification, trackEvilValidator bool) error {
 	checkpoints, err := c.store.GetCheckpointsByHeight(v.TargetHeight)
 	if err != nil {
 		return err
@@ -160,7 +159,7 @@ func (c *Casper) verifySameHeight(v *protocol.Verification, trackEvilValidator b
 		for _, supLink := range checkpoint.SupLinks {
 			if _, ok := supLink.Signatures[v.PubKey]; ok && checkpoint.Hash != v.TargetHash {
 				if trackEvilValidator {
-					c.evilValidators[v.PubKey] = []*protocol.Verification{v, makeVerification(supLink, checkpoint, v.PubKey)}
+					c.evilValidators[v.PubKey] = []*Verification{v, makeVerification(supLink, checkpoint, v.PubKey)}
 				}
 				return errSameHeightInVerification
 			}
@@ -170,7 +169,7 @@ func (c *Casper) verifySameHeight(v *protocol.Verification, trackEvilValidator b
 }
 
 // a validator must not vote within the span of its other votes.
-func (c *Casper) verifySpanHeight(v *protocol.Verification, trackEvilValidator bool) error {
+func (c *Casper) verifySpanHeight(v *Verification, trackEvilValidator bool) error {
 	if c.tree.findOnlyOne(func(checkpoint *state.Checkpoint) bool {
 		if checkpoint.Height == v.TargetHeight {
 			return false
@@ -181,7 +180,7 @@ func (c *Casper) verifySpanHeight(v *protocol.Verification, trackEvilValidator b
 				if (checkpoint.Height < v.TargetHeight && supLink.SourceHeight > v.SourceHeight) ||
 					(checkpoint.Height > v.TargetHeight && supLink.SourceHeight < v.SourceHeight) {
 					if trackEvilValidator {
-						c.evilValidators[v.PubKey] = []*protocol.Verification{v, makeVerification(supLink, checkpoint, v.PubKey)}
+						c.evilValidators[v.PubKey] = []*Verification{v, makeVerification(supLink, checkpoint, v.PubKey)}
 					}
 					return true
 				}
@@ -194,8 +193,8 @@ func (c *Casper) verifySpanHeight(v *protocol.Verification, trackEvilValidator b
 	return nil
 }
 
-func makeVerification(supLink *state.SupLink, checkpoint *state.Checkpoint, pubKey string) *protocol.Verification {
-	return &protocol.Verification{
+func makeVerification(supLink *state.SupLink, checkpoint *state.Checkpoint, pubKey string) *Verification {
+	return &Verification{
 		SourceHash:   supLink.SourceHash,
 		TargetHash:   checkpoint.Hash,
 		SourceHeight: supLink.SourceHeight,
@@ -205,7 +204,7 @@ func makeVerification(supLink *state.SupLink, checkpoint *state.Checkpoint, pubK
 	}
 }
 
-func validate(v *protocol.Verification) error {
+func validate(v *Verification) error {
 	if v.SourceHeight%state.BlocksOfEpoch != 0 || v.TargetHeight%state.BlocksOfEpoch != 0 {
 		return errVoteToGrowingCheckpoint
 	}

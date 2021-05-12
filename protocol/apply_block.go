@@ -1,11 +1,11 @@
-package consensus
+package protocol
 
 import (
 	"encoding/hex"
 
+	"github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/math/checked"
-	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
@@ -16,7 +16,7 @@ import (
 // the tree of checkpoint will grow with the arrival of new blocks
 // it will return verification when an epoch is reached and the current node is the validator, otherwise return nil
 // the chain module must broadcast the verification
-func (c *Casper) ApplyBlock(block *types.Block) (*protocol.Verification, error) {
+func (c *Casper) ApplyBlock(block *types.Block) (*Verification, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -128,15 +128,15 @@ func (c *Casper) applySupLinks(target *state.Checkpoint, supLinks []*types.SupLi
 	return nil
 }
 
-func (c *Casper) myVerification(target *state.Checkpoint, validators []*state.Validator) (*protocol.Verification, error) {
-	pubKey := c.prvKey.XPub().String()
+func (c *Casper) myVerification(target *state.Checkpoint, validators []*state.Validator) (*Verification, error) {
+	pubKey := config.CommonConfig.PrivateKey().XPub().String()
 	if !isValidator(pubKey, validators) {
 		return nil, nil
 	}
 
 	source := c.lastJustifiedCheckpointOfBranch(target)
 	if source != nil {
-		v := &protocol.Verification{
+		v := &Verification{
 			SourceHash:   source.Hash,
 			TargetHash:   target.Hash,
 			SourceHeight: source.Height,
@@ -144,7 +144,8 @@ func (c *Casper) myVerification(target *state.Checkpoint, validators []*state.Va
 			PubKey:       pubKey,
 		}
 
-		if err := v.Sign(c.prvKey); err != nil {
+		prvKey := config.CommonConfig.PrivateKey()
+		if err := v.Sign(*prvKey); err != nil {
 			return nil, err
 		}
 
@@ -241,10 +242,10 @@ func (c *Casper) lastJustifiedCheckpointOfBranch(branch *state.Checkpoint) *stat
 	return nil
 }
 
-func supLinkToVerifications(supLink *types.SupLink, validators []*state.Validator, targetHash bc.Hash, targetHeight uint64) []*protocol.Verification {
-	var result []*protocol.Verification
+func supLinkToVerifications(supLink *types.SupLink, validators []*state.Validator, targetHash bc.Hash, targetHeight uint64) []*Verification {
+	var result []*Verification
 	for i, signature := range supLink.Signatures {
-		result = append(result, &protocol.Verification{
+		result = append(result, &Verification{
 			SourceHash:   supLink.SourceHash,
 			TargetHash:   targetHash,
 			SourceHeight: supLink.SourceHeight,
