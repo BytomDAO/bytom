@@ -47,14 +47,7 @@ func opCheckOutput(vm *virtualMachine) error {
 		return ErrContext
 	}
 
-	for range vm.context.StateData {
-		if err = opToAltStack(vm); err != nil {
-			return ErrContext
-		}
-	}
-
-	state := vm.altStack
-	ok, err := vm.context.CheckOutput(uint64(index), amount, assetID, uint64(vmVersion), code, state, vm.expansionReserved)
+	ok, err := vm.context.CheckOutput(uint64(index), amount, assetID, uint64(vmVersion), code, vm.context.StateData, vm.expansionReserved)
 	if err != nil {
 		return err
 	}

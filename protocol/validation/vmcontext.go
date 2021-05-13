@@ -194,8 +194,8 @@ func bytesEqual(a, b [][]byte) bool {
 		return false
 	}
 
-	for i, aa := range a {
-		if !bytes.Equal(aa, b[i]) {
+	for i, v := range a {
+		if !bytes.Equal(v, b[i]) {
 			return false
 		}
 	}
