@@ -17,11 +17,11 @@ func TestCheckOutput(t *testing.T) {
 			types.NewIssuanceInput(nil, 6, []byte("issueprog"), nil, nil),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewOriginalTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("wrongprog"), nil),
-			types.NewOriginalTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("controlprog"), nil),
-			types.NewOriginalTxOutput(bc.NewAssetID([32]byte{2}), 8, []byte("controlprog"), nil),
-			types.NewOriginalTxOutput(bc.NewAssetID([32]byte{2}), 7, []byte("controlprog"), nil),
-			types.NewOriginalTxOutput(bc.NewAssetID([32]byte{2}), 7, []byte("controlprog"), nil),
+			types.NewOriginalTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("wrongprog"), [][]byte{[]byte("statedata")}),
+			types.NewOriginalTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("controlprog"), [][]byte{[]byte("wrongstatedata")}),
+			types.NewOriginalTxOutput(bc.NewAssetID([32]byte{2}), 8, []byte("controlprog"), [][]byte{[]byte("statedata")}),
+			types.NewOriginalTxOutput(bc.NewAssetID([32]byte{2}), 7, []byte("controlprog"), [][]byte{[]byte("statedata")}),
+			types.NewOriginalTxOutput(bc.NewAssetID([32]byte{2}), 7, []byte("controlprog"), [][]byte{[]byte("statedata")}),
 		},
 	})
 
@@ -37,6 +37,7 @@ func TestCheckOutput(t *testing.T) {
 		assetID   []byte
 		vmVersion uint64
 		code      []byte
+		state     [][]byte
 
 		wantErr error
 		wantOk  bool
@@ -47,6 +48,7 @@ func TestCheckOutput(t *testing.T) {
 			assetID:   append([]byte{2}, make([]byte, 31)...),
 			vmVersion: 1,
 			code:      []byte("controlprog"),
+			state:     [][]byte{[]byte("statedata")},
 			wantOk:    true,
 		},
 		{
@@ -55,6 +57,7 @@ func TestCheckOutput(t *testing.T) {
 			assetID:   append([]byte{2}, make([]byte, 31)...),
 			vmVersion: 1,
 			code:      []byte("controlprog"),
+			state:     [][]byte{[]byte("statedata")},
 			wantOk:    true,
 		},
 		{
@@ -62,7 +65,16 @@ func TestCheckOutput(t *testing.T) {
 			amount:    1,
 			assetID:   append([]byte{9}, make([]byte, 31)...),
 			vmVersion: 1,
-			code:      []byte("missingprog"),
+			code:      []byte("controlprog"),
+			wantOk:    false,
+		},
+		{
+			index:     1,
+			amount:    8,
+			assetID:   append([]byte{3}, make([]byte, 31)...),
+			vmVersion: 1,
+			code:      []byte("controlprog"),
+			state:     [][]byte{[]byte("missingstatedata")},
 			wantOk:    false,
 		},
 		{
@@ -77,13 +89,13 @@ func TestCheckOutput(t *testing.T) {
 
 	for i, test := range cases {
 		t.Run(fmt.Sprintf("case %d", i), func(t *testing.T) {
-			gotOk, err := txCtx.checkOutput(test.index, test.amount, test.assetID, test.vmVersion, test.code, false)
+			gotOk, err := txCtx.checkOutput(test.index, test.amount, test.assetID, test.vmVersion, test.code, test.state, false)
 			if g := errors.Root(err); g != test.wantErr {
-				t.Errorf("checkOutput(%v, %v, %x, %v, %x) err = %v, want %v", test.index, test.amount, test.assetID, test.vmVersion, test.code, g, test.wantErr)
+				t.Errorf("checkOutput(%v, %v, %x, %v, %x, %v) err = %v, want %v", test.index, test.amount, test.assetID, test.vmVersion, test.code, test.state, g, test.wantErr)
 				return
 			}
 			if gotOk != test.wantOk {
-				t.Errorf("checkOutput(%v, %v, %x, %v, %x) ok = %t, want %v", test.index, test.amount, test.assetID, test.vmVersion, test.code, gotOk, test.wantOk)
+				t.Errorf("checkOutput(%v, %v, %x, %v, %x, %v) ok = %t, want %v", test.index, test.amount, test.assetID, test.vmVersion, test.code, test.state, gotOk, test.wantOk)
 			}
 
 		})
