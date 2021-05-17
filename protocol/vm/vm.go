@@ -159,7 +159,6 @@ func (vm *virtualMachine) push(data []byte, deferred bool) error {
 }
 
 func (vm *virtualMachine) pushAlt(data []byte, deferred bool) error {
-
 	cost := 8 + int64(len(data))
 	if deferred {
 		vm.deferCost(cost)
