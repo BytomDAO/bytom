@@ -2,12 +2,14 @@ package database
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/common"
 
+	"github.com/bytom/bytom/consensus"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/errors"
@@ -275,6 +277,7 @@ func (s *Store) GetCheckpoint(hash *bc.Hash) (*state.Checkpoint, error) {
 		return nil, err
 	}
 
+	setSupLinkToCheckpoint(checkpoint, header.SupLinks)
 	return checkpoint, nil
 }
 
@@ -282,7 +285,7 @@ func (s *Store) GetCheckpoint(hash *bc.Hash) (*state.Checkpoint, error) {
 func (s *Store) GetCheckpointsByHeight(height uint64) ([]*state.Checkpoint, error) {
 	iter := s.db.IteratorPrefix(calcCheckpointKey(height, nil))
 	defer iter.Release()
-	return loadCheckpointsFromIter(iter)
+	return s.loadCheckpointsFromIter(iter)
 }
 
 // CheckpointsFromNode return all checkpoints from specified block height and hash
@@ -296,7 +299,7 @@ func (s *Store) CheckpointsFromNode(height uint64, hash *bc.Hash) ([]*state.Chec
 	}
 
 	checkpoints := []*state.Checkpoint{firstCheckpoint}
-	subs, err := loadCheckpointsFromIter(iter)
+	subs, err := s.loadCheckpointsFromIter(iter)
 	if err != nil {
 		return nil, err
 	}
@@ -305,7 +308,7 @@ func (s *Store) CheckpointsFromNode(height uint64, hash *bc.Hash) ([]*state.Chec
 	return checkpoints, nil
 }
 
-func loadCheckpointsFromIter(iter dbm.Iterator) ([]*state.Checkpoint, error) {
+func (s *Store) loadCheckpointsFromIter(iter dbm.Iterator) ([]*state.Checkpoint, error) {
 	var checkpoints []*state.Checkpoint
 	defer iter.Release()
 	for iter.Next() {
@@ -314,6 +317,12 @@ func loadCheckpointsFromIter(iter dbm.Iterator) ([]*state.Checkpoint, error) {
 			return nil, err
 		}
 
+		header, err := s.GetBlockHeader(&checkpoint.Hash)
+		if err != nil {
+			return nil, err
+		}
+
+		setSupLinkToCheckpoint(checkpoint, header.SupLinks)
 		checkpoints = append(checkpoints, checkpoint)
 	}
 	return checkpoints, nil
@@ -332,4 +341,19 @@ func (s *Store) SaveCheckpoints(checkpoints ...*state.Checkpoint) error {
 	}
 	batch.Write()
 	return nil
+}
+
+func setSupLinkToCheckpoint(c *state.Checkpoint, supLinks types.SupLinks) {
+	for _, supLink := range supLinks {
+		var signatures [consensus.NumOfValidators]string
+		for i, signature := range supLink.Signatures {
+			signatures[i] = hex.EncodeToString(signature)
+		}
+
+		c.SupLinks = append(c.SupLinks, &state.SupLink{
+			SourceHeight: supLink.SourceHeight,
+			SourceHash:   supLink.SourceHash,
+			Signatures:   signatures,
+		})
+	}
 }

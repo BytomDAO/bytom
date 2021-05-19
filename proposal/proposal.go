@@ -30,13 +30,14 @@ const (
 )
 
 // NewBlockTemplate returns a new block template that is ready to be solved
-func NewBlockTemplate(chain *protocol.Chain, accountManager *account.Manager, timestamp uint64, warnDuration, criticalDuration time.Duration) (*types.Block, error) {
-	builder := newBlockBuilder(chain, accountManager, timestamp, warnDuration, criticalDuration)
+func NewBlockTemplate(chain *protocol.Chain, validator *state.Validator, accountManager *account.Manager, timestamp uint64, warnDuration, criticalDuration time.Duration) (*types.Block, error) {
+	builder := newBlockBuilder(chain, validator, accountManager, timestamp, warnDuration, criticalDuration)
 	return builder.build()
 }
 
 type blockBuilder struct {
 	chain          *protocol.Chain
+	validator      *state.Validator
 	accountManager *account.Manager
 
 	block    *types.Block
@@ -48,7 +49,7 @@ type blockBuilder struct {
 	gasLeft           int64
 }
 
-func newBlockBuilder(chain *protocol.Chain, accountManager *account.Manager, timestamp uint64, warnDuration, criticalDuration time.Duration) *blockBuilder {
+func newBlockBuilder(chain *protocol.Chain, validator *state.Validator, accountManager *account.Manager, timestamp uint64, warnDuration, criticalDuration time.Duration) *blockBuilder {
 	preBlockHeader := chain.BestBlockHeader()
 	block := &types.Block{
 		BlockHeader: types.BlockHeader{
@@ -62,6 +63,7 @@ func newBlockBuilder(chain *protocol.Chain, accountManager *account.Manager, tim
 
 	builder := &blockBuilder{
 		chain:             chain,
+		validator:         validator,
 		accountManager:    accountManager,
 		block:             block,
 		utxoView:          state.NewUtxoViewpoint(),
@@ -86,7 +88,8 @@ func (b *blockBuilder) build() (*types.Block, error) {
 		return nil, err
 	}
 
-	b.chain.SignBlockHeader(&b.block.BlockHeader)
+	blockHeader := &b.block.BlockHeader
+	b.chain.SignBlockHeader(blockHeader)
 	return b.block, nil
 }
 

@@ -1,12 +1,14 @@
 package protocol
 
 import (
+	"encoding/hex"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/event"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
@@ -31,13 +33,14 @@ type Chain struct {
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
-func NewChain(store Store, txPool *TxPool) (*Chain, error) {
-	return NewChainWithOrphanManage(store, txPool, NewOrphanManage())
+func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher) (*Chain, error) {
+	return NewChainWithOrphanManage(store, txPool, NewOrphanManage(), eventDispatcher)
 }
 
-func NewChainWithOrphanManage(store Store, txPool *TxPool, manage *OrphanManage) (*Chain, error) {
+func NewChainWithOrphanManage(store Store, txPool *TxPool, manage *OrphanManage, eventDispatcher *event.Dispatcher) (*Chain, error) {
 	c := &Chain{
 		orphanManage:     manage,
+		eventDispatcher:  eventDispatcher,
 		txPool:           txPool,
 		store:            store,
 		rollbackNotifyCh: make(chan interface{}),
@@ -142,20 +145,25 @@ func (c *Chain) latestBestBlockHash() *bc.Hash {
 	return &hash
 }
 
-// GetBlocker return blocker by specified blockHash and timestamp
-func (c *Chain) GetBlocker(blockHash *bc.Hash, timeStamp uint64) (string, error) {
-	prevCheckpoint, err := c.casper.prevCheckpoint(blockHash)
+// GetValidator return validator by specified blockHash and timestamp
+func (c *Chain) GetValidator(prevHash *bc.Hash, timeStamp uint64) (*state.Validator, error) {
+	prevCheckpoint, err := c.casper.prevCheckpointByPrevHash(prevHash)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	validators := prevCheckpoint.Validators()
 	startTimestamp := prevCheckpoint.Timestamp + consensus.ActiveNetParams.BlockTimeInterval
-	order := getBlockerOrder(startTimestamp, timeStamp, uint64(len(validators)))
-	return validators[order].PubKey, nil
+	order := getValidatorOrder(startTimestamp, timeStamp, uint64(len(validators)))
+	for _, validator := range validators {
+		if validator.Order == int(order) {
+			return validator, nil
+		}
+	}
+	return nil, errors.New("get blocker failure")
 }
 
-func getBlockerOrder(startTimestamp, blockTimestamp, numOfConsensusNode uint64) uint64 {
+func getValidatorOrder(startTimestamp, blockTimestamp, numOfConsensusNode uint64) uint64 {
 	// One round of product block time for all consensus nodes
 	roundBlockTime := state.BlocksOfEpoch * numOfConsensusNode * consensus.ActiveNetParams.BlockTimeInterval
 	// The start time of the last round of product block
@@ -180,11 +188,41 @@ func (c *Chain) GetBlockIndex() *state.BlockIndex {
 }
 
 func (c *Chain) SignBlockHeader(blockHeader *types.BlockHeader) {
-	c.cond.L.Lock()
-	defer c.cond.L.Unlock()
 	xprv := config.CommonConfig.PrivateKey()
 	signature := xprv.Sign(blockHeader.Hash().Bytes())
 	blockHeader.Set(signature)
+}
+
+func (c *Chain) AddMyVerification(blockHeader *types.BlockHeader, validatorOrder int) error {
+	if blockHeader.Height%state.BlocksOfEpoch != 0 {
+		return nil
+	}
+
+	blockHash := blockHeader.Hash()
+	target, err := c.store.GetCheckpoint(&blockHash)
+	if err != nil {
+		return err
+	}
+
+	v, err := c.casper.myVerification(target, validatorOrder)
+	if err != nil {
+		return err
+	}
+
+	signature, err := hex.DecodeString(v.Signature)
+	if err != nil {
+		return err
+	}
+
+	var signatures [consensus.NumOfValidators][]byte
+	signatures[validatorOrder] = signature
+
+	blockHeader.SupLinks = append(blockHeader.SupLinks, &types.SupLink{
+		SourceHeight: v.SourceHeight,
+		SourceHash:   v.SourceHash,
+		Signatures:   signatures,
+	})
+	return nil
 }
 
 // This function must be called with mu lock in above level

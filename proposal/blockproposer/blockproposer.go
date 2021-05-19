@@ -67,19 +67,19 @@ func (b *BlockProposer) generateBlocks() {
 			nextBlockTime += consensus.ActiveNetParams.BlockTimeInterval
 		}
 
-		blocker, err := b.chain.GetBlocker(&bestBlockHash, nextBlockTime)
+		validator, err := b.chain.GetValidator(&bestBlockHash, nextBlockTime)
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "error": err, "pubKey": xpubStr}).Error("fail on check is next blocker")
 			continue
 		}
 
-		if xpubStr != blocker {
+		if xpubStr != validator.PubKey {
 			continue
 		}
 
 		warnDuration := time.Duration(consensus.ActiveNetParams.BlockTimeInterval*warnTimeNum/warnTimeDenom) * time.Millisecond
 		criticalDuration := time.Duration(consensus.ActiveNetParams.BlockTimeInterval*criticalTimeNum/criticalTimeDenom) * time.Millisecond
-		block, err := proposal.NewBlockTemplate(b.chain, b.accountManager, nextBlockTime, warnDuration, criticalDuration)
+		block, err := proposal.NewBlockTemplate(b.chain, validator, b.accountManager, nextBlockTime, warnDuration, criticalDuration)
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "error": err}).Error("failed on create NewBlockTemplate")
 			continue

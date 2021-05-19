@@ -28,7 +28,7 @@ func MockChain(testDB dbm.DB) (*protocol.Chain, *database.Store, *protocol.TxPoo
 	store := database.NewStore(testDB)
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
-	chain, err := protocol.NewChain(store, txPool)
+	chain, err := protocol.NewChain(store, txPool, dispatcher)
 	return chain, store, txPool, err
 }
 
