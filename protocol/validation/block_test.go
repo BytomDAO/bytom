@@ -20,31 +20,31 @@ func TestCheckBlockTime(t *testing.T) {
 		err        error
 	}{
 		{
-			blockTime:  1520000001,
+			blockTime:  1520006000,
 			parentTime: []uint64{1520000000},
 			err:        nil,
 		},
 		{
-			desc:       "timestamp less than past median time (blocktest#1005)",
-			blockTime:  1510000094,
-			parentTime: []uint64{1520000000, 1510000099, 1510000098, 1510000097, 1510000096, 1510000095, 1510000094, 1510000093, 1510000092, 1510000091, 1510000090},
+			desc:       "timestamp less than past median time",
+			blockTime:  1520006000,
+			parentTime: []uint64{1520000000, 1520000500, 1520001000, 1520001500, 1520002000, 1520002500, 1520003000, 1520003500, 1520004000, 1520004500, 1520005000},
+			err:        nil,
+		},
+		{
+			desc:       "timestamp greater than max limit",
+			blockTime:  99999999990000,
+			parentTime: []uint64{15200000000000},
 			err:        errBadTimestamp,
 		},
 		{
-			desc:       "timestamp greater than max limit (blocktest#1006)",
-			blockTime:  9999999999,
-			parentTime: []uint64{1520000000},
-			err:        errBadTimestamp,
-		},
-		{
-			desc:       "timestamp of the block and the parent block are both greater than max limit (blocktest#1007)",
-			blockTime:  uint64(time.Now().Unix()) + consensus.MaxTimeOffsetSeconds + 2,
-			parentTime: []uint64{uint64(time.Now().Unix()) + consensus.MaxTimeOffsetSeconds + 1},
+			desc:       "timestamp of the block and the parent block are both greater than max limit",
+			blockTime:  uint64(time.Now().UnixNano()/int64(time.Millisecond)) + consensus.ActiveNetParams.MaxTimeOffsetMs + 2000,
+			parentTime: []uint64{uint64(time.Now().UnixNano()/int64(time.Millisecond)) + consensus.ActiveNetParams.MaxTimeOffsetMs + 1000},
 			err:        errBadTimestamp,
 		},
 	}
 
-	parent := &state.BlockNode{Version: 1}
+	parent := &types.BlockHeader{Version: 1}
 	block := &bc.Block{
 		BlockHeader: &bc.BlockHeader{Version: 1},
 	}
@@ -53,8 +53,9 @@ func TestCheckBlockTime(t *testing.T) {
 		parent.Timestamp = c.parentTime[0]
 		parentSuccessor := parent
 		for i := 1; i < len(c.parentTime); i++ {
-			parentSuccessor.Parent = &state.BlockNode{Version: 1, Timestamp: c.parentTime[i]}
-			parentSuccessor = parentSuccessor.Parent
+			Previous := &types.BlockHeader{Version: 1, Timestamp: c.parentTime[i]}
+			parentSuccessor.PreviousBlockHash = Previous.Hash()
+			parentSuccessor = Previous
 		}
 
 		block.Timestamp = c.blockTime
@@ -153,7 +154,7 @@ func TestValidateBlockHeader(t *testing.T) {
 				BlockHeader: &bc.BlockHeader{
 					Version:         1,
 					Height:          1,
-					Timestamp:       1523352601,
+					Timestamp:       1523358600,
 					PreviousBlockId: &bc.Hash{V0: 0},
 				},
 			},
@@ -230,7 +231,7 @@ func TestValidateBlock(t *testing.T) {
 				BlockHeader: &bc.BlockHeader{
 					Version:          1,
 					Height:           1,
-					Timestamp:        1523352601,
+					Timestamp:        1523358600,
 					PreviousBlockId:  &bc.Hash{V0: 0},
 					TransactionsRoot: &bc.Hash{V0: 1},
 				},
@@ -258,7 +259,7 @@ func TestValidateBlock(t *testing.T) {
 				BlockHeader: &bc.BlockHeader{
 					Version:          1,
 					Height:           1,
-					Timestamp:        1523352601,
+					Timestamp:        1523358600,
 					PreviousBlockId:  &bc.Hash{V0: 0},
 					TransactionsRoot: &bc.Hash{V0: 6294987741126419124, V1: 12520373106916389157, V2: 5040806596198303681, V3: 1151748423853876189},
 				},
@@ -286,7 +287,7 @@ func TestValidateBlock(t *testing.T) {
 				BlockHeader: &bc.BlockHeader{
 					Version:         1,
 					Height:          1,
-					Timestamp:       1523352601,
+					Timestamp:       1523358600,
 					PreviousBlockId: &bc.Hash{V0: 0},
 				},
 				Transactions: []*bc.Tx{
@@ -337,7 +338,7 @@ func TestGasOverBlockLimit(t *testing.T) {
 		BlockHeader: &bc.BlockHeader{
 			Version:          1,
 			Height:           1,
-			Timestamp:        1523352601,
+			Timestamp:        1523358600,
 			PreviousBlockId:  &bc.Hash{V0: 0},
 			TransactionsRoot: &bc.Hash{V0: 1},
 		},

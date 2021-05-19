@@ -1,7 +1,6 @@
 package protocol
 
 import (
-	"encoding/hex"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -191,38 +190,6 @@ func (c *Chain) SignBlockHeader(blockHeader *types.BlockHeader) {
 	xprv := config.CommonConfig.PrivateKey()
 	signature := xprv.Sign(blockHeader.Hash().Bytes())
 	blockHeader.Set(signature)
-}
-
-func (c *Chain) AddMyVerification(blockHeader *types.BlockHeader, validatorOrder int) error {
-	if blockHeader.Height%state.BlocksOfEpoch != 0 {
-		return nil
-	}
-
-	blockHash := blockHeader.Hash()
-	target, err := c.store.GetCheckpoint(&blockHash)
-	if err != nil {
-		return err
-	}
-
-	v, err := c.casper.myVerification(target, validatorOrder)
-	if err != nil {
-		return err
-	}
-
-	signature, err := hex.DecodeString(v.Signature)
-	if err != nil {
-		return err
-	}
-
-	var signatures [consensus.NumOfValidators][]byte
-	signatures[validatorOrder] = signature
-
-	blockHeader.SupLinks = append(blockHeader.SupLinks, &types.SupLink{
-		SourceHeight: v.SourceHeight,
-		SourceHash:   v.SourceHash,
-		Signatures:   signatures,
-	})
-	return nil
 }
 
 // This function must be called with mu lock in above level
