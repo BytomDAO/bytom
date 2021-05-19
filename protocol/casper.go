@@ -70,6 +70,10 @@ func (c *Casper) BestChain() (uint64, bc.Hash) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
+	return c.bestChain()
+}
+
+func (c *Casper) bestChain() (uint64, bc.Hash) {
 	// root is init justified
 	root := c.tree.checkpoint
 	bestHeight, bestHash, _ := chainOfMaxJustifiedHeight(c.tree, root.Height)
@@ -87,18 +91,31 @@ func (c *Casper) LastFinalized() (uint64, bc.Hash) {
 
 // Validators return the validators by specified block hash
 // e.g. if the block num of epoch is 100, and the block height corresponding to the block hash is 130, then will return the voting results of height in 0~100
-func (c *Casper) Validators(blockHash *bc.Hash) ([]*state.Validator, error) {
-	hash, err := c.prevCheckpointHash(blockHash)
-	if err != nil {
-		return nil, err
-	}
-
-	checkpoint, err := c.store.GetCheckpoint(hash)
+func (c *Casper) Validators(blockHash *bc.Hash) (map[string]*state.Validator, error) {
+	checkpoint, err := c.prevCheckpoint(blockHash)
 	if err != nil {
 		return nil, err
 	}
 
 	return checkpoint.Validators(), nil
+}
+
+func (c *Casper) prevCheckpoint(blockHash *bc.Hash) (*state.Checkpoint, error) {
+	hash, err := c.prevCheckpointHash(blockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.store.GetCheckpoint(hash)
+}
+
+func (c *Casper) prevCheckpointByPrevHash(prevBlockHash *bc.Hash) (*state.Checkpoint, error) {
+	hash, err := c.prevCheckpointHashByPrevHash(prevBlockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.store.GetCheckpoint(hash)
 }
 
 // EvilValidator represent a validator who broadcast two distinct verification that violate the commandment
@@ -140,37 +157,43 @@ func chainOfMaxJustifiedHeight(node *treeNode, justifiedHeight uint64) (uint64, 
 	return bestHeight, bestHash, maxJustifiedHeight
 }
 
-func isValidator(pubKey string, validators []*state.Validator) bool {
-	for _, v := range validators {
-		if v.PubKey == pubKey {
-			return true
-		}
-	}
-	return false
-}
-
 func (c *Casper) prevCheckpointHash(blockHash *bc.Hash) (*bc.Hash, error) {
 	if data, ok := c.prevCheckpointCache.Get(*blockHash); ok {
 		return data.(*bc.Hash), nil
 	}
 
+	block, err := c.store.GetBlockHeader(blockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := c.prevCheckpointHashByPrevHash(&block.PreviousBlockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	c.prevCheckpointCache.Add(blockHash, result)
+	return result, nil
+}
+
+func (c *Casper) prevCheckpointHashByPrevHash(prevBlockHash *bc.Hash) (*bc.Hash, error) {
+	prevHash := prevBlockHash
 	for {
-		block, err := c.store.GetBlockHeader(blockHash)
+		if data, ok := c.prevCheckpointCache.Get(prevHash); ok {
+			c.prevCheckpointCache.Add(prevBlockHash, data)
+			return data.(*bc.Hash), nil
+		}
+
+		prevBlock, err := c.store.GetBlockHeader(prevHash)
 		if err != nil {
 			return nil, err
 		}
 
-		prevHeight, prevHash := block.Height-1, block.PreviousBlockHash
-		if data, ok := c.prevCheckpointCache.Get(prevHash); ok {
-			c.prevCheckpointCache.Add(blockHash, data)
-			return data.(*bc.Hash), nil
+		if prevBlock.Height%state.BlocksOfEpoch == 0 {
+			c.prevCheckpointCache.Add(prevBlockHash, prevHash)
+			return prevHash, nil
 		}
 
-		if prevHeight%state.BlocksOfEpoch == 0 {
-			c.prevCheckpointCache.Add(blockHash, &prevHash)
-			return &prevHash, nil
-		}
-
-		blockHash = &prevHash
+		prevHash = &prevBlock.PreviousBlockHash
 	}
 }

@@ -30,13 +30,14 @@ const (
 )
 
 // NewBlockTemplate returns a new block template that is ready to be solved
-func NewBlockTemplate(chain *protocol.Chain, accountManager *account.Manager, timestamp uint64, warnDuration, criticalDuration time.Duration) (*types.Block, error) {
-	builder := newBlockBuilder(chain, accountManager, timestamp, warnDuration, criticalDuration)
+func NewBlockTemplate(chain *protocol.Chain, validator *state.Validator, accountManager *account.Manager, timestamp uint64, warnDuration, criticalDuration time.Duration) (*types.Block, error) {
+	builder := newBlockBuilder(chain, validator, accountManager, timestamp, warnDuration, criticalDuration)
 	return builder.build()
 }
 
 type blockBuilder struct {
 	chain          *protocol.Chain
+	validator      *state.Validator
 	accountManager *account.Manager
 
 	block    *types.Block
@@ -48,7 +49,7 @@ type blockBuilder struct {
 	gasLeft           int64
 }
 
-func newBlockBuilder(chain *protocol.Chain, accountManager *account.Manager, timestamp uint64, warnDuration, criticalDuration time.Duration) *blockBuilder {
+func newBlockBuilder(chain *protocol.Chain, validator *state.Validator, accountManager *account.Manager, timestamp uint64, warnDuration, criticalDuration time.Duration) *blockBuilder {
 	preBlockHeader := chain.BestBlockHeader()
 	block := &types.Block{
 		BlockHeader: types.BlockHeader{
@@ -62,6 +63,7 @@ func newBlockBuilder(chain *protocol.Chain, accountManager *account.Manager, tim
 
 	builder := &blockBuilder{
 		chain:             chain,
+		validator:         validator,
 		accountManager:    accountManager,
 		block:             block,
 		utxoView:          state.NewUtxoViewpoint(),
@@ -74,11 +76,13 @@ func newBlockBuilder(chain *protocol.Chain, accountManager *account.Manager, tim
 }
 
 func (b *blockBuilder) build() (*types.Block, error) {
-	if err := b.applyCoinbaseTransaction(); err != nil {
+	b.block.Transactions = []*types.Tx{nil}
+	feeAmount, err := b.applyTransactionFromPool()
+	if err != nil {
 		return nil, err
 	}
 
-	if err := b.applyTransactionFromPool(); err != nil {
+	if err := b.applyCoinbaseTransaction(feeAmount); err != nil {
 		return nil, err
 	}
 
@@ -86,12 +90,13 @@ func (b *blockBuilder) build() (*types.Block, error) {
 		return nil, err
 	}
 
-	b.chain.SignBlockHeader(&b.block.BlockHeader)
+	blockHeader := &b.block.BlockHeader
+	b.chain.SignBlockHeader(blockHeader)
 	return b.block, nil
 }
 
-func (b *blockBuilder) applyCoinbaseTransaction() error {
-	coinbaseTx, err := b.createCoinbaseTx()
+func (b *blockBuilder) applyCoinbaseTransaction(feeAmount uint64) error {
+	coinbaseTx, err := b.createCoinbaseTx(feeAmount)
 	if err != nil {
 		return errors.Wrap(err, "fail on create coinbase tx")
 	}
@@ -101,21 +106,15 @@ func (b *blockBuilder) applyCoinbaseTransaction() error {
 		return err
 	}
 
-	b.block.Transactions = append(b.block.Transactions, coinbaseTx)
+	b.block.Transactions[0] = coinbaseTx
 	b.gasLeft -= gasState.GasUsed
 	return nil
 }
 
-func (b *blockBuilder) applyTransactionFromPool() error {
+func (b *blockBuilder) applyTransactionFromPool() (uint64, error) {
 	txDescList := b.chain.GetTxPool().GetTransactions()
 	sort.Sort(byTime(txDescList))
-
-	poolTxs := make([]*types.Tx, len(txDescList))
-	for i, txDesc := range txDescList {
-		poolTxs[i] = txDesc.Tx
-	}
-
-	return b.applyTransactions(poolTxs, timeoutWarn)
+	return b.applyTransactions(txDescList, timeoutWarn)
 }
 
 func (b *blockBuilder) calculateBlockCommitment() (err error) {
@@ -135,7 +134,7 @@ func (b *blockBuilder) calculateBlockCommitment() (err error) {
 // createCoinbaseTx returns a coinbase transaction paying an appropriate subsidy
 // based on the passed block height to the provided address.  When the address
 // is nil, the coinbase transaction will instead be redeemable by anyone.
-func (b *blockBuilder) createCoinbaseTx() (tx *types.Tx, err error) {
+func (b *blockBuilder) createCoinbaseTx(feeAmount uint64) (tx *types.Tx, err error) {
 	arbitrary := append([]byte{0x00}, []byte(strconv.FormatUint(b.block.Height, 10))...)
 	var script []byte
 	if b.accountManager == nil {
@@ -157,7 +156,8 @@ func (b *blockBuilder) createCoinbaseTx() (tx *types.Tx, err error) {
 		return nil, err
 	}
 
-	if err = builder.AddOutput(types.NewOriginalTxOutput(*consensus.BTMAssetID, 0, script, [][]byte{})); err != nil {
+	coinbaseAmount := consensus.BlockSubsidy(b.block.Height)
+	if err = builder.AddOutput(types.NewOriginalTxOutput(*consensus.BTMAssetID, coinbaseAmount + feeAmount, script, [][]byte{})); err != nil {
 		return nil, err
 	}
 	//TODO: calculate reward to proposer
@@ -180,10 +180,11 @@ func (b *blockBuilder) createCoinbaseTx() (tx *types.Tx, err error) {
 	return tx, nil
 }
 
-func (b *blockBuilder) applyTransactions(txs []*types.Tx, timeoutStatus uint8) error {
+func (b *blockBuilder) applyTransactions(txs []*protocol.TxDesc, timeoutStatus uint8) (uint64, error) {
+	var feeAmount uint64
 	batchTxs := []*types.Tx{}
 	for i := 0; i < len(txs); i++ {
-		if batchTxs = append(batchTxs, txs[i]); len(batchTxs) < batchApplyNum && i != len(txs)-1 {
+		if batchTxs = append(batchTxs, txs[i].Tx); len(batchTxs) < batchApplyNum && i != len(txs)-1 {
 			continue
 		}
 
@@ -200,11 +201,12 @@ func (b *blockBuilder) applyTransactions(txs []*types.Tx, timeoutStatus uint8) e
 
 		b.gasLeft = gasLeft
 		batchTxs = batchTxs[:0]
+		feeAmount += txs[i].Fee
 		if b.getTimeoutStatus() >= timeoutStatus || len(b.block.Transactions) > softMaxTxNum {
 			break
 		}
 	}
-	return nil
+	return feeAmount, nil
 }
 
 type validateTxResult struct {

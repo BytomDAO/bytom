@@ -91,8 +91,10 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		return err
 	}
 
-	if err := c.broadcastVerification(verification); err != nil {
-		return err
+	if verification != nil {
+		if err := c.broadcastVerification(verification); err != nil {
+			return err
+		}
 	}
 
 	contractView := state.NewContractViewpoint()

@@ -11,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
 	browser "github.com/toqueteos/webbrowser"
+	"github.com/bytom/bytom/proposal/blockproposer"
 	"github.com/prometheus/prometheus/util/flock"
 
 	"github.com/bytom/bytom/accesstoken"
@@ -51,6 +52,8 @@ type Node struct {
 	notificationMgr *websocket.WSNotificationManager
 	api             *api.API
 	chain           *protocol.Chain
+	blockProposer   *blockproposer.BlockProposer
+	miningEnable    bool
 	txfeed          *txfeed.Tracker
 }
 
@@ -81,7 +84,7 @@ func NewNode(config *cfg.Config) *Node {
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
 
-	chain, err := protocol.NewChain(store, txPool)
+	chain, err := protocol.NewChain(store, txPool, dispatcher)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
 	}
@@ -147,13 +150,14 @@ func NewNode(config *cfg.Config) *Node {
 		accessTokens:    accessTokens,
 		wallet:          wallet,
 		chain:           chain,
+		miningEnable:    config.Mining,
 		txfeed:          txFeed,
 
 		notificationMgr: notificationMgr,
 	}
 
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
-
+	node.blockProposer = blockproposer.NewBlockProposer(chain, accounts, dispatcher)
 	return node
 }
 
@@ -189,7 +193,7 @@ func launchWebBrowser(port string) {
 }
 
 func (n *Node) initAndstartAPIServer() {
-	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.chain, n.config, n.accessTokens, n.eventDispatcher, n.notificationMgr)
+	n.api = api.NewAPI(n.syncManager, n.wallet, n.blockProposer, n.txfeed, n.chain, n.config, n.accessTokens, n.eventDispatcher, n.notificationMgr)
 
 	listenAddr := env.String("LISTEN", n.config.ApiAddress)
 	env.Parse()
@@ -197,6 +201,14 @@ func (n *Node) initAndstartAPIServer() {
 }
 
 func (n *Node) OnStart() error {
+	if n.miningEnable {
+		if _, err := n.wallet.AccountMgr.GetMiningAddress(); err != nil {
+			n.miningEnable = false
+			log.Error(err)
+		} else {
+			n.blockProposer.Start()
+		}
+	}
 	if !n.config.VaultMode {
 		if err := n.syncManager.Start(); err != nil {
 			return err
@@ -223,6 +235,9 @@ func (n *Node) OnStop() {
 	n.notificationMgr.Shutdown()
 	n.notificationMgr.WaitForShutdown()
 	n.BaseService.OnStop()
+	if n.miningEnable {
+		n.blockProposer.Stop()
+	}
 	if !n.config.VaultMode {
 		n.syncManager.Stop()
 	}

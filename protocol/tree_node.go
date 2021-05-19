@@ -25,6 +25,7 @@ func makeTree(root *state.Checkpoint, successors []*state.Checkpoint) *treeNode 
 		node := nodes[0]
 		for _, successor := range parentToSuccessors[node.checkpoint.Hash] {
 			child := &treeNode{checkpoint: successor}
+			successor.Parent = node.checkpoint
 			node.children = append(node.children, child)
 			nodes = append(nodes, child)
 		}

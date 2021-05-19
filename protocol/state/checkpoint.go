@@ -3,6 +3,7 @@ package state
 import (
 	"sort"
 
+	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/protocol/bc"
 )
 
@@ -10,7 +11,6 @@ const (
 	// BlocksOfEpoch represent the block num in one epoch
 	BlocksOfEpoch   = 100
 	minMortgage     = 1000000
-	numOfValidators = 10
 )
 
 // CheckpointStatus represent current status of checkpoint
@@ -35,12 +35,18 @@ const (
 type SupLink struct {
 	SourceHeight uint64
 	SourceHash   bc.Hash
-	Signatures   map[string]string // pubKey to signature
+	Signatures   [consensus.NumOfValidators]string
 }
 
 // IsMajority if at least 2/3 of validators have published votes with sup link
 func (s *SupLink) IsMajority() bool {
-	return len(s.Signatures) > numOfValidators*2/3
+	numOfSignatures := 0
+	for _, signature := range s.Signatures {
+		if signature != "" {
+			numOfSignatures++
+		}
+	}
+	return numOfSignatures > consensus.NumOfValidators*2/3
 }
 
 // Checkpoint represent the block/hash under consideration for finality for a given epoch.
@@ -52,45 +58,56 @@ type Checkpoint struct {
 	Hash       bc.Hash
 	ParentHash bc.Hash
 	// only save in the memory, not be persisted
-	Parent         *Checkpoint `json:"-"`
-	StartTimestamp uint64
-	SupLinks       []*SupLink
-	Status         CheckpointStatus
+	Parent    *Checkpoint `json:"-"`
+	Timestamp uint64
+	SupLinks  []*SupLink  `json:"-"`
+	Status    CheckpointStatus
 
 	Votes      map[string]uint64 // putKey -> num of vote
 	Guaranties map[string]uint64 // pubKey -> num of guaranty
 }
 
 // AddVerification add a valid verification to checkpoint's supLink
-func (c *Checkpoint) AddVerification(sourceHash bc.Hash, sourceHeight uint64, pubKey, signature string) *SupLink {
+func (c *Checkpoint) AddVerification(sourceHash bc.Hash, sourceHeight uint64, validatorOrder int, signature string) *SupLink {
 	for _, supLink := range c.SupLinks {
 		if supLink.SourceHash == sourceHash {
-			supLink.Signatures[pubKey] = signature
+			supLink.Signatures[validatorOrder] = signature
 			return supLink
 		}
 	}
 	supLink := &SupLink{
 		SourceHeight: sourceHeight,
 		SourceHash:   sourceHash,
-		Signatures:   map[string]string{pubKey: signature},
 	}
+	supLink.Signatures[validatorOrder] = signature
 	c.SupLinks = append(c.SupLinks, supLink)
 	return supLink
+}
+
+// ContainsVerification return whether the specified validator has add verification to current checkpoint
+func (c *Checkpoint) ContainsVerification(sourceHash bc.Hash, validatorOrder int) bool {
+	for _, supLink := range c.SupLinks {
+		if supLink.SourceHash == sourceHash && supLink.Signatures[validatorOrder] != "" {
+			return true
+		}
+	}
+	return false
 }
 
 // Validator represent the participants of the PoS network
 // Responsible for block generation and verification
 type Validator struct {
 	PubKey   string
+	Order    int
 	Vote     uint64
 	Guaranty uint64
 }
 
 // Validators return next epoch of validators, if the status of checkpoint is growing, return empty
-func (c *Checkpoint) Validators() []*Validator {
+func (c *Checkpoint) Validators() map[string]*Validator {
 	var validators []*Validator
 	if c.Status == Growing {
-		return validators
+		return nil
 	}
 
 	for pubKey, mortgageNum := range c.Guaranties {
@@ -107,9 +124,12 @@ func (c *Checkpoint) Validators() []*Validator {
 		return validators[i].Guaranty+validators[i].Vote > validators[j].Guaranty+validators[j].Vote
 	})
 
-	end := numOfValidators
-	if len(validators) < numOfValidators {
-		end = len(validators)
+	result := make(map[string]*Validator)
+	for i := 0; i < len(validators) && i < consensus.NumOfValidators; i++ {
+		validator := validators[i]
+		validator.Order = i
+		result[validator.PubKey] = validator
 	}
-	return validators[:end]
+
+	return result
 }

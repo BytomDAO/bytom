@@ -1,7 +1,6 @@
 package p2p
 
 import (
-	"crypto/ed25519"
 	"fmt"
 	"net"
 	"sync"
@@ -90,7 +89,7 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 	if !config.VaultMode {
 		// Create listener
 		l, listenAddr = GetListener(config.P2P)
-		discv, err = dht.NewDiscover(config, ed25519.PrivateKey(bytes), l.ExternalAddress().Port)
+		discv, err = dht.NewDiscover(config, bytes, l.ExternalAddress().Port)
 		if err != nil {
 			return nil, err
 		}

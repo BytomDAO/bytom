@@ -3,6 +3,7 @@ package dht
 import (
 	"bytes"
 	"crypto"
+	"crypto/ed25519"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -117,7 +118,7 @@ type timeoutEvent struct {
 
 func newNetwork(conn transport, ourPubkey crypto.PublicKey, dbPath string, netrestrict *netutil.Netlist) (*Network, error) {
 	var ourID NodeID
-	copy(ourID[:], ourPubkey.([]byte)[:nodeIDBits])
+	copy(ourID[:], ourPubkey.(ed25519.PublicKey)[:nodeIDBits])
 
 	var db *nodeDB
 	if dbPath != "<no database>" {

@@ -24,14 +24,15 @@ var (
 	errVersionRegression     = errors.New("version regression")
 )
 
-func checkBlockTime(b *bc.Block, parent *state.BlockNode) error {
-	if b.Timestamp > uint64(time.Now().Unix())+consensus.MaxTimeOffsetSeconds {
+func checkBlockTime(b *bc.Block, parent *types.BlockHeader) error {
+	now := uint64(time.Now().UnixNano() / 1e6)
+	if b.Timestamp < (parent.Timestamp + consensus.ActiveNetParams.BlockTimeInterval) {
+		return errBadTimestamp
+	}
+	if b.Timestamp > (now + consensus.ActiveNetParams.MaxTimeOffsetMs) {
 		return errBadTimestamp
 	}
 
-	if b.Timestamp <= parent.CalcPastMedianTime() {
-		return errBadTimestamp
-	}
 	return nil
 }
 
@@ -69,7 +70,7 @@ func ValidateBlockHeader(b *bc.Block, parent *state.BlockNode) error {
 		return errors.WithDetailf(errMismatchedBlock, "previous block ID %x, current block wants %x", parent.Hash.Bytes(), b.PreviousBlockId.Bytes())
 	}
 
-	if err := checkBlockTime(b, parent); err != nil {
+	if err := checkBlockTime(b, parent.BlockHeader()); err != nil {
 		return err
 	}
 	return nil

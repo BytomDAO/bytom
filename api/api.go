@@ -25,6 +25,7 @@ import (
 	"github.com/bytom/bytom/net/websocket"
 	"github.com/bytom/bytom/netsync/peers"
 	"github.com/bytom/bytom/p2p"
+	"github.com/bytom/bytom/proposal/blockproposer"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/wallet"
 )
@@ -111,6 +112,7 @@ type API struct {
 	chain           *protocol.Chain
 	server          *http.Server
 	handler         http.Handler
+	blockProposer   *blockproposer.BlockProposer
 	txFeedTracker   *txfeed.Tracker
 	notificationMgr *websocket.WSNotificationManager
 	eventDispatcher *event.Dispatcher
@@ -178,12 +180,13 @@ type NetSync interface {
 }
 
 // NewAPI create and initialize the API
-func NewAPI(sync NetSync, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, dispatcher *event.Dispatcher, notificationMgr *websocket.WSNotificationManager) *API {
+func NewAPI(sync NetSync, wallet *wallet.Wallet, blockProposer *blockproposer.BlockProposer, txfeeds *txfeed.Tracker, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, dispatcher *event.Dispatcher, notificationMgr *websocket.WSNotificationManager) *API {
 	api := &API{
 		sync:            sync,
 		wallet:          wallet,
 		chain:           chain,
 		accessTokens:    token,
+		blockProposer:   blockProposer,
 		txFeedTracker:   txfeeds,
 		eventDispatcher: dispatcher,
 		notificationMgr: notificationMgr,
@@ -213,6 +216,9 @@ func (a *API) buildHandler() {
 		m.Handle("/list-addresses", jsonHandler(a.listAddresses))
 		m.Handle("/validate-address", jsonHandler(a.validateAddress))
 		m.Handle("/list-pubkeys", jsonHandler(a.listPubKeys))
+
+		m.Handle("/get-mining-address", jsonHandler(a.getMiningAddress))
+		m.Handle("/set-mining-address", jsonHandler(a.setMiningAddress))
 
 		m.Handle("/create-asset", jsonHandler(a.createAsset))
 		m.Handle("/update-asset-alias", jsonHandler(a.updateAssetAlias))
@@ -282,6 +288,9 @@ func (a *API) buildHandler() {
 	m.Handle("/get-block-hash", jsonHandler(a.getBestBlockHash))
 	m.Handle("/get-block-header", jsonHandler(a.getBlockHeader))
 	m.Handle("/get-block-count", jsonHandler(a.getBlockCount))
+
+	m.Handle("/is-mining", jsonHandler(a.isMining))
+	m.Handle("/set-mining", jsonHandler(a.setMining))
 
 	m.Handle("/verify-message", jsonHandler(a.verifyMessage))
 	m.Handle("/compile", jsonHandler(a.compileEquity))

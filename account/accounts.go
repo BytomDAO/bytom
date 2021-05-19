@@ -541,6 +541,36 @@ func (m *Manager) GetLocalCtrlProgramByAddress(address string) (*CtrlProgram, er
 	return cp, json.Unmarshal(rawProgram, cp)
 }
 
+// GetMiningAddress will return the mining address
+func (m *Manager) GetMiningAddress() (string, error) {
+	cp, err := m.GetCoinbaseCtrlProgram()
+	if err != nil {
+		return "", err
+	}
+
+	return cp.Address, nil
+}
+
+// SetMiningAddress will set the mining address
+func (m *Manager) SetMiningAddress(miningAddress string) (string, error) {
+	program, err := m.getProgramByAddress(miningAddress)
+	if err != nil {
+		return "", err
+	}
+
+	cp := &CtrlProgram{
+		Address:        miningAddress,
+		ControlProgram: program,
+	}
+	rawCP, err := json.Marshal(cp)
+	if err != nil {
+		return "", err
+	}
+
+	m.db.Set(miningAddressKey, rawCP)
+	return m.GetMiningAddress()
+}
+
 // IsLocalControlProgram check is the input control program belong to local
 func (m *Manager) IsLocalControlProgram(prog []byte) bool {
 	var hash common.Hash

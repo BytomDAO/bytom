@@ -11,6 +11,20 @@ import (
 // SupLinks is alias of SupLink slice
 type SupLinks []*SupLink
 
+// AddSupLink used to add a supLink by specified validator
+func (s *SupLinks) AddSupLink(sourceHeight uint64, sourceHash bc.Hash, signature []byte, validatorOrder int) {
+	for _, supLink := range *s {
+		if supLink.SourceHash == sourceHash {
+			supLink.Signatures[validatorOrder] = signature
+			return
+		}
+	}
+
+	supLink := &SupLink{SourceHeight: sourceHeight, SourceHash: sourceHash}
+	supLink.Signatures[validatorOrder] = signature
+	*s = append(*s, supLink)
+}
+
 func (s *SupLinks) readFrom(r *blockchain.Reader) (err error) {
 	size, err := blockchain.ReadVarint31(r)
 	if err != nil {

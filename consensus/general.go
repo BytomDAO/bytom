@@ -7,7 +7,7 @@ import (
 	"github.com/bytom/bytom/protocol/bc"
 )
 
-//consensus variables
+// consensus variables
 const (
 	// Max gas that one block contains
 	MaxBlockGas      = uint64(10000000)
@@ -17,7 +17,7 @@ const (
 	DefaultGasCredit = int64(30000)
 	NumOfValidators  = int(10)
 
-	//config parameter for coinbase reward
+	// config parameter for coinbase reward
 	CoinbasePendingBlockNumber = uint64(100)
 	subsidyReductionInterval   = uint64(840000)
 	baseSubsidy                = uint64(41250000000)
@@ -40,6 +40,9 @@ const (
 type CasperConfig struct {
 	// BlockTimeInterval, milliseconds, the block time interval for producing a block
 	BlockTimeInterval uint64
+
+	// MaxTimeOffsetMs represent the max number of seconds a block time is allowed to be ahead of the current time
+	MaxTimeOffsetMs uint64
 }
 
 // BTMAssetID is BTM's asset id, the soul asset of Bytom
@@ -123,6 +126,7 @@ var MainNetParams = Params{
 	Bech32HRPSegwit: "bm",
 	DefaultPort:     "46657",
 	DNSSeeds:        []string{"www.mainnetseed.bytom.io"},
+	CasperConfig:    CasperConfig{BlockTimeInterval: 6000, MaxTimeOffsetMs: 24000},
 	Checkpoints: []Checkpoint{
 		{10000, bc.NewHash([32]byte{0x93, 0xe1, 0xeb, 0x78, 0x21, 0xd2, 0xb4, 0xad, 0x0f, 0x5b, 0x1c, 0xea, 0x82, 0xe8, 0x43, 0xad, 0x8c, 0x09, 0x9a, 0xb6, 0x5d, 0x8f, 0x70, 0xc5, 0x84, 0xca, 0xa2, 0xdd, 0xf1, 0x74, 0x65, 0x2c})},
 		{20000, bc.NewHash([32]byte{0x7d, 0x38, 0x61, 0xf3, 0x2c, 0xc0, 0x03, 0x81, 0xbb, 0xcd, 0x9a, 0x37, 0x6f, 0x10, 0x5d, 0xfe, 0x6f, 0xfe, 0x2d, 0xa5, 0xea, 0x88, 0xa5, 0xe3, 0x42, 0xed, 0xa1, 0x17, 0x9b, 0xa8, 0x0b, 0x7c})},
@@ -161,6 +165,7 @@ var TestNetParams = Params{
 	Bech32HRPSegwit: "tm",
 	DefaultPort:     "46656",
 	DNSSeeds:        []string{"www.testnetseed.bytom.io"},
+	CasperConfig:    CasperConfig{BlockTimeInterval: 6000, MaxTimeOffsetMs: 24000},
 	Checkpoints: []Checkpoint{
 		{10303, bc.NewHash([32]byte{0x3e, 0x94, 0x5d, 0x35, 0x70, 0x30, 0xd4, 0x3b, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c})},
 		{40000, bc.NewHash([32]byte{0x6b, 0x13, 0x9a, 0x5b, 0x76, 0x77, 0x9b, 0xd4, 0x1c, 0xec, 0x53, 0x68, 0x44, 0xbf, 0xf4, 0x48, 0x94, 0x3d, 0x16, 0xe3, 0x9b, 0x2e, 0xe8, 0xa1, 0x0f, 0xa0, 0xbc, 0x7d, 0x2b, 0x17, 0x55, 0xfc})},
@@ -182,5 +187,6 @@ var TestNetParams = Params{
 var SoloNetParams = Params{
 	Name:            "solo",
 	Bech32HRPSegwit: "sm",
+	CasperConfig:    CasperConfig{BlockTimeInterval: 6000, MaxTimeOffsetMs: 24000},
 	Checkpoints:     []Checkpoint{},
 }
