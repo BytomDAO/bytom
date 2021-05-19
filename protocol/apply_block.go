@@ -267,6 +267,7 @@ func (c *Casper) lastJustifiedCheckpointOfBranch(branch *state.Checkpoint) *stat
 		case state.Justified:
 			return parent
 		}
+		parent = parent.Parent
 	}
 	return nil
 }

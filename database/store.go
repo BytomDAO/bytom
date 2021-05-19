@@ -337,6 +337,15 @@ func (s *Store) SaveCheckpoints(checkpoints ...*state.Checkpoint) error {
 			return err
 		}
 
+		if checkpoint.Height % state.BlocksOfEpoch != 1 {
+			header, err := s.GetBlockHeader(&checkpoint.Hash)
+			if err != nil {
+				return err
+			}
+
+			batch.Delete(calcCheckpointKey(header.Height-1, &header.PreviousBlockHash))
+		}
+
 		batch.Set(calcCheckpointKey(checkpoint.Height, &checkpoint.Hash), data)
 	}
 	batch.Write()

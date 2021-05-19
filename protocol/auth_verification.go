@@ -66,6 +66,7 @@ func (c *Casper) authVerification(v *Verification, target *state.Checkpoint, val
 
 func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, validators map[string]*state.Validator, verifications ...*Verification) error {
 	_, oldBestHash := c.bestChain()
+	var affectedCheckpoints []*state.Checkpoint
 	for _, v := range verifications {
 		source, err := c.store.GetCheckpoint(&v.SourceHash)
 		if err != nil {
@@ -82,7 +83,7 @@ func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, validator
 			continue
 		}
 
-		c.setJustified(source, target)
+		affectedCheckpoints = append(affectedCheckpoints, c.setJustified(source, target)...)
 	}
 
 	_, newBestHash := c.bestChain()
@@ -90,7 +91,7 @@ func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, validator
 		c.rollbackNotifyCh <- nil
 	}
 
-	return nil
+	return c.store.SaveCheckpoints(affectedCheckpoints...)
 }
 
 func (c *Casper) saveVerificationToHeader(v *Verification, validatorOrder int) error {
@@ -108,7 +109,9 @@ func (c *Casper) saveVerificationToHeader(v *Verification, validatorOrder int) e
 	return c.store.SaveBlockHeader(blockHeader)
 }
 
-func (c *Casper) setJustified(source, target *state.Checkpoint) {
+// source status is justified, and exist a super majority link from source to target
+func (c *Casper) setJustified(source, target *state.Checkpoint) []*state.Checkpoint {
+	var affectedCheckpoint []*state.Checkpoint
 	target.Status = state.Justified
 	// must direct child
 	if target.Parent.Hash == source.Hash {
@@ -116,10 +119,12 @@ func (c *Casper) setJustified(source, target *state.Checkpoint) {
 	}
 
 	for _, checkpoint := range c.justifyingCheckpoints[target.Hash] {
-		c.setJustified(target, checkpoint)
+		affectedCheckpoint = append(affectedCheckpoint, c.setJustified(target, checkpoint)...)
 	}
 
 	delete(c.justifyingCheckpoints, target.Hash)
+	affectedCheckpoint = append(affectedCheckpoint, source, target)
+	return affectedCheckpoint
 }
 
 func (c *Casper) setFinalized(checkpoint *state.Checkpoint) {
