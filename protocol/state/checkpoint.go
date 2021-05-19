@@ -124,10 +124,6 @@ func (c *Checkpoint) Validators() map[string]*Validator {
 		return validators[i].Guaranty+validators[i].Vote > validators[j].Guaranty+validators[j].Vote
 	})
 
-	for i, validator := range validators {
-		validator.Order = i
-	}
-
 	result := make(map[string]*Validator)
 	for i := 0; i < len(validators) && i < consensus.NumOfValidators; i++ {
 		validator := validators[i]
