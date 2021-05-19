@@ -119,9 +119,6 @@ func (c *Checkpoint) Validators() map[string]*Validator {
 			})
 		}
 	}
-	validators = append(validators, &Validator{
-		PubKey:   "14588a6ca5824b89c9d23c891aff826b2255ba5dbb85997ee5ada6295926d2f9ce9893c613038e127cc6d541ed689949a7cff26c7a636442bbb191d4fe5d8c28",
-	})
 
 	sort.Slice(validators, func(i, j int) bool {
 		return validators[i].Guaranty+validators[i].Vote > validators[j].Guaranty+validators[j].Vote
