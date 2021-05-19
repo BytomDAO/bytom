@@ -12,6 +12,7 @@ package vm
 type Context struct {
 	VMVersion uint64
 	Code      []byte
+	StateData [][]byte
 	Arguments [][]byte
 
 	EntryID []byte
@@ -31,5 +32,5 @@ type Context struct {
 	SpentOutputID *[]byte
 
 	TxSigHash   func() []byte
-	CheckOutput func(index uint64, amount uint64, assetID []byte, vmVersion uint64, code []byte, expansion bool) (bool, error)
+	CheckOutput func(index uint64, amount uint64, assetID []byte, vmVersion uint64, code []byte, state [][]byte, expansion bool) (bool, error)
 }

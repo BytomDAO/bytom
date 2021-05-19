@@ -59,6 +59,12 @@ func Verify(context *Context, gasLimit int64) (gasLeft int64, err error) {
 		runLimit:          gasLimit,
 		context:           context,
 	}
+	stateData := context.StateData
+	for i, state := range stateData {
+		if err = vm.pushAlt(state, false); err != nil {
+			return vm.runLimit, errors.Wrapf(err, "pushing initial statedata %d", i)
+		}
+	}
 
 	args := context.Arguments
 	for i, arg := range args {
@@ -149,6 +155,21 @@ func (vm *virtualMachine) push(data []byte, deferred bool) error {
 		}
 	}
 	vm.dataStack = append(vm.dataStack, data)
+	return nil
+}
+
+func (vm *virtualMachine) pushAlt(data []byte, deferred bool) error {
+	cost := 8 + int64(len(data))
+	if deferred {
+		vm.deferCost(cost)
+	} else {
+		err := vm.applyCost(cost)
+		if err != nil {
+			return err
+		}
+	}
+	vm.altStack = append(vm.altStack, data)
+
 	return nil
 }
 
