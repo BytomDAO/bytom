@@ -39,6 +39,14 @@ func initFiles(cmd *cobra.Command, args []string) {
 		cfg.EnsureRoot(config.RootDir, "solonet")
 	}
 
+	//generate the federation config file
+	fedFilePath := config.FederationFile()
+	if _, err := os.Stat(fedFilePath); os.IsNotExist(err) {
+		if err := cfg.ExportFederationFile(fedFilePath, config); err != nil {
+			log.WithFields(log.Fields{"module": logModule, "config": fedFilePath, "error": err}).Fatal("fail on export federation file")
+		}
+	}
+
 	//generate the node private key
 	keyFilePath := path.Join(config.RootDir, config.PrivateKeyFile)
 	if _, err := os.Stat(keyFilePath); os.IsNotExist(err) {

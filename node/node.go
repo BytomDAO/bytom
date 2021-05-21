@@ -11,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
 	browser "github.com/toqueteos/webbrowser"
+
 	"github.com/bytom/bytom/proposal/blockproposer"
 	"github.com/prometheus/prometheus/util/flock"
 
@@ -59,17 +60,9 @@ type Node struct {
 
 // NewNode create bytom node
 func NewNode(config *cfg.Config) *Node {
-	ctx := context.Background()
-	if err := lockDataDirectory(config); err != nil {
-		cmn.Exit("Error: " + err.Error())
+	if err := initNodeConfig(config); err != nil {
+		cmn.Exit(cmn.Fmt("Failed to init config: %v", err))
 	}
-
-	if err := bytomLog.InitLogFile(config); err != nil {
-		log.WithField("err", err).Fatalln("InitLogFile failed")
-	}
-
-	initActiveNetParams(config)
-	initCommonConfig(config)
 
 	// Get store
 	if config.DBBackend != "memdb" && config.DBBackend != "leveldb" {
@@ -97,7 +90,7 @@ func NewNode(config *cfg.Config) *Node {
 	txFeedDB := dbm.NewDB("txfeeds", config.DBBackend, config.DBDir())
 	txFeed = txfeed.NewTracker(txFeedDB, chain)
 
-	if err = txFeed.Prepare(ctx); err != nil {
+	if err = txFeed.Prepare(context.Background()); err != nil {
 		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("start txfeed")
 		return nil
 	}
@@ -159,6 +152,25 @@ func NewNode(config *cfg.Config) *Node {
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 	node.blockProposer = blockproposer.NewBlockProposer(chain, accounts, dispatcher)
 	return node
+}
+
+func initNodeConfig(config *cfg.Config) error {
+	if err := lockDataDirectory(config); err != nil {
+		cmn.Exit("Error: " + err.Error())
+	}
+
+	if err := bytomLog.InitLogFile(config); err != nil {
+		log.WithField("err", err).Fatalln("InitLogFile failed")
+	}
+
+	if err := cfg.LoadFederationFile(config.FederationFile(), config); err != nil {
+		log.WithField("err", err).Info("Failed to load federated information")
+		return err
+	}
+
+	initActiveNetParams(config)
+	initCommonConfig(config)
+	return nil
 }
 
 // Lock data directory after daemonization

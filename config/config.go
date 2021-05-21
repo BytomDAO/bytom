@@ -22,12 +22,13 @@ type Config struct {
 	// Top level options use an anonymous struct
 	BaseConfig `mapstructure:",squash"`
 	// Options for services
-	P2P       *P2PConfig       `mapstructure:"p2p"`
-	Wallet    *WalletConfig    `mapstructure:"wallet"`
-	Auth      *RPCAuthConfig   `mapstructure:"auth"`
-	Web       *WebConfig       `mapstructure:"web"`
-	Simd      *SimdConfig      `mapstructure:"simd"`
-	Websocket *WebsocketConfig `mapstructure:"ws"`
+	P2P        *P2PConfig        `mapstructure:"p2p"`
+	Wallet     *WalletConfig     `mapstructure:"wallet"`
+	Auth       *RPCAuthConfig    `mapstructure:"auth"`
+	Web        *WebConfig        `mapstructure:"web"`
+	Simd       *SimdConfig       `mapstructure:"simd"`
+	Websocket  *WebsocketConfig  `mapstructure:"ws"`
+	Federation *FederationConfig `mapstructure:"federation"`
 }
 
 // Default configurable parameters.
@@ -40,6 +41,7 @@ func DefaultConfig() *Config {
 		Web:        DefaultWebConfig(),
 		Simd:       DefaultSimdConfig(),
 		Websocket:  DefaultWebsocketConfig(),
+		Federation: DefaultFederationConfig(),
 	}
 }
 
@@ -80,20 +82,20 @@ func (cfg *Config) PrivateKey() *chainkd.XPrv {
 	return cfg.XPrv
 }
 
-//-----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 // BaseConfig
 type BaseConfig struct {
 	// The root directory for all data.
 	// This should be set in viper so it can unmarshal into this struct
 	RootDir string `mapstructure:"home"`
 
-	//The alias of the node
+	// The alias of the node
 	NodeAlias string `mapstructure:"node_alias"`
 
-	//The ID of the network to json
+	// The ID of the network to json
 	ChainID string `mapstructure:"chain_id"`
 
-	//log level to set
+	// log level to set
 	LogLevel string `mapstructure:"log_level"`
 
 	// A custom human readable name for this node
@@ -123,20 +125,23 @@ type BaseConfig struct {
 	PrivateKeyFile string `mapstructure:"private_key_file"`
 	XPrv           *chainkd.XPrv
 	XPub           *chainkd.XPub
+
+	FederationFileName string `mapstructure:"federation_file"`
 }
 
 // Default configurable base parameters.
 func DefaultBaseConfig() BaseConfig {
 	return BaseConfig{
-		Moniker:           "anonymous",
-		ProfListenAddress: "",
-		Mining:            false,
-		DBBackend:         "leveldb",
-		DBPath:            "data",
-		KeysPath:          "keystore",
-		NodeAlias:         "",
-		LogFile:           "log",
-		PrivateKeyFile:    "node_key.txt",
+		Moniker:            "anonymous",
+		ProfListenAddress:  "",
+		Mining:             false,
+		DBBackend:          "leveldb",
+		DBPath:             "data",
+		KeysPath:           "keystore",
+		NodeAlias:          "",
+		LogFile:            "log",
+		PrivateKeyFile:     "node_key.txt",
+		FederationFileName: "federation.json",
 	}
 }
 
@@ -150,6 +155,10 @@ func (b BaseConfig) LogDir() string {
 
 func (b BaseConfig) KeysDir() string {
 	return rootify(b.KeysPath, b.RootDir)
+}
+
+func (b BaseConfig) FederationFile() string {
+	return rootify(b.FederationFileName, b.RootDir)
 }
 
 // P2PConfig
@@ -182,7 +191,7 @@ func DefaultP2PConfig() *P2PConfig {
 	}
 }
 
-//-----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 type WalletConfig struct {
 	Disable  bool   `mapstructure:"disable"`
 	Rescan   bool   `mapstructure:"rescan"`
@@ -205,6 +214,11 @@ type SimdConfig struct {
 type WebsocketConfig struct {
 	MaxNumWebsockets     int `mapstructure:"max_num_websockets"`
 	MaxNumConcurrentReqs int `mapstructure:"max_num_concurrent_reqs"`
+}
+
+type FederationConfig struct {
+	Xpubs  []chainkd.XPub `json:"xpubs"`
+	Quorum int            `json:"quorum"`
 }
 
 // Default configurable rpc's auth parameters.
@@ -245,7 +259,27 @@ func DefaultWebsocketConfig() *WebsocketConfig {
 	}
 }
 
-//-----------------------------------------------------------------------------
+// Default configurable federation parameters.
+func DefaultFederationConfig() *FederationConfig {
+	return &FederationConfig{
+		Xpubs: []chainkd.XPub{
+			xpub("580daf48fa8962100047cb1391da890bb7f2c849fdbc9b368cb4394a4c7cbb0977e2e7ebbf055dc0ef90af6a0d2af01ce7ec56b735d016aab597815ec48552e5"),
+			xpub("f3f6bcf61b65fa9d1566455a5688ca8b395efdc22e654963134b5e5cb0a45d8be522d21abc384a73177a7b9d64eba915fcfe2862d86a508a3c46dc410bdd72ad"),
+			xpub("53559612f2b7bcada18948b7de39d63947a0e2bd7336d07db1350c54ba5743996b84bf9d18ff7a2457e1a5c70ce5013e4a3b62666ddb03294c53051d5f5c70c0"),
+			xpub("7c88cc58adfc71818b08308d43c29de22460b0ea6895449cbec6e458d7dc09e0aea243fa5075ee6621da0d805bd047f6bb207329c5bd2ca3253b172fb323b512"),
+		},
+		Quorum: 2,
+	}
+}
+
+func xpub(str string) (xpub chainkd.XPub) {
+	if err := xpub.UnmarshalText([]byte(str)); err != nil {
+		log.Panicf("Fail converts a string to xpub")
+	}
+	return xpub
+}
+
+// -----------------------------------------------------------------------------
 // Utils
 
 // helper function to make config creation independent of root dir
