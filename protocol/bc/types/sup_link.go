@@ -62,7 +62,7 @@ func (s SupLinks) writeTo(w io.Writer) error {
 type SupLink struct {
 	SourceHeight uint64
 	SourceHash   bc.Hash
-	Signatures   [consensus.NumOfValidators][]byte
+	Signatures   [consensus.MaxNumOfValidators][]byte
 }
 
 func (s *SupLink) readFrom(r *blockchain.Reader) (err error) {
@@ -74,7 +74,7 @@ func (s *SupLink) readFrom(r *blockchain.Reader) (err error) {
 		return err
 	}
 
-	for i := 0; i < consensus.NumOfValidators; i++ {
+	for i := 0; i < consensus.MaxNumOfValidators; i++ {
 		if s.Signatures[i], err = blockchain.ReadVarstr31(r); err != nil {
 			return err
 		}

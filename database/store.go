@@ -354,7 +354,7 @@ func (s *Store) SaveCheckpoints(checkpoints ...*state.Checkpoint) error {
 
 func setSupLinkToCheckpoint(c *state.Checkpoint, supLinks types.SupLinks) {
 	for _, supLink := range supLinks {
-		var signatures [consensus.NumOfValidators]string
+		var signatures [consensus.MaxNumOfValidators]string
 		for i, signature := range supLink.Signatures {
 			signatures[i] = hex.EncodeToString(signature)
 		}
