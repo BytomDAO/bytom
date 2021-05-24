@@ -299,6 +299,10 @@ func supLinkToVerifications(supLink *types.SupLink, validators map[string]*state
 
 	var result []*Verification
 	for i, signature := range supLink.Signatures {
+		if len(signature) == 0 {
+			continue
+		}
+
 		result = append(result, &Verification{
 			SourceHash:   supLink.SourceHash,
 			TargetHash:   targetHash,
