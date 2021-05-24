@@ -231,7 +231,7 @@ func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error
 }
 
 // SaveChainStatus save the core's newest status && delete old status
-func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint, contractView *state.ContractViewpoint, finalizedHeight uint64, finalizedHash *bc.Hash) error {
+func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint, contractView *state.ContractViewpoint, checkpoints []*state.Checkpoint, finalizedHeight uint64, finalizedHash *bc.Hash) error {
 	batch := s.db.NewBatch()
 	if err := saveUtxoView(batch, view); err != nil {
 		return err
@@ -242,6 +242,10 @@ func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint
 	}
 
 	if err := saveContractView(s.db, batch, contractView); err != nil {
+		return err
+	}
+
+	if err := s.saveCheckpoints(batch, checkpoints); err != nil {
 		return err
 	}
 
@@ -331,6 +335,16 @@ func (s *Store) loadCheckpointsFromIter(iter dbm.Iterator) ([]*state.Checkpoint,
 // SaveCheckpoints bulk save multiple checkpoint
 func (s *Store) SaveCheckpoints(checkpoints ...*state.Checkpoint) error {
 	batch := s.db.NewBatch()
+
+	if err := s.saveCheckpoints(batch, checkpoints); err != nil {
+		return err
+	}
+
+	batch.Write()
+	return nil
+}
+
+func (s *Store) saveCheckpoints(batch dbm.Batch, checkpoints []*state.Checkpoint) error {
 	for _, checkpoint := range checkpoints {
 		data, err := json.Marshal(checkpoint)
 		if err != nil {
@@ -348,7 +362,6 @@ func (s *Store) SaveCheckpoints(checkpoints ...*state.Checkpoint) error {
 
 		batch.Set(calcCheckpointKey(checkpoint.Height, &checkpoint.Hash), data)
 	}
-	batch.Write()
 	return nil
 }
 

@@ -86,7 +86,7 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		return err
 	}
 
-	verification, err := c.casper.ApplyBlock(block)
+	verification, checkpoint, err := c.casper.ApplyBlock(block)
 	if err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 	}
 
 	node := c.index.GetNode(&bcBlock.ID)
-	if err := c.setState(node, utxoView, contractView); err != nil {
+	if err := c.setState(node, utxoView, contractView, checkpoint); err != nil {
 		return err
 	}
 
@@ -145,6 +145,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 	}
 
 	txsToRemove := map[bc.Hash]*types.Tx{}
+	var affectedCheckpoints []*state.Checkpoint
 	for _, attachNode := range attachNodes {
 		b, err := c.store.GetBlock(&attachNode.Hash)
 		if err != nil {
@@ -160,10 +161,12 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			return err
 		}
 
-		verification, err := c.casper.ApplyBlock(b)
+		verification, checkpoint, err := c.casper.ApplyBlock(b)
 		if err != nil {
 			return err
 		}
+
+		affectedCheckpoints = append(affectedCheckpoints, checkpoint)
 
 		if err := c.broadcastVerification(verification); err != nil {
 			return err
@@ -184,7 +187,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Debug("attach from mainchain")
 	}
 
-	if err := c.setState(node, utxoView, contractView); err != nil {
+	if err := c.setState(node, utxoView, contractView, affectedCheckpoints...); err != nil {
 		return err
 	}
 
