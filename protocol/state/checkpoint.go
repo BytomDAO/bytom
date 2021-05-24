@@ -3,6 +3,7 @@ package state
 import (
 	"sort"
 
+	"github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/protocol/bc"
 )
@@ -35,18 +36,18 @@ const (
 type SupLink struct {
 	SourceHeight uint64
 	SourceHash   bc.Hash
-	Signatures   [consensus.NumOfValidators]string
+	Signatures   [consensus.MaxNumOfValidators]string
 }
 
 // IsMajority if at least 2/3 of validators have published votes with sup link
-func (s *SupLink) IsMajority() bool {
+func (s *SupLink) IsMajority(numOfValidators int) bool {
 	numOfSignatures := 0
 	for _, signature := range s.Signatures {
 		if signature != "" {
 			numOfSignatures++
 		}
 	}
-	return numOfSignatures > consensus.NumOfValidators*2/3
+	return numOfSignatures > numOfValidators*2/3
 }
 
 // Checkpoint represent the block/hash under consideration for finality for a given epoch.
@@ -120,16 +121,27 @@ func (c *Checkpoint) Validators() map[string]*Validator {
 		}
 	}
 
+	if len(validators) == 0 {
+		return federationValidators()
+	}
+
 	sort.Slice(validators, func(i, j int) bool {
 		return validators[i].Guaranty+validators[i].Vote > validators[j].Guaranty+validators[j].Vote
 	})
 
 	result := make(map[string]*Validator)
-	for i := 0; i < len(validators) && i < consensus.NumOfValidators; i++ {
+	for i := 0; i < len(validators) && i < consensus.MaxNumOfValidators; i++ {
 		validator := validators[i]
 		validator.Order = i
 		result[validator.PubKey] = validator
 	}
-
 	return result
+}
+
+func federationValidators() map[string]*Validator {
+	validators := map[string]*Validator{}
+	for i, xPub := range config.CommonConfig.Federation.Xpubs {
+		validators[xPub.String()] = &Validator{PubKey: xPub.String(), Order: i}
+	}
+	return validators
 }
