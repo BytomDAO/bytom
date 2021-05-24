@@ -79,9 +79,9 @@ func (v *Verification) VerifySignature() error {
 		return err
 	}
 
-	var xPub [64]byte
+	var xPub chainkd.XPub
 	copy(xPub[:], pubKey)
-	if !chainkd.XPub(xPub).Verify(message, signature) {
+	if !xPub.Verify(message, signature) {
 		return errVerifySignature
 	}
 
