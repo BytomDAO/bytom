@@ -9,7 +9,6 @@ import (
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/crypto/sha3pool"
 	"github.com/bytom/bytom/protocol/bc"
-	"golang.org/x/crypto/ed25519"
 )
 
 var errVerifySignature = errors.New("signature of verification message is invalid")
@@ -80,7 +79,9 @@ func (v *Verification) VerifySignature() error {
 		return err
 	}
 
-	if !ed25519.Verify(pubKey, message, signature) {
+	var xPub chainkd.XPub
+	copy(xPub[:], pubKey)
+	if !xPub.Verify(message, signature) {
 		return errVerifySignature
 	}
 
