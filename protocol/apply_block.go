@@ -16,38 +16,43 @@ import (
 // the tree of checkpoint will grow with the arrival of new blocks
 // it will return verification when an epoch is reached and the current node is the validator, otherwise return nil
 // the chain module must broadcast the verification
-func (c *Casper) ApplyBlock(block *types.Block) (*Verification, error) {
+func (c *Casper) ApplyBlock(block *types.Block) (*Verification, *state.Checkpoint, error) {
+	if block.Height % state.BlocksOfEpoch == 1 {
+		c.newEpochCh <- block.PreviousBlockHash
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	if _, err := c.tree.nodeByHash(block.Hash()); err == nil {
 		// already processed
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	target, err := c.applyBlockToCheckpoint(block)
 	if err != nil {
-		return nil, errors.Wrap(err, "apply block to checkpoint")
+		return nil, nil, errors.Wrap(err, "apply block to checkpoint")
 	}
 
 	if err := c.applyTransactions(target, block.Transactions); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	validators, err := c.Validators(&target.Hash)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+
+	verification, err := c.applyMyVerification(target, block, validators)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	if err := c.applySupLinks(target, block.SupLinks, validators); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	if block.Height%state.BlocksOfEpoch == 0 {
-		c.newEpochCh <- block.Hash()
-	}
-
-	return c.applyMyVerification(target, validators)
+	return verification, target, nil
 }
 
 func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, error) {
@@ -74,7 +79,7 @@ func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, 
 	checkpoint.Height = block.Height
 	checkpoint.Hash = block.Hash()
 	checkpoint.Timestamp = block.Timestamp
-	return checkpoint, c.store.SaveCheckpoints(checkpoint)
+	return checkpoint, nil
 }
 
 func (c *Casper) applyTransactions(target *state.Checkpoint, transactions []*types.Tx) error {
@@ -116,6 +121,7 @@ func (c *Casper) applySupLinks(target *state.Checkpoint, supLinks []*types.SupLi
 		return nil
 	}
 
+	affectedCheckpoints := make(map[bc.Hash]*state.Checkpoint)
 	for _, supLink := range supLinks {
 		var validVerifications []*Verification
 		for _, v := range supLinkToVerifications(supLink, validators, target.Hash, target.Height) {
@@ -123,15 +129,46 @@ func (c *Casper) applySupLinks(target *state.Checkpoint, supLinks []*types.SupLi
 				validVerifications = append(validVerifications, v)
 			}
 		}
-		if err := c.addVerificationToCheckpoint(target, validators, validVerifications...); err != nil {
+
+		checkpoints, err := c.addVerificationToCheckpoint(target, validators, validVerifications...)
+		if err != nil {
 			return err
 		}
+
+		for _, c := range checkpoints {
+			affectedCheckpoints[c.Hash] = c
+		}
 	}
-	return nil
+
+	delete(affectedCheckpoints, target.Hash)
+	var checkpoints []*state.Checkpoint
+	for _, c := range affectedCheckpoints {
+		checkpoints = append(checkpoints, c)
+	}
+	return c.store.SaveCheckpoints(checkpoints...)
 }
 
-func (c *Casper) applyMyVerification(target *state.Checkpoint, validators map[string]*state.Validator) (*Verification, error) {
-	if target.Height%state.BlocksOfEpoch != 0 {
+func (c *Casper) applyMyVerification(target *state.Checkpoint, block *types.Block, validators map[string]*state.Validator) (*Verification, error) {
+	v, err := c.myVerification(target, validators)
+	if err != nil {
+		return nil, err
+	}
+
+	if v == nil {
+		return nil, nil
+	}
+
+	signature, err := hex.DecodeString(v.Signature)
+	if err != nil {
+		return nil, err
+	}
+
+	block.SupLinks.AddSupLink(v.SourceHeight, v.SourceHash, signature, validators[v.PubKey].Order)
+	return v, c.store.SaveBlockHeader(&block.BlockHeader)
+}
+
+func (c *Casper) myVerification(target *state.Checkpoint, validators map[string]*state.Validator) (*Verification, error) {
+	if target.Height % state.BlocksOfEpoch != 0 {
 		return nil, nil
 	}
 
@@ -141,29 +178,11 @@ func (c *Casper) applyMyVerification(target *state.Checkpoint, validators map[st
 	}
 
 	validatorOrder := validators[pubKey].Order
-	v, err := c.myVerification(target, validatorOrder)
-	if err != nil {
-		return nil, err
-	}
-
-	if v == nil {
-		return nil, nil
-	}
-
-	if err := c.addVerificationToCheckpoint(target, validators, v); err != nil {
-		return nil, err
-	}
-
-	return v, c.saveVerificationToHeader(v, validatorOrder)
-}
-
-func (c *Casper) myVerification(target *state.Checkpoint, validatorOrder int) (*Verification, error) {
 	source := c.lastJustifiedCheckpointOfBranch(target)
 	if target.ContainsVerification(source.Hash, validatorOrder) {
 		return nil, nil
 	}
 
-	pubKey := config.CommonConfig.PrivateKey().XPub().String()
 	if source != nil {
 		v := &Verification{
 			SourceHash:   source.Hash,

@@ -172,15 +172,15 @@ func (c *Casper) prevCheckpointHash(blockHash *bc.Hash) (*bc.Hash, error) {
 		return nil, err
 	}
 
-	c.prevCheckpointCache.Add(blockHash, result)
+	c.prevCheckpointCache.Add(*blockHash, result)
 	return result, nil
 }
 
 func (c *Casper) prevCheckpointHashByPrevHash(prevBlockHash *bc.Hash) (*bc.Hash, error) {
 	prevHash := prevBlockHash
 	for {
-		if data, ok := c.prevCheckpointCache.Get(prevHash); ok {
-			c.prevCheckpointCache.Add(prevBlockHash, data)
+		if data, ok := c.prevCheckpointCache.Get(*prevHash); ok {
+			c.prevCheckpointCache.Add(*prevBlockHash, data)
 			return data.(*bc.Hash), nil
 		}
 
@@ -190,7 +190,7 @@ func (c *Casper) prevCheckpointHashByPrevHash(prevBlockHash *bc.Hash) (*bc.Hash,
 		}
 
 		if prevBlock.Height%state.BlocksOfEpoch == 0 {
-			c.prevCheckpointCache.Add(prevBlockHash, prevHash)
+			c.prevCheckpointCache.Add(*prevBlockHash, prevHash)
 			return prevHash, nil
 		}
 

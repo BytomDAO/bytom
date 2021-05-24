@@ -57,20 +57,25 @@ func (c *Casper) authVerification(v *Verification, target *state.Checkpoint, val
 		return err
 	}
 
-	if err := c.addVerificationToCheckpoint(target, validators, v); err != nil {
+	checkpoints, err := c.addVerificationToCheckpoint(target, validators, v)
+	if err != nil {
+		return err
+	}
+
+	if err := c.store.SaveCheckpoints(checkpoints...); err != nil {
 		return err
 	}
 
 	return c.saveVerificationToHeader(v, validator.Order)
 }
 
-func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, validators map[string]*state.Validator, verifications ...*Verification) error {
+func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, validators map[string]*state.Validator, verifications ...*Verification) ([]*state.Checkpoint, error) {
 	_, oldBestHash := c.bestChain()
 	var affectedCheckpoints []*state.Checkpoint
 	for _, v := range verifications {
 		source, err := c.store.GetCheckpoint(&v.SourceHash)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		supLink := target.AddVerification(v.SourceHash, v.SourceHeight, validators[v.PubKey].Order, v.Signature)
@@ -91,7 +96,7 @@ func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, validator
 		c.rollbackNotifyCh <- nil
 	}
 
-	return c.store.SaveCheckpoints(affectedCheckpoints...)
+	return affectedCheckpoints, nil
 }
 
 func (c *Casper) saveVerificationToHeader(v *Verification, validatorOrder int) error {

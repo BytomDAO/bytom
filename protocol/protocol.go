@@ -85,9 +85,6 @@ func (c *Chain) initChainStatus() error {
 		Timestamp: genesisBlock.Timestamp,
 		Status:    state.Justified,
 	}
-	if err := c.store.SaveCheckpoints(checkpoint); err != nil {
-		return err
-	}
 
 	utxoView := state.NewUtxoViewpoint()
 	bcBlock := types.MapBlock(genesisBlock)
@@ -101,7 +98,7 @@ func (c *Chain) initChainStatus() error {
 	}
 
 	contractView := state.NewContractViewpoint()
-	return c.store.SaveChainStatus(node, utxoView, contractView, 0, &checkpoint.Hash)
+	return c.store.SaveChainStatus(node, utxoView, contractView, []*state.Checkpoint{checkpoint}, 0, &checkpoint.Hash)
 }
 
 func newCasper(store Store, storeStatus *BlockStoreState, rollbackNotifyCh chan interface{}) (*Casper, error) {
@@ -193,9 +190,9 @@ func (c *Chain) SignBlockHeader(blockHeader *types.BlockHeader) {
 }
 
 // This function must be called with mu lock in above level
-func (c *Chain) setState(node *state.BlockNode, view *state.UtxoViewpoint, contractView *state.ContractViewpoint) error {
+func (c *Chain) setState(node *state.BlockNode, view *state.UtxoViewpoint, contractView *state.ContractViewpoint, checkpoints ...*state.Checkpoint) error {
 	finalizedHeight, finalizedHash := c.casper.LastFinalized()
-	if err := c.store.SaveChainStatus(node, view, contractView, finalizedHeight, &finalizedHash); err != nil {
+	if err := c.store.SaveChainStatus(node, view, contractView, checkpoints, finalizedHeight, &finalizedHash); err != nil {
 		return err
 	}
 
