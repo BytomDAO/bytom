@@ -15,7 +15,7 @@ If you are running an older version, shut it down. Wait until it has quited comp
 You can operate according to the user manual.[(Bytom User Manual)](https://bytom.io/wp-content/themes/freddo/images/wallet/BytomUsermanualV1.0_en.pdf)
 
 
-1.1.0 changelog
+2.0.1 changelog
 ================
 __Bytom Node__
 
