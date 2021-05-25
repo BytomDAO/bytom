@@ -1,6 +1,6 @@
-Bytom version 1.1.1 is now available from:
+Bytom version 2.0.1 is now available from:
 
-  https://github.com/Bytom/bytom/releases/tag/v1.1.1
+  https://github.com/Bytom/bytom/releases/tag/v2.0.1
 
 
 Please report bugs using the issue tracker at github:
@@ -36,10 +36,9 @@ Credits
 Thanks to everyone who directly contributed to this release:
 
 - shenao78
+- boomyl
+- songxuexian
 - DeKaiju
-- iczc
 - Paladz
-- zcc0721
-- ZhitingLin
 
 And everyone who helped test.
