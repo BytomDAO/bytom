@@ -48,11 +48,12 @@ func (c *Casper) ApplyBlock(block *types.Block) (*Verification, *state.Checkpoin
 		return nil, nil, err
 	}
 
-	if err := c.applySupLinks(target, block.SupLinks, validators); err != nil {
+	affectedCheckpoints, err := c.applySupLinks(target, block.SupLinks, validators)
+	if err != nil {
 		return nil, nil, err
 	}
 
-	return verification, target, nil
+	return verification, target, c.saveCheckpoints(affectedCheckpoints, target)
 }
 
 func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, error) {
@@ -116,9 +117,9 @@ func (c *Casper) applyTransactions(target *state.Checkpoint, transactions []*typ
 }
 
 // applySupLinks copy the block's supLink to the checkpoint
-func (c *Casper) applySupLinks(target *state.Checkpoint, supLinks []*types.SupLink, validators map[string]*state.Validator) error {
+func (c *Casper) applySupLinks(target *state.Checkpoint, supLinks []*types.SupLink, validators map[string]*state.Validator) (map[bc.Hash]*state.Checkpoint, error) {
 	if target.Height%state.BlocksOfEpoch != 0 {
-		return nil
+		return nil, nil
 	}
 
 	affectedCheckpoints := make(map[bc.Hash]*state.Checkpoint)
@@ -132,7 +133,7 @@ func (c *Casper) applySupLinks(target *state.Checkpoint, supLinks []*types.SupLi
 
 		checkpoints, err := c.addVerificationToCheckpoint(target, validators, validVerifications...)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		for _, c := range checkpoints {
@@ -140,12 +141,7 @@ func (c *Casper) applySupLinks(target *state.Checkpoint, supLinks []*types.SupLi
 		}
 	}
 
-	delete(affectedCheckpoints, target.Hash)
-	var checkpoints []*state.Checkpoint
-	for _, c := range affectedCheckpoints {
-		checkpoints = append(checkpoints, c)
-	}
-	return c.store.SaveCheckpoints(checkpoints...)
+	return affectedCheckpoints, nil
 }
 
 func (c *Casper) applyMyVerification(target *state.Checkpoint, block *types.Block, validators map[string]*state.Validator) (*Verification, error) {
@@ -178,12 +174,11 @@ func (c *Casper) myVerification(target *state.Checkpoint, validators map[string]
 	}
 
 	validatorOrder := validators[pubKey].Order
-	source := c.lastJustifiedCheckpointOfBranch(target)
-	if target.ContainsVerification(source.Hash, validatorOrder) {
+	if target.ContainsVerification(validatorOrder, nil) {
 		return nil, nil
 	}
 
-	if source != nil {
+	if source := c.lastJustifiedCheckpointOfBranch(target); source != nil {
 		v := &Verification{
 			SourceHash:   source.Hash,
 			TargetHash:   target.Hash,
@@ -205,6 +200,18 @@ func (c *Casper) myVerification(target *state.Checkpoint, validators map[string]
 	}
 	return nil, nil
 }
+
+func (c *Casper) saveCheckpoints(affectedCheckpoints map[bc.Hash]*state.Checkpoint, target *state.Checkpoint) error {
+	// the target checkpoint must eventually be saved in the chain state
+	delete(affectedCheckpoints, target.Hash)
+
+	var checkpoints []*state.Checkpoint
+	for _, c := range affectedCheckpoints {
+		checkpoints = append(checkpoints, c)
+	}
+	return c.store.SaveCheckpoints(checkpoints)
+}
+
 
 type guarantyArgs struct {
 	Amount uint64

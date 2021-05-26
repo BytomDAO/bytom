@@ -86,9 +86,10 @@ func (c *Checkpoint) AddVerification(sourceHash bc.Hash, sourceHeight uint64, va
 }
 
 // ContainsVerification return whether the specified validator has add verification to current checkpoint
-func (c *Checkpoint) ContainsVerification(sourceHash bc.Hash, validatorOrder int) bool {
+// sourceHash not as filter if is nil,
+func (c *Checkpoint) ContainsVerification(validatorOrder int, sourceHash *bc.Hash) bool {
 	for _, supLink := range c.SupLinks {
-		if supLink.SourceHash == sourceHash && supLink.Signatures[validatorOrder] != "" {
+		if (sourceHash == nil || supLink.SourceHash == *sourceHash) && supLink.Signatures[validatorOrder] != "" {
 			return true
 		}
 	}

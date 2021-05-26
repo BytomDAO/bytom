@@ -29,7 +29,7 @@ const minGuaranty = 1E14
 type Casper struct {
 	mu               sync.RWMutex
 	tree             *treeNode
-	rollbackNotifyCh chan interface{}
+	rollbackNotifyCh chan bc.Hash
 	newEpochCh       chan bc.Hash
 	store            Store
 	// pubKey -> conflicting verifications
@@ -46,7 +46,7 @@ type Casper struct {
 // argument checkpoints load the checkpoints from leveldb
 // the first element of checkpoints must genesis checkpoint or the last finalized checkpoint in order to reduce memory space
 // the others must be successors of first one
-func NewCasper(store Store, checkpoints []*state.Checkpoint, rollbackNotifyCh chan interface{}) *Casper {
+func NewCasper(store Store, checkpoints []*state.Checkpoint, rollbackNotifyCh chan bc.Hash) *Casper {
 	if checkpoints[0].Height != 0 && checkpoints[0].Status != state.Finalized {
 		log.Panic("first element of checkpoints must genesis or in finalized status")
 	}

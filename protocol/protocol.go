@@ -24,7 +24,7 @@ type Chain struct {
 	store            Store
 	casper           *Casper
 	processBlockCh   chan *processBlockMsg
-	rollbackNotifyCh chan interface{}
+	rollbackNotifyCh chan bc.Hash
 	eventDispatcher  *event.Dispatcher
 
 	cond     sync.Cond
@@ -42,7 +42,7 @@ func NewChainWithOrphanManage(store Store, txPool *TxPool, manage *OrphanManage,
 		eventDispatcher:  eventDispatcher,
 		txPool:           txPool,
 		store:            store,
-		rollbackNotifyCh: make(chan interface{}),
+		rollbackNotifyCh: make(chan bc.Hash),
 		processBlockCh:   make(chan *processBlockMsg, maxProcessBlockChSize),
 	}
 	c.cond.L = new(sync.Mutex)
@@ -101,7 +101,7 @@ func (c *Chain) initChainStatus() error {
 	return c.store.SaveChainStatus(node, utxoView, contractView, []*state.Checkpoint{checkpoint}, 0, &checkpoint.Hash)
 }
 
-func newCasper(store Store, storeStatus *BlockStoreState, rollbackNotifyCh chan interface{}) (*Casper, error) {
+func newCasper(store Store, storeStatus *BlockStoreState, rollbackNotifyCh chan bc.Hash) (*Casper, error) {
 	checkpoints, err := store.CheckpointsFromNode(storeStatus.FinalizedHeight, storeStatus.FinalizedHash)
 	if err != nil {
 		return nil, err
@@ -134,11 +134,6 @@ func (c *Chain) BestBlockHash() *bc.Hash {
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
 	return &c.bestNode.Hash
-}
-
-func (c *Chain) latestBestBlockHash() *bc.Hash {
-	_, hash := c.casper.BestChain()
-	return &hash
 }
 
 // GetValidator return validator by specified blockHash and timestamp

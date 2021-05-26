@@ -25,8 +25,45 @@ type Verification struct {
 	PubKey       string
 }
 
-// EncodeMessage encode the verification for the validators to sign or verify
-func (v *Verification) EncodeMessage() ([]byte, error) {
+// Sign used to sign the verification by specified xPrv
+func (v *Verification) Sign(xPrv chainkd.XPrv) error {
+	message, err := v.encodeMessage()
+	if err != nil {
+		return err
+	}
+
+	v.Signature = hex.EncodeToString(xPrv.Sign(message))
+	return nil
+}
+
+// VerifySignature verify the signature of encode message of verification
+func (v *Verification) VerifySignature() error {
+	pubKey, err := hex.DecodeString(v.PubKey)
+	if err != nil {
+		return err
+	}
+
+	signature, err := hex.DecodeString(v.Signature)
+	if err != nil {
+		return err
+	}
+
+	message, err := v.encodeMessage()
+	if err != nil {
+		return err
+	}
+
+	var xPub chainkd.XPub
+	copy(xPub[:], pubKey)
+	if !xPub.Verify(message, signature) {
+		return errVerifySignature
+	}
+
+	return nil
+}
+
+// encodeMessage encode the verification for the validators to sign or verify
+func (v *Verification) encodeMessage() ([]byte, error) {
 	buff := new(bytes.Buffer)
 	if _, err := v.SourceHash.WriteTo(buff); err != nil {
 		return nil, err
@@ -49,43 +86,6 @@ func (v *Verification) EncodeMessage() ([]byte, error) {
 	}
 
 	return sha3Hash(buff.Bytes())
-}
-
-// Sign used to sign the verification by specified xPrv
-func (v *Verification) Sign(xPrv chainkd.XPrv) error {
-	message, err := v.EncodeMessage()
-	if err != nil {
-		return err
-	}
-
-	v.Signature = hex.EncodeToString(xPrv.Sign(message))
-	return nil
-}
-
-// VerifySignature verify the signature of encode message of verification
-func (v *Verification) VerifySignature() error {
-	pubKey, err := hex.DecodeString(v.PubKey)
-	if err != nil {
-		return err
-	}
-
-	signature, err := hex.DecodeString(v.Signature)
-	if err != nil {
-		return err
-	}
-
-	message, err := v.EncodeMessage()
-	if err != nil {
-		return err
-	}
-
-	var xPub chainkd.XPub
-	copy(xPub[:], pubKey)
-	if !xPub.Verify(message, signature) {
-		return errVerifySignature
-	}
-
-	return nil
 }
 
 func sha3Hash(message []byte) ([]byte, error) {
