@@ -305,8 +305,8 @@ func (c *Chain) blockProcessor() {
 		case msg := <-c.processBlockCh:
 			isOrphan, err := c.processBlock(msg.block)
 			msg.reply <- processBlockResponse{isOrphan: isOrphan, err: err}
-		case <-c.rollbackNotifyCh:
-			if err := c.rollback(); err != nil {
+		case newBestHash := <-c.rollbackNotifyCh:
+			if err := c.rollback(newBestHash); err != nil {
 				log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on rollback block")
 			}
 		}
@@ -341,13 +341,12 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	return false, nil
 }
 
-func (c *Chain) rollback() error {
-	latestBestBlockHash := c.latestBestBlockHash()
-	if c.bestNode.Hash == *latestBestBlockHash {
+func (c *Chain) rollback(newBestHash bc.Hash) error {
+	if c.bestNode.Hash == newBestHash {
 		return nil
 	}
 
-	node := c.index.GetNode(latestBestBlockHash)
+	node := c.index.GetNode(&newBestHash)
 	log.WithFields(log.Fields{"module": logModule}).Debug("start to reorganize chain")
 	return c.reorganizeChain(node)
 }

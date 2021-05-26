@@ -34,7 +34,7 @@ func (c *Casper) AuthVerification(v *Verification) error {
 		return errPubKeyIsNotValidator
 	}
 
-	if target.ContainsVerification(v.SourceHash, validators[v.PubKey].Order) {
+	if target.ContainsVerification(validators[v.PubKey].Order, &v.SourceHash) {
 		return nil
 	}
 
@@ -62,7 +62,7 @@ func (c *Casper) authVerification(v *Verification, target *state.Checkpoint, val
 		return err
 	}
 
-	if err := c.store.SaveCheckpoints(checkpoints...); err != nil {
+	if err := c.store.SaveCheckpoints(checkpoints); err != nil {
 		return err
 	}
 
@@ -93,7 +93,7 @@ func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, validator
 
 	_, newBestHash := c.bestChain()
 	if oldBestHash != newBestHash {
-		c.rollbackNotifyCh <- nil
+		c.rollbackNotifyCh <- newBestHash
 	}
 
 	return affectedCheckpoints, nil

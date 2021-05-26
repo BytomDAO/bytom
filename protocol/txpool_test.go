@@ -100,7 +100,7 @@ type mockStore struct{}
 func (s *mockStore) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error)     { return nil, nil }
 func (s *mockStore) GetCheckpoint(hash *bc.Hash) (*state.Checkpoint, error)       { return nil, nil }
 func (s *mockStore) GetCheckpointsByHeight(u uint64) ([]*state.Checkpoint, error) { return nil, nil }
-func (s *mockStore) SaveCheckpoints(...*state.Checkpoint) error                   { return nil }
+func (s *mockStore) SaveCheckpoints([]*state.Checkpoint) error                   { return nil }
 func (s *mockStore) CheckpointsFromNode(height uint64, hash *bc.Hash) ([]*state.Checkpoint, error)      { return nil, nil }
 func (s *mockStore) BlockExist(hash *bc.Hash) bool                                { return false }
 func (s *mockStore) GetBlock(*bc.Hash) (*types.Block, error)                      { return nil, nil }
@@ -597,7 +597,7 @@ type mockStore1 struct{}
 func (s *mockStore1) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error)     { return nil, nil }
 func (s *mockStore1) GetCheckpoint(hash *bc.Hash) (*state.Checkpoint, error)       { return nil, nil }
 func (s *mockStore1) GetCheckpointsByHeight(u uint64) ([]*state.Checkpoint, error) { return nil, nil }
-func (s *mockStore1) SaveCheckpoints(...*state.Checkpoint) error                   { return nil }
+func (s *mockStore1) SaveCheckpoints([]*state.Checkpoint) error                   { return nil }
 func (s *mockStore1) CheckpointsFromNode(height uint64, hash *bc.Hash) ([]*state.Checkpoint, error)      { return nil, nil }
 func (s *mockStore1) BlockExist(hash *bc.Hash) bool                                { return false }
 func (s *mockStore1) GetBlock(*bc.Hash) (*types.Block, error)                      { return nil, nil }

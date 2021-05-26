@@ -333,7 +333,7 @@ func (s *Store) loadCheckpointsFromIter(iter dbm.Iterator) ([]*state.Checkpoint,
 }
 
 // SaveCheckpoints bulk save multiple checkpoint
-func (s *Store) SaveCheckpoints(checkpoints ...*state.Checkpoint) error {
+func (s *Store) SaveCheckpoints(checkpoints []*state.Checkpoint) error {
 	batch := s.db.NewBatch()
 
 	if err := s.saveCheckpoints(batch, checkpoints); err != nil {
