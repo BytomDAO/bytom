@@ -202,6 +202,7 @@ func (c *Casper) myVerification(target *state.Checkpoint, validators map[string]
 }
 
 func (c *Casper) saveCheckpoints(affectedCheckpoints map[bc.Hash]*state.Checkpoint, target *state.Checkpoint) error {
+	// the target checkpoint must eventually be saved in the chain state
 	delete(affectedCheckpoints, target.Hash)
 
 	var checkpoints []*state.Checkpoint
