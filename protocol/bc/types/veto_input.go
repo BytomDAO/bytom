@@ -26,7 +26,7 @@ func NewVetoInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amou
 		StateData:      stateData,
 	}
 	return &TxInput{
-		AssetVersion: 1,
+		AssetVersion: 11,
 		TypedInput: &VetoInput{
 			SpendCommitment: sc,
 			Arguments:       arguments,
