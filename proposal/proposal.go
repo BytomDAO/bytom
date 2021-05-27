@@ -182,14 +182,14 @@ func (b *blockBuilder) createCoinbaseTx(feeAmount uint64) (tx *types.Tx, err err
 
 func (b *blockBuilder) applyTransactions(txs []*protocol.TxDesc, timeoutStatus uint8) (uint64, error) {
 	var feeAmount uint64
-	batchTxs := []*types.Tx{}
+	batchTxs := []*protocol.TxDesc{}
 	for i := 0; i < len(txs); i++ {
-		if batchTxs = append(batchTxs, txs[i].Tx); len(batchTxs) < batchApplyNum && i != len(txs)-1 {
+		if batchTxs = append(batchTxs, txs[i]); len(batchTxs) < batchApplyNum && i != len(txs)-1 {
 			continue
 		}
 
 		results, gasLeft := b.preValidateTxs(batchTxs, b.chain, b.utxoView, b.gasLeft)
-		for _, result := range results {
+		for j, result := range results {
 			if result.err != nil {
 				log.WithFields(log.Fields{"module": logModule, "error": result.err}).Error("propose block generation: skip tx due to")
 				b.chain.GetTxPool().RemoveTransaction(&result.tx.ID)
@@ -197,11 +197,11 @@ func (b *blockBuilder) applyTransactions(txs []*protocol.TxDesc, timeoutStatus u
 			}
 
 			b.block.Transactions = append(b.block.Transactions, result.tx)
+			feeAmount += batchTxs[j].Fee
 		}
 
 		b.gasLeft = gasLeft
 		batchTxs = batchTxs[:0]
-		feeAmount += txs[i].Fee
 		if b.getTimeoutStatus() >= timeoutStatus || len(b.block.Transactions) > softMaxTxNum {
 			break
 		}
@@ -214,24 +214,25 @@ type validateTxResult struct {
 	err error
 }
 
-func (b *blockBuilder) preValidateTxs(txs []*types.Tx, chain *protocol.Chain, view *state.UtxoViewpoint, gasLeft int64) ([]*validateTxResult, int64) {
+func (b *blockBuilder) preValidateTxs(txs []*protocol.TxDesc, chain *protocol.Chain, view *state.UtxoViewpoint, gasLeft int64) ([]*validateTxResult, int64) {
 	var results []*validateTxResult
 	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: chain.BestBlockHeight() + 1}}
 	bcTxs := make([]*bc.Tx, len(txs))
 	for i, tx := range txs {
-		bcTxs[i] = tx.Tx
+		bcTxs[i] = tx.Tx.Tx
 	}
 
 	validateResults := validation.ValidateTxs(bcTxs, bcBlock, b.chain.ProgramConverter)
 	for i := 0; i < len(validateResults) && gasLeft > 0; i++ {
+		tx := txs[i].Tx
 		gasStatus := validateResults[i].GetGasState()
 		if err := validateResults[i].GetError(); err != nil {
-			results = append(results, &validateTxResult{tx: txs[i], err: err})
+			results = append(results, &validateTxResult{tx: tx, err: err})
 			continue
 		}
 
 		if err := chain.GetTransactionsUtxo(view, []*bc.Tx{bcTxs[i]}); err != nil {
-			results = append(results, &validateTxResult{tx: txs[i], err: err})
+			results = append(results, &validateTxResult{tx: tx, err: err})
 			continue
 		}
 
@@ -240,11 +241,11 @@ func (b *blockBuilder) preValidateTxs(txs []*types.Tx, chain *protocol.Chain, vi
 		}
 
 		if err := view.ApplyTransaction(bcBlock, bcTxs[i]); err != nil {
-			results = append(results, &validateTxResult{tx: txs[i], err: err})
+			results = append(results, &validateTxResult{tx: tx, err: err})
 			continue
 		}
 
-		results = append(results, &validateTxResult{tx: txs[i], err: validateResults[i].GetError()})
+		results = append(results, &validateTxResult{tx: tx, err: validateResults[i].GetError()})
 		gasLeft -= gasStatus.GasUsed
 	}
 	return results, gasLeft
