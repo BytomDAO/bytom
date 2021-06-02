@@ -1,6 +1,8 @@
 package p2p
 
 import (
+	"crypto/ed25519"
+	"encoding/hex"
 	"fmt"
 	"net"
 	"reflect"
@@ -10,13 +12,13 @@ import (
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/tmlibs/flowrate"
 
 	cfg "github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/p2p/connection"
 )
 
@@ -80,7 +82,7 @@ func newPeer(pc *peerConn, nodeInfo *NodeInfo, reactorsByCh map[byte]Reactor, ch
 	p := &Peer{
 		peerConn: pc,
 		NodeInfo: nodeInfo,
-		Key:      nodeInfo.PubKey.String(),
+		Key:      hex.EncodeToString(nodeInfo.PubKey),
 		isLAN:    isLAN,
 	}
 	p.mconn = createMConnection(pc.conn, p, reactorsByCh, chDescs, onPeerError, pc.config.MConfig)
@@ -88,7 +90,7 @@ func newPeer(pc *peerConn, nodeInfo *NodeInfo, reactorsByCh map[byte]Reactor, ch
 	return p
 }
 
-func newOutboundPeerConn(addr *NetAddress, ourNodePrivKey crypto.PrivKeyEd25519, config *PeerConfig) (*peerConn, error) {
+func newOutboundPeerConn(addr *NetAddress, ourNodePrivKey chainkd.XPrv, config *PeerConfig) (*peerConn, error) {
 	conn, err := dial(addr, config)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error dial peer")
@@ -102,11 +104,11 @@ func newOutboundPeerConn(addr *NetAddress, ourNodePrivKey crypto.PrivKeyEd25519,
 	return pc, nil
 }
 
-func newInboundPeerConn(conn net.Conn, ourNodePrivKey crypto.PrivKeyEd25519, config *cfg.P2PConfig) (*peerConn, error) {
+func newInboundPeerConn(conn net.Conn, ourNodePrivKey chainkd.XPrv, config *cfg.P2PConfig) (*peerConn, error) {
 	return newPeerConn(conn, false, ourNodePrivKey, DefaultPeerConfig(config))
 }
 
-func newPeerConn(rawConn net.Conn, outbound bool, ourNodePrivKey crypto.PrivKeyEd25519, config *PeerConfig) (*peerConn, error) {
+func newPeerConn(rawConn net.Conn, outbound bool, ourNodePrivKey chainkd.XPrv, config *PeerConfig) (*peerConn, error) {
 	rawConn.SetDeadline(time.Now().Add(config.HandshakeTimeout))
 	conn, err := connection.MakeSecretConnection(rawConn, ourNodePrivKey)
 	if err != nil {
@@ -206,7 +208,7 @@ func (p *Peer) IsLAN() bool {
 }
 
 // PubKey returns peer's public key.
-func (p *Peer) PubKey() crypto.PubKeyEd25519 {
+func (p *Peer) PubKey() ed25519.PublicKey {
 	return p.conn.(*connection.SecretConnection).RemotePubKey()
 }
 

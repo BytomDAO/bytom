@@ -6,8 +6,9 @@ import (
 	"io"
 	"testing"
 
-	"github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
+
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 )
 
 type dummyConn struct {
@@ -33,10 +34,10 @@ func makeDummyConnPair() (fooConn, barConn dummyConn) {
 
 func makeSecretConnPair(tb testing.TB) (fooSecConn, barSecConn *SecretConnection) {
 	fooConn, barConn := makeDummyConnPair()
-	fooPrvKey := crypto.GenPrivKeyEd25519()
-	fooPubKey := fooPrvKey.PubKey().Unwrap().(crypto.PubKeyEd25519)
-	barPrvKey := crypto.GenPrivKeyEd25519()
-	barPubKey := barPrvKey.PubKey().Unwrap().(crypto.PubKeyEd25519)
+	fooPrvKey, _ := chainkd.NewXPrv(nil)
+	fooPubKey := fooPrvKey.XPub()
+	barPrvKey, _ := chainkd.NewXPrv(nil)
+	barPubKey := barPrvKey.XPub()
 
 	fooSecConnTask := func(i int) (val interface{}, err error, abort bool) {
 		fooSecConn, err = MakeSecretConnection(fooConn, fooPrvKey)
@@ -65,19 +66,9 @@ func makeSecretConnPair(tb testing.TB) (fooSecConn, barSecConn *SecretConnection
 		return nil, nil, false
 	}
 
-	trs, ok := cmn.Parallel(fooSecConnTask, barSecConnTask)
+	_, ok := cmn.Parallel(fooSecConnTask, barSecConnTask)
 	if !ok {
 		tb.Errorf("Parallel task run failed")
-	}
-	for i := 0; i < 2; i++ {
-		res, ok := trs.LatestResult(i)
-		if !ok {
-			tb.Errorf("Task %d did not complete", i)
-		}
-
-		if res.Error != nil {
-			tb.Errorf("Task %d should not hash errored but god %v", i, res.Error)
-		}
 	}
 
 	return
@@ -104,7 +95,7 @@ func TestSecretConnectionReadWrite(t *testing.T) {
 	genNodeRunner := func(nodeConn dummyConn, nodeWrites []string, nodeReads *[]string) func(int) (interface{}, error, bool) {
 		return func(i int) (val interface{}, err error, about bool) {
 			// Node handshake
-			nodePrvKey := crypto.GenPrivKeyEd25519()
+			nodePrvKey, _ := chainkd.NewXPrv(nil)
 			nodeSecretConn, err := MakeSecretConnection(nodeConn, nodePrvKey)
 			if err != nil {
 				return nil, err, false
