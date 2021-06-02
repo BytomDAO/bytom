@@ -10,7 +10,7 @@ import (
 
 const (
 	// BlocksOfEpoch represent the block num in one epoch
-	BlocksOfEpoch   = 5
+	BlocksOfEpoch   = 100
 	minMortgage     = 1000000
 )
 
