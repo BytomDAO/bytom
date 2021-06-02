@@ -85,7 +85,6 @@ func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, validator
 
 		if source.Status == state.Unjustified {
 			c.justifyingCheckpoints[source.Hash] = append(c.justifyingCheckpoints[source.Hash], target)
-			continue
 		}
 
 		affectedCheckpoints = append(affectedCheckpoints, c.setJustified(source, target)...)
@@ -119,7 +118,7 @@ func (c *Casper) setJustified(source, target *state.Checkpoint) []*state.Checkpo
 	var affectedCheckpoint []*state.Checkpoint
 	target.Status = state.Justified
 	// must direct child
-	if target.Parent.Hash == source.Hash {
+	if target.Parent != nil && target.Parent.Hash == source.Hash {
 		c.setFinalized(source)
 	}
 

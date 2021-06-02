@@ -72,6 +72,13 @@ func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, 
 			Votes:      make(map[string]uint64),
 			Guaranties: make(map[string]uint64),
 		}
+
+		for pubKey, num := range parent.Votes {
+			checkpoint.Votes[pubKey] = num
+		}
+		for pubKey, num := range parent.Guaranties {
+			checkpoint.Guaranties[pubKey] = num
+		}
 		node.children = append(node.children, &treeNode{checkpoint: checkpoint})
 	} else if mod == 0 {
 		checkpoint.Status = state.Unjustified
