@@ -156,11 +156,11 @@ func (c *Chain) GetValidator(prevHash *bc.Hash, timeStamp uint64) (*state.Valida
 
 func getValidatorOrder(startTimestamp, blockTimestamp, numOfConsensusNode uint64) uint64 {
 	// One round of product block time for all consensus nodes
-	roundBlockTime := state.BlocksOfEpoch * numOfConsensusNode * consensus.ActiveNetParams.BlockTimeInterval
+	roundBlockTime := numOfConsensusNode * consensus.ActiveNetParams.BlockTimeInterval
 	// The start time of the last round of product block
 	lastRoundStartTime := startTimestamp + (blockTimestamp-startTimestamp)/roundBlockTime*roundBlockTime
 	// Order of blocker
-	return (blockTimestamp - lastRoundStartTime) / (state.BlocksOfEpoch * consensus.ActiveNetParams.BlockTimeInterval)
+	return (blockTimestamp - lastRoundStartTime) / consensus.ActiveNetParams.BlockTimeInterval
 }
 
 // BestBlockHeader returns the chain tail block
