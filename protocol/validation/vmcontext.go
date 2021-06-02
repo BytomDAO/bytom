@@ -100,6 +100,10 @@ func convertProgram(prog []byte, converter ProgramConverterFunc) []byte {
 		if contractProg, err := converter(prog); err == nil {
 			return contractProg
 		}
+	} else if segwit.IsP2WSCScript(prog) {
+		if witnessProg, err := segwit.ConvertP2SCProgram([]byte(prog)); err == nil {
+			return witnessProg
+		}
 	}
 	return prog
 }

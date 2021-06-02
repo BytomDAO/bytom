@@ -5,6 +5,7 @@ import (
 
 	"github.com/bytom/bytom/consensus/bcrp"
 	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/vm"
 )
 
@@ -13,6 +14,13 @@ var (
 	ErrBadValue       = errors.New("bad value")
 	ErrMultisigFormat = errors.New("bad multisig program format")
 )
+
+// swapContractArgs is a struct for swap contract arguments
+type SwapContractArgs struct {
+	RequestedAsset0 bc.AssetID
+	RequestedAsset1 bc.AssetID
+	RequestedAsset2 bc.AssetID
+}
 
 // IsUnspendable checks if a contorl program is absolute failed
 func IsUnspendable(prog []byte) bool {
@@ -182,4 +190,33 @@ func GetIssuanceProgramRestrictHeight(program []byte) uint64 {
 		return height
 	}
 	return 0
+}
+
+// P2WSCProgram return the segwit pay to swap contract
+func P2WSCProgram(swapContractArgs SwapContractArgs) ([]byte, error) {
+	builder := NewBuilder()
+	builder.AddInt64(0)
+	builder.AddData(swapContractArgs.RequestedAsset0.Bytes())
+	builder.AddData(swapContractArgs.RequestedAsset1.Bytes())
+	builder.AddData(swapContractArgs.RequestedAsset2.Bytes())
+	return builder.Build()
+}
+
+// P2SCProgram generates the script for control with swap contract
+//
+// swapContract source code:
+//
+// contract stack flow:
+func P2SCProgram(swapContractArgs SwapContractArgs) ([]byte, error) {
+	program, err := P2WSCProgram(swapContractArgs)
+	if err != nil {
+		return nil, err
+	}
+
+	builder := NewBuilder()
+	// contract arguments
+	builder.AddData(program)
+
+	// TODO: contract instructions
+	return builder.Build()
 }
