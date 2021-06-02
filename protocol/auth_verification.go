@@ -118,7 +118,7 @@ func (c *Casper) setJustified(source, target *state.Checkpoint) []*state.Checkpo
 	var affectedCheckpoint []*state.Checkpoint
 	target.Status = state.Justified
 	// must direct child
-	if target.Parent != nil && target.Parent.Hash == source.Hash {
+	if target.ParentHash == source.Hash {
 		c.setFinalized(source)
 	}
 
