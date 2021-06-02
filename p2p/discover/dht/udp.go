@@ -3,7 +3,6 @@ package dht
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"crypto/ed25519"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -18,6 +17,7 @@ import (
 	"github.com/bytom/bytom/common"
 	cfg "github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/crypto"
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/p2p/netutil"
 	"github.com/bytom/bytom/version"
 )
@@ -255,13 +255,13 @@ type netWork interface {
 // udp implements the RPC protocol.
 type udp struct {
 	conn        conn
-	priv        ed25519.PrivateKey
+	priv        chainkd.XPrv
 	ourEndpoint rpcEndpoint
 	//nat         nat.Interface
 	net netWork
 }
 
-func NewDiscover(config *cfg.Config, priv ed25519.PrivateKey, port uint16) (*Network, error) {
+func NewDiscover(config *cfg.Config, priv chainkd.XPrv, port uint16) (*Network, error) {
 	addr, err := net.ResolveUDPAddr("udp", net.JoinHostPort("0.0.0.0", strconv.FormatUint(uint64(port), 10)))
 	if err != nil {
 		return nil, err
@@ -302,13 +302,13 @@ func NewDiscover(config *cfg.Config, priv ed25519.PrivateKey, port uint16) (*Net
 }
 
 // ListenUDP returns a new table that listens for UDP packets on laddr.
-func ListenUDP(priv ed25519.PrivateKey, conn conn, realaddr *net.UDPAddr, nodeDBPath string, netrestrict *netutil.Netlist) (*Network, error) {
+func ListenUDP(priv chainkd.XPrv, conn conn, realaddr *net.UDPAddr, nodeDBPath string, netrestrict *netutil.Netlist) (*Network, error) {
 	transport, err := listenUDP(priv, conn, realaddr)
 	if err != nil {
 		return nil, err
 	}
 
-	net, err := newNetwork(transport, priv.Public(), nodeDBPath, netrestrict)
+	net, err := newNetwork(transport, priv.XPub().PublicKey(), nodeDBPath, netrestrict)
 	if err != nil {
 		return nil, err
 	}
@@ -318,7 +318,7 @@ func ListenUDP(priv ed25519.PrivateKey, conn conn, realaddr *net.UDPAddr, nodeDB
 	return net, nil
 }
 
-func listenUDP(priv ed25519.PrivateKey, conn conn, realaddr *net.UDPAddr) (*udp, error) {
+func listenUDP(priv chainkd.XPrv, conn conn, realaddr *net.UDPAddr) (*udp, error) {
 	return &udp{conn: conn, priv: priv, ourEndpoint: makeEndpoint(realaddr, uint16(realaddr.Port))}, nil
 }
 
@@ -414,7 +414,7 @@ func (t *udp) sendPacket(toid NodeID, toaddr *net.UDPAddr, ptype byte, req inter
 // zeroed padding space for encodePacket.
 var headSpace = make([]byte, headSize)
 
-func encodePacket(priv ed25519.PrivateKey, ptype byte, req interface{}) (p, hash []byte, err error) {
+func encodePacket(priv chainkd.XPrv, ptype byte, req interface{}) (p, hash []byte, err error) {
 	b := new(bytes.Buffer)
 	b.Write(headSpace)
 	b.WriteByte(ptype)
@@ -425,10 +425,10 @@ func encodePacket(priv ed25519.PrivateKey, ptype byte, req interface{}) (p, hash
 		return nil, nil, err
 	}
 	packet := b.Bytes()
-	nodeID := priv.Public()
-	sig := ed25519.Sign(priv, common.BytesToHash(packet[headSize:]).Bytes())
+	nodeID := priv.XPub().PublicKey()
+	sig := priv.Sign(common.BytesToHash(packet[headSize:]).Bytes())
 	copy(packet, versionPrefix)
-	copy(packet[versionPrefixSize:], nodeID.(ed25519.PublicKey)[:])
+	copy(packet[versionPrefixSize:], nodeID[:])
 	copy(packet[versionPrefixSize+nodeIDSize:], sig)
 
 	hash = common.BytesToHash(packet[versionPrefixSize:]).Bytes()

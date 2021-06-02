@@ -2,6 +2,7 @@ package connection
 
 import (
 	"bytes"
+	"crypto/ed25519"
 	crand "crypto/rand"
 	"crypto/sha256"
 	"encoding/binary"
@@ -12,12 +13,12 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"golang.org/x/crypto/nacl/box"
 	"golang.org/x/crypto/nacl/secretbox"
 	"golang.org/x/crypto/ripemd160"
 
-	"github.com/tendermint/go-crypto"
-	wire "github.com/tendermint/go-wire"
+	"github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
 )
 
@@ -26,12 +27,12 @@ const (
 	dataMaxSize     = 1024
 	totalFrameSize  = dataMaxSize + dataLenSize
 	sealedFrameSize = totalFrameSize + secretbox.Overhead
-	authSigMsgSize  = (32 + 1) + (64 + 1) // fixed size (length prefixed) byte arrays
+	authSigMsgSize  = 100 // fixed size (length prefixed) byte arrays
 )
 
 type authSigMessage struct {
-	Key crypto.PubKey
-	Sig crypto.Signature
+	Key []byte
+	Sig []byte
 }
 
 // SecretConnection implements net.Conn
@@ -40,13 +41,13 @@ type SecretConnection struct {
 	recvBuffer []byte
 	recvNonce  *[24]byte
 	sendNonce  *[24]byte
-	remPubKey  crypto.PubKeyEd25519
+	remPubKey  ed25519.PublicKey
 	shrSecret  *[32]byte // shared secret
 }
 
 // MakeSecretConnection performs handshake and returns a new authenticated SecretConnection.
-func MakeSecretConnection(conn io.ReadWriteCloser, locPrivKey crypto.PrivKeyEd25519) (*SecretConnection, error) {
-	locPubKey := locPrivKey.PubKey().Unwrap().(crypto.PubKeyEd25519)
+func MakeSecretConnection(conn io.ReadWriteCloser, locPrivKey chainkd.XPrv) (*SecretConnection, error) {
+	locPubKey := locPrivKey.XPub().PublicKey()
 
 	// Generate ephemeral keys for perfect forward secrecy.
 	locEphPub, locEphPriv := genEphKeys()
@@ -90,15 +91,11 @@ func MakeSecretConnection(conn io.ReadWriteCloser, locPrivKey crypto.PrivKeyEd25
 	}
 
 	remPubKey, remSignature := authSigMsg.Key, authSigMsg.Sig
-	if _, ok := remPubKey.PubKeyInner.(crypto.PubKeyEd25519); !ok {
-		return nil, errors.New("peer sent a nil public key")
-	}
-
-	if !remPubKey.VerifyBytes(challenge[:], remSignature) {
+	if !ed25519.Verify(remPubKey, challenge[:], remSignature) {
 		return nil, errors.New("Challenge verification failed")
 	}
 
-	sc.remPubKey = remPubKey.Unwrap().(crypto.PubKeyEd25519)
+	sc.remPubKey = remPubKey
 	return sc, nil
 }
 
@@ -134,7 +131,7 @@ func (sc *SecretConnection) Read(data []byte) (n int, err error) {
 }
 
 // RemotePubKey returns authenticated remote pubkey
-func (sc *SecretConnection) RemotePubKey() crypto.PubKeyEd25519 {
+func (sc *SecretConnection) RemotePubKey() ed25519.PublicKey {
 	return sc.remPubKey
 }
 
@@ -236,16 +233,15 @@ func genNonces(loPubKey, hiPubKey *[32]byte, locIsLo bool) (*[24]byte, *[24]byte
 	return nonce2, nonce1
 }
 
-func signChallenge(challenge *[32]byte, locPrivKey crypto.PrivKeyEd25519) (signature crypto.SignatureEd25519) {
-	signature = locPrivKey.Sign(challenge[:]).Unwrap().(crypto.SignatureEd25519)
-	return
+func signChallenge(challenge *[32]byte, locPrivKey chainkd.XPrv) []byte {
+	return locPrivKey.Sign(challenge[:])
 }
 
-func shareAuthSignature(sc *SecretConnection, pubKey crypto.PubKeyEd25519, signature crypto.SignatureEd25519) (*authSigMessage, error) {
+func shareAuthSignature(sc *SecretConnection, pubKey, signature []byte) (*authSigMessage, error) {
 	var recvMsg authSigMessage
 
 	wTask := func(i int) (res interface{}, err error, abort bool) {
-		msgBytes := wire.BinaryBytes(authSigMessage{pubKey.Wrap(), signature.Wrap()})
+		msgBytes := wire.BinaryBytes(authSigMessage{pubKey, signature})
 		_, err = sc.Write(msgBytes)
 		return nil, err, false
 	}

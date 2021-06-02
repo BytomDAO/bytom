@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/tendermint/go-crypto"
 
 	cfg "github.com/bytom/bytom/config"
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/errors"
 	conn "github.com/bytom/bytom/p2p/connection"
@@ -138,7 +138,7 @@ func TestFiltersOutItself(t *testing.T) {
 	cfg := *testCfg
 	cfg.DBPath = dirPath
 	cfg.P2P.ListenAddress = "127.0.1.1:0"
-	swPrivKey := crypto.GenPrivKeyEd25519()
+	swPrivKey, _ := chainkd.NewXPrv(nil)
 	s1 := MakeSwitch(&cfg, testDB, swPrivKey, initSwitchFunc)
 	s1.Start()
 	defer s1.Stop()
@@ -179,7 +179,7 @@ func TestDialBannedPeer(t *testing.T) {
 	cfg := *testCfg
 	cfg.DBPath = dirPath
 	cfg.P2P.ListenAddress = "127.0.1.1:0"
-	swPrivKey := crypto.GenPrivKeyEd25519()
+	swPrivKey, _ := chainkd.NewXPrv(nil)
 	s1 := MakeSwitch(&cfg, testDB, swPrivKey, initSwitchFunc)
 	s1.Start()
 	defer s1.Stop()
@@ -192,7 +192,8 @@ func TestDialBannedPeer(t *testing.T) {
 
 	rpCfg := *testCfg
 	rpCfg.DBPath = rmdirPath
-	rp := &remotePeer{PrivKey: crypto.GenPrivKeyEd25519(), Config: &rpCfg}
+	prvKey, _ := chainkd.NewXPrv(nil)
+	rp := &remotePeer{PrivKey: prvKey, Config: &rpCfg}
 	rp.Start()
 	defer rp.Stop()
 	for {
@@ -217,7 +218,7 @@ func TestDuplicateOutBoundPeer(t *testing.T) {
 	cfg := *testCfg
 	cfg.DBPath = dirPath
 	cfg.P2P.ListenAddress = "127.0.1.1:0"
-	swPrivKey := crypto.GenPrivKeyEd25519()
+	swPrivKey, _ := chainkd.NewXPrv(nil)
 	s1 := MakeSwitch(&cfg, testDB, swPrivKey, initSwitchFunc)
 	s1.Start()
 	defer s1.Stop()
@@ -229,7 +230,8 @@ func TestDuplicateOutBoundPeer(t *testing.T) {
 	defer os.RemoveAll(rmdirPath)
 
 	rpCfg := *testCfg
-	rp := &remotePeer{PrivKey: crypto.GenPrivKeyEd25519(), Config: &rpCfg}
+	prvKey, _ := chainkd.NewXPrv(nil)
+	rp := &remotePeer{PrivKey: prvKey, Config: &rpCfg}
 	rp.Start()
 	defer rp.Stop()
 
@@ -254,13 +256,13 @@ func TestDuplicateInBoundPeer(t *testing.T) {
 	cfg := *testCfg
 	cfg.DBPath = dirPath
 	cfg.P2P.ListenAddress = "127.0.1.1:0"
-	swPrivKey := crypto.GenPrivKeyEd25519()
+	swPrivKey, _ := chainkd.NewXPrv(nil)
 	s1 := MakeSwitch(&cfg, testDB, swPrivKey, initSwitchFunc)
 	s1.Start()
 	defer s1.Stop()
 
 	inpCfg := *testCfg
-	inp := &inboundPeer{PrivKey: crypto.GenPrivKeyEd25519(), config: &inpCfg}
+	inp := &inboundPeer{PrivKey: swPrivKey, config: &inpCfg}
 	addr := NewNetAddress(s1.listeners[0].(*DefaultListener).NetListener().Addr())
 	if err != nil {
 		t.Fatal(err)
@@ -290,13 +292,13 @@ func TestAddInboundPeer(t *testing.T) {
 	cfg.DBPath = dirPath
 	cfg.P2P.MaxNumPeers = 2
 	cfg.P2P.ListenAddress = "127.0.1.1:0"
-	swPrivKey := crypto.GenPrivKeyEd25519()
+	swPrivKey, _ := chainkd.NewXPrv(nil)
 	s1 := MakeSwitch(&cfg, testDB, swPrivKey, initSwitchFunc)
 	s1.Start()
 	defer s1.Stop()
 
 	inpCfg := *testCfg
-	inpPrivKey := crypto.GenPrivKeyEd25519()
+	inpPrivKey, _ := chainkd.NewXPrv(nil)
 	inp := &inboundPeer{PrivKey: inpPrivKey, config: &inpCfg}
 	addr := NewNetAddress(s1.listeners[0].(*DefaultListener).NetListener().Addr())
 	if err != nil {
@@ -305,7 +307,7 @@ func TestAddInboundPeer(t *testing.T) {
 	go inp.dial(addr)
 
 	rpCfg := *testCfg
-	rpPrivKey := crypto.GenPrivKeyEd25519()
+	rpPrivKey, _ := chainkd.NewXPrv(nil)
 	rp := &remotePeer{PrivKey: rpPrivKey, Config: &rpCfg}
 	rp.Start()
 	defer rp.Stop()
@@ -315,7 +317,7 @@ func TestAddInboundPeer(t *testing.T) {
 	}
 
 	inp2Cfg := *testCfg
-	inp2PrivKey := crypto.GenPrivKeyEd25519()
+	inp2PrivKey, _ := chainkd.NewXPrv(nil)
 	inp2 := &inboundPeer{PrivKey: inp2PrivKey, config: &inp2Cfg}
 
 	go inp2.dial(addr)
@@ -339,13 +341,13 @@ func TestStopPeer(t *testing.T) {
 	cfg.DBPath = dirPath
 	cfg.P2P.MaxNumPeers = 2
 	cfg.P2P.ListenAddress = "127.0.1.1:0"
-	swPrivKey := crypto.GenPrivKeyEd25519()
+	swPrivKey, _ := chainkd.NewXPrv(nil)
 	s1 := MakeSwitch(&cfg, testDB, swPrivKey, initSwitchFunc)
 	s1.Start()
 	defer s1.Stop()
 
 	inpCfg := *testCfg
-	inpPrivKey := crypto.GenPrivKeyEd25519()
+	inpPrivKey, _ := chainkd.NewXPrv(nil)
 	inp := &inboundPeer{PrivKey: inpPrivKey, config: &inpCfg}
 	addr := NewNetAddress(s1.listeners[0].(*DefaultListener).NetListener().Addr())
 	if err != nil {
@@ -354,7 +356,7 @@ func TestStopPeer(t *testing.T) {
 	go inp.dial(addr)
 
 	rpCfg := *testCfg
-	rpPrivKey := crypto.GenPrivKeyEd25519()
+	rpPrivKey, _ := chainkd.NewXPrv(nil)
 	rp := &remotePeer{PrivKey: rpPrivKey, Config: &rpCfg}
 	rp.Start()
 	defer rp.Stop()
