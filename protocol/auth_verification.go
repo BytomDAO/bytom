@@ -117,17 +117,19 @@ func (c *Casper) setJustified(source, target *state.Checkpoint) {
 	target.Status = state.Justified
 	// must direct child
 	if target.ParentHash == source.Hash {
-		c.setFinalized(source.Hash)
+		c.setFinalized(source)
 	}
 }
 
-func (c *Casper) setFinalized(checkpointHash bc.Hash) {
-	newRoot, err := c.tree.nodeByHash(checkpointHash)
+func (c *Casper) setFinalized(checkpoint *state.Checkpoint) {
+	checkpoint.Status = state.Finalized
+	newRoot, err := c.tree.nodeByHash(checkpoint.Hash)
 	if err != nil {
 		log.WithField("err", err).Error("source checkpoint before the last finalized checkpoint")
 		return
 	}
 
+	// update the checkpoint state in memory
 	newRoot.checkpoint.Status = state.Finalized
 	c.tree = newRoot
 }
