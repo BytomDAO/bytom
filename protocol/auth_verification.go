@@ -124,7 +124,7 @@ func (c *Casper) setJustified(source, target *state.Checkpoint) {
 func (c *Casper) setFinalized(checkpoint *state.Checkpoint) {
 	newRoot, err := c.tree.nodeByHash(checkpoint.Hash)
 	if err != nil {
-		// source checkpoint before the last finalized checkpoint
+		log.WithField("err", err).Error("source checkpoint before the last finalized checkpoint")
 		return
 	}
 
