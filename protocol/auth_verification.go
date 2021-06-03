@@ -19,25 +19,6 @@ func (c *Casper) AuthVerification(v *Verification) error {
 		return err
 	}
 
-	target, err := c.store.GetCheckpoint(&v.TargetHash)
-	if err != nil {
-		c.verificationCache.Add(verificationCacheKey(v.TargetHash, v.PubKey), v)
-		return nil
-	}
-
-	validators, err := c.Validators(&v.TargetHash)
-	if err != nil {
-		return err
-	}
-
-	 if _, ok := validators[v.PubKey]; !ok {
-		return errPubKeyIsNotValidator
-	}
-
-	if target.ContainsVerification(validators[v.PubKey].Order, &v.SourceHash) {
-		return nil
-	}
-
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -48,7 +29,26 @@ func (c *Casper) AuthVerification(v *Verification) error {
 		return nil
 	}
 
-	return c.authVerification(v, target, validators)
+	targetNode, err := c.tree.nodeByHash(v.TargetHash)
+	if err != nil {
+		c.verificationCache.Add(verificationCacheKey(v.TargetHash, v.PubKey), v)
+		return nil
+	}
+
+	validators, err := c.Validators(&v.TargetHash)
+	if err != nil {
+		return err
+	}
+
+	if _, ok := validators[v.PubKey]; !ok {
+		return errPubKeyIsNotValidator
+	}
+
+	if targetNode.checkpoint.ContainsVerification(validators[v.PubKey].Order, &v.SourceHash) {
+		return nil
+	}
+
+	return c.authVerification(v, targetNode.checkpoint, validators)
 }
 
 func (c *Casper) authVerification(v *Verification, target *state.Checkpoint, validators map[string]*state.Validator) error {
@@ -73,7 +73,7 @@ func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, validator
 	_, oldBestHash := c.bestChain()
 	var affectedCheckpoints []*state.Checkpoint
 	for _, v := range verifications {
-		source, err := c.store.GetCheckpoint(&v.SourceHash)
+		source, err := c.store. GetCheckpoint(&v.SourceHash)
 		if err != nil {
 			return nil, err
 		}
@@ -122,12 +122,12 @@ func (c *Casper) setJustified(source, target *state.Checkpoint) {
 }
 
 func (c *Casper) setFinalized(checkpoint *state.Checkpoint) {
-	checkpoint.Status = state.Finalized
 	newRoot, err := c.tree.nodeByHash(checkpoint.Hash)
 	if err != nil {
 		log.WithField("err", err).Panic("fail to set checkpoint finalized")
 	}
 
+	newRoot.checkpoint.Status = state.Finalized
 	c.tree = newRoot
 }
 
