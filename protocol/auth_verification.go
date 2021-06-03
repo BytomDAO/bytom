@@ -79,15 +79,14 @@ func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, validator
 		}
 
 		supLink := target.AddVerification(v.SourceHash, v.SourceHeight, validators[v.PubKey].Order, v.Signature)
+		affectedCheckpoints = append(affectedCheckpoints, target)
+
 		if target.Status != state.Unjustified || !supLink.IsMajority(len(validators)) || source.Status == state.Finalized {
 			continue
 		}
 
-		if source.Status == state.Unjustified {
-			c.justifyingCheckpoints[source.Hash] = append(c.justifyingCheckpoints[source.Hash], target)
-		}
-
-		affectedCheckpoints = append(affectedCheckpoints, c.setJustified(source, target)...)
+		c.setJustified(source, target)
+		affectedCheckpoints = append(affectedCheckpoints, source)
 	}
 
 	_, newBestHash := c.bestChain()
@@ -114,21 +113,12 @@ func (c *Casper) saveVerificationToHeader(v *Verification, validatorOrder int) e
 }
 
 // source status is justified, and exist a super majority link from source to target
-func (c *Casper) setJustified(source, target *state.Checkpoint) []*state.Checkpoint {
-	var affectedCheckpoint []*state.Checkpoint
+func (c *Casper) setJustified(source, target *state.Checkpoint) {
 	target.Status = state.Justified
 	// must direct child
 	if target.ParentHash == source.Hash {
 		c.setFinalized(source)
 	}
-
-	for _, checkpoint := range c.justifyingCheckpoints[target.Hash] {
-		affectedCheckpoint = append(affectedCheckpoint, c.setJustified(target, checkpoint)...)
-	}
-
-	delete(c.justifyingCheckpoints, target.Hash)
-	affectedCheckpoint = append(affectedCheckpoint, source, target)
-	return affectedCheckpoint
 }
 
 func (c *Casper) setFinalized(checkpoint *state.Checkpoint) {
