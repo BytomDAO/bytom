@@ -38,8 +38,6 @@ type Casper struct {
 	prevCheckpointCache *common.Cache
 	// block hash + pubKey -> verification
 	verificationCache *common.Cache
-	// put the checkpoints which exist a majority supLink but the source checkpoint is not justified
-	justifyingCheckpoints map[bc.Hash][]*state.Checkpoint
 }
 
 // NewCasper create a new instance of Casper
@@ -59,7 +57,6 @@ func NewCasper(store Store, checkpoints []*state.Checkpoint, rollbackNotifyCh ch
 		evilValidators:        make(map[string][]*Verification),
 		prevCheckpointCache:   common.NewCache(1024),
 		verificationCache:     common.NewCache(1024),
-		justifyingCheckpoints: make(map[bc.Hash][]*state.Checkpoint),
 	}
 	go casper.authVerificationLoop()
 	return casper

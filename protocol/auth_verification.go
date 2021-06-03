@@ -19,25 +19,6 @@ func (c *Casper) AuthVerification(v *Verification) error {
 		return err
 	}
 
-	target, err := c.store.GetCheckpoint(&v.TargetHash)
-	if err != nil {
-		c.verificationCache.Add(verificationCacheKey(v.TargetHash, v.PubKey), v)
-		return nil
-	}
-
-	validators, err := c.Validators(&v.TargetHash)
-	if err != nil {
-		return err
-	}
-
-	 if _, ok := validators[v.PubKey]; !ok {
-		return errPubKeyIsNotValidator
-	}
-
-	if target.ContainsVerification(validators[v.PubKey].Order, &v.SourceHash) {
-		return nil
-	}
-
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -48,7 +29,26 @@ func (c *Casper) AuthVerification(v *Verification) error {
 		return nil
 	}
 
-	return c.authVerification(v, target, validators)
+	targetNode, err := c.tree.nodeByHash(v.TargetHash)
+	if err != nil {
+		c.verificationCache.Add(verificationCacheKey(v.TargetHash, v.PubKey), v)
+		return nil
+	}
+
+	validators, err := c.Validators(&v.TargetHash)
+	if err != nil {
+		return err
+	}
+
+	if _, ok := validators[v.PubKey]; !ok {
+		return errPubKeyIsNotValidator
+	}
+
+	if targetNode.checkpoint.ContainsVerification(validators[v.PubKey].Order, &v.SourceHash) {
+		return nil
+	}
+
+	return c.authVerification(v, targetNode.checkpoint, validators)
 }
 
 func (c *Casper) authVerification(v *Verification, target *state.Checkpoint, validators map[string]*state.Validator) error {
@@ -73,22 +73,20 @@ func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, validator
 	_, oldBestHash := c.bestChain()
 	var affectedCheckpoints []*state.Checkpoint
 	for _, v := range verifications {
-		source, err := c.store.GetCheckpoint(&v.SourceHash)
+		source, err := c.store. GetCheckpoint(&v.SourceHash)
 		if err != nil {
 			return nil, err
 		}
 
 		supLink := target.AddVerification(v.SourceHash, v.SourceHeight, validators[v.PubKey].Order, v.Signature)
+		affectedCheckpoints = append(affectedCheckpoints, target)
+
 		if target.Status != state.Unjustified || !supLink.IsMajority(len(validators)) || source.Status == state.Finalized {
 			continue
 		}
 
-		if source.Status == state.Unjustified {
-			c.justifyingCheckpoints[source.Hash] = append(c.justifyingCheckpoints[source.Hash], target)
-			continue
-		}
-
-		affectedCheckpoints = append(affectedCheckpoints, c.setJustified(source, target)...)
+		c.setJustified(source, target)
+		affectedCheckpoints = append(affectedCheckpoints, source)
 	}
 
 	_, newBestHash := c.bestChain()
@@ -115,30 +113,24 @@ func (c *Casper) saveVerificationToHeader(v *Verification, validatorOrder int) e
 }
 
 // source status is justified, and exist a super majority link from source to target
-func (c *Casper) setJustified(source, target *state.Checkpoint) []*state.Checkpoint {
-	var affectedCheckpoint []*state.Checkpoint
+func (c *Casper) setJustified(source, target *state.Checkpoint) {
 	target.Status = state.Justified
 	// must direct child
-	if target.Parent.Hash == source.Hash {
+	if target.ParentHash == source.Hash {
 		c.setFinalized(source)
 	}
-
-	for _, checkpoint := range c.justifyingCheckpoints[target.Hash] {
-		affectedCheckpoint = append(affectedCheckpoint, c.setJustified(target, checkpoint)...)
-	}
-
-	delete(c.justifyingCheckpoints, target.Hash)
-	affectedCheckpoint = append(affectedCheckpoint, source, target)
-	return affectedCheckpoint
 }
 
 func (c *Casper) setFinalized(checkpoint *state.Checkpoint) {
 	checkpoint.Status = state.Finalized
 	newRoot, err := c.tree.nodeByHash(checkpoint.Hash)
 	if err != nil {
-		log.WithField("err", err).Panic("fail to set checkpoint finalized")
+		log.WithField("err", err).Error("source checkpoint before the last finalized checkpoint")
+		return
 	}
 
+	// update the checkpoint state in memory
+	newRoot.checkpoint.Status = state.Finalized
 	c.tree = newRoot
 }
 

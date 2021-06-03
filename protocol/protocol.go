@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"encoding/hex"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -119,7 +120,20 @@ func (c *Chain) LastIrreversibleHeader() *types.BlockHeader {
 
 // ProcessBlockVerification process block verification
 func (c *Chain) ProcessBlockVerification(v *Verification) error {
-	return c.casper.AuthVerification(v)
+	if err := c.casper.AuthVerification(v); err != nil {
+		return err
+	}
+
+	pubKey, _ := hex.DecodeString(v.PubKey)
+	signature, _ := hex.DecodeString(v.Signature)
+	return c.eventDispatcher.Post(event.BlockVerificationEvent{
+		SourceHeight: v.SourceHeight,
+		SourceHash:   v.SourceHash,
+		TargetHeight: v.TargetHeight,
+		TargetHash:   v.TargetHash,
+		PubKey:       pubKey,
+		Signature:    signature,
+	})
 }
 
 // BestBlockHeight returns the current height of the blockchain.
@@ -154,13 +168,13 @@ func (c *Chain) GetValidator(prevHash *bc.Hash, timeStamp uint64) (*state.Valida
 	return nil, errors.New("get blocker failure")
 }
 
-func getValidatorOrder(startTimestamp, blockTimestamp, numOfConsensusNode uint64) uint64 {
+func getValidatorOrder(startTimestamp, blockTimestamp, numOfValidators uint64) uint64 {
 	// One round of product block time for all consensus nodes
-	roundBlockTime := state.BlocksOfEpoch * numOfConsensusNode * consensus.ActiveNetParams.BlockTimeInterval
+	roundBlockTime := numOfValidators * consensus.ActiveNetParams.BlockTimeInterval
 	// The start time of the last round of product block
 	lastRoundStartTime := startTimestamp + (blockTimestamp-startTimestamp)/roundBlockTime*roundBlockTime
 	// Order of blocker
-	return (blockTimestamp - lastRoundStartTime) / (state.BlocksOfEpoch * consensus.ActiveNetParams.BlockTimeInterval)
+	return (blockTimestamp - lastRoundStartTime) / consensus.ActiveNetParams.BlockTimeInterval
 }
 
 // BestBlockHeader returns the chain tail block
