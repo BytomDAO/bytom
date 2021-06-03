@@ -16,8 +16,8 @@ const (
 	rewardThreshold   = 0.5
 )
 
-//  validatorBlockReward the number of rewards each block validator can get
-func validatorBlockReward(checkpoint *Checkpoint) (uint64, error) {
+//  validatorRewardPerBlock the number of rewards each block validator can get
+func validatorRewardPerBlock(checkpoint *Checkpoint) (uint64, error) {
 	pledgeRate, err := pledgeRate(checkpoint)
 	if err != nil {
 		return 0, nil
@@ -32,7 +32,7 @@ func validatorBlockReward(checkpoint *Checkpoint) (uint64, error) {
 
 // federationBlockReward the number of rewards each block federation can get
 func federationBlockReward(checkpoint *Checkpoint) (uint64, error) {
-	validatorReward, err := validatorBlockReward(checkpoint)
+	validatorReward, err := validatorRewardPerBlock(checkpoint)
 	if err != nil {
 		return 0, err
 	}
@@ -50,6 +50,12 @@ func pledgeRate(checkpoint *Checkpoint) (float64, error) {
 		}
 	}
 
+	for _, guaranty := range checkpoint.Guaranties {
+		if totalVotes, ok = checked.AddUint64(totalVotes, guaranty); !ok {
+			return 0.0, errors.Wrap(checked.ErrOverflow)
+		}
+	}
+
 	if totalVotes > totalSupply {
 		return 0.0, errors.New("validators total votes exceed total supply")
 	}
@@ -57,8 +63,8 @@ func pledgeRate(checkpoint *Checkpoint) (float64, error) {
 	return float64(totalVotes) / totalSupply, nil
 }
 
-// ValidatorReward calculate the coinbase reward for validator
-func (c *Checkpoint) ValidatorReward(block *types.Block) error {
+// ApplyValidatorReward calculate the coinbase reward for validator
+func (c *Checkpoint) ApplyValidatorReward(block *types.Block) error {
 	var (
 		controlProgram []byte
 		feeAmount      uint64
@@ -82,7 +88,7 @@ func (c *Checkpoint) ValidatorReward(block *types.Block) error {
 		}
 	}
 
-	validatorReward, err := validatorBlockReward(c.Parent)
+	validatorReward, err := validatorRewardPerBlock(c.Parent)
 	if err != nil {
 		return err
 	}
@@ -92,8 +98,8 @@ func (c *Checkpoint) ValidatorReward(block *types.Block) error {
 	return nil
 }
 
-// FederationReward  federation gain the reward in an epoch
-func (c *Checkpoint) FederationReward() error {
+// ApplyFederationReward  federation gain the reward in an epoch
+func (c *Checkpoint) ApplyFederationReward() error {
 	federationReward, err := federationBlockReward(c.Parent)
 	if err != nil {
 		return err
