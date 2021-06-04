@@ -17,7 +17,7 @@ import (
 // it will return verification when an epoch is reached and the current node is the validator, otherwise return nil
 // the chain module must broadcast the verification
 func (c *Casper) ApplyBlock(block *types.Block) (*Verification, *state.Checkpoint, error) {
-	if block.Height % state.BlocksOfEpoch == 1 {
+	if block.Height%state.BlocksOfEpoch == 1 {
 		c.newEpochCh <- block.PreviousBlockHash
 	}
 
@@ -69,6 +69,7 @@ func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, 
 			ParentHash: parent.Hash,
 			Parent:     parent,
 			Status:     state.Growing,
+			Rewards:    make(map[string]uint64),
 			Votes:      make(map[string]uint64),
 			Guaranties: make(map[string]uint64),
 		}
@@ -79,9 +80,15 @@ func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, 
 		for pubKey, num := range parent.Guaranties {
 			checkpoint.Guaranties[pubKey] = num
 		}
+
 		node.children = append(node.children, &treeNode{checkpoint: checkpoint})
 	} else if mod == 0 {
 		checkpoint.Status = state.Unjustified
+		checkpoint.ApplyFederationReward()
+	}
+
+	if err := checkpoint.ApplyValidatorReward(block); err != nil {
+		return nil, err
 	}
 
 	checkpoint.Height = block.Height
@@ -171,7 +178,7 @@ func (c *Casper) applyMyVerification(target *state.Checkpoint, block *types.Bloc
 }
 
 func (c *Casper) myVerification(target *state.Checkpoint, validators map[string]*state.Validator) (*Verification, error) {
-	if target.Height % state.BlocksOfEpoch != 0 {
+	if target.Height%state.BlocksOfEpoch != 0 {
 		return nil, nil
 	}
 
@@ -199,7 +206,7 @@ func (c *Casper) myVerification(target *state.Checkpoint, validators map[string]
 			return nil, err
 		}
 
-		if err := c.verifyVerification(v, validatorOrder,false); err != nil {
+		if err := c.verifyVerification(v, validatorOrder, false); err != nil {
 			return nil, nil
 		}
 
@@ -218,7 +225,6 @@ func (c *Casper) saveCheckpoints(affectedCheckpoints map[bc.Hash]*state.Checkpoi
 	}
 	return c.store.SaveCheckpoints(checkpoints)
 }
-
 
 type guarantyArgs struct {
 	Amount uint64

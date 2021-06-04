@@ -235,3 +235,8 @@ func (c *Chain) BlockWaiter(height uint64) <-chan struct{} {
 func (c *Chain) GetTxPool() *TxPool {
 	return c.txPool
 }
+
+// PrevCheckpointByPrevHash get previous checkpoint by previous block hash
+func (c *Chain) PrevCheckpointByPrevHash(preBlockHash *bc.Hash) (*state.Checkpoint, error) {
+	return c.casper.prevCheckpointByPrevHash(preBlockHash)
+}

@@ -12,7 +12,7 @@ import (
 
 const (
 	totalSupply       = 15.66 * 1e16
-	singleBlockReward = uint64(570776255) //AnnualSupply(0.3 * 1e16) / AnnualBlock(365 * 24 * 60 * 10)
+	singleBlockReward = uint64(570776255) // AnnualSupply(0.3 * 1e16) / AnnualBlock(365 * 24 * 60 * 10)
 	rewardThreshold   = 0.5
 )
 
@@ -88,6 +88,10 @@ func (c *Checkpoint) ApplyValidatorReward(block *types.Block) error {
 		}
 	}
 
+	if c.Parent == nil {
+		return errors.New("the checkpoint parent is nil")
+	}
+
 	validatorReward, err := validatorRewardPerBlock(c.Parent)
 	if err != nil {
 		return err
@@ -100,6 +104,10 @@ func (c *Checkpoint) ApplyValidatorReward(block *types.Block) error {
 
 // ApplyFederationReward  federation gain the reward in an epoch
 func (c *Checkpoint) ApplyFederationReward() error {
+	if c.Parent == nil {
+		return errors.New("the checkpoint parent is nil")
+	}
+
 	federationReward, err := federationBlockReward(c.Parent)
 	if err != nil {
 		return err
