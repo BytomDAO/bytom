@@ -41,19 +41,24 @@ func checkCoinbaseAmount(b *bc.Block, checkpoint *state.Checkpoint) error {
 	if len(b.Transactions) == 0 {
 		return errors.Wrap(ErrWrongCoinbaseTransaction, "block is empty")
 	}
+
 	tx := b.Transactions[0]
+	if len(tx.TxHeader.ResultIds) == 0 {
+		return errors.Wrap(ErrWrongCoinbaseTransaction, "tx header resultIds is empty")
+	}
+
+	output, err := tx.Output(*tx.TxHeader.ResultIds[0])
+	if err != nil {
+		return err
+	}
+
+	if output.Source.Value.Amount != 0 {
+		return errors.Wrap(ErrWrongCoinbaseTransaction, "dismatch output amount")
+	}
+
 	if b.Height%state.BlocksOfEpoch != 1 {
 		if len(tx.TxHeader.ResultIds) != 1 {
 			return errors.Wrap(ErrWrongCoinbaseTransaction, "have more than 1 output")
-		}
-
-		output, err := tx.Output(*tx.TxHeader.ResultIds[0])
-		if err != nil {
-			return err
-		}
-
-		if output.Source.Value.Amount != 0 {
-			return errors.Wrap(ErrWrongCoinbaseTransaction, "dismatch output amount")
 		}
 	} else {
 		if len(tx.TxHeader.ResultIds) != len(checkpoint.Rewards)+1 {
