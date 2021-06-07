@@ -61,7 +61,7 @@ func AsInt64(b []byte) (int64, error) {
 
 // BigIntBytes conv big int to bytes, uint256 is version 1.1.1
 func BigIntBytes(n *uint256.Int) []byte {
-	return n.Bytes()
+	return LittleEndianBytes(n)
 }
 
 // AsBigInt conv bytes to big int
@@ -70,10 +70,31 @@ func AsBigInt(b []byte) (*uint256.Int, error) {
 		return nil, ErrBadValue
 	}
 
-	res := uint256.NewInt().SetBytes(b)
+	res := uint256.NewInt().SetBytes(BigEndianBytes(b))
 	if res.Sign() < 0 {
 		return nil, ErrRange
 	}
 
 	return res, nil
+}
+
+// LittleEndianBytes returns the value of z as a 32-byte little-endian array.
+func LittleEndianBytes(n *uint256.Int) []byte {
+	var b [32]byte
+	binary.LittleEndian.PutUint64(b[0:8], n[0])
+	binary.LittleEndian.PutUint64(b[8:16], n[1])
+	binary.LittleEndian.PutUint64(b[16:24], n[2])
+	binary.LittleEndian.PutUint64(b[24:32], n[3])
+	return b[:n.ByteLen()]
+}
+
+// BigEndianBytes returns the value of z as a 32-byte little-endian array.
+func BigEndianBytes(b []byte) []byte {
+	lens := len(b)
+	res := make([]byte,lens)
+	for i:=0;i<lens;i++{
+		res[i] = b[lens-1-i]
+	}
+
+	return res
 }
