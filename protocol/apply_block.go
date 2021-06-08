@@ -15,8 +15,7 @@ import (
 
 type applyBlockReply struct {
 	verification *Verification
-	isRollback   bool
-	newBestHash  bc.Hash
+	bestHash     bc.Hash
 }
 
 // ApplyBlock used to receive a new block from upper layer, it provides idempotence
@@ -33,10 +32,10 @@ func (c *Casper) ApplyBlock(block *types.Block) (*applyBlockReply, error) {
 	defer c.mu.Unlock()
 
 	if _, err := c.tree.nodeByHash(block.Hash()); err == nil {
-		return nil, errAlreadyProcessedBlock
+		_, bestHash := c.bestChain()
+		return &applyBlockReply{bestHash: bestHash}, nil
 	}
 
-	_, oldBestHash := c.bestChain()
 	target, err := c.applyBlockToCheckpoint(block)
 	if err != nil {
 		return nil, errors.Wrap(err, "apply block to checkpoint")
@@ -61,11 +60,8 @@ func (c *Casper) ApplyBlock(block *types.Block) (*applyBlockReply, error) {
 		return nil, err
 	}
 
-	reply := &applyBlockReply{verification: verification}
-	if c.isRollback(oldBestHash, block) {
-		reply.isRollback = true
-		reply.newBestHash = block.Hash()
-	}
+	_, bestHash := c.bestChain()
+	reply := &applyBlockReply{verification: verification, bestHash: bestHash}
 	return reply, c.saveCheckpoints(affectedCheckpoints)
 }
 
@@ -112,11 +108,6 @@ func (c *Casper) checkpointByHash(blockHash bc.Hash) (*treeNode, error) {
 	}
 
 	return node, nil
-}
-
-func (c *Casper) isRollback(oldBestHash bc.Hash, block *types.Block) bool {
-	_, newBestHash := c.bestChain()
-	return block.Hash() == newBestHash && block.PreviousBlockHash != oldBestHash
 }
 
 func (c *Casper) reorganizeCheckpoint(hash bc.Hash) (*treeNode, error) {
