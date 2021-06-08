@@ -59,23 +59,18 @@ func AsInt64(b []byte) (int64, error) {
 	return int64(res), nil
 }
 
-// BigIntBytes conv big int to bytes, uint256 is version 1.1.1
+// BigIntBytes conv big int to little endian bytes, uint256 is version 1.1.1
 func BigIntBytes(n *uint256.Int) []byte {
-	var b [32]byte
-	binary.LittleEndian.PutUint64(b[0:8], n[0])
-	binary.LittleEndian.PutUint64(b[8:16], n[1])
-	binary.LittleEndian.PutUint64(b[16:24], n[2])
-	binary.LittleEndian.PutUint64(b[24:32], n[3])
-	return b[:n.ByteLen()]
+	return Reverse(n.Bytes())
 }
 
-// AsBigInt conv bytes to big int
+// AsBigInt conv little endian bytes to big int
 func AsBigInt(b []byte) (*uint256.Int, error) {
 	if len(b) > 32 {
 		return nil, ErrBadValue
 	}
 
-	res := uint256.NewInt().SetBytes(LittleEndianToBigEndian(b))
+	res := uint256.NewInt().SetBytes(Reverse(b))
 	if res.Sign() < 0 {
 		return nil, ErrRange
 	}
@@ -83,10 +78,10 @@ func AsBigInt(b []byte) (*uint256.Int, error) {
 	return res, nil
 }
 
-// LittleEndianToBigEndian returns the 32-byte little-endian array as a 32-byte big-endian array.
-func LittleEndianToBigEndian(b []byte) []byte {
-	for i,j := 0, len(b) - 1; i<j; i,j = i+1, j-1 {
-		b[i],b[j] = b[j], b[i]
+// Reverse reverse []byte.
+func Reverse(b []byte) []byte {
+	for i, j := 0, len(b)-1; i < j; i, j = i+1, j-1 {
+		b[i], b[j] = b[j], b[i]
 	}
 
 	return b
