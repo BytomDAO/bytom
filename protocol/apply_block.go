@@ -66,8 +66,7 @@ func (c *Casper) ApplyBlock(block *types.Block) (*applyBlockReply, error) {
 		reply.isRollback = true
 		reply.newBestHash = block.Hash()
 	}
-	affectedCheckpoints = append(affectedCheckpoints, target)
-	return reply, c.store.SaveCheckpoints(affectedCheckpoints)
+	return reply, c.saveCheckpoints(affectedCheckpoints)
 }
 
 func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, error) {
@@ -200,11 +199,11 @@ func applyTransactions(target *state.Checkpoint, transactions []*types.Tx) error
 
 // applySupLinks copy the block's supLink to the checkpoint
 func (c *Casper) applySupLinks(target *state.Checkpoint, supLinks []*types.SupLink, validators map[string]*state.Validator) ([]*state.Checkpoint, error) {
+	affectedCheckpoints := []*state.Checkpoint{target}
 	if target.Height%state.BlocksOfEpoch != 0 {
 		return nil, nil
 	}
 
-	var affectedCheckpoints []*state.Checkpoint
 	for _, supLink := range supLinks {
 		var validVerifications []*Verification
 		for _, v := range supLinkToVerifications(supLink, validators, target.Hash, target.Height) {
@@ -363,6 +362,20 @@ func (c *Casper) lastJustifiedCheckpointOfBranch(branch *state.Checkpoint) *stat
 		parent = parent.Parent
 	}
 	return nil
+}
+
+func (c *Casper) saveCheckpoints(checkpoints []*state.Checkpoint) error {
+	checkpointSet := make(map[bc.Hash]*state.Checkpoint)
+	for _, c := range checkpoints {
+		checkpointSet[c.Hash] = c
+	}
+
+	var result []*state.Checkpoint
+	for _, c := range checkpointSet {
+		result = append(result, c)
+	}
+
+	return c.store.SaveCheckpoints(result)
 }
 
 func supLinkToVerifications(supLink *types.SupLink, validators map[string]*state.Validator, targetHash bc.Hash, targetHeight uint64) []*Verification {

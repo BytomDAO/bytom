@@ -164,14 +164,12 @@ func (bk *blockKeeper) regularBlockSync() error {
 	for i := bestHeight + 1; i <= targetHeight; {
 		block, err := bk.msgFetcher.requireBlock(bk.syncPeer.ID(), i)
 		if err != nil {
-			log.WithField("err", err).Error("require block fail")
 			bk.peers.ProcessIllegal(bk.syncPeer.ID(), security.LevelConnException, err.Error())
 			return err
 		}
 
 		isOrphan, err := bk.chain.ProcessBlock(block)
 		if err != nil {
-			log.WithField("err", err).Error("process block fail")
 			bk.peers.ProcessIllegal(bk.syncPeer.ID(), security.LevelMsgIllegal, err.Error())
 			return err
 		}
