@@ -270,19 +270,19 @@ func (m *BlocksMessage) String() string {
 
 //StatusResponseMessage get status response msg
 type StatusMessage struct {
-	BestHeight         uint64
-	BestHash           [32]byte
-	IrreversibleHeight uint64
-	IrreversibleHash   [32]byte
+	BestHeight      uint64
+	BestHash        [32]byte
+	JustifiedHeight uint64
+	JustifiedHash   [32]byte
 }
 
 //NewStatusResponseMessage construct get status response msg
-func NewStatusMessage(bestHeader, irreversibleHeader *types.BlockHeader) *StatusMessage {
+func NewStatusMessage(bestHeader, justifiedHeader *types.BlockHeader) *StatusMessage {
 	return &StatusMessage{
-		BestHeight:         bestHeader.Height,
-		BestHash:           bestHeader.Hash().Byte32(),
-		IrreversibleHeight: irreversibleHeader.Height,
-		IrreversibleHash:   irreversibleHeader.Hash().Byte32(),
+		BestHeight:      bestHeader.Height,
+		BestHash:        bestHeader.Hash().Byte32(),
+		JustifiedHeight: justifiedHeader.Height,
+		JustifiedHash:   justifiedHeader.Hash().Byte32(),
 	}
 }
 
@@ -293,12 +293,12 @@ func (m *StatusMessage) GetBestHash() *bc.Hash {
 }
 
 func (m *StatusMessage) GetIrreversibleHash() *bc.Hash {
-	hash := bc.NewHash(m.IrreversibleHash)
+	hash := bc.NewHash(m.JustifiedHash)
 	return &hash
 }
 
 func (m *StatusMessage) String() string {
-	return fmt.Sprintf("{best hash: %s, irreversible hash: %s}", hex.EncodeToString(m.BestHash[:]), hex.EncodeToString(m.IrreversibleHash[:]))
+	return fmt.Sprintf("{best hash: %s, irreversible hash: %s}", hex.EncodeToString(m.BestHash[:]), hex.EncodeToString(m.JustifiedHash[:]))
 }
 
 //TransactionMessage notify new tx msg

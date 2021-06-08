@@ -77,17 +77,17 @@ type PeerInfo struct {
 
 type Peer struct {
 	BasePeer
-	mtx                sync.RWMutex
-	services           consensus.ServiceFlag
-	bestHeight         uint64
-	bestHash           *bc.Hash
-	irreversibleHeight uint64
-	irreversibleHash   *bc.Hash
-	knownTxs           *set.Set // Set of transaction hashes known to be known by this peer
-	knownBlocks        *set.Set // Set of block hashes known to be known by this peer
-	knownSignatures    *set.Set // Set of block signatures known to be known by this peer
-	knownStatus        uint64   // Set of chain status known to be known by this peer
-	filterAdds         *set.Set // Set of addresses that the spv node cares about.
+	mtx             sync.RWMutex
+	services        consensus.ServiceFlag
+	bestHeight      uint64
+	bestHash        *bc.Hash
+	justifiedHeight uint64
+	justifiedHash   *bc.Hash
+	knownTxs        *set.Set // Set of transaction hashes known to be known by this peer
+	knownBlocks     *set.Set // Set of block hashes known to be known by this peer
+	knownSignatures *set.Set // Set of block signatures known to be known by this peer
+	knownStatus     uint64   // Set of chain status known to be known by this peer
+	filterAdds      *set.Set // Set of addresses that the spv node cares about.
 }
 
 func newPeer(basePeer BasePeer) *Peer {
@@ -108,11 +108,11 @@ func (p *Peer) Height() uint64 {
 	return p.bestHeight
 }
 
-func (p *Peer) IrreversibleHeight() uint64 {
+func (p *Peer) JustifiedHeight() uint64 {
 	p.mtx.RLock()
 	defer p.mtx.RUnlock()
 
-	return p.irreversibleHeight
+	return p.justifiedHeight
 }
 
 func (p *Peer) AddFilterAddress(address []byte) {
@@ -342,8 +342,8 @@ func (p *Peer) SendTransactions(txs []*types.Tx) error {
 	return nil
 }
 
-func (p *Peer) SendStatus(bestHeader, irreversibleHeader *types.BlockHeader) error {
-	msg := msgs.NewStatusMessage(bestHeader, irreversibleHeader)
+func (p *Peer) SendStatus(bestHeader, justifiedHeader *types.BlockHeader) error {
+	msg := msgs.NewStatusMessage(bestHeader, justifiedHeader)
 	if ok := p.TrySend(msgs.BlockchainChannel, struct{ msgs.BlockchainMessage }{msg}); !ok {
 		return errSendStatusMsg
 	}
@@ -359,12 +359,12 @@ func (p *Peer) SetBestStatus(bestHeight uint64, bestHash *bc.Hash) {
 	p.bestHash = bestHash
 }
 
-func (p *Peer) SetIrreversibleStatus(irreversibleHeight uint64, irreversibleHash *bc.Hash) {
+func (p *Peer) SetJustifiedStatus(justifiedHeight uint64, justifiedHash *bc.Hash) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
-	p.irreversibleHeight = irreversibleHeight
-	p.irreversibleHash = irreversibleHash
+	p.justifiedHeight = justifiedHeight
+	p.justifiedHash = justifiedHash
 }
 
 type PeerSet struct {
@@ -416,23 +416,9 @@ func (ps *PeerSet) BestPeer(flag consensus.ServiceFlag) *Peer {
 		if !p.services.IsEnable(flag) {
 			continue
 		}
-		if bestPeer == nil || p.bestHeight > bestPeer.bestHeight || (p.bestHeight == bestPeer.bestHeight && p.IsLAN()) {
-			bestPeer = p
-		}
-	}
-	return bestPeer
-}
-
-func (ps *PeerSet) BestIrreversiblePeer(flag consensus.ServiceFlag) *Peer {
-	ps.mtx.RLock()
-	defer ps.mtx.RUnlock()
-
-	var bestPeer *Peer
-	for _, p := range ps.peers {
-		if !p.services.IsEnable(flag) {
-			continue
-		}
-		if bestPeer == nil || p.irreversibleHeight > bestPeer.irreversibleHeight || (p.irreversibleHeight == bestPeer.irreversibleHeight && p.IsLAN()) {
+		if bestPeer == nil || p.JustifiedHeight() > bestPeer.JustifiedHeight() ||
+			(p.JustifiedHeight() == bestPeer.JustifiedHeight() && p.bestHeight > bestPeer.bestHeight) ||
+			(p.JustifiedHeight() == bestPeer.JustifiedHeight() && p.bestHeight == bestPeer.bestHeight && p.IsLAN()) {
 			bestPeer = p
 		}
 	}
@@ -474,8 +460,8 @@ func (ps *PeerSet) BroadcastMsg(bm BroadcastMsg) error {
 	return nil
 }
 
-func (ps *PeerSet) BroadcastNewStatus(bestHeader, irreversibleHeader *types.BlockHeader) error {
-	msg := msgs.NewStatusMessage(bestHeader, irreversibleHeader)
+func (ps *PeerSet) BroadcastNewStatus(bestHeader, justifiedHeader *types.BlockHeader) error {
+	msg := msgs.NewStatusMessage(bestHeader, justifiedHeader)
 	peers := ps.peersWithoutNewStatus(bestHeader.Height)
 	for _, peer := range peers {
 		if ok := peer.TrySend(msgs.BlockchainChannel, struct{ msgs.BlockchainMessage }{msg}); !ok {
@@ -648,11 +634,11 @@ func (ps *PeerSet) SetStatus(peerID string, height uint64, hash *bc.Hash) {
 	peer.SetBestStatus(height, hash)
 }
 
-func (ps *PeerSet) SetIrreversibleStatus(peerID string, height uint64, hash *bc.Hash) {
+func (ps *PeerSet) SetJustifiedStatus(peerID string, height uint64, hash *bc.Hash) {
 	peer := ps.GetPeer(peerID)
 	if peer == nil {
 		return
 	}
 
-	peer.SetIrreversibleStatus(height, hash)
+	peer.SetJustifiedStatus(height, hash)
 }

@@ -48,7 +48,12 @@ func (c *Casper) AuthVerification(v *Verification) error {
 		return nil
 	}
 
-	return c.authVerification(v, targetNode.checkpoint, validators)
+	_, oldBestHash := c.bestChain()
+	if err := c.authVerification(v, targetNode.checkpoint, validators); err != nil {
+		return err
+	}
+
+	return c.tryRollback(oldBestHash)
 }
 
 func (c *Casper) authVerification(v *Verification, target *state.Checkpoint, validators map[string]*state.Validator) error {
@@ -70,17 +75,14 @@ func (c *Casper) authVerification(v *Verification, target *state.Checkpoint, val
 }
 
 func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, validators map[string]*state.Validator, verifications ...*Verification) ([]*state.Checkpoint, error) {
-	_, oldBestHash := c.bestChain()
-	var affectedCheckpoints []*state.Checkpoint
+	affectedCheckpoints := []*state.Checkpoint{target}
 	for _, v := range verifications {
-		source, err := c.store. GetCheckpoint(&v.SourceHash)
+		source, err := c.store.GetCheckpoint(&v.SourceHash)
 		if err != nil {
 			return nil, err
 		}
 
 		supLink := target.AddVerification(v.SourceHash, v.SourceHeight, validators[v.PubKey].Order, v.Signature)
-		affectedCheckpoints = append(affectedCheckpoints, target)
-
 		if target.Status != state.Unjustified || !supLink.IsMajority(len(validators)) || source.Status == state.Finalized {
 			continue
 		}
@@ -88,12 +90,6 @@ func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, validator
 		c.setJustified(source, target)
 		affectedCheckpoints = append(affectedCheckpoints, source)
 	}
-
-	_, newBestHash := c.bestChain()
-	if oldBestHash != newBestHash {
-		c.rollbackNotifyCh <- newBestHash
-	}
-
 	return affectedCheckpoints, nil
 }
 
@@ -132,6 +128,15 @@ func (c *Casper) setFinalized(checkpoint *state.Checkpoint) {
 	// update the checkpoint state in memory
 	newRoot.checkpoint.Status = state.Finalized
 	c.tree = newRoot
+}
+
+func (c *Casper) tryRollback(oldBestHash bc.Hash) error {
+	if _, newBestHash := c.bestChain(); oldBestHash != newBestHash {
+		msg := &rollbackMsg{bestHash: newBestHash}
+		c.rollbackCh <- msg
+		return <-msg.reply
+	}
+	return nil
 }
 
 func (c *Casper) authVerificationLoop() {

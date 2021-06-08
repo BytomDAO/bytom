@@ -231,7 +231,7 @@ func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error
 }
 
 // SaveChainStatus save the core's newest status && delete old status
-func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint, contractView *state.ContractViewpoint, checkpoints []*state.Checkpoint, finalizedHeight uint64, finalizedHash *bc.Hash) error {
+func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint, contractView *state.ContractViewpoint, finalizedHeight uint64, finalizedHash *bc.Hash) error {
 	batch := s.db.NewBatch()
 	if err := saveUtxoView(batch, view); err != nil {
 		return err
@@ -242,10 +242,6 @@ func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint
 	}
 
 	if err := saveContractView(s.db, batch, contractView); err != nil {
-		return err
-	}
-
-	if err := s.saveCheckpoints(batch, checkpoints); err != nil {
 		return err
 	}
 
@@ -346,12 +342,13 @@ func (s *Store) SaveCheckpoints(checkpoints []*state.Checkpoint) error {
 
 func (s *Store) saveCheckpoints(batch dbm.Batch, checkpoints []*state.Checkpoint) error {
 	for _, checkpoint := range checkpoints {
+		startTime := time.Now()
 		data, err := json.Marshal(checkpoint)
 		if err != nil {
 			return err
 		}
 
-		if checkpoint.Height % state.BlocksOfEpoch != 1 {
+		if checkpoint.Height%state.BlocksOfEpoch != 1 {
 			header, err := s.GetBlockHeader(&checkpoint.Hash)
 			if err != nil {
 				return err
@@ -361,6 +358,13 @@ func (s *Store) saveCheckpoints(batch dbm.Batch, checkpoints []*state.Checkpoint
 		}
 
 		batch.Set(calcCheckpointKey(checkpoint.Height, &checkpoint.Hash), data)
+		log.WithFields(log.Fields{
+			"module": logModule,
+			"height": checkpoint.Height,
+			"hash":   checkpoint.Hash.String(),
+			"status": checkpoint.Status,
+			"duration": time.Since(startTime),
+		}).Info("checkpoint saved on disk")
 	}
 	return nil
 }

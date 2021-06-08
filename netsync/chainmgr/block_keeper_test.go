@@ -98,7 +98,7 @@ func TestCheckSyncType(t *testing.T) {
 		for _, syncPeer := range c.peers {
 			blockKeeper.peers.AddPeer(syncPeer.peer)
 			blockKeeper.peers.SetStatus(syncPeer.peer.id, syncPeer.bestHeight, nil)
-			blockKeeper.peers.SetIrreversibleStatus(syncPeer.peer.id, syncPeer.irreversibleHeight, nil)
+			blockKeeper.peers.SetJustifiedStatus(syncPeer.peer.id, syncPeer.irreversibleHeight, nil)
 		}
 		gotType := blockKeeper.checkSyncType()
 		if c.syncType != gotType {

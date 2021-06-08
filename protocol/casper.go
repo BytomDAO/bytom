@@ -20,6 +20,7 @@ var (
 	errVoteToNonValidator       = errors.New("pubKey of vote is not validator")
 	errGuarantyLessThanMinimum  = errors.New("guaranty less than minimum")
 	errOverflow                 = errors.New("arithmetic overflow/underflow")
+	errAlreadyProcessedBlock    = errors.New("block already processed in casper")
 )
 
 const minGuaranty = 1E14
@@ -27,11 +28,11 @@ const minGuaranty = 1E14
 // Casper is BFT based proof of stack consensus algorithm, it provides safety and liveness in theory,
 // it's design mainly refers to https://github.com/ethereum/research/blob/master/papers/casper-basics/casper_basics.pdf
 type Casper struct {
-	mu               sync.RWMutex
-	tree             *treeNode
-	rollbackNotifyCh chan bc.Hash
-	newEpochCh       chan bc.Hash
-	store            Store
+	mu         sync.RWMutex
+	tree       *treeNode
+	rollbackCh chan *rollbackMsg
+	newEpochCh chan bc.Hash
+	store      Store
 	// pubKey -> conflicting verifications
 	evilValidators map[string][]*Verification
 	// block hash -> previous checkpoint hash
@@ -44,40 +45,25 @@ type Casper struct {
 // argument checkpoints load the checkpoints from leveldb
 // the first element of checkpoints must genesis checkpoint or the last finalized checkpoint in order to reduce memory space
 // the others must be successors of first one
-func NewCasper(store Store, checkpoints []*state.Checkpoint, rollbackNotifyCh chan bc.Hash) *Casper {
+func NewCasper(store Store, checkpoints []*state.Checkpoint, rollbackCh chan *rollbackMsg) *Casper {
 	if checkpoints[0].Height != 0 && checkpoints[0].Status != state.Finalized {
 		log.Panic("first element of checkpoints must genesis or in finalized status")
 	}
 
 	casper := &Casper{
-		tree:                  makeTree(checkpoints[0], checkpoints[1:]),
-		rollbackNotifyCh:      rollbackNotifyCh,
-		newEpochCh:            make(chan bc.Hash),
-		store:                 store,
-		evilValidators:        make(map[string][]*Verification),
-		prevCheckpointCache:   common.NewCache(1024),
-		verificationCache:     common.NewCache(1024),
+		tree:                makeTree(checkpoints[0], checkpoints[1:]),
+		rollbackCh:          rollbackCh,
+		newEpochCh:          make(chan bc.Hash),
+		store:               store,
+		evilValidators:      make(map[string][]*Verification),
+		prevCheckpointCache: common.NewCache(1024),
+		verificationCache:   common.NewCache(1024),
 	}
 	go casper.authVerificationLoop()
 	return casper
 }
 
-// Best chain return the chain containing the justified checkpoint of the largest height
-func (c *Casper) BestChain() (uint64, bc.Hash) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	return c.bestChain()
-}
-
-func (c *Casper) bestChain() (uint64, bc.Hash) {
-	// root is init justified
-	root := c.tree.checkpoint
-	bestHeight, bestHash, _ := chainOfMaxJustifiedHeight(c.tree, root.Height)
-	return bestHeight, bestHash
-}
-
-// LastFinalized return the block height and block hash which is finalized ast last
+// LastFinalized return the block height and block hash which is finalized at last
 func (c *Casper) LastFinalized() (uint64, bc.Hash) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -86,10 +72,18 @@ func (c *Casper) LastFinalized() (uint64, bc.Hash) {
 	return root.Height, root.Hash
 }
 
+// LastJustified return the block height and block hash which is justified at last
+func (c *Casper) LastJustified() (uint64, bc.Hash) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	return lastJustified(c.tree)
+}
+
 // Validators return the validators by specified block hash
 // e.g. if the block num of epoch is 100, and the block height corresponding to the block hash is 130, then will return the voting results of height in 0~100
 func (c *Casper) Validators(blockHash *bc.Hash) (map[string]*state.Validator, error) {
-	checkpoint, err := c.prevCheckpoint(blockHash)
+	checkpoint, err := c.parentCheckpoint(blockHash)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +91,7 @@ func (c *Casper) Validators(blockHash *bc.Hash) (map[string]*state.Validator, er
 	return checkpoint.Validators(), nil
 }
 
-func (c *Casper) prevCheckpoint(blockHash *bc.Hash) (*state.Checkpoint, error) {
+func (c *Casper) parentCheckpoint(blockHash *bc.Hash) (*state.Checkpoint, error) {
 	hash, err := c.prevCheckpointHash(blockHash)
 	if err != nil {
 		return nil, err
@@ -106,7 +100,7 @@ func (c *Casper) prevCheckpoint(blockHash *bc.Hash) (*state.Checkpoint, error) {
 	return c.store.GetCheckpoint(hash)
 }
 
-func (c *Casper) prevCheckpointByPrevHash(prevBlockHash *bc.Hash) (*state.Checkpoint, error) {
+func (c *Casper) parentCheckpointByPrevHash(prevBlockHash *bc.Hash) (*state.Checkpoint, error) {
 	hash, err := c.prevCheckpointHashByPrevHash(prevBlockHash)
 	if err != nil {
 		return nil, err
@@ -138,6 +132,27 @@ func (c *Casper) EvilValidators() []*EvilValidator {
 	return validators
 }
 
+func (c *Casper) bestChain() (uint64, bc.Hash) {
+	// root is init justified
+	root := c.tree.checkpoint
+	bestHeight, bestHash, _ := chainOfMaxJustifiedHeight(c.tree, root.Height)
+	return bestHeight, bestHash
+}
+
+func lastJustified(node *treeNode) (uint64, bc.Hash) {
+	lastJustifiedHeight, lastJustifiedHash := uint64(0), bc.Hash{}
+	if node.checkpoint.Status == state.Justified {
+		lastJustifiedHeight, lastJustifiedHash = node.checkpoint.Height, node.checkpoint.Hash
+	}
+
+	for _, child := range node.children {
+		if justifiedHeight, justifiedHash := lastJustified(child); justifiedHeight > lastJustifiedHeight {
+			lastJustifiedHeight, lastJustifiedHash = justifiedHeight, justifiedHash
+		}
+	}
+	return lastJustifiedHeight, lastJustifiedHash
+}
+
 // justifiedHeight is the max justified height of checkpoint from node to root
 func chainOfMaxJustifiedHeight(node *treeNode, justifiedHeight uint64) (uint64, bc.Hash, uint64) {
 	checkpoint := node.checkpoint
@@ -147,7 +162,7 @@ func chainOfMaxJustifiedHeight(node *treeNode, justifiedHeight uint64) (uint64, 
 
 	bestHeight, bestHash, maxJustifiedHeight := checkpoint.Height, checkpoint.Hash, justifiedHeight
 	for _, child := range node.children {
-		if height, hash, justified := chainOfMaxJustifiedHeight(child, justifiedHeight); justified >= maxJustifiedHeight {
+		if height, hash, justified := chainOfMaxJustifiedHeight(child, justifiedHeight); justified > maxJustifiedHeight || height > bestHeight {
 			bestHeight, bestHash, maxJustifiedHeight = height, hash, justified
 		}
 	}

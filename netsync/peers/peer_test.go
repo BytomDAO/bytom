@@ -86,8 +86,8 @@ func TestSetIrreversibleStatus(t *testing.T) {
 	peer := newPeer(&basePeer{})
 	height := uint64(100)
 	hash := bc.NewHash([32]byte{0x1, 0x2})
-	peer.SetIrreversibleStatus(height, &hash)
-	if peer.IrreversibleHeight() != height {
+	peer.SetJustifiedStatus(height, &hash)
+	if peer.JustifiedHeight() != height {
 		t.Fatalf("test set Irreversible status err. got %d want %d", peer.Height(), height)
 	}
 }
@@ -341,12 +341,12 @@ func TestIrreversibleStatus(t *testing.T) {
 	ps.AddPeer(&basePeer{id: peer2ID, serviceFlag: consensus.SFFullNode})
 	ps.AddPeer(&basePeer{id: peer3ID, serviceFlag: consensus.SFFastSync})
 	ps.AddPeer(&basePeer{id: peer4ID, serviceFlag: consensus.SFFastSync, isLan: true})
-	ps.SetIrreversibleStatus(peer1ID, 1000, &block1000Hash)
-	ps.SetIrreversibleStatus(peer2ID, 2000, &block2000Hash)
-	ps.SetIrreversibleStatus(peer3ID, 3000, &block3000Hash)
-	ps.SetIrreversibleStatus(peer4ID, 3000, &block3000Hash)
+	ps.SetJustifiedStatus(peer1ID, 1000, &block1000Hash)
+	ps.SetJustifiedStatus(peer2ID, 2000, &block2000Hash)
+	ps.SetJustifiedStatus(peer3ID, 3000, &block3000Hash)
+	ps.SetJustifiedStatus(peer4ID, 3000, &block3000Hash)
 	targetPeer := peer4ID
-	peer := ps.BestIrreversiblePeer(consensus.SFFastSync)
+	peer := ps.BestPeer(consensus.SFFastSync)
 
 	if peer.ID() != targetPeer {
 		t.Fatalf("test set status err. Name of target peer %s got %s", peer4ID, peer.ID())

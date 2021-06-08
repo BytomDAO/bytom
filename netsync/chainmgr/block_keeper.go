@@ -164,12 +164,14 @@ func (bk *blockKeeper) regularBlockSync() error {
 	for i := bestHeight + 1; i <= targetHeight; {
 		block, err := bk.msgFetcher.requireBlock(bk.syncPeer.ID(), i)
 		if err != nil {
+			log.WithField("err", err).Error("require block fail")
 			bk.peers.ProcessIllegal(bk.syncPeer.ID(), security.LevelConnException, err.Error())
 			return err
 		}
 
 		isOrphan, err := bk.chain.ProcessBlock(block)
 		if err != nil {
+			log.WithField("err", err).Error("process block fail")
 			bk.peers.ProcessIllegal(bk.syncPeer.ID(), security.LevelMsgIllegal, err.Error())
 			return err
 		}
@@ -197,9 +199,9 @@ func (bk *blockKeeper) start() {
 
 func (bk *blockKeeper) checkSyncType() int {
 	bestHeight := bk.chain.BestBlockHeight()
-	peer := bk.peers.BestIrreversiblePeer(consensus.SFFullNode | consensus.SFFastSync)
+	peer := bk.peers.BestPeer(consensus.SFFullNode | consensus.SFFastSync)
 	if peer != nil {
-		if peerIrreversibleHeight := peer.IrreversibleHeight(); peerIrreversibleHeight >= bestHeight+minGapStartFastSync {
+		if peerJustifiedHeight := peer.JustifiedHeight(); peerJustifiedHeight >= bestHeight+minGapStartFastSync {
 			bk.fastSync.setSyncPeer(peer)
 			return fastSyncType
 		}
@@ -253,7 +255,7 @@ func (bk *blockKeeper) syncWorker() {
 				continue
 			}
 
-			if err := bk.peers.BroadcastNewStatus(bk.chain.BestBlockHeader(), bk.chain.LastIrreversibleHeader()); err != nil {
+			if err := bk.peers.BroadcastNewStatus(bk.chain.BestBlockHeader(), bk.chain.LastJustifiedHeader()); err != nil {
 				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on syncWorker broadcast new status")
 			}
 		case <-bk.quit:
