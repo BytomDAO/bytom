@@ -61,7 +61,7 @@ func AsInt64(b []byte) (int64, error) {
 
 // BigIntBytes conv big int to little endian bytes, uint256 is version 1.1.1
 func BigIntBytes(n *uint256.Int) []byte {
-	return Reverse(n.Bytes())
+	return reverse(n.Bytes())
 }
 
 // AsBigInt conv little endian bytes to big int
@@ -70,7 +70,7 @@ func AsBigInt(b []byte) (*uint256.Int, error) {
 		return nil, ErrBadValue
 	}
 
-	res := uint256.NewInt().SetBytes(Reverse(b))
+	res := uint256.NewInt().SetBytes(reverse(b))
 	if res.Sign() < 0 {
 		return nil, ErrRange
 	}
@@ -78,8 +78,8 @@ func AsBigInt(b []byte) (*uint256.Int, error) {
 	return res, nil
 }
 
-// Reverse reverse []byte.
-func Reverse(b []byte) []byte {
+// reverse []byte.
+func reverse(b []byte) []byte {
 	for i, j := 0, len(b)-1; i < j; i, j = i+1, j-1 {
 		b[i], b[j] = b[j], b[i]
 	}
