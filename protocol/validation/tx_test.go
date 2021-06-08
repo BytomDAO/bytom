@@ -224,8 +224,8 @@ func TestOverflow(t *testing.T) {
 		txInputs := make([]*types.TxInput, 0, len(inputs))
 		txOutputs := make([]*types.TxOutput, 0, len(outputs))
 
-		for _, amount := range inputs {
-			txInput := types.NewSpendInput(nil, *sourceID, *consensus.BTMAssetID, amount, 0, ctrlProgram, nil)
+		for i, amount := range inputs {
+			txInput := types.NewSpendInput(nil, *sourceID, *consensus.BTMAssetID, amount, uint64(i), ctrlProgram, nil)
 			txInputs = append(txInputs, txInput)
 		}
 
@@ -524,21 +524,11 @@ func TestTxValidation(t *testing.T) {
 			err: ErrOverGasCredit,
 		},
 		{
-			desc: "can't find gas spend input in entries",
-			f: func() {
-				spendID := mux.Sources[len(mux.Sources)-1].Ref
-				delete(tx.Entries, *spendID)
-				mux.Sources = mux.Sources[:len(mux.Sources)-1]
-			},
-			err: bc.ErrMissingEntry,
-		},
-		{
 			desc: "no gas spend input",
 			f: func() {
 				spendID := mux.Sources[len(mux.Sources)-1].Ref
 				delete(tx.Entries, *spendID)
 				mux.Sources = mux.Sources[:len(mux.Sources)-1]
-				tx.GasInputIDs = nil
 				vs.gasStatus.GasLeft = 0
 			},
 			err: vm.ErrRunLimitExceeded,
@@ -549,7 +539,6 @@ func TestTxValidation(t *testing.T) {
 				spendID := mux.Sources[len(mux.Sources)-1].Ref
 				delete(tx.Entries, *spendID)
 				mux.Sources = mux.Sources[:len(mux.Sources)-1]
-				tx.GasInputIDs = nil
 			},
 			err: nil,
 		},
@@ -931,15 +920,7 @@ func TestRuleAA(t *testing.T) {
 		{
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
-					Height: ruleAA - 1,
-				},
-			},
-			err: ErrMismatchedPosition,
-		},
-		{
-			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					Height: ruleAA,
+					Height: 5000,
 				},
 			},
 			err: ErrEmptyInputIDs,
@@ -1001,53 +982,6 @@ func TestTimeRange(t *testing.T) {
 		tx.TimeRange = c.timeRange
 		if _, err := ValidateTx(tx, block, converter); (err != nil) != c.err {
 			t.Errorf("#%d got error %t, want %t", i, !c.err, c.err)
-		}
-	}
-}
-
-func TestStandardTx(t *testing.T) {
-	fixture := sample(t, nil)
-	tx := types.NewTx(*fixture.tx).Tx
-
-	cases := []struct {
-		desc string
-		f    func()
-		err  error
-	}{
-		{
-			desc: "normal standard tx",
-			err:  nil,
-		},
-		{
-			desc: "not standard tx in spend input",
-			f: func() {
-				inputID := tx.GasInputIDs[0]
-				spend := tx.Entries[inputID].(*bc.Spend)
-				spentOutput, err := tx.Output(*spend.SpentOutputId)
-				if err != nil {
-					t.Fatal(err)
-				}
-				spentOutput.ControlProgram = &bc.Program{Code: []byte{0}}
-			},
-			err: ErrNotStandardTx,
-		},
-		{
-			desc: "not standard tx in output",
-			f: func() {
-				outputID := tx.ResultIds[0]
-				output := tx.Entries[*outputID].(*bc.Output)
-				output.ControlProgram = &bc.Program{Code: []byte{0}}
-			},
-			err: ErrNotStandardTx,
-		},
-	}
-
-	for i, c := range cases {
-		if c.f != nil {
-			c.f()
-		}
-		if err := checkStandardTx(tx, 0); err != c.err {
-			t.Errorf("case #%d (%s) got error %t, want %t", i, c.desc, err, c.err)
 		}
 	}
 }

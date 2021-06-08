@@ -1,63 +1,10 @@
 package types
 
 import (
-	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/vm"
 	"github.com/bytom/bytom/protocol/vm/vmutil"
 )
-
-// MapTx converts a types TxData object into its entries-based
-// representation.
-func MapTx(oldTx *TxData) *bc.Tx {
-	txID, txHeader, entries := mapTx(oldTx)
-	tx := &bc.Tx{
-		TxHeader: txHeader,
-		ID:       txID,
-		Entries:  entries,
-		InputIDs: make([]bc.Hash, len(oldTx.Inputs)),
-	}
-
-	spentOutputIDs := make(map[bc.Hash]bool)
-	for id, e := range entries {
-		var ord uint64
-		switch e := e.(type) {
-		case *bc.Issuance:
-			ord = e.Ordinal
-
-		case *bc.Spend:
-			ord = e.Ordinal
-			spentOutputIDs[*e.SpentOutputId] = true
-			if *e.WitnessDestination.Value.AssetId == *consensus.BTMAssetID {
-				tx.GasInputIDs = append(tx.GasInputIDs, id)
-			}
-
-		case *bc.VetoInput:
-			ord = e.Ordinal
-			spentOutputIDs[*e.SpentOutputId] = true
-			if *e.WitnessDestination.Value.AssetId == *consensus.BTMAssetID {
-				tx.GasInputIDs = append(tx.GasInputIDs, id)
-			}
-
-		case *bc.Coinbase:
-			ord = 0
-			tx.GasInputIDs = append(tx.GasInputIDs, id)
-
-		default:
-			continue
-		}
-
-		if ord >= uint64(len(oldTx.Inputs)) {
-			continue
-		}
-		tx.InputIDs[ord] = id
-	}
-
-	for id := range spentOutputIDs {
-		tx.SpentOutputIDs = append(tx.SpentOutputIDs, id)
-	}
-	return tx
-}
 
 type mapHelper struct {
 	txData   *TxData
@@ -72,18 +19,22 @@ type mapHelper struct {
 	muxSources []*bc.ValueSource
 	mux        *bc.Mux
 
-	resultIDs []*bc.Hash
+	inputIDs       []bc.Hash
+	spentOutputIDs []bc.Hash
+	resultIDs      []*bc.Hash
 }
 
 func newMapHelper(txData *TxData) *mapHelper {
 	return &mapHelper{
-		txData:     txData,
-		entryMap:   make(map[bc.Hash]bc.Entry),
-		spends:     []*bc.Spend{},
-		issuances:  []*bc.Issuance{},
-		vetos:      []*bc.VetoInput{},
-		muxSources: make([]*bc.ValueSource, len(txData.Inputs)),
-		resultIDs:  []*bc.Hash{},
+		txData:         txData,
+		entryMap:       make(map[bc.Hash]bc.Entry),
+		spends:         []*bc.Spend{},
+		issuances:      []*bc.Issuance{},
+		vetos:          []*bc.VetoInput{},
+		muxSources:     make([]*bc.ValueSource, len(txData.Inputs)),
+		inputIDs:       make([]bc.Hash, len(txData.Inputs)),
+		spentOutputIDs: []bc.Hash{},
+		resultIDs:      []*bc.Hash{},
 	}
 }
 
@@ -93,9 +44,22 @@ func (mh *mapHelper) addEntry(e bc.Entry) bc.Hash {
 	return id
 }
 
+func (mh *mapHelper) generateTx() *bc.Tx {
+	header := bc.NewTxHeader(mh.txData.Version, mh.txData.SerializedSize, mh.txData.TimeRange, mh.resultIDs)
+	return &bc.Tx{
+		TxHeader:       header,
+		ID:             mh.addEntry(header),
+		Entries:        mh.entryMap,
+		InputIDs:       mh.inputIDs,
+		SpentOutputIDs: mh.spentOutputIDs,
+	}
+
+}
+
 func (mh *mapHelper) mapCoinbaseInput(i int, input *CoinbaseInput) {
 	mh.coinbase = bc.NewCoinbase(input.Arbitrary)
 	id := mh.addEntry(mh.coinbase)
+	mh.inputIDs[i] = id
 	mh.muxSources[i] = &bc.ValueSource{
 		Ref:   &id,
 		Value: &mh.txData.Outputs[0].AssetAmount,
@@ -123,6 +87,7 @@ func (mh *mapHelper) mapIssuanceInput(i int, input *IssuanceInput) {
 	issuance.WitnessArguments = input.Arguments
 	mh.issuances = append(mh.issuances, issuance)
 	id := mh.addEntry(issuance)
+	mh.inputIDs[i] = id
 	mh.muxSources[i] = &bc.ValueSource{
 		Ref:   &id,
 		Value: &value,
@@ -147,6 +112,8 @@ func (mh *mapHelper) mapSpendInput(i int, input *SpendInput) {
 	spend.WitnessArguments = input.Arguments
 	mh.spends = append(mh.spends, spend)
 	id := mh.addEntry(spend)
+	mh.inputIDs[i] = id
+	mh.spentOutputIDs = append(mh.spentOutputIDs, prevoutID)
 	mh.muxSources[i] = &bc.ValueSource{
 		Ref:   &id,
 		Value: &input.AssetAmount,
@@ -169,6 +136,8 @@ func (mh *mapHelper) mapVetoInput(i int, input *VetoInput) {
 	vetoInput.WitnessArguments = input.Arguments
 	mh.vetos = append(mh.vetos, vetoInput)
 	id := mh.addEntry(vetoInput)
+	mh.inputIDs[i] = id
+	mh.spentOutputIDs = append(mh.spentOutputIDs, prevoutID)
 	mh.muxSources[i] = &bc.ValueSource{
 		Ref:   &id,
 		Value: &input.AssetAmount,
@@ -251,14 +220,14 @@ func (mh *mapHelper) mapOutputs() {
 	}
 }
 
-func mapTx(txData *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash]bc.Entry) {
+// MapTx converts a types TxData object into its entries-based
+// representation.
+func MapTx(txData *TxData) *bc.Tx {
 	mh := newMapHelper(txData)
 	mh.mapInputs()
 	mh.initMux()
 	mh.mapOutputs()
-
-	h := bc.NewTxHeader(txData.Version, txData.SerializedSize, txData.TimeRange, mh.resultIDs)
-	return mh.addEntry(h), h, mh.entryMap
+	return mh.generateTx()
 }
 
 func mapBlockHeader(old *BlockHeader) (bc.Hash, *bc.BlockHeader) {

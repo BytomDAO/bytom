@@ -13,7 +13,6 @@ type Tx struct {
 	InputIDs []Hash // 1:1 correspondence with TxData.Inputs
 
 	SpentOutputIDs []Hash
-	GasInputIDs    []Hash
 }
 
 // SigHash ...
