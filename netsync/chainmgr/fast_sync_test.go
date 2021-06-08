@@ -356,7 +356,7 @@ func TestCreateFetchBlocksTasks(t *testing.T) {
 		for _, syncPeer := range c.peers {
 			peers.AddPeer(syncPeer.peer)
 			peers.SetStatus(syncPeer.peer.id, syncPeer.bestHeight, nil)
-			peers.SetIrreversibleStatus(syncPeer.peer.id, syncPeer.irreversibleHeight, nil)
+			peers.SetJustifiedStatus(syncPeer.peer.id, syncPeer.irreversibleHeight, nil)
 		}
 		mockChain := mock.NewChain()
 		fs := newFastSync(mockChain, &mockFetcher{baseChain: baseChain, peerStatus: peerStatus, testType: c.testType}, nil, peers)

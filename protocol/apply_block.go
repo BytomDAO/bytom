@@ -3,6 +3,8 @@ package protocol
 import (
 	"encoding/hex"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/math/checked"
@@ -11,13 +13,19 @@ import (
 	"github.com/bytom/bytom/protocol/state"
 )
 
+type applyBlockReply struct {
+	verification *Verification
+	isRollback   bool
+	newBestHash  bc.Hash
+}
+
 // ApplyBlock used to receive a new block from upper layer, it provides idempotence
 // and parse the vote and mortgage from the transactions, then save to the checkpoint
 // the tree of checkpoint will grow with the arrival of new blocks
 // it will return verification when an epoch is reached and the current node is the validator, otherwise return nil
 // the chain module must broadcast the verification
-func (c *Casper) ApplyBlock(block *types.Block) (*Verification, *state.Checkpoint, error) {
-	if block.Height % state.BlocksOfEpoch == 1 {
+func (c *Casper) ApplyBlock(block *types.Block) (*applyBlockReply, error) {
+	if block.Height%state.BlocksOfEpoch == 1 {
 		c.newEpochCh <- block.PreviousBlockHash
 	}
 
@@ -25,39 +33,44 @@ func (c *Casper) ApplyBlock(block *types.Block) (*Verification, *state.Checkpoin
 	defer c.mu.Unlock()
 
 	if _, err := c.tree.nodeByHash(block.Hash()); err == nil {
-		// already processed
-		return nil, nil, nil
+		return nil, errAlreadyProcessedBlock
 	}
 
+	_, oldBestHash := c.bestChain()
 	target, err := c.applyBlockToCheckpoint(block)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "apply block to checkpoint")
+		return nil, errors.Wrap(err, "apply block to checkpoint")
 	}
 
-	if err := c.applyTransactions(target, block.Transactions); err != nil {
-		return nil, nil, err
+	if err := applyTransactions(target, block.Transactions); err != nil {
+		return nil, err
 	}
 
 	validators, err := c.Validators(&target.Hash)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	verification, err := c.applyMyVerification(target, block, validators)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	affectedCheckpoints, err := c.applySupLinks(target, block.SupLinks, validators)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return verification, target, c.saveCheckpoints(affectedCheckpoints, target)
+	reply := &applyBlockReply{verification: verification}
+	if c.isRollback(oldBestHash, block) {
+		reply.isRollback = true
+		reply.newBestHash = block.Hash()
+	}
+	return reply, c.saveCheckpoints(affectedCheckpoints)
 }
 
 func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, error) {
-	node, err := c.tree.nodeByHash(block.PreviousBlockHash)
+	node, err := c.checkpointByHash(block.PreviousBlockHash)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +92,7 @@ func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, 
 		for pubKey, num := range parent.Guaranties {
 			checkpoint.Guaranties[pubKey] = num
 		}
-		node.children = append(node.children, &treeNode{checkpoint: checkpoint})
+		node.addChild(&treeNode{checkpoint: checkpoint})
 	} else if mod == 0 {
 		checkpoint.Status = state.Unjustified
 	}
@@ -90,7 +103,68 @@ func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, 
 	return checkpoint, nil
 }
 
-func (c *Casper) applyTransactions(target *state.Checkpoint, transactions []*types.Tx) error {
+func (c *Casper) checkpointByHash(blockHash bc.Hash) (*treeNode, error) {
+	node, err := c.tree.nodeByHash(blockHash)
+	if err != nil {
+		logrus.WithField("err", err).Error("fail find checkpoint, start to reorganize checkpoint")
+
+		return c.reorganizeCheckpoint(blockHash)
+	}
+
+	return node, nil
+}
+
+func (c *Casper) isRollback(oldBestHash bc.Hash, block *types.Block) bool {
+	_, newBestHash := c.bestChain()
+	return block.Hash() == newBestHash && block.PreviousBlockHash != oldBestHash
+}
+
+func (c *Casper) reorganizeCheckpoint(hash bc.Hash) (*treeNode, error) {
+	prevHash := hash
+	var attachBlocks []*types.Block
+	for {
+		prevBlock, err := c.store.GetBlock(&prevHash)
+		if err != nil {
+			return nil, err
+		}
+
+		if prevBlock.Height%state.BlocksOfEpoch == 0 {
+			break
+		}
+
+		attachBlocks = append([]*types.Block{prevBlock}, attachBlocks...)
+		prevHash = prevBlock.PreviousBlockHash
+	}
+
+	parent, err := c.tree.nodeByHash(prevHash)
+	if err != nil {
+		return nil, err
+	}
+
+	node := &treeNode{
+		checkpoint: &state.Checkpoint{
+			ParentHash: parent.checkpoint.Hash,
+			Parent:     parent.checkpoint,
+			Status:     state.Growing,
+			Votes:      make(map[string]uint64),
+			Guaranties: make(map[string]uint64),
+		},
+	}
+
+	parent.addChild(node)
+	for _, attachBlock := range attachBlocks {
+		if err := applyTransactions(node.checkpoint, attachBlock.Transactions); err != nil {
+			return nil, err
+		}
+
+		node.checkpoint.Hash = attachBlock.Hash()
+		node.checkpoint.Height = attachBlock.Height
+		node.checkpoint.Timestamp = attachBlock.Timestamp
+	}
+	return node, nil
+}
+
+func applyTransactions(target *state.Checkpoint, transactions []*types.Tx) error {
 	for _, tx := range transactions {
 		for _, input := range tx.Inputs {
 			if vetoInput, ok := input.TypedInput.(*types.VetoInput); ok {
@@ -124,12 +198,12 @@ func (c *Casper) applyTransactions(target *state.Checkpoint, transactions []*typ
 }
 
 // applySupLinks copy the block's supLink to the checkpoint
-func (c *Casper) applySupLinks(target *state.Checkpoint, supLinks []*types.SupLink, validators map[string]*state.Validator) (map[bc.Hash]*state.Checkpoint, error) {
+func (c *Casper) applySupLinks(target *state.Checkpoint, supLinks []*types.SupLink, validators map[string]*state.Validator) ([]*state.Checkpoint, error) {
+	affectedCheckpoints := []*state.Checkpoint{target}
 	if target.Height%state.BlocksOfEpoch != 0 {
 		return nil, nil
 	}
 
-	affectedCheckpoints := make(map[bc.Hash]*state.Checkpoint)
 	for _, supLink := range supLinks {
 		var validVerifications []*Verification
 		for _, v := range supLinkToVerifications(supLink, validators, target.Hash, target.Height) {
@@ -143,11 +217,8 @@ func (c *Casper) applySupLinks(target *state.Checkpoint, supLinks []*types.SupLi
 			return nil, err
 		}
 
-		for _, c := range checkpoints {
-			affectedCheckpoints[c.Hash] = c
-		}
+		affectedCheckpoints = append(affectedCheckpoints, checkpoints...)
 	}
-
 	return affectedCheckpoints, nil
 }
 
@@ -171,7 +242,7 @@ func (c *Casper) applyMyVerification(target *state.Checkpoint, block *types.Bloc
 }
 
 func (c *Casper) myVerification(target *state.Checkpoint, validators map[string]*state.Validator) (*Verification, error) {
-	if target.Height % state.BlocksOfEpoch != 0 {
+	if target.Height%state.BlocksOfEpoch != 0 {
 		return nil, nil
 	}
 
@@ -199,7 +270,7 @@ func (c *Casper) myVerification(target *state.Checkpoint, validators map[string]
 			return nil, err
 		}
 
-		if err := c.verifyVerification(v, validatorOrder,false); err != nil {
+		if err := c.verifyVerification(v, validatorOrder, false); err != nil {
 			return nil, nil
 		}
 
@@ -207,18 +278,6 @@ func (c *Casper) myVerification(target *state.Checkpoint, validators map[string]
 	}
 	return nil, nil
 }
-
-func (c *Casper) saveCheckpoints(affectedCheckpoints map[bc.Hash]*state.Checkpoint, target *state.Checkpoint) error {
-	// the target checkpoint must eventually be saved in the chain state
-	delete(affectedCheckpoints, target.Hash)
-
-	var checkpoints []*state.Checkpoint
-	for _, c := range affectedCheckpoints {
-		checkpoints = append(checkpoints, c)
-	}
-	return c.store.SaveCheckpoints(checkpoints)
-}
-
 
 type guarantyArgs struct {
 	Amount uint64
@@ -303,6 +362,20 @@ func (c *Casper) lastJustifiedCheckpointOfBranch(branch *state.Checkpoint) *stat
 		parent = parent.Parent
 	}
 	return nil
+}
+
+func (c *Casper) saveCheckpoints(checkpoints []*state.Checkpoint) error {
+	checkpointSet := make(map[bc.Hash]*state.Checkpoint)
+	for _, c := range checkpoints {
+		checkpointSet[c.Hash] = c
+	}
+
+	var result []*state.Checkpoint
+	for _, c := range checkpointSet {
+		result = append(result, c)
+	}
+
+	return c.store.SaveCheckpoints(result)
 }
 
 func supLinkToVerifications(supLink *types.SupLink, validators map[string]*state.Validator, targetHash bc.Hash, targetHeight uint64) []*Verification {

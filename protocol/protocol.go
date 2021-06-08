@@ -15,18 +15,21 @@ import (
 	"github.com/bytom/bytom/protocol/state"
 )
 
-const maxProcessBlockChSize = 1024
+const (
+	maxProcessBlockChSize  = 1024
+	maxProcessRollbackSize = 1024
+)
 
 // Chain provides functions for working with the Bytom block chain.
 type Chain struct {
-	index            *state.BlockIndex
-	orphanManage     *OrphanManage
-	txPool           *TxPool
-	store            Store
-	casper           *Casper
-	processBlockCh   chan *processBlockMsg
-	rollbackNotifyCh chan bc.Hash
-	eventDispatcher  *event.Dispatcher
+	index             *state.BlockIndex
+	orphanManage      *OrphanManage
+	txPool            *TxPool
+	store             Store
+	casper            *Casper
+	processBlockCh    chan *processBlockMsg
+	processRollbackCh chan *rollbackMsg
+	eventDispatcher   *event.Dispatcher
 
 	cond     sync.Cond
 	bestNode *state.BlockNode
@@ -39,12 +42,12 @@ func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher) (*
 
 func NewChainWithOrphanManage(store Store, txPool *TxPool, manage *OrphanManage, eventDispatcher *event.Dispatcher) (*Chain, error) {
 	c := &Chain{
-		orphanManage:     manage,
-		eventDispatcher:  eventDispatcher,
-		txPool:           txPool,
-		store:            store,
-		rollbackNotifyCh: make(chan bc.Hash),
-		processBlockCh:   make(chan *processBlockMsg, maxProcessBlockChSize),
+		orphanManage:      manage,
+		eventDispatcher:   eventDispatcher,
+		txPool:            txPool,
+		store:             store,
+		processRollbackCh: make(chan *rollbackMsg, maxProcessRollbackSize),
+		processBlockCh:    make(chan *processBlockMsg, maxProcessBlockChSize),
 	}
 	c.cond.L = new(sync.Mutex)
 
@@ -64,7 +67,7 @@ func NewChainWithOrphanManage(store Store, txPool *TxPool, manage *OrphanManage,
 	c.bestNode = c.index.GetNode(storeStatus.Hash)
 	c.index.SetMainChain(c.bestNode)
 
-	casper, err := newCasper(store, storeStatus, c.rollbackNotifyCh)
+	casper, err := newCasper(store, storeStatus, c.processRollbackCh)
 	if err != nil {
 		return nil, err
 	}
@@ -87,6 +90,10 @@ func (c *Chain) initChainStatus() error {
 		Status:    state.Justified,
 	}
 
+	if err := c.store.SaveCheckpoints([]*state.Checkpoint{checkpoint}); err != nil {
+		return err
+	}
+
 	utxoView := state.NewUtxoViewpoint()
 	bcBlock := types.MapBlock(genesisBlock)
 	if err := utxoView.ApplyBlock(bcBlock); err != nil {
@@ -99,21 +106,21 @@ func (c *Chain) initChainStatus() error {
 	}
 
 	contractView := state.NewContractViewpoint()
-	return c.store.SaveChainStatus(node, utxoView, contractView, []*state.Checkpoint{checkpoint}, 0, &checkpoint.Hash)
+	return c.store.SaveChainStatus(node, utxoView, contractView, 0, &checkpoint.Hash)
 }
 
-func newCasper(store Store, storeStatus *BlockStoreState, rollbackNotifyCh chan bc.Hash) (*Casper, error) {
+func newCasper(store Store, storeStatus *BlockStoreState, rollbackCh chan *rollbackMsg) (*Casper, error) {
 	checkpoints, err := store.CheckpointsFromNode(storeStatus.FinalizedHeight, storeStatus.FinalizedHash)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewCasper(store, checkpoints, rollbackNotifyCh), nil
+	return NewCasper(store, checkpoints, rollbackCh), nil
 }
 
-// BestBlockHeight returns the last irreversible block header of the blockchain
-func (c *Chain) LastIrreversibleHeader() *types.BlockHeader {
-	_, hash := c.casper.LastFinalized()
+// LastFinalizedHeader returns the last finalized block header of the block chain
+func (c *Chain) LastJustifiedHeader() *types.BlockHeader {
+	_, hash := c.casper.LastJustified()
 	node := c.index.GetNode(&hash)
 	return node.BlockHeader()
 }
@@ -152,7 +159,7 @@ func (c *Chain) BestBlockHash() *bc.Hash {
 
 // GetValidator return validator by specified blockHash and timestamp
 func (c *Chain) GetValidator(prevHash *bc.Hash, timeStamp uint64) (*state.Validator, error) {
-	prevCheckpoint, err := c.casper.prevCheckpointByPrevHash(prevHash)
+	prevCheckpoint, err := c.casper.parentCheckpointByPrevHash(prevHash)
 	if err != nil {
 		return nil, err
 	}
@@ -199,9 +206,9 @@ func (c *Chain) SignBlockHeader(blockHeader *types.BlockHeader) {
 }
 
 // This function must be called with mu lock in above level
-func (c *Chain) setState(node *state.BlockNode, view *state.UtxoViewpoint, contractView *state.ContractViewpoint, checkpoints ...*state.Checkpoint) error {
+func (c *Chain) setState(node *state.BlockNode, view *state.UtxoViewpoint, contractView *state.ContractViewpoint) error {
 	finalizedHeight, finalizedHash := c.casper.LastFinalized()
-	if err := c.store.SaveChainStatus(node, view, contractView, checkpoints, finalizedHeight, &finalizedHash); err != nil {
+	if err := c.store.SaveChainStatus(node, view, contractView, finalizedHeight, &finalizedHash); err != nil {
 		return err
 	}
 

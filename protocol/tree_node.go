@@ -34,6 +34,16 @@ func makeTree(root *state.Checkpoint, successors []*state.Checkpoint) *treeNode 
 	return rootNode
 }
 
+func (t *treeNode) addChild(child *treeNode) {
+	for i, n := range t.children {
+		if n.checkpoint.Hash == child.checkpoint.Hash {
+			t.children[i] = child
+			return
+		}
+	}
+	t.children = append(t.children, child)
+}
+
 func (t *treeNode) nodeByHash(blockHash bc.Hash) (*treeNode, error) {
 	if c := t.findOnlyOne(func(c *state.Checkpoint) bool {
 		return c.Hash == blockHash
