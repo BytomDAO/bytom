@@ -10,8 +10,8 @@ import (
 
 const (
 	// BlocksOfEpoch represent the block num in one epoch
-	BlocksOfEpoch   = 100
-	minMortgage     = 1000000
+	BlocksOfEpoch = 100
+	minMortgage   = 1000000
 )
 
 // CheckpointStatus represent current status of checkpoint
@@ -61,9 +61,10 @@ type Checkpoint struct {
 	// only save in the memory, not be persisted
 	Parent    *Checkpoint `json:"-"`
 	Timestamp uint64
-	SupLinks  []*SupLink  `json:"-"`
+	SupLinks  []*SupLink `json:"-"`
 	Status    CheckpointStatus
 
+	Rewards    map[string]uint64 // controlProgram -> num of reward
 	Votes      map[string]uint64 // putKey -> num of vote
 	Guaranties map[string]uint64 // pubKey -> num of guaranty
 }
