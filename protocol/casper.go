@@ -20,7 +20,6 @@ var (
 	errVoteToNonValidator       = errors.New("pubKey of vote is not validator")
 	errGuarantyLessThanMinimum  = errors.New("guaranty less than minimum")
 	errOverflow                 = errors.New("arithmetic overflow/underflow")
-	errAlreadyProcessedBlock    = errors.New("block already processed in casper")
 )
 
 const minGuaranty = 1E14

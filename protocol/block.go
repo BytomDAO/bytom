@@ -331,19 +331,21 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 		return false, c.connectBlock(bestBlock)
 	}
 
-	log.WithFields(log.Fields{"module": logModule}).Debug("apply fork chain to casper")
+	log.WithFields(log.Fields{"module": logModule}).Info("apply fork chain to casper")
 	return false, c.applyForkChainToCasper(bestNode)
 }
 
 func (c *Chain) applyForkChainToCasper(bestNode *state.BlockNode) error {
 	attachNodes, _ := c.calcReorganizeNodes(bestNode)
+	var reply *applyBlockReply
 	for _, node := range attachNodes {
+		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Info("apply fork node")
 		block, err := c.store.GetBlock(&node.Hash)
 		if err != nil {
 			return err
 		}
 
-		reply, err := c.casper.ApplyBlock(block)
+		reply, err = c.casper.ApplyBlock(block)
 		if err != nil {
 			return err
 		}
@@ -353,12 +355,9 @@ func (c *Chain) applyForkChainToCasper(bestNode *state.BlockNode) error {
 				return err
 			}
 		}
-
-		if reply.isRollback {
-			if err := c.rollback(reply.newBestHash); err != nil {
-				return err
-			}
-		}
+	}
+	if reply.bestHash != c.bestNode.Hash {
+		return c.rollback(reply.bestHash)
 	}
 	return nil
 }
@@ -369,6 +368,6 @@ func (c *Chain) rollback(bestHash bc.Hash) error {
 	}
 
 	node := c.index.GetNode(&bestHash)
-	log.WithFields(log.Fields{"module": logModule}).Debug("start to reorganize chain")
+	log.WithFields(log.Fields{"module": logModule, "bestHash": bestHash.String()}).Info("start to reorganize chain")
 	return c.reorganizeChain(node)
 }
