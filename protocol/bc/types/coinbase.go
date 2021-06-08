@@ -1,5 +1,9 @@
 package types
 
+import (
+	"github.com/bytom/bytom/protocol/bc"
+)
+
 // CoinbaseInput records the coinbase message
 type CoinbaseInput struct {
 	Arbitrary []byte
@@ -11,6 +15,11 @@ func NewCoinbaseInput(arbitrary []byte) *TxInput {
 		AssetVersion: 1,
 		TypedInput:   &CoinbaseInput{Arbitrary: arbitrary},
 	}
+}
+
+// AssetID implement the TypedInput.
+func (cb *CoinbaseInput) AssetID() bc.AssetID {
+	return bc.AssetID{}
 }
 
 // InputType is the interface function for return the input type

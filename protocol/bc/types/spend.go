@@ -33,5 +33,10 @@ func NewSpendInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amo
 	}
 }
 
+// AssetID implement the TypedInput.
+func (si *SpendInput) AssetID() bc.AssetID {
+	return *si.AssetId
+}
+
 // InputType is the interface function for return the input type.
 func (si *SpendInput) InputType() uint8 { return SpendInputType }
