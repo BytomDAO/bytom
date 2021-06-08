@@ -8,15 +8,58 @@ import (
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/vm"
+	"github.com/bytom/bytom/protocol/vm/vmutil"
 )
 
 func TestValidateTx(t *testing.T) {
+	p, _ := vmutil.P2SCProgram0()
 	converter := func(prog []byte) ([]byte, error) { return nil, nil }
+	a2 := bc.AssetID{V0: 2}
 	cases := []struct {
 		desc   string
 		txData *types.TxData
 		err    error
 	}{
+		{
+			desc: "swap tx",
+			txData: &types.TxData{
+				Version:        1,
+				SerializedSize: 40000,
+				Inputs: []*types.TxInput{
+					types.NewSpendInput(
+						[][]byte{a2.Bytes(), p},
+						bc.Hash{V0: 20},
+						bc.AssetID{V0: 1}, 10000, 1, p,
+						[][]byte{vm.Int64Bytes(10000), vm.Int64Bytes(10000000), vm.Int64Bytes(100000000000)}),
+					types.NewSpendInput(
+						nil,
+						bc.Hash{V0: 10},
+						bc.AssetID{V0: 1}, 1000, 0, []byte{0x51}, nil),
+					types.NewSpendInput(
+						nil,
+						bc.Hash{V0: 50},
+						*consensus.BTMAssetID, 3000000000, 3, []byte{0x51}, nil),
+					types.NewSpendInput(
+						[][]byte{a2.Bytes(), p},
+						bc.Hash{V0: 30},
+						bc.AssetID{V0: 2}, 10000000, 2, p,
+						[][]byte{vm.Int64Bytes(10000), vm.Int64Bytes(10000000), vm.Int64Bytes(100000000000)}),
+					/*types.NewSpendInput(
+					nil,
+					bc.Hash{V0: 40},
+					bc.AssetID{V0: 3}, 100000000000, 3, p,
+					[][]byte{vm.Int64Bytes(10000), vm.Int64Bytes(10000000), vm.Int64Bytes(100000000000)}),*/
+				},
+				Outputs: []*types.TxOutput{
+					types.NewOriginalTxOutput(bc.AssetID{V0: 2}, 909091, []byte{0x51}, nil),
+					types.NewOriginalTxOutput(bc.AssetID{V0: 1}, 11000, p, [][]byte{vm.Int64Bytes(11000), vm.Int64Bytes(9090909), vm.Int64Bytes(100000000000)}),
+					types.NewOriginalTxOutput(bc.AssetID{V0: 2}, 9090909, p, [][]byte{vm.Int64Bytes(11000), vm.Int64Bytes(9090909), vm.Int64Bytes(100000000000)}),
+					//types.NewOriginalTxOutput(bc.AssetID{V0: 3}, 100000000000, p, [][]byte{vm.Int64Bytes(11000), vm.Int64Bytes(9090909), vm.Int64Bytes(100000000000)}),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 100, mustDecodeString("00149dd32abe4756676cc310470457edefce8b3bd7e7"), [][]byte{}),
+				},
+			},
+			//err: vm.ErrRunLimitExceeded,
+		},
 		{
 			desc: "single utxo, single sign, non asset, btm stanard transaction",
 			txData: &types.TxData{
@@ -262,6 +305,7 @@ func TestValidateTx(t *testing.T) {
 		if rootErr(err) != c.err {
 			t.Errorf("case #%d (%s) got error %s, want %s; validationState is:\n", i, c.desc, err, c.err)
 		}
+		break
 	}
 }
 

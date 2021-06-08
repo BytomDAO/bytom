@@ -14,7 +14,7 @@ const (
 	VMGasRate          = int64(200)
 	StorageGasRate     = int64(1)
 	MaxGasAmount       = int64(200000)
-	DefaultGasCredit   = int64(30000)
+	DefaultGasCredit   = int64(30000000)
 	MaxNumOfValidators = int(10)
 
 	// config parameter for coinbase reward
