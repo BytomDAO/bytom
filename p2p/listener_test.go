@@ -8,6 +8,7 @@ import (
 )
 
 func TestListener(t *testing.T) {
+	t.Skip()
 	// Create a listener
 	l, _ := NewDefaultListener("tcp", "localhost:8001", true)
 

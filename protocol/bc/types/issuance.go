@@ -31,15 +31,6 @@ func NewIssuanceInput(nonce []byte, amount uint64, issuanceProgram []byte, argum
 	}
 }
 
-// InputType is the interface function for return the input type.
-func (ii *IssuanceInput) InputType() uint8 { return IssuanceInputType }
-
-// AssetID calculate the assetID of the issuance input.
-func (ii *IssuanceInput) AssetID() bc.AssetID {
-	defhash := ii.AssetDefinitionHash()
-	return bc.ComputeAssetID(ii.IssuanceProgram, ii.VMVersion, &defhash)
-}
-
 // AssetDefinitionHash return the hash of the issuance asset definition.
 func (ii *IssuanceInput) AssetDefinitionHash() (defhash bc.Hash) {
 	sha := sha3pool.Get256()
@@ -48,6 +39,15 @@ func (ii *IssuanceInput) AssetDefinitionHash() (defhash bc.Hash) {
 	defhash.ReadFrom(sha)
 	return defhash
 }
+
+// AssetID calculate the assetID of the issuance input.
+func (ii *IssuanceInput) AssetID() bc.AssetID {
+	defhash := ii.AssetDefinitionHash()
+	return bc.ComputeAssetID(ii.IssuanceProgram, ii.VMVersion, &defhash)
+}
+
+// InputType is the interface function for return the input type.
+func (ii *IssuanceInput) InputType() uint8 { return IssuanceInputType }
 
 // NonceHash return the hash of the issuance asset definition.
 func (ii *IssuanceInput) NonceHash() (hash bc.Hash) {

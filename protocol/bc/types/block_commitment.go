@@ -7,7 +7,7 @@ import (
 	"github.com/bytom/bytom/protocol/bc"
 )
 
-// BlockCommitment store the TransactionsMerkleRoot && TransactionStatusHash
+// BlockCommitment store the TransactionsMerkleRoot
 type BlockCommitment struct {
 	// TransactionsMerkleRoot is the root hash of the Merkle binary hash tree
 	// formed by the hashes of all transactions included in the block.
