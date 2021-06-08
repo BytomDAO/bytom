@@ -331,7 +331,6 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 		return false, c.connectBlock(bestBlock)
 	}
 
-	log.WithFields(log.Fields{"module": logModule}).Info("apply fork chain to casper")
 	return false, c.applyForkChainToCasper(bestNode)
 }
 
