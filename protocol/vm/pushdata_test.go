@@ -112,19 +112,28 @@ func TestPushDataBytes(t *testing.T) {
 		data []byte
 		want []byte
 	}
-	cases := []test{{
-		data: nil,
-		want: []byte{byte(OP_0)},
-	}, {
-		data: make([]byte, 255),
-		want: append([]byte{byte(OP_PUSHDATA1), 0xff}, make([]byte, 255)...),
-	}, {
-		data: make([]byte, 1<<8),
-		want: append([]byte{byte(OP_PUSHDATA2), 0, 1}, make([]byte, 1<<8)...),
-	}, {
-		data: make([]byte, 1<<16),
-		want: append([]byte{byte(OP_PUSHDATA4), 0, 0, 1, 0}, make([]byte, 1<<16)...),
-	}}
+	cases := []test{
+		{
+			data: nil,
+			want: []byte{byte(OP_0)},
+		},
+		{
+			data: make([]byte, 255),
+			want: append([]byte{byte(OP_PUSHDATA1), 0xff}, make([]byte, 255)...),
+		},
+		{
+			data: make([]byte, 1<<8),
+			want: append([]byte{byte(OP_PUSHDATA2), 0, 1}, make([]byte, 1<<8)...),
+		},
+		{
+			data: make([]byte, 1<<16),
+			want: append([]byte{byte(OP_PUSHDATA4), 0, 0, 1, 0}, make([]byte, 1<<16)...),
+		},
+		{
+			data: make([]byte, 1<<16),
+			want: append([]byte{byte(OP_PUSHDATA4), 0, 0, 1, 0}, make([]byte, 1<<16)...),
+		},
+	}
 
 	for i := 1; i <= 75; i++ {
 		cases = append(cases, test{
