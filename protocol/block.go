@@ -338,7 +338,6 @@ func (c *Chain) applyForkChainToCasper(bestNode *state.BlockNode) error {
 	attachNodes, _ := c.calcReorganizeNodes(bestNode)
 	var reply *applyBlockReply
 	for _, node := range attachNodes {
-		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Info("apply fork node")
 		block, err := c.store.GetBlock(&node.Hash)
 		if err != nil {
 			return err
@@ -348,6 +347,8 @@ func (c *Chain) applyForkChainToCasper(bestNode *state.BlockNode) error {
 		if err != nil {
 			return err
 		}
+
+		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Info("apply fork node")
 
 		if reply.verification != nil {
 			if err := c.broadcastVerification(reply.verification); err != nil {
