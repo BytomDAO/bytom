@@ -29,6 +29,7 @@ type (
 	// TypedInput return the txinput type.
 	TypedInput interface {
 		InputType() uint8
+		AssetID() bc.AssetID
 	}
 )
 
@@ -49,19 +50,6 @@ func (t *TxInput) AssetAmount() bc.AssetAmount {
 		return inp.AssetAmount
 	}
 	return bc.AssetAmount{}
-}
-
-// AssetID return the assetID of the txinput
-func (t *TxInput) AssetID() bc.AssetID {
-	switch inp := t.TypedInput.(type) {
-	case *IssuanceInput:
-		return inp.AssetID()
-	case *SpendInput:
-		return *inp.AssetId
-	case *VetoInput:
-		return *inp.AssetId
-	}
-	return bc.AssetID{}
 }
 
 // Amount return the asset amount of the txinput

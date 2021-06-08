@@ -25,6 +25,7 @@ func TestNewNetAddress(t *testing.T) {
 }
 
 func TestNewNetAddressString(t *testing.T) {
+	t.Skip()
 	assert := assert.New(t)
 
 	tests := []struct {

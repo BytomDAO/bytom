@@ -35,5 +35,10 @@ func NewVetoInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amou
 	}
 }
 
+// AssetID implement the TypedInput.
+func (ui *VetoInput) AssetID() bc.AssetID {
+	return *ui.AssetId
+}
+
 // InputType is the interface function for return the input type.
 func (ui *VetoInput) InputType() uint8 { return VetoInputType }

@@ -23,15 +23,15 @@ type BlockHeader struct {
 	BlockCommitment
 }
 
-// Time returns the time represented by the Timestamp in block header.
-func (bh *BlockHeader) Time() time.Time {
-	return time.Unix(int64(bh.Timestamp), 0).UTC()
-}
-
 // Hash returns complete hash of the block header.
 func (bh *BlockHeader) Hash() bc.Hash {
 	h, _ := mapBlockHeader(bh)
 	return h
+}
+
+// Time returns the time represented by the Timestamp in block header.
+func (bh *BlockHeader) Time() time.Time {
+	return time.Unix(int64(bh.Timestamp), 0).UTC()
 }
 
 // MarshalText fulfills the json.Marshaler interface. This guarantees that
@@ -67,6 +67,15 @@ func (bh *BlockHeader) UnmarshalText(text []byte) error {
 	}
 
 	return nil
+}
+
+// WriteTo writes the block header to the input io.Writer
+func (bh *BlockHeader) WriteTo(w io.Writer) (int64, error) {
+	ew := errors.NewWriter(w)
+	if err := bh.writeTo(ew, SerBlockHeader); err != nil {
+		return 0, err
+	}
+	return ew.Written(), ew.Err()
 }
 
 func (bh *BlockHeader) readFrom(r *blockchain.Reader) (serflag uint8, err error) {
@@ -113,15 +122,6 @@ func (bh *BlockHeader) readFrom(r *blockchain.Reader) (serflag uint8, err error)
 	}
 
 	return
-}
-
-// WriteTo writes the block header to the input io.Writer
-func (bh *BlockHeader) WriteTo(w io.Writer) (int64, error) {
-	ew := errors.NewWriter(w)
-	if err := bh.writeTo(ew, SerBlockHeader); err != nil {
-		return 0, err
-	}
-	return ew.Written(), ew.Err()
 }
 
 func (bh *BlockHeader) writeTo(w io.Writer, serflags uint8) (err error) {
