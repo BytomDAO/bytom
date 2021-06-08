@@ -18,7 +18,7 @@ var (
 	ErrTxVersion                 = errors.New("invalid transaction version")
 	ErrWrongTransactionSize      = errors.New("invalid transaction size")
 	ErrBadTimeRange              = errors.New("invalid transaction time range")
-	ErrEmptyInputIDs             = errors.New("got the empty InputIDs")
+	ErrInputDoubleSend           = errors.New("got the double spend input")
 	ErrNotStandardTx             = errors.New("not standard transaction")
 	ErrWrongCoinbaseTransaction  = errors.New("wrong coinbase transaction")
 	ErrWrongCoinbaseAsset        = errors.New("wrong coinbase assetID")
@@ -431,7 +431,7 @@ func checkDoubleSpend(tx *bc.Tx) error {
 	usedInputMap := make(map[bc.Hash]bool)
 	for _, id := range tx.InputIDs {
 		if _, ok := usedInputMap[id]; ok {
-			return ErrEmptyInputIDs
+			return ErrInputDoubleSend
 		}
 
 		usedInputMap[id] = true
