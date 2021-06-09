@@ -7,21 +7,18 @@ import (
 	"sync"
 
 	"github.com/bytom/bytom/consensus"
-	"github.com/bytom/bytom/consensus/segwit"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/math/checked"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/vm"
 )
 
-const ruleAA = 142500
-
 // validate transaction error
 var (
 	ErrTxVersion                 = errors.New("invalid transaction version")
 	ErrWrongTransactionSize      = errors.New("invalid transaction size")
 	ErrBadTimeRange              = errors.New("invalid transaction time range")
-	ErrEmptyInputIDs             = errors.New("got the empty InputIDs")
+	ErrInputDoubleSend           = errors.New("got the double spend input")
 	ErrNotStandardTx             = errors.New("not standard transaction")
 	ErrWrongCoinbaseTransaction  = errors.New("wrong coinbase transaction")
 	ErrWrongCoinbaseAsset        = errors.New("wrong coinbase assetID")
@@ -181,19 +178,6 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			}
 		}
 
-		for _, BTMInputID := range vs.tx.GasInputIDs {
-			e, ok := vs.tx.Entries[BTMInputID]
-			if !ok {
-				return errors.Wrapf(bc.ErrMissingEntry, "entry for bytom input %x not found", BTMInputID)
-			}
-
-			vs2 := *vs
-			vs2.entryID = BTMInputID
-			if err := checkValid(&vs2, e); err != nil {
-				return errors.Wrap(err, "checking gas input")
-			}
-		}
-
 		for i, dest := range e.WitnessDestinations {
 			vs2 := *vs
 			vs2.destPos = uint64(i)
@@ -202,16 +186,16 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			}
 		}
 
-		if err := vs.gasStatus.setGasValid(); err != nil {
-			return err
-		}
-
 		for i, src := range e.Sources {
 			vs2 := *vs
 			vs2.sourcePos = uint64(i)
 			if err = checkValidSrc(&vs2, src); err != nil {
 				return errors.Wrapf(err, "checking mux source %d", i)
 			}
+		}
+
+		if err := vs.gasStatus.setGasValid(); err != nil {
+			return err
 		}
 
 	case *bc.Output:
@@ -443,43 +427,16 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 	return nil
 }
 
-func checkStandardTx(tx *bc.Tx, blockHeight uint64) error {
+func checkDoubleSpend(tx *bc.Tx) error {
+	usedInputMap := make(map[bc.Hash]bool)
 	for _, id := range tx.InputIDs {
-		if blockHeight >= ruleAA && id.IsZero() {
-			return ErrEmptyInputIDs
+		if _, ok := usedInputMap[id]; ok {
+			return ErrInputDoubleSend
 		}
+
+		usedInputMap[id] = true
 	}
 
-	for _, id := range tx.GasInputIDs {
-		spend, err := tx.Spend(id)
-		if err != nil {
-			continue
-		}
-		spentOutput, err := tx.Output(*spend.SpentOutputId)
-		if err != nil {
-			return err
-		}
-
-		if !segwit.IsP2WScript(spentOutput.ControlProgram.Code) {
-			return ErrNotStandardTx
-		}
-	}
-
-	for _, id := range tx.ResultIds {
-		e, ok := tx.Entries[*id]
-		if !ok {
-			return errors.Wrapf(bc.ErrMissingEntry, "id %x", id.Bytes())
-		}
-
-		output, ok := e.(*bc.Output)
-		if !ok || *output.Source.Value.AssetId != *consensus.BTMAssetID {
-			continue
-		}
-
-		if !segwit.IsP2WScript(output.ControlProgram.Code) {
-			return ErrNotStandardTx
-		}
-	}
 	return nil
 }
 
@@ -508,7 +465,7 @@ func ValidateTx(tx *bc.Tx, block *bc.Block, converter ProgramConverterFunc) (*Ga
 		return nil, err
 	}
 
-	if err := checkStandardTx(tx, block.Height); err != nil {
+	if err := checkDoubleSpend(tx); err != nil {
 		return nil, err
 	}
 
