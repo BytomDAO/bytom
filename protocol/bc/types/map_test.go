@@ -63,7 +63,7 @@ func TestMapSpendTx(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if *spendOut.Source.Value != oldIn.AssetAmount() {
+				if *spendOut.Source.Value.AssetId != oldIn.AssetID() || spendOut.Source.Value.Amount != oldIn.Amount() {
 					t.Errorf("tx.InputIDs[%d]'s asset amount is not equal after map'", i)
 				}
 			default:
