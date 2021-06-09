@@ -2,13 +2,14 @@ package account
 
 import (
 	"context"
-	"encoding/json"
+	stdjson "encoding/json"
 
 	"github.com/bytom/bytom/blockchain/signers"
 	"github.com/bytom/bytom/blockchain/txbuilder"
 	"github.com/bytom/bytom/common"
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/bytom/encoding/json"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
@@ -18,7 +19,7 @@ import (
 //DecodeSpendAction unmarshal JSON-encoded data of spend action
 func (m *Manager) DecodeSpendAction(data []byte) (txbuilder.Action, error) {
 	a := &spendAction{accounts: m}
-	return a, json.Unmarshal(data, a)
+	return a, stdjson.Unmarshal(data, a)
 }
 
 type spendAction struct {
@@ -70,7 +71,7 @@ func (m *Manager) reserveBtmUtxoChain(builder *txbuilder.TemplateBuilder, accoun
 	utxos := []*UTXO{}
 	for gasAmount := uint64(0); reservedAmount < gasAmount+amount; gasAmount = calcMergeGas(len(utxos)) {
 		reserveAmount := amount + gasAmount - reservedAmount
-		res, err := m.utxoKeeper.Reserve(accountID, consensus.BTMAssetID, reserveAmount, useUnconfirmed, builder.MaxTime())
+		res, err := m.utxoKeeper.Reserve(accountID, consensus.BTMAssetID, reserveAmount, useUnconfirmed, nil, builder.MaxTime())
 		if err != nil {
 			return nil, err
 		}
@@ -215,7 +216,7 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 		return errors.Wrap(err, "get account info")
 	}
 
-	res, err := a.accounts.utxoKeeper.Reserve(a.AccountID, a.AssetId, a.Amount, a.UseUnconfirmed, b.MaxTime())
+	res, err := a.accounts.utxoKeeper.Reserve(a.AccountID, a.AssetId, a.Amount, a.UseUnconfirmed, nil, b.MaxTime())
 	if err != nil {
 		return errors.Wrap(err, "reserving utxos")
 	}
@@ -252,7 +253,7 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 //DecodeSpendUTXOAction unmarshal JSON-encoded data of spend utxo action
 func (m *Manager) DecodeSpendUTXOAction(data []byte) (txbuilder.Action, error) {
 	a := &spendUTXOAction{accounts: m}
-	return a, json.Unmarshal(data, a)
+	return a, stdjson.Unmarshal(data, a)
 }
 
 type spendUTXOAction struct {
@@ -307,6 +308,9 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 // UtxoToInputs convert an utxo to the txinput
 func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.SigningInstruction, error) {
 	txInput := types.NewSpendInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram, u.StateData)
+	if u.Vote != nil {
+		txInput = types.NewVetoInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram, u.Vote, nil)
+	}
 	sigInst := &txbuilder.SigningInstruction{}
 	if signer == nil {
 		return txInput, sigInst, nil
@@ -347,6 +351,74 @@ func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.S
 	}
 
 	return txInput, sigInst, nil
+}
+
+//DecodeVetoAction unmarshal JSON-encoded data of spend action
+func (m *Manager) DecodeVetoAction(data []byte) (txbuilder.Action, error) {
+	a := &vetoAction{accounts: m}
+	return a, stdjson.Unmarshal(data, a)
+}
+
+type vetoAction struct {
+	accounts *Manager
+	bc.AssetAmount
+	AccountID      string        `json:"account_id"`
+	Vote           json.HexBytes `json:"vote"`
+	UseUnconfirmed bool          `json:"use_unconfirmed"`
+}
+
+func (a *vetoAction) ActionType() string {
+	return "veto"
+}
+
+func (a *vetoAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
+	var missing []string
+	if a.AccountID == "" {
+		missing = append(missing, "account_id")
+	}
+	if a.AssetId.IsZero() {
+		missing = append(missing, "asset_id")
+	}
+	if len(missing) > 0 {
+		return txbuilder.MissingFieldsError(missing...)
+	}
+
+	acct, err := a.accounts.FindByID(a.AccountID)
+	if err != nil {
+		return errors.Wrap(err, "get account info")
+	}
+
+	res, err := a.accounts.utxoKeeper.Reserve(a.AccountID, a.AssetId, a.Amount, a.UseUnconfirmed, a.Vote, b.MaxTime())
+	if err != nil {
+		return errors.Wrap(err, "reserving utxos")
+	}
+
+	// Cancel the reservation if the build gets rolled back.
+	b.OnRollback(func() { a.accounts.utxoKeeper.Cancel(res.id) })
+	for _, r := range res.utxos {
+		txInput, sigInst, err := UtxoToInputs(acct.Signer, r)
+		if err != nil {
+			return errors.Wrap(err, "creating inputs")
+		}
+
+		if err = b.AddInput(txInput, sigInst); err != nil {
+			return errors.Wrap(err, "adding inputs")
+		}
+	}
+
+	if res.change > 0 {
+		acp, err := a.accounts.CreateAddress(a.AccountID, true)
+		if err != nil {
+			return errors.Wrap(err, "creating control program")
+		}
+
+		// Don't insert the control program until callbacks are executed.
+		a.accounts.insertControlProgramDelayed(b, acp)
+		if err = b.AddOutput(types.NewVoteOutput(*a.AssetId, res.change, acp.ControlProgram, a.Vote, nil)); err != nil {
+			return errors.Wrap(err, "adding change voteOutput")
+		}
+	}
+	return nil
 }
 
 // insertControlProgramDelayed takes a template builder and an account

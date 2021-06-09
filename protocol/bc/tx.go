@@ -70,3 +70,29 @@ func (tx *Tx) Issuance(id Hash) (*Issuance, error) {
 	}
 	return iss, nil
 }
+
+// VetoInput try to get the veto entry by given hash
+func (tx *Tx) VetoInput(id Hash) (*VetoInput, error) {
+	e, ok := tx.Entries[id]
+	if !ok || e == nil {
+		return nil, errors.Wrapf(ErrMissingEntry, "id %x", id.Bytes())
+	}
+	sp, ok := e.(*VetoInput)
+	if !ok {
+		return nil, errors.Wrapf(ErrEntryType, "entry %x has unexpected type %T", id.Bytes(), e)
+	}
+	return sp, nil
+}
+
+// VoteOutput try to get the vote output entry by given hash
+func (tx *Tx) VoteOutput(id Hash) (*VoteOutput, error) {
+	e, ok := tx.Entries[id]
+	if !ok || e == nil {
+		return nil, errors.Wrapf(ErrMissingEntry, "id %x", id.Bytes())
+	}
+	o, ok := e.(*VoteOutput)
+	if !ok {
+		return nil, errors.Wrapf(ErrEntryType, "entry %x has unexpected type %T", id.Bytes(), e)
+	}
+	return o, nil
+}

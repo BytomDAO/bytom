@@ -27,9 +27,11 @@ func (a *API) actionDecoder(action string) (func([]byte) (txbuilder.Action, erro
 		"control_program":              txbuilder.DecodeControlProgramAction,
 		"issue":                        a.wallet.AssetReg.DecodeIssueAction,
 		"retire":                       txbuilder.DecodeRetireAction,
+		"vote_output":                  txbuilder.DecodeVoteOutputAction,
 		"register_contract":            txbuilder.DecodeRegisterAction,
 		"spend_account":                a.wallet.AccountMgr.DecodeSpendAction,
 		"spend_account_unspent_output": a.wallet.AccountMgr.DecodeSpendUTXOAction,
+		"veto":                         a.wallet.AccountMgr.DecodeVetoAction,
 	}
 	decoder, ok := decoders[action]
 	return decoder, ok

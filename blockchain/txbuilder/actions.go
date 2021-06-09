@@ -183,3 +183,62 @@ func (a *registerAction) Build(ctx context.Context, b *TemplateBuilder) error {
 func (a *registerAction) ActionType() string {
 	return "register_contract"
 }
+
+// DecodeVoteOutputAction convert input data to action struct
+func DecodeVoteOutputAction(data []byte) (Action, error) {
+	a := new(voteOutputAction)
+	err := stdjson.Unmarshal(data, a)
+	return a, err
+}
+
+type voteOutputAction struct {
+	bc.AssetAmount
+	Address string        `json:"address"`
+	Vote    json.HexBytes `json:"vote"`
+}
+
+func (a *voteOutputAction) Build(ctx context.Context, b *TemplateBuilder) error {
+	var missing []string
+	if a.Address == "" {
+		missing = append(missing, "address")
+	}
+	if a.AssetId.IsZero() {
+		missing = append(missing, "asset_id")
+	}
+	if a.Amount == 0 {
+		missing = append(missing, "amount")
+	}
+	if len(a.Vote) == 0 {
+		missing = append(missing, "vote")
+	}
+	if len(missing) > 0 {
+		return MissingFieldsError(missing...)
+	}
+
+	address, err := common.DecodeAddress(a.Address, &consensus.ActiveNetParams)
+	if err != nil {
+		return err
+	}
+
+	redeemContract := address.ScriptAddress()
+	program := []byte{}
+	switch address.(type) {
+	case *common.AddressWitnessPubKeyHash:
+		program, err = vmutil.P2WPKHProgram(redeemContract)
+	case *common.AddressWitnessScriptHash:
+		program, err = vmutil.P2WSHProgram(redeemContract)
+	default:
+		return errors.New("unsupport address type")
+	}
+	if err != nil {
+		return err
+	}
+
+	out := types.NewVoteOutput(*a.AssetId, a.Amount, program, a.Vote, nil)
+	return b.AddOutput(out)
+}
+
+func (a *voteOutputAction) ActionType() string {
+	return "vote_output"
+}
+
