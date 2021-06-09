@@ -16,7 +16,7 @@ const dirPath = "testdata/pseudo"
 func TestCreateKeyWithUpperCase(t *testing.T) {
 	hsm, _ := New(dirPath)
 
-	alias := "UPPER"
+	alias := "UPPERCASE"
 
 	xpub, _, err := hsm.XCreate(alias, "password", "en")
 	if err != nil {
@@ -82,12 +82,12 @@ func TestUpdateKeyAlias(t *testing.T) {
 func TestPseudoHSMChainKDKeys(t *testing.T) {
 
 	hsm, _ := New(dirPath)
-	xpub, _, err := hsm.XCreate("bbs", "password", "en")
+	xpub, _, err := hsm.XCreate("bbj", "password", "en")
 
 	if err != nil {
 		t.Fatal(err)
 	}
-	xpub2, _, err := hsm.XCreate("bytom", "nopassword", "en")
+	xpub2, _, err := hsm.XCreate("bytom2", "nopassword", "en")
 	if err != nil {
 		t.Fatal(err)
 	}
