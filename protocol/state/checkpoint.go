@@ -113,7 +113,7 @@ func (c *Checkpoint) Validators() map[string]*Validator {
 		return nil
 	}
 
-	// todo use vote num to generate validators in test version
+	//  todo use vote num to generate validators in test version
 	for pubKey, mortgageNum := range c.Votes {
 		if mortgageNum >= minMortgage {
 			validators = append(validators, &Validator{
