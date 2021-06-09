@@ -244,7 +244,7 @@ func (c *Casper) myVerification(target *state.Checkpoint, validators map[string]
 		return nil, nil
 	}
 
-	if source := c.lastJustifiedCheckpointOfBranch(target); source != nil {
+	if source := c.lastJustifiedCheckpoint(target); source != nil {
 		v := &Verification{
 			SourceHash:   source.Hash,
 			TargetHash:   target.Hash,
@@ -338,7 +338,7 @@ func processVote(output *types.TxOutput, checkpoint *state.Checkpoint) error {
 	return nil
 }
 
-func (c *Casper) lastJustifiedCheckpointOfBranch(branch *state.Checkpoint) *state.Checkpoint {
+func (c *Casper) lastJustifiedCheckpoint(branch *state.Checkpoint) *state.Checkpoint {
 	parent := branch.Parent
 	for parent != nil {
 		switch parent.Status {
