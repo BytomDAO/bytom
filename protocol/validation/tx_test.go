@@ -224,8 +224,8 @@ func TestOverflow(t *testing.T) {
 		txInputs := make([]*types.TxInput, 0, len(inputs))
 		txOutputs := make([]*types.TxOutput, 0, len(outputs))
 
-		for _, amount := range inputs {
-			txInput := types.NewSpendInput(nil, *sourceID, *consensus.BTMAssetID, amount, 0, ctrlProgram, nil)
+		for i, amount := range inputs {
+			txInput := types.NewSpendInput(nil, *sourceID, *consensus.BTMAssetID, amount, uint64(i), ctrlProgram, nil)
 			txInputs = append(txInputs, txInput)
 		}
 
@@ -524,21 +524,11 @@ func TestTxValidation(t *testing.T) {
 			err: ErrOverGasCredit,
 		},
 		{
-			desc: "can't find gas spend input in entries",
-			f: func() {
-				spendID := mux.Sources[len(mux.Sources)-1].Ref
-				delete(tx.Entries, *spendID)
-				mux.Sources = mux.Sources[:len(mux.Sources)-1]
-			},
-			err: bc.ErrMissingEntry,
-		},
-		{
 			desc: "no gas spend input",
 			f: func() {
 				spendID := mux.Sources[len(mux.Sources)-1].Ref
 				delete(tx.Entries, *spendID)
 				mux.Sources = mux.Sources[:len(mux.Sources)-1]
-				tx.GasInputIDs = nil
 				vs.gasStatus.GasLeft = 0
 			},
 			err: vm.ErrRunLimitExceeded,
@@ -549,7 +539,6 @@ func TestTxValidation(t *testing.T) {
 				spendID := mux.Sources[len(mux.Sources)-1].Ref
 				delete(tx.Entries, *spendID)
 				mux.Sources = mux.Sources[:len(mux.Sources)-1]
-				tx.GasInputIDs = nil
 			},
 			err: nil,
 		},
@@ -823,7 +812,7 @@ func TestCoinbase(t *testing.T) {
 	}
 }
 
-func TestRuleAA(t *testing.T) {
+func TestDoubleSpend(t *testing.T) {
 	testData := "07010004016201609bc47dda88eee18c7433340c16e054cabee4318a8d638e873be19e979df81dc7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0e3f9f5c80e0101160014f233267911e94dc74df706fe3b697273e212d5450063024088b5e730136407312980d3b1446004a8c552111721a4ba48044365cf7f7785542f2d7799f73d7cba1be2301fdfb91ad6ea99559b1857a25336eaefd90675870f207642ba797fd89d1f98a8559b4ca74123697dd4dee882955acd0da9010a80d64e0161015fe334d4fe18398f0232d2aca7050388ce4ee5ae82c8148d7f0cea748438b65135ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ace684200101160014f233267911e94dc74df706fe3b697273e212d545006302404a17a5995b8163ee448719b462a5694b22a35522dd9883333fd462cc3d0aabf049445c5cbb911a40e1906a5bea99b23b1a79e215eeb1a818d8b1dd27e06f3004207642ba797fd89d1f98a8559b4ca74123697dd4dee882955acd0da9010a80d64e016201609bc47dda88eee18c7433340c16e054cabee4318a8d638e873be19e979df81dc7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0e3f9f5c80e0101160014f233267911e94dc74df706fe3b697273e212d5450063024088b5e730136407312980d3b1446004a8c552111721a4ba48044365cf7f7785542f2d7799f73d7cba1be2301fdfb91ad6ea99559b1857a25336eaefd90675870f207642ba797fd89d1f98a8559b4ca74123697dd4dee882955acd0da9010a80d64e0161015fe334d4fe18398f0232d2aca7050388ce4ee5ae82c8148d7f0cea748438b65135ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ace684200101160014f233267911e94dc74df706fe3b697273e212d545006302409278702c74eb3ae7666f9da4841443a4b001d6c7d7de631faf9f26eb464f6cdd741dcd4c2f3a1eb47cbc345f56a16902380b8f74b7a559f9bec854bd0e955b0c207642ba797fd89d1f98a8559b4ca74123697dd4dee882955acd0da9010a80d64e0201003fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa08ba3fae80e01160014aac0345165045e612b3d7363f39a372bead80ce7000001003fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe08fe0fae80e01160014aac0345165045e612b3d7363f39a372bead80ce70000"
 	/*
 		07  // serflags
@@ -931,18 +920,10 @@ func TestRuleAA(t *testing.T) {
 		{
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
-					Height: ruleAA - 1,
+					Height: 5000,
 				},
 			},
-			err: ErrMismatchedPosition,
-		},
-		{
-			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					Height: ruleAA,
-				},
-			},
-			err: ErrEmptyInputIDs,
+			err: ErrInputDoubleSend,
 		},
 	}
 
@@ -1001,53 +982,6 @@ func TestTimeRange(t *testing.T) {
 		tx.TimeRange = c.timeRange
 		if _, err := ValidateTx(tx, block, converter); (err != nil) != c.err {
 			t.Errorf("#%d got error %t, want %t", i, !c.err, c.err)
-		}
-	}
-}
-
-func TestStandardTx(t *testing.T) {
-	fixture := sample(t, nil)
-	tx := types.NewTx(*fixture.tx).Tx
-
-	cases := []struct {
-		desc string
-		f    func()
-		err  error
-	}{
-		{
-			desc: "normal standard tx",
-			err:  nil,
-		},
-		{
-			desc: "not standard tx in spend input",
-			f: func() {
-				inputID := tx.GasInputIDs[0]
-				spend := tx.Entries[inputID].(*bc.Spend)
-				spentOutput, err := tx.Output(*spend.SpentOutputId)
-				if err != nil {
-					t.Fatal(err)
-				}
-				spentOutput.ControlProgram = &bc.Program{Code: []byte{0}}
-			},
-			err: ErrNotStandardTx,
-		},
-		{
-			desc: "not standard tx in output",
-			f: func() {
-				outputID := tx.ResultIds[0]
-				output := tx.Entries[*outputID].(*bc.Output)
-				output.ControlProgram = &bc.Program{Code: []byte{0}}
-			},
-			err: ErrNotStandardTx,
-		},
-	}
-
-	for i, c := range cases {
-		if c.f != nil {
-			c.f()
-		}
-		if err := checkStandardTx(tx, 0); err != c.err {
-			t.Errorf("case #%d (%s) got error %t, want %t", i, c.desc, err, c.err)
 		}
 	}
 }
