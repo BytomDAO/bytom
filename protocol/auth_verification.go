@@ -48,12 +48,11 @@ func (c *Casper) AuthVerification(v *Verification) error {
 		return nil
 	}
 
-	_, oldBestHash := c.bestChain()
 	if err := c.authVerification(v, targetNode.checkpoint, validators); err != nil {
 		return err
 	}
 
-	return c.tryRollback(oldBestHash)
+	return c.tryRollback(c.bestChain())
 }
 
 func (c *Casper) authVerification(v *Verification, target *state.Checkpoint, validators map[string]*state.Validator) error {
@@ -131,7 +130,7 @@ func (c *Casper) setFinalized(checkpoint *state.Checkpoint) {
 }
 
 func (c *Casper) tryRollback(oldBestHash bc.Hash) error {
-	if _, newBestHash := c.bestChain(); oldBestHash != newBestHash {
+	if newBestHash := c.bestChain(); oldBestHash != newBestHash {
 		msg := &rollbackMsg{bestHash: newBestHash}
 		c.rollbackCh <- msg
 		return <-msg.reply

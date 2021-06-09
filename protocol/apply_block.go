@@ -32,8 +32,7 @@ func (c *Casper) ApplyBlock(block *types.Block) (*applyBlockReply, error) {
 	defer c.mu.Unlock()
 
 	if _, err := c.tree.nodeByHash(block.Hash()); err == nil {
-		_, bestHash := c.bestChain()
-		return &applyBlockReply{bestHash: bestHash}, nil
+		return &applyBlockReply{bestHash: c.bestChain()}, nil
 	}
 
 	target, err := c.applyBlockToCheckpoint(block)
@@ -60,13 +59,11 @@ func (c *Casper) ApplyBlock(block *types.Block) (*applyBlockReply, error) {
 		return nil, err
 	}
 
-	_, bestHash := c.bestChain()
-	reply := &applyBlockReply{verification: verification, bestHash: bestHash}
-	return reply, c.saveCheckpoints(affectedCheckpoints)
+	return &applyBlockReply{verification: verification, bestHash: c.bestChain()}, c.saveCheckpoints(affectedCheckpoints)
 }
 
 func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, error) {
-	node, err := c.checkpointByHash(block.PreviousBlockHash)
+	node, err := c.checkpointNodeByHash(block.PreviousBlockHash)
 	if err != nil {
 		return nil, err
 	}
@@ -99,18 +96,18 @@ func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, 
 	return checkpoint, nil
 }
 
-func (c *Casper) checkpointByHash(blockHash bc.Hash) (*treeNode, error) {
+func (c *Casper) checkpointNodeByHash(blockHash bc.Hash) (*treeNode, error) {
 	node, err := c.tree.nodeByHash(blockHash)
 	if err != nil {
 		logrus.WithField("err", err).Error("fail find checkpoint, start to reorganize checkpoint")
 
-		return c.reorganizeCheckpoint(blockHash)
+		return c.replayCheckpoint(blockHash)
 	}
 
 	return node, nil
 }
 
-func (c *Casper) reorganizeCheckpoint(hash bc.Hash) (*treeNode, error) {
+func (c *Casper) replayCheckpoint(hash bc.Hash) (*treeNode, error) {
 	prevHash := hash
 	var attachBlocks []*types.Block
 	for {
