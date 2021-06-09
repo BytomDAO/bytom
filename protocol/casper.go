@@ -91,7 +91,7 @@ func (c *Casper) Validators(blockHash *bc.Hash) (map[string]*state.Validator, er
 }
 
 func (c *Casper) parentCheckpoint(blockHash *bc.Hash) (*state.Checkpoint, error) {
-	hash, err := c.prevCheckpointHash(blockHash)
+	hash, err := c.parentCheckpointHash(blockHash)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func (c *Casper) parentCheckpoint(blockHash *bc.Hash) (*state.Checkpoint, error)
 }
 
 func (c *Casper) parentCheckpointByPrevHash(prevBlockHash *bc.Hash) (*state.Checkpoint, error) {
-	hash, err := c.prevCheckpointHashByPrevHash(prevBlockHash)
+	hash, err := c.parentCheckpointHashByPrevHash(prevBlockHash)
 	if err != nil {
 		return nil, err
 	}
@@ -131,11 +131,11 @@ func (c *Casper) EvilValidators() []*EvilValidator {
 	return validators
 }
 
-func (c *Casper) bestChain() (uint64, bc.Hash) {
+func (c *Casper) bestChain() bc.Hash {
 	// root is init justified
 	root := c.tree.checkpoint
-	bestHeight, bestHash, _ := chainOfMaxJustifiedHeight(c.tree, root.Height)
-	return bestHeight, bestHash
+	_, bestHash, _ := chainOfMaxJustifiedHeight(c.tree, root.Height)
+	return bestHash
 }
 
 func lastJustified(node *treeNode) (uint64, bc.Hash) {
@@ -168,7 +168,7 @@ func chainOfMaxJustifiedHeight(node *treeNode, justifiedHeight uint64) (uint64, 
 	return bestHeight, bestHash, maxJustifiedHeight
 }
 
-func (c *Casper) prevCheckpointHash(blockHash *bc.Hash) (*bc.Hash, error) {
+func (c *Casper) parentCheckpointHash(blockHash *bc.Hash) (*bc.Hash, error) {
 	if data, ok := c.prevCheckpointCache.Get(*blockHash); ok {
 		return data.(*bc.Hash), nil
 	}
@@ -178,7 +178,7 @@ func (c *Casper) prevCheckpointHash(blockHash *bc.Hash) (*bc.Hash, error) {
 		return nil, err
 	}
 
-	result, err := c.prevCheckpointHashByPrevHash(&block.PreviousBlockHash)
+	result, err := c.parentCheckpointHashByPrevHash(&block.PreviousBlockHash)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +187,7 @@ func (c *Casper) prevCheckpointHash(blockHash *bc.Hash) (*bc.Hash, error) {
 	return result, nil
 }
 
-func (c *Casper) prevCheckpointHashByPrevHash(prevBlockHash *bc.Hash) (*bc.Hash, error) {
+func (c *Casper) parentCheckpointHashByPrevHash(prevBlockHash *bc.Hash) (*bc.Hash, error) {
 	prevHash := prevBlockHash
 	for {
 		prevBlock, err := c.store.GetBlockHeader(prevHash)
