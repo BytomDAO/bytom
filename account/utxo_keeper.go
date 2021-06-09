@@ -1,6 +1,7 @@
 package account
 
 import (
+	"bytes"
 	"container/list"
 	"encoding/json"
 	"sort"
@@ -34,6 +35,7 @@ type UTXO struct {
 	Amount              uint64
 	SourcePos           uint64
 	ControlProgram      []byte
+	Vote                []byte
 	StateData           [][]byte
 	AccountID           string
 	Address             string
@@ -112,11 +114,11 @@ func (uk *utxoKeeper) RemoveUnconfirmedUtxo(hashes []*bc.Hash) {
 	}
 }
 
-func (uk *utxoKeeper) Reserve(accountID string, assetID *bc.AssetID, amount uint64, useUnconfirmed bool, exp time.Time) (*reservation, error) {
+func (uk *utxoKeeper) Reserve(accountID string, assetID *bc.AssetID, amount uint64, useUnconfirmed bool, vote []byte, exp time.Time) (*reservation, error) {
 	uk.mtx.Lock()
 	defer uk.mtx.Unlock()
 
-	utxos, immatureAmount := uk.findUtxos(accountID, assetID, useUnconfirmed)
+	utxos, immatureAmount := uk.findUtxos(accountID, assetID, useUnconfirmed, vote)
 	optUtxos, optAmount, reservedAmount := uk.optUTXOs(utxos, amount)
 	if optAmount+reservedAmount+immatureAmount < amount {
 		return nil, ErrInsufficient
@@ -203,12 +205,12 @@ func (uk *utxoKeeper) expireReservation(t time.Time) {
 	}
 }
 
-func (uk *utxoKeeper) findUtxos(accountID string, assetID *bc.AssetID, useUnconfirmed bool) ([]*UTXO, uint64) {
+func (uk *utxoKeeper) findUtxos(accountID string, assetID *bc.AssetID, useUnconfirmed bool, vote []byte) ([]*UTXO, uint64) {
 	immatureAmount := uint64(0)
 	currentHeight := uk.currentHeight()
 	utxos := []*UTXO{}
 	appendUtxo := func(u *UTXO) {
-		if u.AccountID != accountID || u.AssetID != *assetID {
+		if u.AccountID != accountID || u.AssetID != *assetID || !bytes.Equal(u.Vote, vote) {
 			return
 		}
 		if u.ValidHeight > currentHeight {

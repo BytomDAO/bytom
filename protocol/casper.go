@@ -19,10 +19,9 @@ var (
 	errSpanHeightInVerification = errors.New("validator publish vote within the span of its other votes")
 	errVoteToNonValidator       = errors.New("pubKey of vote is not validator")
 	errGuarantyLessThanMinimum  = errors.New("guaranty less than minimum")
-	errOverflow                 = errors.New("arithmetic overflow/underflow")
 )
 
-const minGuaranty = 1E14
+const minGuaranty = 0
 
 // Casper is BFT based proof of stack consensus algorithm, it provides safety and liveness in theory,
 // it's design mainly refers to https://github.com/ethereum/research/blob/master/papers/casper-basics/casper_basics.pdf

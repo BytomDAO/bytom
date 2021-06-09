@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"encoding/json"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/account"
@@ -10,6 +11,7 @@ import (
 	"github.com/bytom/bytom/crypto/sha3pool"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 )
 
@@ -43,8 +45,8 @@ func (w *Wallet) GetAccountUtxos(accountID string, id string, unconfirmed, isSma
 }
 
 func (w *Wallet) attachUtxos(batch dbm.Batch, b *types.Block) {
-	for txIndex, tx := range b.Transactions {
-		//hand update the transaction input utxos
+	for _, tx := range b.Transactions {
+		// hand update the transaction input utxos
 		inputUtxos := txInToUtxos(tx)
 		for _, inputUtxo := range inputUtxos {
 			if segwit.IsP2WScript(inputUtxo.ControlProgram) {
@@ -54,12 +56,8 @@ func (w *Wallet) attachUtxos(batch dbm.Batch, b *types.Block) {
 			}
 		}
 
-		//hand update the transaction output utxos
-		validHeight := uint64(0)
-		if txIndex == 0 {
-			validHeight = b.Height + consensus.CoinbasePendingBlockNumber
-		}
-		outputUtxos := txOutToUtxos(tx, validHeight)
+		// hand update the transaction output utxos
+		outputUtxos := txOutToUtxos(tx, b.Height)
 		utxos := w.filterAccountUtxo(outputUtxos)
 		if err := batchSaveUtxos(utxos, batch); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("attachUtxos fail on batchSaveUtxos")
@@ -148,45 +146,105 @@ func batchSaveUtxos(utxos []*account.UTXO, batch dbm.Batch) error {
 func txInToUtxos(tx *types.Tx) []*account.UTXO {
 	utxos := []*account.UTXO{}
 	for _, inpID := range tx.Tx.InputIDs {
-		sp, err := tx.Spend(inpID)
-		if err != nil {
+		var utxo *account.UTXO
+		e, ok := tx.Entries[inpID]
+		if !ok {
 			continue
 		}
 
-		resOut, err := tx.Output(*sp.SpentOutputId)
-		if err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("txInToUtxos fail on get resOut")
+		switch inp := e.(type) {
+		case *bc.Spend:
+			resOut, err := tx.Output(*inp.SpentOutputId)
+			if err != nil {
+				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("txInToUtxos fail on get resOut")
+				continue
+			}
+
+			utxo = &account.UTXO{
+				OutputID:       *inp.SpentOutputId,
+				AssetID:        *resOut.Source.Value.AssetId,
+				Amount:         resOut.Source.Value.Amount,
+				ControlProgram: resOut.ControlProgram.Code,
+				SourceID:       *resOut.Source.Ref,
+				SourcePos:      resOut.Source.Position,
+			}
+		case *bc.VetoInput:
+			resOut, err := tx.VoteOutput(*inp.SpentOutputId)
+			if err != nil {
+				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("txInToUtxos fail on get resOut for vetoInput")
+				continue
+			}
+			if *resOut.Source.Value.AssetId != *consensus.BTMAssetID {
+				continue
+			}
+			utxo = &account.UTXO{
+				OutputID:       *inp.SpentOutputId,
+				AssetID:        *resOut.Source.Value.AssetId,
+				Amount:         resOut.Source.Value.Amount,
+				ControlProgram: resOut.ControlProgram.Code,
+				SourceID:       *resOut.Source.Ref,
+				SourcePos:      resOut.Source.Position,
+				Vote:           resOut.Vote,
+			}
+		default:
 			continue
 		}
-
-		utxos = append(utxos, &account.UTXO{
-			OutputID:       *sp.SpentOutputId,
-			AssetID:        *resOut.Source.Value.AssetId,
-			Amount:         resOut.Source.Value.Amount,
-			ControlProgram: resOut.ControlProgram.Code,
-			SourceID:       *resOut.Source.Ref,
-			SourcePos:      resOut.Source.Position,
-		})
+		utxos = append(utxos, utxo)
 	}
 	return utxos
 }
 
-func txOutToUtxos(tx *types.Tx, vaildHeight uint64) []*account.UTXO {
+func txOutToUtxos(tx *types.Tx, blockHeight uint64) []*account.UTXO {
 	utxos := []*account.UTXO{}
 	for i, out := range tx.Outputs {
-		bcOut, err := tx.Output(*tx.ResultIds[i])
-		if err != nil {
+		validHeight := uint64(0)
+		entryOutput, ok := tx.Entries[*tx.ResultIds[i]]
+		if !ok {
+			log.WithFields(log.Fields{"module": logModule}).Error("txOutToUtxos fail on get entryOutput")
 			continue
 		}
 
-		utxo := &account.UTXO{
-			OutputID:       *tx.OutputID(i),
-			AssetID:        *out.AssetAmount.AssetId,
-			Amount:         out.Amount,
-			ControlProgram: out.ControlProgram,
-			SourceID:       *bcOut.Source.Ref,
-			SourcePos:      bcOut.Source.Position,
-			ValidHeight:    vaildHeight,
+		var utxo *account.UTXO
+		switch bcOut := entryOutput.(type) {
+		case *bc.Output:
+			if out.AssetAmount.Amount == uint64(0) {
+				continue
+			}
+
+			if tx.Inputs[0].InputType() == types.CoinbaseInputType {
+				validHeight = blockHeight + consensus.CoinbasePendingBlockNumber
+			}
+
+			utxo = &account.UTXO{
+				OutputID:       *tx.OutputID(i),
+				AssetID:        *out.AssetAmount.AssetId,
+				Amount:         out.AssetAmount.Amount,
+				ControlProgram: out.ControlProgram,
+				SourceID:       *bcOut.Source.Ref,
+				SourcePos:      bcOut.Source.Position,
+				ValidHeight:    validHeight,
+			}
+
+		case *bc.VoteOutput:
+			voteValidHeight := blockHeight + consensus.VotePendingBlockNumber
+			if validHeight < voteValidHeight {
+				validHeight = voteValidHeight
+			}
+
+			utxo = &account.UTXO{
+				OutputID:       *tx.OutputID(i),
+				AssetID:        *out.AssetAmount.AssetId,
+				Amount:         out.AssetAmount.Amount,
+				ControlProgram: out.ControlProgram,
+				SourceID:       *bcOut.Source.Ref,
+				SourcePos:      bcOut.Source.Position,
+				ValidHeight:    validHeight,
+				Vote:           bcOut.Vote,
+			}
+
+		default:
+			log.WithFields(log.Fields{"module": logModule}).Warn("txOutToUtxos fail on get bcOut")
+			continue
 		}
 		utxos = append(utxos, utxo)
 	}

@@ -152,8 +152,7 @@ func (c *Casper) replayCheckpoint(hash bc.Hash) (*treeNode, error) {
 	return node, nil
 }
 
-func applyTransactions(target *state.Checkpoint, transactions []*types.Tx) error {
-	for _, tx := range transactions {
+func applyTransactions(target *state.Checkpoint, transactions []*types.Tx) error {for _, tx := range transactions {
 		for _, input := range tx.Inputs {
 			if vetoInput, ok := input.TypedInput.(*types.VetoInput); ok {
 				if err := processVeto(vetoInput, target); err != nil {
@@ -285,7 +284,7 @@ func processWithdrawal(guarantyArgs *guarantyArgs, checkpoint *state.Checkpoint)
 	guarantyNum := checkpoint.Guaranties[pubKey]
 	guarantyNum, ok := checked.SubUint64(guarantyNum, guarantyArgs.Amount)
 	if !ok {
-		return errOverflow
+		return checked.ErrOverflow
 	}
 
 	checkpoint.Guaranties[pubKey] = guarantyNum
@@ -302,7 +301,7 @@ func processGuaranty(guarantyArgs *guarantyArgs, checkpoint *state.Checkpoint) e
 	guarantyNum := checkpoint.Guaranties[pubKey]
 	guarantyNum, ok := checked.AddUint64(guarantyNum, guarantyArgs.Amount)
 	if !ok {
-		return errOverflow
+		return checked.ErrOverflow
 	}
 
 	checkpoint.Guaranties[pubKey] = guarantyNum
@@ -314,7 +313,7 @@ func processVeto(input *types.VetoInput, checkpoint *state.Checkpoint) error {
 	voteNum := checkpoint.Votes[pubKey]
 	voteNum, ok := checked.SubUint64(voteNum, input.Amount)
 	if !ok {
-		return errOverflow
+		return checked.ErrOverflow
 	}
 
 	checkpoint.Votes[pubKey] = voteNum
@@ -331,7 +330,7 @@ func processVote(output *types.TxOutput, checkpoint *state.Checkpoint) error {
 	voteNum := checkpoint.Votes[pubKey]
 	voteNum, ok := checked.AddUint64(voteNum, output.Amount)
 	if !ok {
-		return errOverflow
+		return checked.ErrOverflow
 	}
 
 	checkpoint.Votes[pubKey] = voteNum
