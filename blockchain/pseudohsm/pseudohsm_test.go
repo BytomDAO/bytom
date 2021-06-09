@@ -2,14 +2,12 @@ package pseudohsm
 
 import (
 	"crypto/ed25519"
-	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
 
-	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/errors"
 )
 
@@ -18,21 +16,18 @@ const dirPath = "testdata/pseudo"
 func TestCreateKeyWithUpperCase(t *testing.T) {
 	hsm, _ := New(dirPath)
 
-	// alias := "UPPER"
-	//
-	// xpub, _, err := hsm.XCreate(alias, "password", "en")
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
-	//
-	// if xpub.Alias != strings.ToLower(alias) {
-	// 	t.Fatal("the created key alias should be lowercase")
-	// }
+	alias := "UPPER"
 
-	var xPub chainkd.XPub
-	xPubBytes, _ := hex.DecodeString("81cce498b9282315ec9bfa4ef35309bb2cf281f78b597fa01c017db63500b228c6c666aca2e6f755fcd3d4733a26687ded70d921628140b22dff6adc297af042")
-	copy(xPub[:], xPubBytes)
-	err := hsm.XDelete(xPub, "password")
+	xpub, _, err := hsm.XCreate(alias, "password", "en")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if xpub.Alias != strings.ToLower(alias) {
+		t.Fatal("the created key alias should be lowercase")
+	}
+
+	err = hsm.XDelete(xpub.XPub, "password")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,7 +116,7 @@ func TestPseudoHSMChainKDKeys(t *testing.T) {
 
 	xpubs := hsm.ListKeys()
 	if len(xpubs) != 2 {
-		t.Errorf("expected 2 entries in the db, got:%v", xpubs)
+		t.Error("expected 2 entries in the db")
 	}
 	err = hsm.ResetPassword(xpub2.XPub, "nopassword", "1password")
 	if err != nil {
