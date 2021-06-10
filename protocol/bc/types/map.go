@@ -53,15 +53,13 @@ func (mh *mapHelper) generateTx() *bc.Tx {
 		InputIDs:       mh.inputIDs,
 		SpentOutputIDs: mh.spentOutputIDs,
 	}
-
 }
 
 func (mh *mapHelper) mapCoinbaseInput(i int, input *CoinbaseInput) {
 	mh.coinbase = bc.NewCoinbase(input.Arbitrary)
-	id := mh.addEntry(mh.coinbase)
-	mh.inputIDs[i] = id
+	mh.inputIDs[i] = mh.addEntry(mh.coinbase)
 	mh.muxSources[i] = &bc.ValueSource{
-		Ref:   &id,
+		Ref:   &mh.inputIDs[i],
 		Value: &mh.txData.Outputs[0].AssetAmount,
 	}
 }
@@ -70,10 +68,7 @@ func (mh *mapHelper) mapIssuanceInput(i int, input *IssuanceInput) {
 	nonceHash := input.NonceHash()
 	assetDefHash := input.AssetDefinitionHash()
 	assetID := input.AssetID()
-	value := bc.AssetAmount{
-		AssetId: &assetID,
-		Amount:  input.Amount,
-	}
+	value := bc.AssetAmount{AssetId: &assetID, Amount: input.Amount}
 
 	issuance := bc.NewIssuance(&nonceHash, &value, uint64(i))
 	issuance.WitnessAssetDefinition = &bc.AssetDefinition{
@@ -86,10 +81,9 @@ func (mh *mapHelper) mapIssuanceInput(i int, input *IssuanceInput) {
 
 	issuance.WitnessArguments = input.Arguments
 	mh.issuances = append(mh.issuances, issuance)
-	id := mh.addEntry(issuance)
-	mh.inputIDs[i] = id
+	mh.inputIDs[i] = mh.addEntry(issuance)
 	mh.muxSources[i] = &bc.ValueSource{
-		Ref:   &id,
+		Ref:   &mh.inputIDs[i],
 		Value: &value,
 	}
 }
@@ -111,11 +105,10 @@ func (mh *mapHelper) mapSpendInput(i int, input *SpendInput) {
 	spend := bc.NewSpend(&prevoutID, uint64(i))
 	spend.WitnessArguments = input.Arguments
 	mh.spends = append(mh.spends, spend)
-	id := mh.addEntry(spend)
-	mh.inputIDs[i] = id
+	mh.inputIDs[i] = mh.addEntry(spend)
 	mh.spentOutputIDs = append(mh.spentOutputIDs, prevoutID)
 	mh.muxSources[i] = &bc.ValueSource{
-		Ref:   &id,
+		Ref:   &mh.inputIDs[i],
 		Value: &input.AssetAmount,
 	}
 }
@@ -135,11 +128,10 @@ func (mh *mapHelper) mapVetoInput(i int, input *VetoInput) {
 	vetoInput := bc.NewVetoInput(&prevoutID, uint64(i))
 	vetoInput.WitnessArguments = input.Arguments
 	mh.vetos = append(mh.vetos, vetoInput)
-	id := mh.addEntry(vetoInput)
-	mh.inputIDs[i] = id
+	mh.inputIDs[i] = mh.addEntry(vetoInput)
 	mh.spentOutputIDs = append(mh.spentOutputIDs, prevoutID)
 	mh.muxSources[i] = &bc.ValueSource{
-		Ref:   &id,
+		Ref:   &mh.inputIDs[i],
 		Value: &input.AssetAmount,
 	}
 }
