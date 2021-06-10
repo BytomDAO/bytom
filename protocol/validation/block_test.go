@@ -269,7 +269,7 @@ func TestValidateBlock(t *testing.T) {
 				ID: bc.Hash{V0: 1},
 				BlockHeader: &bc.BlockHeader{
 					Version:          1,
-					Height:           1,
+					Height:           state.BlocksOfEpoch + 1,
 					Timestamp:        1523358600,
 					PreviousBlockId:  &bc.Hash{V0: 0},
 					TransactionsRoot: &bc.Hash{V0: 1},
@@ -280,7 +280,6 @@ func TestValidateBlock(t *testing.T) {
 						SerializedSize: 1,
 						Inputs:         []*types.TxInput{types.NewCoinbaseInput(nil)},
 						Outputs: []*types.TxOutput{
-							types.NewOriginalTxOutput(*consensus.BTMAssetID, 0, cp, nil),
 							types.NewOriginalTxOutput(*consensus.BTMAssetID, 41250000000, cp, nil),
 						},
 					}),
@@ -288,7 +287,7 @@ func TestValidateBlock(t *testing.T) {
 			},
 			parent: &state.BlockNode{
 				Version:   1,
-				Height:    0,
+				Height:    state.BlocksOfEpoch,
 				Timestamp: 1523352600,
 				Hash:      bc.Hash{V0: 0},
 			},
@@ -302,7 +301,7 @@ func TestValidateBlock(t *testing.T) {
 				ID: bc.Hash{V0: 1},
 				BlockHeader: &bc.BlockHeader{
 					Version:          1,
-					Height:           1,
+					Height:           state.BlocksOfEpoch + 1,
 					Timestamp:        1523358600,
 					PreviousBlockId:  &bc.Hash{V0: 0},
 					TransactionsRoot: &bc.Hash{V0: 6294987741126419124, V1: 12520373106916389157, V2: 5040806596198303681, V3: 1151748423853876189},
@@ -313,7 +312,6 @@ func TestValidateBlock(t *testing.T) {
 						SerializedSize: 1,
 						Inputs:         []*types.TxInput{types.NewCoinbaseInput(nil)},
 						Outputs: []*types.TxOutput{
-							types.NewOriginalTxOutput(*consensus.BTMAssetID, 0, cp, nil),
 							types.NewOriginalTxOutput(*consensus.BTMAssetID, 41250000000, cp, nil),
 						},
 					}),
@@ -321,7 +319,7 @@ func TestValidateBlock(t *testing.T) {
 			},
 			parent: &state.BlockNode{
 				Version:   1,
-				Height:    0,
+				Height:    state.BlocksOfEpoch,
 				Timestamp: 1523352600,
 				Hash:      bc.Hash{V0: 0},
 			},
