@@ -241,4 +241,3 @@ func (a *voteOutputAction) Build(ctx context.Context, b *TemplateBuilder) error 
 func (a *voteOutputAction) ActionType() string {
 	return "vote_output"
 }
-

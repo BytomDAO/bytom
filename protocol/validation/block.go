@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"encoding/hex"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -36,24 +37,48 @@ func checkBlockTime(b *bc.Block, parent *types.BlockHeader) error {
 	return nil
 }
 
-func checkCoinbaseAmount(b *bc.Block, amount uint64) error {
+func checkCoinbaseAmount(b *bc.Block, checkpoint *state.Checkpoint) error {
 	if len(b.Transactions) == 0 {
 		return errors.Wrap(ErrWrongCoinbaseTransaction, "block is empty")
 	}
 
 	tx := b.Transactions[0]
-	if len(tx.TxHeader.ResultIds) != 1 {
-		return errors.Wrap(ErrWrongCoinbaseTransaction, "have more than 1 output")
+	if len(tx.TxHeader.ResultIds) == 0 {
+		return errors.Wrap(ErrWrongCoinbaseTransaction, "tx header resultIds is empty")
 	}
 
-	output, err := tx.Output(*tx.TxHeader.ResultIds[0])
-	if err != nil {
-		return err
+	if b.Height%state.BlocksOfEpoch != 1 || b.Height == 1 {
+		output, err := tx.Output(*tx.TxHeader.ResultIds[0])
+		if err != nil {
+			return err
+		}
+
+		if output.Source.Value.Amount != 0 {
+			return errors.Wrap(ErrWrongCoinbaseTransaction, "dismatch output amount")
+		}
+
+		if len(tx.TxHeader.ResultIds) != 1 {
+			return errors.Wrap(ErrWrongCoinbaseTransaction, "have more than 1 output")
+		}
+	} else {
+		if len(tx.TxHeader.ResultIds) != len(checkpoint.Rewards) {
+			return errors.Wrap(ErrWrongCoinbaseTransaction)
+		}
+
+		rewards := checkpoint.Rewards
+		for i := 0; i < len(tx.TxHeader.ResultIds); i++ {
+			output := tx.TxHeader.ResultIds[i]
+			out, err := tx.Output(*output)
+			if err != nil {
+				return err
+			}
+
+			if rewards[hex.EncodeToString(out.ControlProgram.Code)] != out.Source.Value.Amount {
+				return errors.Wrap(ErrWrongCoinbaseTransaction)
+			}
+		}
 	}
 
-	if output.Source.Value.Amount != amount {
-		return errors.Wrap(ErrWrongCoinbaseTransaction, "dismatch output amount")
-	}
 	return nil
 }
 
@@ -77,27 +102,26 @@ func ValidateBlockHeader(b *bc.Block, parent *state.BlockNode) error {
 }
 
 // ValidateBlock validates a block and the transactions within.
-func ValidateBlock(b *bc.Block, parent *state.BlockNode, converter ProgramConverterFunc) error {
+func ValidateBlock(b *bc.Block, parent *state.BlockNode, checkpoint *state.Checkpoint, converter ProgramConverterFunc) error {
 	startTime := time.Now()
 	if err := ValidateBlockHeader(b, parent); err != nil {
 		return err
 	}
 
 	blockGasSum := uint64(0)
-	coinbaseAmount := consensus.BlockSubsidy(b.BlockHeader.Height)
+
 	validateResults := ValidateTxs(b.Transactions, b, converter)
 	for i, validateResult := range validateResults {
 		if validateResult.err != nil {
 			return errors.Wrapf(validateResult.err, "validate of transaction %d of %d", i, len(b.Transactions))
 		}
 
-		coinbaseAmount += validateResult.gasStatus.BTMValue
 		if blockGasSum += uint64(validateResult.gasStatus.GasUsed); blockGasSum > consensus.MaxBlockGas {
 			return errOverBlockLimit
 		}
 	}
 
-	if err := checkCoinbaseAmount(b, coinbaseAmount); err != nil {
+	if err := checkCoinbaseAmount(b, checkpoint); err != nil {
 		return err
 	}
 

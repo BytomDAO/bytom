@@ -1,6 +1,7 @@
 package proposal
 
 import (
+	"encoding/hex"
 	"sort"
 	"strconv"
 	"time"
@@ -77,12 +78,11 @@ func newBlockBuilder(chain *protocol.Chain, validator *state.Validator, accountM
 
 func (b *blockBuilder) build() (*types.Block, error) {
 	b.block.Transactions = []*types.Tx{nil}
-	feeAmount, err := b.applyTransactionFromPool()
-	if err != nil {
+	if err := b.applyTransactionFromPool(); err != nil {
 		return nil, err
 	}
 
-	if err := b.applyCoinbaseTransaction(feeAmount); err != nil {
+	if err := b.applyCoinbaseTransaction(); err != nil {
 		return nil, err
 	}
 
@@ -95,8 +95,8 @@ func (b *blockBuilder) build() (*types.Block, error) {
 	return b.block, nil
 }
 
-func (b *blockBuilder) applyCoinbaseTransaction(feeAmount uint64) error {
-	coinbaseTx, err := b.createCoinbaseTx(feeAmount)
+func (b *blockBuilder) applyCoinbaseTransaction() error {
+	coinbaseTx, err := b.createCoinbaseTx()
 	if err != nil {
 		return errors.Wrap(err, "fail on create coinbase tx")
 	}
@@ -111,7 +111,7 @@ func (b *blockBuilder) applyCoinbaseTransaction(feeAmount uint64) error {
 	return nil
 }
 
-func (b *blockBuilder) applyTransactionFromPool() (uint64, error) {
+func (b *blockBuilder) applyTransactionFromPool() error {
 	txDescList := b.chain.GetTxPool().GetTransactions()
 	sort.Sort(byTime(txDescList))
 	return b.applyTransactions(txDescList, timeoutWarn)
@@ -134,7 +134,7 @@ func (b *blockBuilder) calculateBlockCommitment() (err error) {
 // createCoinbaseTx returns a coinbase transaction paying an appropriate subsidy
 // based on the passed block height to the provided address.  When the address
 // is nil, the coinbase transaction will instead be redeemable by anyone.
-func (b *blockBuilder) createCoinbaseTx(feeAmount uint64) (tx *types.Tx, err error) {
+func (b *blockBuilder) createCoinbaseTx() (tx *types.Tx, err error) {
 	arbitrary := append([]byte{0x00}, []byte(strconv.FormatUint(b.block.Height, 10))...)
 	var script []byte
 	if b.accountManager == nil {
@@ -156,11 +156,27 @@ func (b *blockBuilder) createCoinbaseTx(feeAmount uint64) (tx *types.Tx, err err
 		return nil, err
 	}
 
-	coinbaseAmount := consensus.BlockSubsidy(b.block.Height)
-	if err = builder.AddOutput(types.NewOriginalTxOutput(*consensus.BTMAssetID, coinbaseAmount + feeAmount, script, [][]byte{})); err != nil {
+	checkpoint, err := b.getPrevCheckpoint()
+	if err != nil {
 		return nil, err
 	}
-	//TODO: calculate reward to proposer
+
+	if b.block.Height%state.BlocksOfEpoch == 1 && b.block.Height != 1 {
+		for controlProgram, amount := range checkpoint.Rewards {
+			controlProgramBytes, err := hex.DecodeString(controlProgram)
+			if err != nil {
+				return nil, err
+			}
+
+			if err := builder.AddOutput(types.NewOriginalTxOutput(*consensus.BTMAssetID, amount, controlProgramBytes, [][]byte{})); err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		if err = builder.AddOutput(types.NewOriginalTxOutput(*consensus.BTMAssetID, 0, script, [][]byte{})); err != nil {
+			return nil, err
+		}
+	}
 
 	_, txData, err := builder.Build()
 	if err != nil {
@@ -180,8 +196,7 @@ func (b *blockBuilder) createCoinbaseTx(feeAmount uint64) (tx *types.Tx, err err
 	return tx, nil
 }
 
-func (b *blockBuilder) applyTransactions(txs []*protocol.TxDesc, timeoutStatus uint8) (uint64, error) {
-	var feeAmount uint64
+func (b *blockBuilder) applyTransactions(txs []*protocol.TxDesc, timeoutStatus uint8) error {
 	batchTxs := []*protocol.TxDesc{}
 	for i := 0; i < len(txs); i++ {
 		if batchTxs = append(batchTxs, txs[i]); len(batchTxs) < batchApplyNum && i != len(txs)-1 {
@@ -189,7 +204,7 @@ func (b *blockBuilder) applyTransactions(txs []*protocol.TxDesc, timeoutStatus u
 		}
 
 		results, gasLeft := b.preValidateTxs(batchTxs, b.chain, b.utxoView, b.gasLeft)
-		for j, result := range results {
+		for _, result := range results {
 			if result.err != nil {
 				log.WithFields(log.Fields{"module": logModule, "error": result.err}).Error("propose block generation: skip tx due to")
 				b.chain.GetTxPool().RemoveTransaction(&result.tx.ID)
@@ -197,7 +212,6 @@ func (b *blockBuilder) applyTransactions(txs []*protocol.TxDesc, timeoutStatus u
 			}
 
 			b.block.Transactions = append(b.block.Transactions, result.tx)
-			feeAmount += batchTxs[j].Fee
 		}
 
 		b.gasLeft = gasLeft
@@ -206,7 +220,7 @@ func (b *blockBuilder) applyTransactions(txs []*protocol.TxDesc, timeoutStatus u
 			break
 		}
 	}
-	return feeAmount, nil
+	return nil
 }
 
 type validateTxResult struct {
@@ -265,4 +279,12 @@ func (b *blockBuilder) getTimeoutStatus() uint8 {
 	}
 
 	return b.timeoutStatus
+}
+
+func (b *blockBuilder) prevBlockHash() *bc.Hash {
+	return &b.block.PreviousBlockHash
+}
+
+func (b *blockBuilder) getPrevCheckpoint() (*state.Checkpoint, error) {
+	return b.chain.PrevCheckpointByPrevHash(b.prevBlockHash())
 }

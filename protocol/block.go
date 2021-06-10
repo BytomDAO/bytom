@@ -225,7 +225,12 @@ func (c *Chain) saveBlock(block *types.Block) error {
 	bcBlock := types.MapBlock(block)
 	parent := c.index.GetNode(&block.PreviousBlockHash)
 
-	if err := validation.ValidateBlock(bcBlock, parent, c.ProgramConverter); err != nil {
+	checkpoint, err := c.PrevCheckpointByPrevHash(&block.PreviousBlockHash)
+	if err != nil {
+		return err
+	}
+
+	if err := validation.ValidateBlock(bcBlock, parent, checkpoint, c.ProgramConverter); err != nil {
 		return errors.Sub(ErrBadBlock, err)
 	}
 

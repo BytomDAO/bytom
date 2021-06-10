@@ -1,6 +1,7 @@
 package types
 
 import (
+	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/vm"
 	"github.com/bytom/bytom/protocol/vm/vmutil"
@@ -58,9 +59,13 @@ func (mh *mapHelper) generateTx() *bc.Tx {
 func (mh *mapHelper) mapCoinbaseInput(i int, input *CoinbaseInput) {
 	mh.coinbase = bc.NewCoinbase(input.Arbitrary)
 	mh.inputIDs[i] = mh.addEntry(mh.coinbase)
+	var totalAmount uint64
+	for _, output := range mh.txData.Outputs {
+		totalAmount += output.Amount
+	}
 	mh.muxSources[i] = &bc.ValueSource{
 		Ref:   &mh.inputIDs[i],
-		Value: &mh.txData.Outputs[0].AssetAmount,
+		Value: &bc.AssetAmount{AssetId: consensus.BTMAssetID, Amount: totalAmount},
 	}
 }
 
