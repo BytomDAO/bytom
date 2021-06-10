@@ -33,6 +33,25 @@ type TypedOutput interface {
 	writeTo(io.Writer) error
 }
 
+var outputTypeMap = map[uint8]func() TypedOutput{
+	OriginalOutputType: func() TypedOutput { return &originalTxOutput{} },
+	VoteOutputType:     func() TypedOutput { return &VoteOutput{} },
+}
+
+func parseTypedOutput(r *blockchain.Reader) (TypedOutput, error) {
+	var outType [1]byte
+	if _, err := io.ReadFull(r, outType[:]); err != nil {
+		return nil, errors.Wrap(err, "reading output type")
+	}
+
+	newOutFun, ok := outputTypeMap[outType[0]]
+	if !ok {
+		return nil, fmt.Errorf("unsupported output type %d", outType[0])
+	}
+
+	return newOutFun(), nil
+}
+
 func (to *TxOutput) readFrom(r *blockchain.Reader) (err error) {
 	if to.AssetVersion, err = blockchain.ReadVarint63(r); err != nil {
 		return errors.Wrap(err, "reading asset version")
@@ -56,25 +75,6 @@ func (to *TxOutput) readFrom(r *blockchain.Reader) (err error) {
 	// read and ignore the (empty) output witness
 	_, err = blockchain.ReadVarstr31(r)
 	return errors.Wrap(err, "reading output witness")
-}
-
-var outputTypeMap = map[uint8]func() TypedOutput{
-	OriginalOutputType: func() TypedOutput { return &originalTxOutput{} },
-	VoteOutputType:     func() TypedOutput { return &VoteOutput{} },
-}
-
-func parseTypedOutput(r *blockchain.Reader) (TypedOutput, error) {
-	var outType [1]byte
-	if _, err := io.ReadFull(r, outType[:]); err != nil {
-		return nil, errors.Wrap(err, "reading output type")
-	}
-
-	newOutFun, ok := outputTypeMap[outType[0]]
-	if !ok {
-		return nil, fmt.Errorf("unsupported output type %d", outType[0])
-	}
-
-	return newOutFun(), nil
 }
 
 func (to *TxOutput) writeTo(w io.Writer) error {
@@ -115,8 +115,7 @@ func ComputeOutputID(sc *SpendCommitment) (h bc.Hash, err error) {
 		Value:    &sc.AssetAmount,
 		Position: sc.SourcePosition,
 	}
-	o := bc.NewOutput(src, &bc.Program{VmVersion: sc.VMVersion, Code: sc.ControlProgram}, &bc.StateData{StateData: sc.StateData}, 0)
 
-	h = bc.EntryID(o)
-	return h, nil
+	o := bc.NewOutput(src, &bc.Program{VmVersion: sc.VMVersion, Code: sc.ControlProgram}, &bc.StateData{StateData: sc.StateData}, 0)
+	return bc.EntryID(o), nil
 }

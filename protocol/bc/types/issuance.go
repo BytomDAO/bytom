@@ -5,8 +5,11 @@ import (
 
 	"github.com/bytom/bytom/crypto/sha3pool"
 	"github.com/bytom/bytom/encoding/blockchain"
+	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
 )
+
+var errBadAssetID = errors.New("asset ID does not match other issuance parameters")
 
 // IssuanceInput satisfies the TypedInput interface and represents a issuance.
 type IssuanceInput struct {
