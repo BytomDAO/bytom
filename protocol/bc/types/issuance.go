@@ -17,6 +17,8 @@ type IssuanceInput struct {
 	VMVersion       uint64
 	IssuanceProgram []byte
 	Arguments       [][]byte
+
+	assetId bc.AssetID
 }
 
 // NewIssuanceInput create a new IssuanceInput struct.
@@ -45,8 +47,11 @@ func (ii *IssuanceInput) AssetDefinitionHash() (defhash bc.Hash) {
 
 // AssetID calculate the assetID of the issuance input.
 func (ii *IssuanceInput) AssetID() bc.AssetID {
-	defhash := ii.AssetDefinitionHash()
-	return bc.ComputeAssetID(ii.IssuanceProgram, ii.VMVersion, &defhash)
+	if ii.assetId.IsZero() {
+		ii.assetId = ii.calcAssetID()
+	}
+
+	return ii.assetId
 }
 
 // InputType is the interface function for return the input type.
@@ -61,12 +66,17 @@ func (ii *IssuanceInput) NonceHash() (hash bc.Hash) {
 	return hash
 }
 
-func (ii *IssuanceInput) readCommitment(r *blockchain.Reader) (assetID bc.AssetID, err error) {
+func (ii *IssuanceInput) calcAssetID() bc.AssetID {
+	defhash := ii.AssetDefinitionHash()
+	return bc.ComputeAssetID(ii.IssuanceProgram, ii.VMVersion, &defhash)
+}
+
+func (ii *IssuanceInput) readCommitment(r *blockchain.Reader) (err error) {
 	if ii.Nonce, err = blockchain.ReadVarstr31(r); err != nil {
 		return
 	}
 
-	if _, err = assetID.ReadFrom(r); err != nil {
+	if _, err = ii.assetId.ReadFrom(r); err != nil {
 		return
 	}
 
@@ -74,7 +84,7 @@ func (ii *IssuanceInput) readCommitment(r *blockchain.Reader) (assetID bc.AssetI
 	return
 }
 
-func (ii *IssuanceInput) readWitness(r *blockchain.Reader, assetID bc.AssetID) (err error) {
+func (ii *IssuanceInput) readWitness(r *blockchain.Reader) (err error) {
 	if ii.AssetDefinition, err = blockchain.ReadVarstr31(r); err != nil {
 		return err
 	}
@@ -87,7 +97,7 @@ func (ii *IssuanceInput) readWitness(r *blockchain.Reader, assetID bc.AssetID) (
 		return err
 	}
 
-	if ii.AssetID() != assetID {
+	if ii.calcAssetID() != ii.assetId {
 		return errBadAssetID
 	}
 

@@ -44,12 +44,12 @@ func (si *SpendInput) AssetID() bc.AssetID {
 // InputType is the interface function for return the input type.
 func (si *SpendInput) InputType() uint8 { return SpendInputType }
 
-func (si *SpendInput) readCommitment(r *blockchain.Reader) (assetID bc.AssetID, err error) {
+func (si *SpendInput) readCommitment(r *blockchain.Reader) (err error) {
 	si.SpendCommitmentSuffix, err = si.SpendCommitment.readFrom(r, 1)
 	return
 }
 
-func (si *SpendInput) readWitness(r *blockchain.Reader, _ bc.AssetID) (err error) {
+func (si *SpendInput) readWitness(r *blockchain.Reader) (err error) {
 	si.Arguments, err = blockchain.ReadVarstrList(r)
 	return err
 }
