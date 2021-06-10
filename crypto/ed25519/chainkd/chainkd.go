@@ -87,15 +87,6 @@ func (xprv XPrv) nonhardenedChild(sel []byte) (res XPrv) {
 
 	pruneIntermediateScalar(res[:32])
 
-	// Unrolled the following loop:
-	// var carry int
-	// carry = 0
-	// for i := 0; i < 32; i++ {
-	//         sum := int(xprv[i]) + int(res[i]) + carry
-	//         res[i] = byte(sum & 0xff)
-	//         carry = (sum >> 8)
-	// }
-
 	sum := int(0)
 
 	sum = int(xprv[0]) + int(res[0]) + (sum >> 8)
