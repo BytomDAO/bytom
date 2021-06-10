@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bytom/bytom/testcontrol"
 	"github.com/bytom/bytom/consensus"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/errors"
@@ -16,6 +15,7 @@ import (
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/test/mock"
+	"github.com/bytom/bytom/testcontrol"
 	"github.com/bytom/bytom/testutil"
 )
 

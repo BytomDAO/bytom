@@ -155,7 +155,7 @@ func TestTransaction(t *testing.T) {
 				"737461746544617461", // output 0: state data
 				"00",                 // output 1: witness length
 			}, ""),
-			hash: testutil.MustDecodeHash("9f0ca64c282b7069c67af78e989a14ed8d208aa99222370d941dad4bbf69cb2c"),
+			hash: testutil.MustDecodeHash("27d7fae74355ee9de2014bc51c30de27afa922ac4171eca1f38a05965c899c79"),
 		},
 	}
 	for i, test := range cases {

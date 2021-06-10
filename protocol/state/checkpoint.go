@@ -65,7 +65,7 @@ type Checkpoint struct {
 	Status    CheckpointStatus
 
 	Rewards    map[string]uint64 // controlProgram -> num of reward
-	Votes      map[string]uint64 // putKey -> num of vote
+	Votes      map[string]uint64 // pubKey -> num of vote
 	Guaranties map[string]uint64 // pubKey -> num of guaranty
 }
 

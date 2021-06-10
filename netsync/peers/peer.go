@@ -185,7 +185,7 @@ func (p *Peer) GetPeerInfo() *PeerInfo {
 	}
 }
 
-func (p *Peer) getRelatedTxs(txs []*types.Tx) ([]*types.Tx) {
+func (p *Peer) getRelatedTxs(txs []*types.Tx) []*types.Tx {
 	var relatedTxs []*types.Tx
 	for _, tx := range txs {
 		if p.isRelatedTx(tx) {

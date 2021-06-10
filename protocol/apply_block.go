@@ -75,6 +75,7 @@ func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, 
 			ParentHash: parent.Hash,
 			Parent:     parent,
 			Status:     state.Growing,
+			Rewards:    make(map[string]uint64),
 			Votes:      make(map[string]uint64),
 			Guaranties: make(map[string]uint64),
 		}
@@ -88,6 +89,13 @@ func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, 
 		node.addChild(&treeNode{checkpoint: checkpoint})
 	} else if mod == 0 {
 		checkpoint.Status = state.Unjustified
+		if err := checkpoint.ApplyFederationReward(); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := checkpoint.ApplyValidatorReward(block); err != nil {
+		return nil, err
 	}
 
 	checkpoint.Height = block.Height
@@ -152,7 +160,8 @@ func (c *Casper) replayCheckpoint(hash bc.Hash) (*treeNode, error) {
 	return node, nil
 }
 
-func applyTransactions(target *state.Checkpoint, transactions []*types.Tx) error {for _, tx := range transactions {
+func applyTransactions(target *state.Checkpoint, transactions []*types.Tx) error {
+	for _, tx := range transactions {
 		for _, input := range tx.Inputs {
 			if vetoInput, ok := input.TypedInput.(*types.VetoInput); ok {
 				if err := processVeto(vetoInput, target); err != nil {

@@ -359,10 +359,10 @@ func (s *Store) saveCheckpoints(batch dbm.Batch, checkpoints []*state.Checkpoint
 
 		batch.Set(calcCheckpointKey(checkpoint.Height, &checkpoint.Hash), data)
 		log.WithFields(log.Fields{
-			"module": logModule,
-			"height": checkpoint.Height,
-			"hash":   checkpoint.Hash.String(),
-			"status": checkpoint.Status,
+			"module":   logModule,
+			"height":   checkpoint.Height,
+			"hash":     checkpoint.Hash.String(),
+			"status":   checkpoint.Status,
 			"duration": time.Since(startTime),
 		}).Info("checkpoint saved on disk")
 	}

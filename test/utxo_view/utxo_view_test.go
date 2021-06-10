@@ -315,7 +315,7 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 				t.Error(err)
 			}
 		}
-		if err := store.SaveChainStatus(node, utxoViewpoint, contractView,0, &bc.Hash{}); err != nil {
+		if err := store.SaveChainStatus(node, utxoViewpoint, contractView, 0, &bc.Hash{}); err != nil {
 			t.Error(err)
 		}
 
