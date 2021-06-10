@@ -86,13 +86,13 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		return err
 	}
 
-	verification, checkpoint, err := c.casper.ApplyBlock(block)
+	reply, err := c.casper.ApplyBlock(block)
 	if err != nil {
 		return err
 	}
 
-	if verification != nil {
-		if err := c.broadcastVerification(verification); err != nil {
+	if reply.verification != nil {
+		if err := c.broadcastVerification(reply.verification); err != nil {
 			return err
 		}
 	}
@@ -103,7 +103,7 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 	}
 
 	node := c.index.GetNode(&bcBlock.ID)
-	if err := c.setState(node, utxoView, contractView, checkpoint); err != nil {
+	if err := c.setState(node, utxoView, contractView); err != nil {
 		return err
 	}
 
@@ -145,7 +145,6 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 	}
 
 	txsToRemove := map[bc.Hash]*types.Tx{}
-	var affectedCheckpoints []*state.Checkpoint
 	for _, attachNode := range attachNodes {
 		b, err := c.store.GetBlock(&attachNode.Hash)
 		if err != nil {
@@ -158,17 +157,6 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 		}
 
 		if err := utxoView.ApplyBlock(attachBlock); err != nil {
-			return err
-		}
-
-		verification, checkpoint, err := c.casper.ApplyBlock(b)
-		if err != nil {
-			return err
-		}
-
-		affectedCheckpoints = append(affectedCheckpoints, checkpoint)
-
-		if err := c.broadcastVerification(verification); err != nil {
 			return err
 		}
 
@@ -187,7 +175,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Debug("attach from mainchain")
 	}
 
-	if err := c.setState(node, utxoView, contractView, affectedCheckpoints...); err != nil {
+	if err := c.setState(node, utxoView, contractView); err != nil {
 		return err
 	}
 
@@ -304,16 +292,20 @@ func (c *Chain) ProcessBlock(block *types.Block) (bool, error) {
 	return response.isOrphan, response.err
 }
 
+type rollbackMsg struct {
+	bestHash bc.Hash
+	reply    chan error
+}
+
 func (c *Chain) blockProcessor() {
 	for {
 		select {
 		case msg := <-c.processBlockCh:
 			isOrphan, err := c.processBlock(msg.block)
 			msg.reply <- processBlockResponse{isOrphan: isOrphan, err: err}
-		case newBestHash := <-c.rollbackNotifyCh:
-			if err := c.rollback(newBestHash); err != nil {
-				log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on rollback block")
-			}
+		case msg := <-c.processRollbackCh:
+			err := c.rollback(msg.bestHash)
+			msg.reply <- err
 		}
 	}
 }
@@ -343,15 +335,44 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 		log.WithFields(log.Fields{"module": logModule}).Debug("append block to the end of mainchain")
 		return false, c.connectBlock(bestBlock)
 	}
-	return false, nil
+
+	return false, c.applyForkChainToCasper(bestNode)
 }
 
-func (c *Chain) rollback(newBestHash bc.Hash) error {
-	if c.bestNode.Hash == newBestHash {
+func (c *Chain) applyForkChainToCasper(bestNode *state.BlockNode) error {
+	attachNodes, _ := c.calcReorganizeNodes(bestNode)
+	var reply *applyBlockReply
+	for _, node := range attachNodes {
+		block, err := c.store.GetBlock(&node.Hash)
+		if err != nil {
+			return err
+		}
+
+		reply, err = c.casper.ApplyBlock(block)
+		if err != nil {
+			return err
+		}
+
+		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Info("apply fork node")
+
+		if reply.verification != nil {
+			if err := c.broadcastVerification(reply.verification); err != nil {
+				return err
+			}
+		}
+	}
+	if reply.bestHash != c.bestNode.Hash {
+		return c.rollback(reply.bestHash)
+	}
+	return nil
+}
+
+func (c *Chain) rollback(bestHash bc.Hash) error {
+	if c.bestNode.Hash == bestHash {
 		return nil
 	}
 
-	node := c.index.GetNode(&newBestHash)
-	log.WithFields(log.Fields{"module": logModule}).Debug("start to reorganize chain")
+	node := c.index.GetNode(&bestHash)
+	log.WithFields(log.Fields{"module": logModule, "bestHash": bestHash.String()}).Info("start to reorganize chain")
 	return c.reorganizeChain(node)
 }

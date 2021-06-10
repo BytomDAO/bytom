@@ -13,357 +13,430 @@ import (
 
 func TestNumericOps(t *testing.T) {
 	type testStruct struct {
+		name    string
 		op      Op
 		startVM *virtualMachine
 		wantErr error
 		wantVM  *virtualMachine
 	}
-	cases := []testStruct{{
-		op: OP_1ADD,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{0x02}},
+	tests := []struct {
+		name    string
+		op      Op
+		startVM *virtualMachine
+		wantErr error
+		wantVM  *virtualMachine
+	}{
+		{
+			name: "test OP_1ADD",
+			op:   OP_1ADD,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{0x02}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:  49998,
+				dataStack: [][]byte{{0x03}},
+			},
 		},
-		wantVM: &virtualMachine{
-			runLimit:  49998,
-			dataStack: [][]byte{{0x03}},
+		{
+			name: "test OP_1SUB 2-1",
+			op:   OP_1SUB,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{2}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:  49998,
+				dataStack: [][]byte{{1}},
+			},
 		},
-	}, {
-		op: OP_1SUB,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{2}},
+		{
+			name: "test OP_1SUB use uint256's second array elem",
+			op:   OP_1SUB,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:     49998,
+				deferredCost: -1,
+				dataStack:    [][]byte{{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+			},
 		},
-		wantVM: &virtualMachine{
-			runLimit:  49998,
-			dataStack: [][]byte{{1}},
+		{
+			name: "test OP_2MUL 2*2",
+			op:   OP_2MUL,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{2}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:  49998,
+				dataStack: [][]byte{{4}},
+			},
 		},
-	}, {
-		op: OP_1SUB,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+		{
+			name: "test OP_2MUL use uint256's full array elem",
+			op:   OP_2MUL,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3f}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:  49998,
+				dataStack: [][]byte{{0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f}},
+			},
 		},
-		wantVM: &virtualMachine{
-			runLimit:     49998,
-			deferredCost: -1,
-			dataStack:    [][]byte{{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+		{
+			name: "test OP_2MUL use uint256's second array elem",
+			op:   OP_2MUL,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:     49998,
+				deferredCost: 1,
+				dataStack:    [][]byte{{0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01}},
+			},
 		},
-	}, {
-		op: OP_2MUL,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{2}},
+		{
+			name: "test OP_2DIV 2/2",
+			op:   OP_2DIV,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{2}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:  49998,
+				dataStack: [][]byte{{1}},
+			},
 		},
-		wantVM: &virtualMachine{
-			runLimit:  49998,
-			dataStack: [][]byte{{4}},
+		{
+			name: "test OP_NOT",
+			op:   OP_NOT,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{2}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:     49998,
+				deferredCost: -1,
+				dataStack:    [][]byte{{}},
+			},
 		},
-	}, {
-		op: OP_2MUL,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+		{
+			name: "test OP_0NOTEQUAL",
+			op:   OP_0NOTEQUAL,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{2}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:  49998,
+				dataStack: [][]byte{{1}},
+			},
 		},
-		wantVM: &virtualMachine{
-			runLimit:  49998,
-			dataStack: [][]byte{{0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe}},
+		{
+			name: "test OP_ADD 2+1",
+			op:   OP_ADD,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{2}, {1}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:     49998,
+				deferredCost: -9,
+				dataStack:    [][]byte{{3}},
+			},
 		},
-	}, {
-		op: OP_2MUL,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+		{
+			name: "test OP_SUB 2-1",
+			op:   OP_SUB,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{2}, {1}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:     49998,
+				deferredCost: -9,
+				dataStack:    [][]byte{{1}},
+			},
 		},
-		wantVM: &virtualMachine{
-			runLimit:     49998,
-			deferredCost: 1,
-			dataStack:    [][]byte{{0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe}},
+		{
+			name: "test OP_MUL 2*1",
+			op:   OP_MUL,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{2}, {1}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:     49992,
+				deferredCost: -9,
+				dataStack:    [][]byte{{2}},
+			},
 		},
-	}, {
-		op: OP_2DIV,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{2}},
+		{
+			name: "test OP_DIV 2/1",
+			op:   OP_DIV,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{2}, {1}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:     49992,
+				deferredCost: -9,
+				dataStack:    [][]byte{{2}},
+			},
 		},
-		wantVM: &virtualMachine{
-			runLimit:  49998,
-			dataStack: [][]byte{{1}},
+		{
+			name: "test OP_DIV 2/0",
+			op:   OP_DIV,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{2}, {}},
+			},
+			wantErr: ErrDivZero,
 		},
-	}, {
-		op: OP_NOT,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{2}},
+		{
+			name: "test OP_MOD 2%1",
+			op:   OP_MOD,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{2}, {1}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:     49992,
+				deferredCost: -10,
+				dataStack:    [][]byte{{}},
+			},
 		},
-		wantVM: &virtualMachine{
-			runLimit:     49998,
-			deferredCost: -1,
-			dataStack:    [][]byte{{}},
+		{
+			name: "test OP_MOD 2%0",
+			op:   OP_MOD,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{2}, {0}},
+			},
+			wantErr: ErrDivZero,
 		},
-	}, {
-		op: OP_0NOTEQUAL,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{2}},
+		{
+			name: "test OP_LSHIFT",
+			op:   OP_LSHIFT,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{2}, {1}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:     49992,
+				deferredCost: -9,
+				dataStack:    [][]byte{{4}},
+			},
 		},
-		wantVM: &virtualMachine{
-			runLimit:  49998,
-			dataStack: [][]byte{{1}},
+		{
+			name: "test OP_RSHIFT",
+			op:   OP_RSHIFT,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{2}, {1}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:     49992,
+				deferredCost: -9,
+				dataStack:    [][]byte{{1}},
+			},
 		},
-	}, {
-		op: OP_ADD,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{2}, {1}},
+		{
+			name: "test OP_BOOLAND",
+			op:   OP_BOOLAND,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{2}, {1}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:     49998,
+				deferredCost: -9,
+				dataStack:    [][]byte{{1}},
+			},
 		},
-		wantVM: &virtualMachine{
-			runLimit:     49998,
-			deferredCost: -9,
-			dataStack:    [][]byte{{3}},
+		{
+			name: "test OP_BOOLOR",
+			op:   OP_BOOLOR,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{2}, {1}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:     49998,
+				deferredCost: -9,
+				dataStack:    [][]byte{{1}},
+			},
 		},
-	}, {
-		op: OP_SUB,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{2}, {1}},
+		{
+			name: "test OP_NUMEQUAL",
+			op:   OP_NUMEQUAL,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{2}, {1}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:     49998,
+				deferredCost: -10,
+				dataStack:    [][]byte{{}},
+			},
 		},
-		wantVM: &virtualMachine{
-			runLimit:     49998,
-			deferredCost: -9,
-			dataStack:    [][]byte{{1}},
+		{
+			name: "test OP_NUMEQUALVERIFY",
+			op:   OP_NUMEQUALVERIFY,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{2}, {2}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:     49998,
+				deferredCost: -18,
+				dataStack:    [][]byte{},
+			},
 		},
-	}, {
-		op: OP_MUL,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{2}, {1}},
+		{
+			name: "test OP_NUMEQUALVERIFY",
+			op:   OP_NUMEQUALVERIFY,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{1}, {2}},
+			},
+			wantErr: ErrVerifyFailed,
 		},
-		wantVM: &virtualMachine{
-			runLimit:     49992,
-			deferredCost: -9,
-			dataStack:    [][]byte{{2}},
+		{
+			name: "test OP_NUMNOTEQUAL",
+			op:   OP_NUMNOTEQUAL,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{2}, {1}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:     49998,
+				deferredCost: -9,
+				dataStack:    [][]byte{{1}},
+			},
 		},
-	}, {
-		op: OP_DIV,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{2}, {1}},
+		{
+			name: "test OP_LESSTHAN",
+			op:   OP_LESSTHAN,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{2}, {1}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:     49998,
+				deferredCost: -10,
+				dataStack:    [][]byte{{}},
+			},
 		},
-		wantVM: &virtualMachine{
-			runLimit:     49992,
-			deferredCost: -9,
-			dataStack:    [][]byte{{2}},
+		{
+			name: "test OP_LESSTHANOREQUAL",
+			op:   OP_LESSTHANOREQUAL,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{2}, {1}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:     49998,
+				deferredCost: -10,
+				dataStack:    [][]byte{{}},
+			},
 		},
-	}, {
-		op: OP_DIV,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{2}, {}},
+		{
+			name: "test OP_GREATERTHAN",
+			op:   OP_GREATERTHAN,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{2}, {1}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:     49998,
+				deferredCost: -9,
+				dataStack:    [][]byte{{1}},
+			},
 		},
-		wantErr: ErrDivZero,
-	}, {
-		op: OP_MOD,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{2}, {1}},
+		{
+			name: "test OP_GREATERTHANOREQUAL",
+			op:   OP_GREATERTHANOREQUAL,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{2}, {1}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:     49998,
+				deferredCost: -9,
+				dataStack:    [][]byte{{1}},
+			},
 		},
-		wantVM: &virtualMachine{
-			runLimit:     49992,
-			deferredCost: -10,
-			dataStack:    [][]byte{{}},
+		{
+			name: "test OP_MIN min(2,1)",
+			op:   OP_MIN,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{2}, {1}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:     49998,
+				deferredCost: -9,
+				dataStack:    [][]byte{{1}},
+			},
 		},
-	}, {
-		op: OP_MOD,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{2}, {0}},
+		{
+			name: "test OP_MIN min(1,2)",
+			op:   OP_MIN,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{1}, {2}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:     49998,
+				deferredCost: -9,
+				dataStack:    [][]byte{{1}},
+			},
 		},
-		wantErr: ErrDivZero,
-	}, {
-		op: OP_LSHIFT,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{2}, {1}},
+		{
+			name: "test OP_MAX max(1,2)",
+			op:   OP_MAX,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{2}, {1}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:     49998,
+				deferredCost: -9,
+				dataStack:    [][]byte{{2}},
+			},
 		},
-		wantVM: &virtualMachine{
-			runLimit:     49992,
-			deferredCost: -9,
-			dataStack:    [][]byte{{4}},
+		{
+			name: "test OP_MAX max(1,2)",
+			op:   OP_MAX,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{1}, {2}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:     49998,
+				deferredCost: -9,
+				dataStack:    [][]byte{{2}},
+			},
 		},
-	}, {
-		op: OP_RSHIFT,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{2}, {1}},
-		},
-		wantVM: &virtualMachine{
-			runLimit:     49992,
-			deferredCost: -9,
-			dataStack:    [][]byte{{1}},
-		},
-	}, {
-		op: OP_BOOLAND,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{2}, {1}},
-		},
-		wantVM: &virtualMachine{
-			runLimit:     49998,
-			deferredCost: -9,
-			dataStack:    [][]byte{{1}},
-		},
-	}, {
-		op: OP_BOOLOR,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{2}, {1}},
-		},
-		wantVM: &virtualMachine{
-			runLimit:     49998,
-			deferredCost: -9,
-			dataStack:    [][]byte{{1}},
-		},
-	}, {
-		op: OP_NUMEQUAL,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{2}, {1}},
-		},
-		wantVM: &virtualMachine{
-			runLimit:     49998,
-			deferredCost: -10,
-			dataStack:    [][]byte{{}},
-		},
-	}, {
-		op: OP_NUMEQUALVERIFY,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{2}, {2}},
-		},
-		wantVM: &virtualMachine{
-			runLimit:     49998,
-			deferredCost: -18,
-			dataStack:    [][]byte{},
-		},
-	}, {
-		op: OP_NUMEQUALVERIFY,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{1}, {2}},
-		},
-		wantErr: ErrVerifyFailed,
-	}, {
-		op: OP_NUMNOTEQUAL,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{2}, {1}},
-		},
-		wantVM: &virtualMachine{
-			runLimit:     49998,
-			deferredCost: -9,
-			dataStack:    [][]byte{{1}},
-		},
-	}, {
-		op: OP_LESSTHAN,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{2}, {1}},
-		},
-		wantVM: &virtualMachine{
-			runLimit:     49998,
-			deferredCost: -10,
-			dataStack:    [][]byte{{}},
-		},
-	}, {
-		op: OP_LESSTHANOREQUAL,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{2}, {1}},
-		},
-		wantVM: &virtualMachine{
-			runLimit:     49998,
-			deferredCost: -10,
-			dataStack:    [][]byte{{}},
-		},
-	}, {
-		op: OP_GREATERTHAN,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{2}, {1}},
-		},
-		wantVM: &virtualMachine{
-			runLimit:     49998,
-			deferredCost: -9,
-			dataStack:    [][]byte{{1}},
-		},
-	}, {
-		op: OP_GREATERTHANOREQUAL,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{2}, {1}},
-		},
-		wantVM: &virtualMachine{
-			runLimit:     49998,
-			deferredCost: -9,
-			dataStack:    [][]byte{{1}},
-		},
-	}, {
-		op: OP_MIN,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{2}, {1}},
-		},
-		wantVM: &virtualMachine{
-			runLimit:     49998,
-			deferredCost: -9,
-			dataStack:    [][]byte{{1}},
-		},
-	}, {
-		op: OP_MIN,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{1}, {2}},
-		},
-		wantVM: &virtualMachine{
-			runLimit:     49998,
-			deferredCost: -9,
-			dataStack:    [][]byte{{1}},
-		},
-	}, {
-		op: OP_MAX,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{2}, {1}},
-		},
-		wantVM: &virtualMachine{
-			runLimit:     49998,
-			deferredCost: -9,
-			dataStack:    [][]byte{{2}},
-		},
-	}, {
-		op: OP_MAX,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{1}, {2}},
-		},
-		wantVM: &virtualMachine{
-			runLimit:     49998,
-			deferredCost: -9,
-			dataStack:    [][]byte{{2}},
-		},
-	}, {
-		op: OP_WITHIN,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{1}, {1}, {2}},
-		},
-		wantVM: &virtualMachine{
-			runLimit:     49996,
-			deferredCost: -18,
-			dataStack:    [][]byte{{1}},
-		},
-	}}
+		{
+			name: "test OP_WITHIN",
+			op:   OP_WITHIN,
+			startVM: &virtualMachine{
+				runLimit:  50000,
+				dataStack: [][]byte{{1}, {1}, {2}},
+			},
+			wantVM: &virtualMachine{
+				runLimit:     49996,
+				deferredCost: -18,
+				dataStack:    [][]byte{{1}},
+			},
+		}}
 
 	numops := []Op{
 		OP_1ADD, OP_1SUB, OP_2MUL, OP_2DIV, OP_NOT, OP_0NOTEQUAL,
@@ -373,7 +446,7 @@ func TestNumericOps(t *testing.T) {
 	}
 
 	for _, op := range numops {
-		cases = append(cases, testStruct{
+		tests = append(tests, testStruct{
 			op: op,
 			startVM: &virtualMachine{
 				runLimit:  0,
@@ -383,20 +456,21 @@ func TestNumericOps(t *testing.T) {
 		})
 	}
 
-	for i, c := range cases {
-		err := ops[c.op].fn(c.startVM)
+	for i, c := range tests {
+		t.Run(c.name, func(t *testing.T) {
+			err := ops[c.op].fn(c.startVM)
+			if err != c.wantErr {
+				t.Errorf("case %d, op %s: got err = %v want %v", i, ops[c.op].name, err, c.wantErr)
+				return
+			}
+			if c.wantErr != nil {
+				return
+			}
 
-		if err != c.wantErr {
-			t.Errorf("case %d, op %s: got err = %v want %v", i, ops[c.op].name, err, c.wantErr)
-			continue
-		}
-		if c.wantErr != nil {
-			continue
-		}
-
-		if !testutil.DeepEqual(c.startVM, c.wantVM) {
-			t.Errorf("case %d, op %s: unexpected vm result\n\tgot:  %+v\n\twant: %+v\n", i, ops[c.op].name, c.startVM, c.wantVM)
-		}
+			if !testutil.DeepEqual(c.startVM, c.wantVM) {
+				t.Errorf("case %d, op %s: unexpected vm result\n\tgot:  %+v\n\twant: %+v\n", i, ops[c.op].name, c.startVM, c.wantVM)
+			}
+		})
 	}
 }
 
@@ -788,7 +862,7 @@ func Test_op2Mul(t *testing.T) {
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
-					dataStack: [][]byte{{0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+					dataStack: [][]byte{{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3f}},
 				},
 			},
 			wantErr: false,
@@ -818,7 +892,7 @@ func Test_op2Mul(t *testing.T) {
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
-					dataStack: [][]byte{{0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+					dataStack: [][]byte{{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40}},
 				},
 			},
 			wantErr: true,
@@ -859,10 +933,10 @@ func Test_opMul(t *testing.T) {
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
-					dataStack: [][]byte{{0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, {0x02}},
+					dataStack: [][]byte{{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3f}, {0x02}},
 				},
 			},
-			want:    [][]byte{{0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe}},
+			want:    [][]byte{{0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f}},
 			wantErr: false,
 		},
 		{
@@ -890,7 +964,7 @@ func Test_opMul(t *testing.T) {
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
-					dataStack: [][]byte{{0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, {0x02}},
+					dataStack: [][]byte{{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40}, {0x02}},
 				},
 			},
 			wantErr: true,
@@ -937,7 +1011,7 @@ func Test_op1Sub(t *testing.T) {
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
-					dataStack: [][]byte{{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+					dataStack: [][]byte{{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}},
 				},
 			},
 			want:    [][]byte{{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
@@ -1004,7 +1078,7 @@ func Test_opSub(t *testing.T) {
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
-					dataStack: [][]byte{{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, {0x01}},
+					dataStack: [][]byte{{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}, {0x01}},
 				},
 			},
 			want:    [][]byte{{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
@@ -1071,10 +1145,10 @@ func Test_op2Div(t *testing.T) {
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
-					dataStack: [][]byte{{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+					dataStack: [][]byte{{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}},
 				},
 			},
-			want:    [][]byte{{0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+			want:    [][]byte{{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80}},
 			wantErr: false,
 		},
 		{
@@ -1152,10 +1226,10 @@ func Test_opDiv(t *testing.T) {
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
-					dataStack: [][]byte{{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, {0x02}},
+					dataStack: [][]byte{{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}, {0x02}},
 				},
 			},
-			want:    [][]byte{{0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+			want:    [][]byte{{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80}},
 			wantErr: false,
 		},
 		{
@@ -1237,7 +1311,7 @@ func Test_opAdd(t *testing.T) {
 					dataStack: [][]byte{{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, {0x01}},
 				},
 			},
-			want:    [][]byte{{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+			want:    [][]byte{{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}},
 			wantErr: false,
 		},
 		{
@@ -1450,7 +1524,7 @@ func TestOpShift(t *testing.T) {
 				},
 				f: opRshift,
 			},
-			want:    [][]byte{{0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+			want:    [][]byte{{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01}},
 			wantErr: false,
 		},
 		{

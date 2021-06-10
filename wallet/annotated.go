@@ -195,13 +195,14 @@ func (w *Wallet) BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInp
 		}
 	case *bc.Issuance:
 		in.Type = "issue"
-		in.IssuanceProgram = orig.IssuanceProgram()
+		in.IssuanceProgram = orig.ControlProgram()
 		arguments := orig.Arguments()
 		for _, arg := range arguments {
 			in.WitnessArguments = append(in.WitnessArguments, arg)
 		}
-		if assetDefinition := orig.AssetDefinition(); isValidJSON(assetDefinition) {
-			assetDefinition := json.RawMessage(assetDefinition)
+
+		if ii, ok := orig.TypedInput.(*types.IssuanceInput); ok && isValidJSON(ii.AssetDefinition) {
+			assetDefinition := json.RawMessage(ii.AssetDefinition)
 			in.AssetDefinition = &assetDefinition
 		}
 	case *bc.Coinbase:

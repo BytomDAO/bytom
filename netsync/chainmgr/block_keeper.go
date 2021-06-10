@@ -197,9 +197,9 @@ func (bk *blockKeeper) start() {
 
 func (bk *blockKeeper) checkSyncType() int {
 	bestHeight := bk.chain.BestBlockHeight()
-	peer := bk.peers.BestIrreversiblePeer(consensus.SFFullNode | consensus.SFFastSync)
+	peer := bk.peers.BestPeer(consensus.SFFullNode | consensus.SFFastSync)
 	if peer != nil {
-		if peerIrreversibleHeight := peer.IrreversibleHeight(); peerIrreversibleHeight >= bestHeight+minGapStartFastSync {
+		if peerJustifiedHeight := peer.JustifiedHeight(); peerJustifiedHeight >= bestHeight+minGapStartFastSync {
 			bk.fastSync.setSyncPeer(peer)
 			return fastSyncType
 		}
@@ -253,7 +253,7 @@ func (bk *blockKeeper) syncWorker() {
 				continue
 			}
 
-			if err := bk.peers.BroadcastNewStatus(bk.chain.BestBlockHeader(), bk.chain.LastIrreversibleHeader()); err != nil {
+			if err := bk.peers.BroadcastNewStatus(bk.chain.BestBlockHeader(), bk.chain.LastJustifiedHeader()); err != nil {
 				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on syncWorker broadcast new status")
 			}
 		case <-bk.quit:

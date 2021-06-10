@@ -96,7 +96,6 @@ func TestCheckCoinbaseAmount(t *testing.T) {
 					types.NewTx(types.TxData{
 						Inputs: []*types.TxInput{types.NewCoinbaseInput(nil)},
 						Outputs: []*types.TxOutput{
-							types.NewOriginalTxOutput(*consensus.BTMAssetID, 0, []byte("controlProgram"), nil),
 							types.NewOriginalTxOutput(*consensus.BTMAssetID, 5000, []byte("controlProgram"), nil),
 						},
 					}),
@@ -114,7 +113,6 @@ func TestCheckCoinbaseAmount(t *testing.T) {
 					types.NewTx(types.TxData{
 						Inputs: []*types.TxInput{types.NewCoinbaseInput(nil)},
 						Outputs: []*types.TxOutput{
-							types.NewOriginalTxOutput(*consensus.BTMAssetID, 0, []byte("controlProgram"), nil),
 							types.NewOriginalTxOutput(*consensus.BTMAssetID, 5000, []byte("controlProgram1"), nil),
 							types.NewOriginalTxOutput(*consensus.BTMAssetID, 5000, []byte("controlProgram2"), nil),
 						},
@@ -331,40 +329,6 @@ func TestValidateBlock(t *testing.T) {
 				Rewards: map[string]uint64{hex.EncodeToString(cp): 41250000000},
 			},
 			err: errMismatchedMerkleRoot,
-		},
-		{
-			desc: "the coinbase amount is less than the real coinbase amount (txtest#1014)",
-			block: &bc.Block{
-				ID: bc.Hash{V0: 1},
-				BlockHeader: &bc.BlockHeader{
-					Version:         1,
-					Height:          1,
-					Timestamp:       1523358600,
-					PreviousBlockId: &bc.Hash{V0: 0},
-				},
-				Transactions: []*bc.Tx{
-					types.MapTx(&types.TxData{
-						Version:        1,
-						SerializedSize: 1,
-						Inputs:         []*types.TxInput{types.NewCoinbaseInput(nil)},
-						Outputs:        []*types.TxOutput{types.NewOriginalTxOutput(*consensus.BTMAssetID, 41250000000, cp, nil)},
-					}),
-					types.MapTx(&types.TxData{
-						Version:        1,
-						SerializedSize: 1,
-						Inputs:         []*types.TxInput{types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp, nil)},
-						Outputs:        []*types.TxOutput{types.NewOriginalTxOutput(*consensus.BTMAssetID, 90000000, cp, nil)},
-					}),
-				},
-			},
-			parent: &state.BlockNode{
-				Version:   1,
-				Height:    0,
-				Timestamp: 1523352600,
-				Hash:      bc.Hash{V0: 0},
-			},
-			checkpoint: &state.Checkpoint{},
-			err:        ErrWrongCoinbaseTransaction,
 		},
 	}
 

@@ -9,12 +9,12 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/blockchain/query"
+	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/vm/vmutil"
-	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 const (
@@ -355,7 +355,7 @@ func buildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
 		in.SpentOutputID = e.SpentOutputId
 	case *bc.Issuance:
 		in.Type = "issue"
-		in.IssuanceProgram = orig.IssuanceProgram()
+		in.IssuanceProgram = orig.ControlProgram()
 	}
 
 	return in

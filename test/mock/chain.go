@@ -27,7 +27,7 @@ func NewChain() *Chain {
 	}
 }
 
-func (c *Chain) LastIrreversibleHeader() *types.BlockHeader {
+func (c *Chain) LastJustifiedHeader() *types.BlockHeader {
 	return nil
 }
 
