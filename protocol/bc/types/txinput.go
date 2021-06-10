@@ -51,8 +51,8 @@ type (
 	TypedInput interface {
 		InputType() uint8
 		AssetID() bc.AssetID
-		readCommitment(*blockchain.Reader) (bc.AssetID, error)
-		readWitness(*blockchain.Reader, bc.AssetID) error
+		readCommitment(*blockchain.Reader) error
+		readWitness(*blockchain.Reader) error
 		writeCommitment(io.Writer, uint64) error
 		writeWitness(w io.Writer) error
 	}
@@ -127,7 +127,6 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 		return err
 	}
 
-	var assetID bc.AssetID
 	t.CommitmentSuffix, err = blockchain.ReadExtensibleString(r, func(r *blockchain.Reader) error {
 		if t.AssetVersion != 1 {
 			return nil
@@ -137,8 +136,7 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 			return err
 		}
 
-		assetID, err = t.readCommitment(r)
-		return err
+		return t.readCommitment(r)
 	})
 	if err != nil {
 		return err
@@ -146,7 +144,7 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 
 	t.WitnessSuffix, err = blockchain.ReadExtensibleString(r, func(r *blockchain.Reader) error {
 		if t.AssetVersion == 1 {
-			return t.readWitness(r, assetID)
+			return t.readWitness(r)
 		}
 
 		return nil

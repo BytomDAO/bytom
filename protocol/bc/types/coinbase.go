@@ -28,12 +28,12 @@ func (cb *CoinbaseInput) AssetID() bc.AssetID {
 // InputType is the interface function for return the input type
 func (cb *CoinbaseInput) InputType() uint8 { return CoinbaseInputType }
 
-func (cb *CoinbaseInput) readCommitment(r *blockchain.Reader) (_ bc.AssetID, err error) {
+func (cb *CoinbaseInput) readCommitment(r *blockchain.Reader) (err error) {
 	cb.Arbitrary, err = blockchain.ReadVarstr31(r)
 	return
 }
 
-func (cb *CoinbaseInput) readWitness(_ *blockchain.Reader, _ bc.AssetID) error { return nil }
+func (cb *CoinbaseInput) readWitness(_ *blockchain.Reader) error { return nil }
 
 func (cb *CoinbaseInput) writeCommitment(w io.Writer, _ uint64) error {
 	if _, err := w.Write([]byte{CoinbaseInputType}); err != nil {

@@ -46,7 +46,7 @@ func (vi *VetoInput) AssetID() bc.AssetID {
 // InputType is the interface function for return the input type.
 func (vi *VetoInput) InputType() uint8 { return VetoInputType }
 
-func (vi *VetoInput) readCommitment(r *blockchain.Reader) (assetID bc.AssetID, err error) {
+func (vi *VetoInput) readCommitment(r *blockchain.Reader) (err error) {
 	if vi.VetoCommitmentSuffix, err = vi.SpendCommitment.readFrom(r, 1); err != nil {
 		return
 	}
@@ -55,7 +55,7 @@ func (vi *VetoInput) readCommitment(r *blockchain.Reader) (assetID bc.AssetID, e
 	return
 }
 
-func (vi *VetoInput) readWitness(r *blockchain.Reader, _ bc.AssetID) (err error) {
+func (vi *VetoInput) readWitness(r *blockchain.Reader) (err error) {
 	vi.Arguments, err = blockchain.ReadVarstrList(r)
 	return err
 }
