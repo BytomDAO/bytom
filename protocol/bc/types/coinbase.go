@@ -30,7 +30,7 @@ func (cb *CoinbaseInput) InputType() uint8 { return CoinbaseInputType }
 
 func (cb *CoinbaseInput) readCommitment(r *blockchain.Reader) (err error) {
 	cb.Arbitrary, err = blockchain.ReadVarstr31(r)
-	return
+	return err
 }
 
 func (cb *CoinbaseInput) readWitness(_ *blockchain.Reader) error { return nil }

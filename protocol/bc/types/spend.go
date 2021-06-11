@@ -46,7 +46,7 @@ func (si *SpendInput) InputType() uint8 { return SpendInputType }
 
 func (si *SpendInput) readCommitment(r *blockchain.Reader) (err error) {
 	si.SpendCommitmentSuffix, err = si.SpendCommitment.readFrom(r, 1)
-	return
+	return err
 }
 
 func (si *SpendInput) readWitness(r *blockchain.Reader) (err error) {
