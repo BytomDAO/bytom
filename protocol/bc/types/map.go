@@ -96,14 +96,13 @@ func (mh *mapHelper) mapIssuanceInput(i int, input *IssuanceInput) {
 func (mh *mapHelper) mapSpendInput(i int, input *SpendInput) {
 	// create entry for prevout
 	prog := &bc.Program{VmVersion: input.VMVersion, Code: input.ControlProgram}
-	data := &bc.StateData{StateData: input.StateData}
 	src := &bc.ValueSource{
 		Ref:      &input.SourceID,
 		Value:    &input.AssetAmount,
 		Position: input.SourcePosition,
 	}
 
-	prevout := bc.NewOutput(src, prog, data, 0) // ordinal doesn't matter for prevouts, only for result outputs
+	prevout := bc.NewOutput(src, prog, input.StateData, 0) // ordinal doesn't matter for prevouts, only for result outputs
 	prevoutID := mh.addEntry(prevout)
 
 	// create entry for spend
@@ -120,14 +119,13 @@ func (mh *mapHelper) mapSpendInput(i int, input *SpendInput) {
 
 func (mh *mapHelper) mapVetoInput(i int, input *VetoInput) {
 	prog := &bc.Program{VmVersion: input.VMVersion, Code: input.ControlProgram}
-	data := &bc.StateData{StateData: input.StateData}
 	src := &bc.ValueSource{
 		Ref:      &input.SourceID,
 		Value:    &input.AssetAmount,
 		Position: input.SourcePosition,
 	}
 
-	prevout := bc.NewVoteOutput(src, prog, data, 0, input.Vote) // ordinal doesn't matter for prevouts, only for result outputs
+	prevout := bc.NewVoteOutput(src, prog, input.StateData, 0, input.Vote) // ordinal doesn't matter for prevouts, only for result outputs
 	prevoutID := mh.addEntry(prevout)
 	// create entry for VetoInput
 	vetoInput := bc.NewVetoInput(&prevoutID, uint64(i))
@@ -187,7 +185,6 @@ func (mh *mapHelper) mapOutputs() {
 	for i, out := range mh.txData.Outputs {
 		src := &bc.ValueSource{Ref: &muxID, Value: &out.AssetAmount, Position: uint64(i)}
 		prog := &bc.Program{out.VMVersion, out.ControlProgram}
-		data := &bc.StateData{StateData: out.StateData}
 
 		var resultID bc.Hash
 		switch {
@@ -196,12 +193,12 @@ func (mh *mapHelper) mapOutputs() {
 			resultID = mh.addEntry(r)
 
 		case out.OutputType() == OriginalOutputType:
-			o := bc.NewOutput(src, prog, data, uint64(i))
+			o := bc.NewOutput(src, prog, out.StateData, uint64(i))
 			resultID = mh.addEntry(o)
 
 		case out.OutputType() == VoteOutputType:
 			voteOut, _ := out.TypedOutput.(*VoteOutput)
-			v := bc.NewVoteOutput(src, prog, data, uint64(i), voteOut.Vote)
+			v := bc.NewVoteOutput(src, prog, out.StateData, uint64(i), voteOut.Vote)
 			resultID = mh.addEntry(v)
 
 		default:

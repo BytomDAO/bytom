@@ -16,7 +16,7 @@ func (o *Output) writeForHash(w io.Writer) {
 }
 
 // NewOutput creates a new Output.
-func NewOutput(source *ValueSource, controlProgram *Program, stateData *StateData, ordinal uint64) *Output {
+func NewOutput(source *ValueSource, controlProgram *Program, stateData [][]byte, ordinal uint64) *Output {
 	return &Output{
 		Source:         source,
 		ControlProgram: controlProgram,

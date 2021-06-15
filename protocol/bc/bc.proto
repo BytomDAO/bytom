@@ -14,10 +14,6 @@ message Program {
   bytes  code       = 2;
 }
 
-message StateData {
-  repeated bytes  state_data       = 1;
-}
-
 // This message type duplicates Hash, above. One alternative is to
 // embed a Hash inside an AssetID. But it's useful for AssetID to be
 // plain old data (without pointers). Another alternative is use Hash
@@ -83,7 +79,7 @@ message Output {
   ValueSource source          = 1;
   Program     control_program = 2;
   uint64      ordinal         = 3;
-  StateData   state_data      = 4;
+  repeated bytes  state_data  = 4;
 }
 
 message VoteOutput {
@@ -91,7 +87,7 @@ message VoteOutput {
   Program     control_program = 2;
   uint64      ordinal         = 3;
   bytes       vote            = 4;
-  StateData   state_data      = 5;
+  repeated bytes  state_data  = 5;
 }
 
 message VetoInput {

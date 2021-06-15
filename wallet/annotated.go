@@ -298,9 +298,9 @@ func (w *Wallet) BuildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOut
 	return out
 }
 
-func stateDataStrings(stateData *bc.StateData) []string {
-	ss := make([]string, 0, len(stateData.StateData))
-	for _, bytes := range stateData.StateData {
+func stateDataStrings(stateData [][]byte) []string {
+	ss := make([]string, 0, len(stateData))
+	for _, bytes := range stateData {
 		ss = append(ss, hex.EncodeToString(bytes))
 	}
 	return ss
