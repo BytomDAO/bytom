@@ -67,15 +67,6 @@ message TxHeader {
   repeated Hash result_ids      = 4;
 }
 
-message TxVerifyResult {
-  bool status_fail = 1;
-}
-
-message TransactionStatus {
-  uint64                  version        = 1;
-  repeated TxVerifyResult verify_status  = 2;
-}
-
 message Mux {
   repeated ValueSource      sources              = 1; // issuances, spends, and muxes
   Program                   program              = 2;

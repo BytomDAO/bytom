@@ -603,10 +603,9 @@ func (s *mockStore1) SaveCheckpoints([]*state.Checkpoint) error                 
 func (s *mockStore1) CheckpointsFromNode(height uint64, hash *bc.Hash) ([]*state.Checkpoint, error) {
 	return nil, nil
 }
-func (s *mockStore1) BlockExist(hash *bc.Hash) bool                                { return false }
-func (s *mockStore1) GetBlock(*bc.Hash) (*types.Block, error)                      { return nil, nil }
-func (s *mockStore1) GetStoreStatus() *BlockStoreState                             { return nil }
-func (s *mockStore1) GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error) { return nil, nil }
+func (s *mockStore1) BlockExist(hash *bc.Hash) bool           { return false }
+func (s *mockStore1) GetBlock(*bc.Hash) (*types.Block, error) { return nil, nil }
+func (s *mockStore1) GetStoreStatus() *BlockStoreState        { return nil }
 func (s *mockStore1) GetTransactionsUtxo(utxoView *state.UtxoViewpoint, tx []*bc.Tx) error {
 	for _, hash := range testTxs[2].SpentOutputIDs {
 		utxoView.Entries[hash] = &storage.UtxoEntry{IsCoinBase: false, Spent: false}

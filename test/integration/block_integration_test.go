@@ -19,8 +19,7 @@ import (
 var blockMap map[int][]*attachBlock
 
 type attachBlock struct {
-	block        *types.Block
-	verifyResult []*bc.TxVerifyResult
+	block *types.Block
 }
 
 func init() {
@@ -29,8 +28,7 @@ func init() {
 	blockMap = map[int][]*attachBlock{
 		0: {
 			{
-				block:        config.GenesisBlock(),
-				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}},
+				block: config.GenesisBlock(),
 			},
 		},
 		// 0 号的hash不会变
@@ -57,7 +55,6 @@ func init() {
 						}),
 					},
 				},
-				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}},
 			},
 			{
 				block: &types.Block{
@@ -81,7 +78,6 @@ func init() {
 						}),
 					},
 				},
-				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}},
 			},
 		},
 		2: {
@@ -108,7 +104,6 @@ func init() {
 						}),
 					},
 				},
-				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}},
 			},
 			// with spend btm transaction
 			{
@@ -152,7 +147,6 @@ func init() {
 						}),
 					},
 				},
-				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}, {StatusFail: false}},
 			},
 			// with btm retire transaction
 			{
@@ -196,7 +190,6 @@ func init() {
 						}),
 					},
 				},
-				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}, {StatusFail: false}},
 			},
 			// with issuance transaction
 			{
@@ -248,7 +241,6 @@ func init() {
 						}),
 					},
 				},
-				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}, {StatusFail: false}},
 			},
 			// with issuance transaction but status fail is true
 			{
@@ -301,8 +293,6 @@ func init() {
 						}),
 					},
 				},
-				//看下这个变量什么时候会用到。
-				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}, {StatusFail: true}},
 			},
 			// with non btm transaction
 			{
@@ -357,7 +347,6 @@ func init() {
 						}),
 					},
 				},
-				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}, {StatusFail: false}},
 			},
 			// with non btm transaction but status fail is true
 			{
@@ -413,7 +402,6 @@ func init() {
 						}),
 					},
 				},
-				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}, {StatusFail: true}},
 			},
 		},
 		3: {
@@ -440,7 +428,6 @@ func init() {
 						}),
 					},
 				},
-				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}},
 			},
 			// the previous block is blockMap[2][2]
 			{
@@ -465,7 +452,6 @@ func init() {
 						}),
 					},
 				},
-				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}},
 			},
 		},
 	}
@@ -1105,11 +1091,6 @@ func createStoreItems(mainChainIndexes []int, attachBlocks []*attachBlock, extra
 		}
 
 		for i, tx := range block.Transactions {
-			statusFail := attachBlock.verifyResult[i].StatusFail
-			if statusFail {
-				continue
-			}
-
 			for _, input := range tx.Inputs {
 				if _, ok := input.TypedInput.(*types.SpendInput); !ok {
 					continue
