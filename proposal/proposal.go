@@ -211,6 +211,7 @@ func modifyCoinbaseZeroOutput(b *txbuilder.TemplateBuilder, controlProgram strin
 		output := b.Outputs()[i]
 		if output.Amount == 0 && *output.AssetId == *consensus.BTMAssetID && hex.EncodeToString(output.ControlProgram) == controlProgram {
 			output.Amount = amount
+			return
 		}
 	}
 }
