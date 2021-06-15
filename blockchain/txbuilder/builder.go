@@ -1,11 +1,9 @@
 package txbuilder
 
 import (
-	"encoding/hex"
 	"math"
 	"time"
 
-	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc/types"
 )
@@ -47,15 +45,9 @@ func (b *TemplateBuilder) AddOutput(o *types.TxOutput) error {
 	return nil
 }
 
-// DeleteCoinbaseZeroOutput delete coinbase tx amount zero output
-func (b *TemplateBuilder) DeleteCoinbaseZeroOutput(controlProgram string) {
-	for i := 0; i < len(b.outputs); i++ {
-		output := b.outputs[i]
-		if output.Amount == 0 && *output.AssetId == *consensus.BTMAssetID && hex.EncodeToString(output.ControlProgram) == controlProgram {
-			b.outputs = append(b.outputs[0:i], b.outputs[i+1:]...)
-			return
-		}
-	}
+// Outputs return outputs of transactions
+func (b *TemplateBuilder) Outputs() []*types.TxOutput {
+	return b.outputs
 }
 
 // InputCount return number of input in the template builder
