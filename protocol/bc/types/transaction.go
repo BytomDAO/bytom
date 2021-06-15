@@ -53,6 +53,8 @@ func (tx *Tx) SetInputArguments(n uint32, args [][]byte) {
 		e.WitnessArguments = args
 	case *bc.Spend:
 		e.WitnessArguments = args
+	case *bc.VetoInput:
+		e.WitnessArguments = args
 	}
 }
 
@@ -101,6 +103,7 @@ func (tx *TxData) readFrom(r *blockchain.Reader) (err error) {
 	if _, err = io.ReadFull(r, serflags[:]); err != nil {
 		return errors.Wrap(err, "reading serialization flags")
 	}
+
 	if serflags[0] != serRequired {
 		return fmt.Errorf("unsupported serflags %#x", serflags[0])
 	}
@@ -108,6 +111,7 @@ func (tx *TxData) readFrom(r *blockchain.Reader) (err error) {
 	if tx.Version, err = blockchain.ReadVarint63(r); err != nil {
 		return errors.Wrap(err, "reading transaction version")
 	}
+
 	if tx.TimeRange, err = blockchain.ReadVarint63(r); err != nil {
 		return err
 	}
@@ -122,6 +126,7 @@ func (tx *TxData) readFrom(r *blockchain.Reader) (err error) {
 		if err = ti.readFrom(r); err != nil {
 			return errors.Wrapf(err, "reading input %d", len(tx.Inputs))
 		}
+
 		tx.Inputs = append(tx.Inputs, ti)
 	}
 
@@ -135,8 +140,10 @@ func (tx *TxData) readFrom(r *blockchain.Reader) (err error) {
 		if err = to.readFrom(r); err != nil {
 			return errors.Wrapf(err, "reading output %d", len(tx.Outputs))
 		}
+
 		tx.Outputs = append(tx.Outputs, to)
 	}
+
 	tx.SerializedSize = uint64(startSerializedSize - r.Len())
 	return nil
 }
@@ -147,6 +154,7 @@ func (tx *TxData) WriteTo(w io.Writer) (int64, error) {
 	if err := tx.writeTo(ew, serRequired); err != nil {
 		return 0, err
 	}
+
 	return ew.Written(), ew.Err()
 }
 
@@ -154,9 +162,11 @@ func (tx *TxData) writeTo(w io.Writer, serflags byte) error {
 	if _, err := w.Write([]byte{serflags}); err != nil {
 		return errors.Wrap(err, "writing serialization flags")
 	}
+
 	if _, err := blockchain.WriteVarint63(w, tx.Version); err != nil {
 		return errors.Wrap(err, "writing transaction version")
 	}
+
 	if _, err := blockchain.WriteVarint63(w, tx.TimeRange); err != nil {
 		return errors.Wrap(err, "writing transaction maxtime")
 	}
@@ -182,4 +192,3 @@ func (tx *TxData) writeTo(w io.Writer, serflags byte) error {
 	}
 	return nil
 }
-

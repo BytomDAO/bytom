@@ -58,8 +58,6 @@ type (
 	}
 )
 
-var errBadAssetID = errors.New("asset ID does not match other issuance parameters")
-
 // Amount return the asset amount of the txinput
 func (t *TxInput) Amount() uint64 {
 	switch inp := t.TypedInput.(type) {
