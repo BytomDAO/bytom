@@ -45,6 +45,11 @@ func (b *TemplateBuilder) AddOutput(o *types.TxOutput) error {
 	return nil
 }
 
+// Outputs return outputs of transactions
+func (b *TemplateBuilder) Outputs() []*types.TxOutput {
+	return b.outputs
+}
+
 // InputCount return number of input in the template builder
 func (b *TemplateBuilder) InputCount() int {
 	return len(b.inputs)
