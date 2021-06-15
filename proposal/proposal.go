@@ -165,14 +165,10 @@ func (b *blockBuilder) createCoinbaseTx() (tx *types.Tx, err error) {
 		return nil, err
 	}
 
-	scriptStr := hex.EncodeToString(script)
 	if b.block.Height%state.BlocksOfEpoch == 1 && b.block.Height != 1 {
-		if amount, ok := checkpoint.Rewards[scriptStr]; ok {
-			modifyCoinbaseZeroOutput(builder, scriptStr, amount)
-		}
-
 		for controlProgram, amount := range checkpoint.Rewards {
-			if controlProgram == scriptStr {
+			if controlProgram == hex.EncodeToString(script) {
+				builder.Outputs()[0].Amount = amount
 				continue
 			}
 
@@ -203,17 +199,6 @@ func (b *blockBuilder) createCoinbaseTx() (tx *types.Tx, err error) {
 		Tx:     types.MapTx(txData),
 	}
 	return tx, nil
-}
-
-// modifyCoinbaseZeroOutput modify coinbase tx amount zero output
-func modifyCoinbaseZeroOutput(b *txbuilder.TemplateBuilder, controlProgram string, amount uint64) {
-	for i := 0; i < len(b.Outputs()); i++ {
-		output := b.Outputs()[i]
-		if output.Amount == 0 && *output.AssetId == *consensus.BTMAssetID && hex.EncodeToString(output.ControlProgram) == controlProgram {
-			output.Amount = amount
-			return
-		}
-	}
 }
 
 func (b *blockBuilder) applyTransactions(txs []*protocol.TxDesc, timeoutStatus uint8) error {
