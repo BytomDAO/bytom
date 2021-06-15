@@ -116,6 +116,6 @@ func ComputeOutputID(sc *SpendCommitment) (h bc.Hash, err error) {
 		Position: sc.SourcePosition,
 	}
 
-	o := bc.NewOutput(src, &bc.Program{VmVersion: sc.VMVersion, Code: sc.ControlProgram}, &bc.StateData{StateData: sc.StateData}, 0)
+	o := bc.NewOutput(src, &bc.Program{VmVersion: sc.VMVersion, Code: sc.ControlProgram}, sc.StateData, 0)
 	return bc.EntryID(o), nil
 }

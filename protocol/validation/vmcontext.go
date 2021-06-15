@@ -12,7 +12,7 @@ import (
 )
 
 // NewTxVMContext generates the vm.Context for BVM
-func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, stateData *bc.StateData, args [][]byte) *vm.Context {
+func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, stateData [][]byte, args [][]byte) *vm.Context {
 	var (
 		tx          = vs.tx
 		blockHeight = vs.block.BlockHeader.GetHeight()
@@ -67,7 +67,7 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, state
 	result := &vm.Context{
 		VMVersion: prog.VmVersion,
 		Code:      convertProgram(prog.Code, vs.converter),
-		StateData: stateData.StateData,
+		StateData: stateData,
 		Arguments: args,
 
 		EntryID: entryID.Bytes(),
@@ -111,12 +111,12 @@ type entryContext struct {
 
 func (ec *entryContext) checkOutput(index uint64, amount uint64, assetID []byte, vmVersion uint64, code []byte, state [][]byte, expansion bool) (bool, error) {
 	checkEntry := func(e bc.Entry) (bool, error) {
-		check := func(prog *bc.Program, value *bc.AssetAmount, stateData *bc.StateData) bool {
+		check := func(prog *bc.Program, value *bc.AssetAmount, stateData [][]byte) bool {
 			return (prog.VmVersion == vmVersion &&
 				bytes.Equal(prog.Code, code) &&
 				bytes.Equal(value.AssetId.Bytes(), assetID) &&
 				value.Amount == amount &&
-				bytesEqual(stateData.StateData, state))
+				bytesEqual(stateData, state))
 		}
 
 		switch e := e.(type) {
@@ -133,7 +133,7 @@ func (ec *entryContext) checkOutput(index uint64, amount uint64, assetID []byte,
 				// (The spec always requires prog.VmVersion to be zero.)
 				prog.Code = code
 			}
-			return check(&prog, e.Source.Value, &bc.StateData{}), nil
+			return check(&prog, e.Source.Value, [][]byte{}), nil
 		}
 
 		return false, vm.ErrContext
