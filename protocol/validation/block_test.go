@@ -113,6 +113,42 @@ func TestCheckCoinbaseAmount(t *testing.T) {
 					types.NewTx(types.TxData{
 						Inputs: []*types.TxInput{types.NewCoinbaseInput(nil)},
 						Outputs: []*types.TxOutput{
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 0, []byte("controlProgram"), nil),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 5000, []byte("controlProgram"), nil),
+						},
+					}),
+				},
+			},
+			checkpoint: &state.Checkpoint{
+				Rewards: map[string]uint64{hex.EncodeToString([]byte("controlProgram")): 5000},
+			},
+			err: nil,
+		},
+		{
+			block: &types.Block{
+				BlockHeader: types.BlockHeader{Height: state.BlocksOfEpoch + 1},
+				Transactions: []*types.Tx{
+					types.NewTx(types.TxData{
+						Inputs: []*types.TxInput{types.NewCoinbaseInput(nil)},
+						Outputs: []*types.TxOutput{
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 1000, []byte("controlProgram"), nil),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 5000, []byte("controlProgram"), nil),
+						},
+					}),
+				},
+			},
+			checkpoint: &state.Checkpoint{
+				Rewards: map[string]uint64{hex.EncodeToString([]byte("controlProgram")): 5000},
+			},
+			err: ErrWrongCoinbaseTransaction,
+		},
+		{
+			block: &types.Block{
+				BlockHeader: types.BlockHeader{Height: state.BlocksOfEpoch + 1},
+				Transactions: []*types.Tx{
+					types.NewTx(types.TxData{
+						Inputs: []*types.TxInput{types.NewCoinbaseInput(nil)},
+						Outputs: []*types.TxOutput{
 							types.NewOriginalTxOutput(*consensus.BTMAssetID, 5000, []byte("controlProgram1"), nil),
 							types.NewOriginalTxOutput(*consensus.BTMAssetID, 5000, []byte("controlProgram2"), nil),
 						},

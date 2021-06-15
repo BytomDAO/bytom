@@ -60,22 +60,43 @@ func checkCoinbaseAmount(b *bc.Block, checkpoint *state.Checkpoint) error {
 		if len(tx.TxHeader.ResultIds) != 1 {
 			return errors.Wrap(ErrWrongCoinbaseTransaction, "have more than 1 output")
 		}
-	} else {
-		if len(tx.TxHeader.ResultIds) != len(checkpoint.Rewards) {
-			return errors.Wrap(ErrWrongCoinbaseTransaction)
+
+		return nil
+	}
+
+	return checkoutRewardCoinbase(tx, checkpoint)
+}
+
+func checkoutRewardCoinbase(tx *bc.Tx, checkpoint *state.Checkpoint) error {
+	resultIdLen := len(tx.TxHeader.ResultIds)
+	if resultIdLen != len(checkpoint.Rewards) && resultIdLen != len(checkpoint.Rewards)+1 {
+		return errors.Wrap(ErrWrongCoinbaseTransaction)
+	}
+
+	var startIndex int
+	if resultIdLen == len(checkpoint.Rewards)+1 {
+		output, err := tx.Output(*tx.TxHeader.ResultIds[0])
+		if err != nil {
+			return err
 		}
 
-		rewards := checkpoint.Rewards
-		for i := 0; i < len(tx.TxHeader.ResultIds); i++ {
-			output := tx.TxHeader.ResultIds[i]
-			out, err := tx.Output(*output)
-			if err != nil {
-				return err
-			}
+		if output.Source.Value.Amount != 0 {
+			return errors.Wrap(ErrWrongCoinbaseTransaction, "dismatch output amount")
+		}
 
-			if rewards[hex.EncodeToString(out.ControlProgram.Code)] != out.Source.Value.Amount {
-				return errors.Wrap(ErrWrongCoinbaseTransaction)
-			}
+		startIndex = 1
+	}
+
+	rewards := checkpoint.Rewards
+	for i := startIndex; i < resultIdLen; i++ {
+		output := tx.TxHeader.ResultIds[i]
+		out, err := tx.Output(*output)
+		if err != nil {
+			return err
+		}
+
+		if rewards[hex.EncodeToString(out.ControlProgram.Code)] != out.Source.Value.Amount {
+			return errors.Wrap(ErrWrongCoinbaseTransaction)
 		}
 	}
 

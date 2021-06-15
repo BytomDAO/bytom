@@ -142,6 +142,7 @@ func (c *Casper) replayCheckpoint(hash bc.Hash) (*treeNode, error) {
 			ParentHash: parent.checkpoint.Hash,
 			Parent:     parent.checkpoint,
 			Status:     state.Growing,
+			Rewards:    make(map[string]uint64),
 			Votes:      make(map[string]uint64),
 			Guaranties: make(map[string]uint64),
 		},
@@ -150,6 +151,10 @@ func (c *Casper) replayCheckpoint(hash bc.Hash) (*treeNode, error) {
 	parent.addChild(node)
 	for _, attachBlock := range attachBlocks {
 		if err := applyTransactions(node.checkpoint, attachBlock.Transactions); err != nil {
+			return nil, err
+		}
+
+		if err := node.checkpoint.ApplyValidatorReward(attachBlock); err != nil {
 			return nil, err
 		}
 
