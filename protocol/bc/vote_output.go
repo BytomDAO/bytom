@@ -2,7 +2,7 @@ package bc
 
 import "io"
 
-func (VoteOutput) typ() string { return "voteoutput1" }
+func (VoteOutput) typ() string { return "voteOutput1" }
 func (o *VoteOutput) writeForHash(w io.Writer) {
 	mustWriteForHash(w, o.Source)
 	mustWriteForHash(w, o.ControlProgram)
