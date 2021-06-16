@@ -72,7 +72,7 @@ type Checkpoint struct {
 	Votes      map[string]uint64 // pubKey -> num of vote
 	Guaranties map[string]uint64 // pubKey -> num of guaranty
 
-	MergeCheckpoint func(bc.Hash)
+	MergeCheckpoint func(bc.Hash) `json:"-"`
 }
 
 // NewCheckpoint create a new checkpoint instance
