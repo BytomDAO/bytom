@@ -48,7 +48,7 @@ func checkCoinbaseAmount(b *bc.Block, checkpoint *state.Checkpoint) error {
 	}
 
 	if b.Height%state.BlocksOfEpoch != 1 || b.Height == 1 {
-		output, err := tx.Output(*tx.TxHeader.ResultIds[0])
+		output, err := tx.OriginalOutput(*tx.TxHeader.ResultIds[0])
 		if err != nil {
 			return err
 		}
@@ -75,7 +75,7 @@ func checkoutRewardCoinbase(tx *bc.Tx, checkpoint *state.Checkpoint) error {
 
 	var startIndex int
 	if resultIdLen == len(checkpoint.Rewards)+1 {
-		output, err := tx.Output(*tx.TxHeader.ResultIds[0])
+		output, err := tx.OriginalOutput(*tx.TxHeader.ResultIds[0])
 		if err != nil {
 			return err
 		}
@@ -90,7 +90,7 @@ func checkoutRewardCoinbase(tx *bc.Tx, checkpoint *state.Checkpoint) error {
 	rewards := checkpoint.Rewards
 	for i := startIndex; i < resultIdLen; i++ {
 		output := tx.TxHeader.ResultIds[i]
-		out, err := tx.Output(*output)
+		out, err := tx.OriginalOutput(*output)
 		if err != nil {
 			return err
 		}

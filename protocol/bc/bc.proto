@@ -75,7 +75,7 @@ message Coinbase {
   bytes            arbitrary           = 2;
 }
 
-message Output {
+message OriginalOutput {
   ValueSource source          = 1;
   Program     control_program = 2;
   uint64      ordinal         = 3;

@@ -201,7 +201,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return err
 		}
 
-	case *bc.Output:
+	case *bc.OriginalOutput:
 		vs2 := *vs
 		vs2.sourcePos = 0
 		if err = checkValidSrc(&vs2, e.Source); err != nil {
@@ -256,7 +256,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		if e.SpentOutputId == nil {
 			return errors.Wrap(ErrMissingField, "spend without spent output ID")
 		}
-		spentOutput, err := vs.tx.Output(*e.SpentOutputId)
+		spentOutput, err := vs.tx.OriginalOutput(*e.SpentOutputId)
 		if err != nil {
 			return errors.Wrap(err, "getting spend prevout")
 		}
@@ -453,7 +453,7 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 
 	var src *bc.ValueSource
 	switch ref := e.(type) {
-	case *bc.Output:
+	case *bc.OriginalOutput:
 		if vd.Position != 0 {
 			return errors.Wrapf(ErrPosition, "invalid position %d for output destination", vd.Position)
 		}

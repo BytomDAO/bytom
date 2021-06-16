@@ -27,12 +27,12 @@ func newTx(t *types.Tx) *tx {
 }
 
 func (t *tx) getSourceID(outIndex int) *bc.Hash {
-	output := t.Tx.Entries[*t.Tx.OutputID(outIndex)].(*bc.Output)
+	output := t.Tx.Entries[*t.Tx.OutputID(outIndex)].(*bc.OriginalOutput)
 	return output.Source.Ref
 }
 
 func (t *tx) getAmount(outIndex int) uint64 {
-	output := t.Tx.Entries[*t.Tx.OutputID(outIndex)].(*bc.Output)
+	output := t.Tx.Entries[*t.Tx.OutputID(outIndex)].(*bc.OriginalOutput)
 	return output.Source.Value.Amount
 }
 

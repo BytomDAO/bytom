@@ -200,7 +200,7 @@ func (a *API) getUnconfirmedTx(ctx context.Context, filter struct {
 	resOutID := txDesc.Tx.ResultIds[0]
 	resOut := txDesc.Tx.Entries[*resOutID]
 	switch out := resOut.(type) {
-	case *bc.Output:
+	case *bc.OriginalOutput:
 		tx.MuxID = *out.Source.Ref
 	case *bc.Retirement:
 		tx.MuxID = *out.Source.Ref

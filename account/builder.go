@@ -126,7 +126,7 @@ func (m *Manager) buildBtmTxChain(utxos []*UTXO, signer *signers.Signer) ([]*txb
 			return nil, nil, err
 		}
 
-		bcOut, err := tpl.Transaction.Output(*tpl.Transaction.ResultIds[0])
+		bcOut, err := tpl.Transaction.OriginalOutput(*tpl.Transaction.ResultIds[0])
 		if err != nil {
 			return nil, nil, err
 		}

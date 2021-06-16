@@ -11,7 +11,7 @@ import (
 )
 
 var defaultEntry = map[bc.Hash]bc.Entry{
-	bc.Hash{V0: 0}: &bc.Output{
+	bc.Hash{V0: 0}: &bc.OriginalOutput{
 		Source: &bc.ValueSource{
 			Value: &bc.AssetAmount{
 				AssetId: &bc.AssetID{V0: 0},
@@ -21,14 +21,14 @@ var defaultEntry = map[bc.Hash]bc.Entry{
 }
 
 var gasOnlyTxEntry = map[bc.Hash]bc.Entry{
-	bc.Hash{V1: 0}: &bc.Output{
+	bc.Hash{V1: 0}: &bc.OriginalOutput{
 		Source: &bc.ValueSource{
 			Value: &bc.AssetAmount{
 				AssetId: consensus.BTMAssetID,
 			},
 		},
 	},
-	bc.Hash{V1: 1}: &bc.Output{
+	bc.Hash{V1: 1}: &bc.OriginalOutput{
 		Source: &bc.ValueSource{
 			Value: &bc.AssetAmount{
 				AssetId: &bc.AssetID{V0: 999},
@@ -131,7 +131,7 @@ func TestApplyBlock(t *testing.T) {
 		{
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
-					Height:            101,
+					Height: 101,
 				},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
@@ -160,7 +160,7 @@ func TestApplyBlock(t *testing.T) {
 		{
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
-					Height:            0,
+					Height: 0,
 				},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
@@ -239,7 +239,7 @@ func TestApplyBlock(t *testing.T) {
 					bc.Hash{V1: 1}: storage.NewUtxoEntry(false, 0, true),
 				},
 			},
-			err:       false,
+			err: false,
 		},
 		{
 			// apply gas only tx, non-btm asset spent output will not be store
@@ -265,7 +265,7 @@ func TestApplyBlock(t *testing.T) {
 					bc.Hash{V1: 1}: storage.NewUtxoEntry(true, 0, false),
 				},
 			},
-			err:       false,
+			err: false,
 		},
 	}
 

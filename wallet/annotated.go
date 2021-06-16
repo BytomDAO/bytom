@@ -279,7 +279,7 @@ func (w *Wallet) BuildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOut
 	case orig.OutputType() == types.OriginalOutputType:
 		out.Type = "control"
 		if e, ok := tx.Entries[*outid]; ok {
-			if output, ok := e.(*bc.Output); ok {
+			if output, ok := e.(*bc.OriginalOutput); ok {
 				out.StateData = stateDataStrings(output.StateData)
 			}
 		}

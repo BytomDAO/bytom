@@ -333,7 +333,7 @@ func TestTxValidation(t *testing.T) {
 			Position: uint64(len(tx.ResultIds)),
 		}
 		prog := &bc.Program{txOutput.VMVersion, txOutput.ControlProgram}
-		output := bc.NewOutput(src, prog, nil, uint64(len(tx.ResultIds)))
+		output := bc.NewOriginalOutput(src, prog, nil, uint64(len(tx.ResultIds)))
 		outputID := bc.EntryID(output)
 		tx.Entries[outputID] = output
 
@@ -392,10 +392,10 @@ func TestTxValidation(t *testing.T) {
 			desc: "underflowing mux destination amounts",
 			f: func() {
 				mux.WitnessDestinations[0].Value.Amount = math.MaxInt64
-				out := tx.Entries[*mux.WitnessDestinations[0].Ref].(*bc.Output)
+				out := tx.Entries[*mux.WitnessDestinations[0].Ref].(*bc.OriginalOutput)
 				out.Source.Value.Amount = math.MaxInt64
 				mux.WitnessDestinations[1].Value.Amount = math.MaxInt64
-				out = tx.Entries[*mux.WitnessDestinations[1].Ref].(*bc.Output)
+				out = tx.Entries[*mux.WitnessDestinations[1].Ref].(*bc.OriginalOutput)
 				out.Source.Value.Amount = math.MaxInt64
 			},
 			err: ErrOverflow,
@@ -412,7 +412,7 @@ func TestTxValidation(t *testing.T) {
 		{
 			desc: "mismatched output source / mux dest position",
 			f: func() {
-				tx.Entries[*tx.ResultIds[0]].(*bc.Output).Source.Position = 1
+				tx.Entries[*tx.ResultIds[0]].(*bc.OriginalOutput).Source.Position = 1
 			},
 			err: ErrMismatchedPosition,
 		},
@@ -433,7 +433,7 @@ func TestTxValidation(t *testing.T) {
 				fixture2 := sample(t, fixture)
 				tx2 := types.NewTx(*fixture2.tx).Tx
 				out2ID := tx2.ResultIds[0]
-				out2 := tx2.Entries[*out2ID].(*bc.Output)
+				out2 := tx2.Entries[*out2ID].(*bc.OriginalOutput)
 				tx.Entries[*out2ID] = out2
 				mux.WitnessDestinations[0].Ref = out2ID
 			},
@@ -465,7 +465,7 @@ func TestTxValidation(t *testing.T) {
 			desc: "mismatched mux dest value / output source value",
 			f: func() {
 				outID := tx.ResultIds[0]
-				out := tx.Entries[*outID].(*bc.Output)
+				out := tx.Entries[*outID].(*bc.OriginalOutput)
 				mux.WitnessDestinations[0].Value = &bc.AssetAmount{
 					AssetId: out.Source.Value.AssetId,
 					Amount:  out.Source.Value.Amount + 1,
@@ -508,7 +508,7 @@ func TestTxValidation(t *testing.T) {
 			desc: "mismatched spent source/witness value",
 			f: func() {
 				spend := txSpend(t, tx, 1)
-				spentOutput := tx.Entries[*spend.SpentOutputId].(*bc.Output)
+				spentOutput := tx.Entries[*spend.SpentOutputId].(*bc.OriginalOutput)
 				spentOutput.Source.Value = &bc.AssetAmount{
 					AssetId: spend.WitnessDestination.Value.AssetId,
 					Amount:  spend.WitnessDestination.Value.Amount + 1,
@@ -606,7 +606,7 @@ func TestTxValidation(t *testing.T) {
 			desc: "normal retirement output",
 			f: func() {
 				outputID := tx.ResultIds[0]
-				output := tx.Entries[*outputID].(*bc.Output)
+				output := tx.Entries[*outputID].(*bc.OriginalOutput)
 				retirement := bc.NewRetirement(output.Source, output.Ordinal)
 				retirementID := bc.EntryID(retirement)
 				tx.Entries[retirementID] = retirement
@@ -620,8 +620,8 @@ func TestTxValidation(t *testing.T) {
 			desc: "ordinal doesn't matter for prevouts",
 			f: func() {
 				spend := txSpend(t, tx, 1)
-				prevout := tx.Entries[*spend.SpentOutputId].(*bc.Output)
-				newPrevout := bc.NewOutput(prevout.Source, prevout.ControlProgram, prevout.StateData, 10)
+				prevout := tx.Entries[*spend.SpentOutputId].(*bc.OriginalOutput)
+				newPrevout := bc.NewOriginalOutput(prevout.Source, prevout.ControlProgram, prevout.StateData, 10)
 				hash := bc.EntryID(newPrevout)
 				spend.SpentOutputId = &hash
 			},
@@ -1199,7 +1199,7 @@ func txSpend(t *testing.T, tx *bc.Tx, index int) *bc.Spend {
 func getMuxID(tx *bc.Tx) *bc.Hash {
 	out := tx.Entries[*tx.ResultIds[0]]
 	switch result := out.(type) {
-	case *bc.Output:
+	case *bc.OriginalOutput:
 		return result.Source.Ref
 	case *bc.Retirement:
 		return result.Source.Ref

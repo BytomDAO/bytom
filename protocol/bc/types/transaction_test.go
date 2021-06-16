@@ -106,7 +106,7 @@ func TestTransaction(t *testing.T) {
 				"737461746544617461", // output 0: state data
 				"00",                 // output 0: witness length
 			}, ""),
-			hash: testutil.MustDecodeHash("b23862d7969ce9581ee7f94f648fd8a51ca103984afb68a134db9ab5c3af177f"),
+			hash: testutil.MustDecodeHash("509632e139a418be372cd4b73c8de7b8aa5215c47848bf76ed2488d0a5c0c55e"),
 		},
 		{
 			tx: NewTx(TxData{
@@ -155,7 +155,7 @@ func TestTransaction(t *testing.T) {
 				"737461746544617461", // output 0: state data
 				"00",                 // output 1: witness length
 			}, ""),
-			hash: testutil.MustDecodeHash("27d7fae74355ee9de2014bc51c30de27afa922ac4171eca1f38a05965c899c79"),
+			hash: testutil.MustDecodeHash("4243fc12f6e8704c5e4318a2addc648d29fd1c03a8fe1246badafa5efd8b5339"),
 		},
 	}
 	for i, test := range cases {

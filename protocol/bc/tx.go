@@ -32,13 +32,13 @@ var (
 	ErrMissingEntry = errors.New("missing entry")
 )
 
-// Output try to get the output entry by given hash
-func (tx *Tx) Output(id Hash) (*Output, error) {
+// OriginalOutput try to get the output entry by given hash
+func (tx *Tx) OriginalOutput(id Hash) (*OriginalOutput, error) {
 	e, ok := tx.Entries[id]
 	if !ok || e == nil {
 		return nil, errors.Wrapf(ErrMissingEntry, "id %x", id.Bytes())
 	}
-	o, ok := e.(*Output)
+	o, ok := e.(*OriginalOutput)
 	if !ok {
 		return nil, errors.Wrapf(ErrEntryType, "entry %x has unexpected type %T", id.Bytes(), e)
 	}
