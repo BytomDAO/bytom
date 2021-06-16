@@ -161,8 +161,17 @@ func (b *blockBuilder) createCoinbaseTx() (tx *types.Tx, err error) {
 		return nil, err
 	}
 
+	if err = builder.AddOutput(types.NewOriginalTxOutput(*consensus.BTMAssetID, 0, script, [][]byte{})); err != nil {
+		return nil, err
+	}
+
 	if b.block.Height%state.BlocksOfEpoch == 1 && b.block.Height != 1 {
 		for controlProgram, amount := range checkpoint.Rewards {
+			if controlProgram == hex.EncodeToString(script) {
+				builder.Outputs()[0].Amount = amount
+				continue
+			}
+
 			controlProgramBytes, err := hex.DecodeString(controlProgram)
 			if err != nil {
 				return nil, err
@@ -171,10 +180,6 @@ func (b *blockBuilder) createCoinbaseTx() (tx *types.Tx, err error) {
 			if err := builder.AddOutput(types.NewOriginalTxOutput(*consensus.BTMAssetID, amount, controlProgramBytes, [][]byte{})); err != nil {
 				return nil, err
 			}
-		}
-	} else {
-		if err = builder.AddOutput(types.NewOriginalTxOutput(*consensus.BTMAssetID, 0, script, [][]byte{})); err != nil {
-			return nil, err
 		}
 	}
 

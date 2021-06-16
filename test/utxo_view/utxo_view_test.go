@@ -17,13 +17,11 @@ import (
 
 func TestAttachOrDetachBlocks(t *testing.T) {
 	cases := []struct {
-		desc           string
-		before         map[bc.Hash]*storage.UtxoEntry
-		want           map[bc.Hash]*storage.UtxoEntry
-		attachBlock    []*bc.Block
-		detachBlock    []*bc.Block
-		attachTxStatus []*bc.TransactionStatus
-		detachTxStatus []*bc.TransactionStatus
+		desc        string
+		before      map[bc.Hash]*storage.UtxoEntry
+		want        map[bc.Hash]*storage.UtxoEntry
+		attachBlock []*bc.Block
+		detachBlock []*bc.Block
 	}{
 		{
 			desc:   "coinbase tx",
@@ -31,11 +29,6 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 			want:   map[bc.Hash]*storage.UtxoEntry{*newTx(mockBlocks[0].Transactions[0]).OutputHash(0): storage.NewUtxoEntry(true, mockBlocks[0].Block.Height, false)},
 			attachBlock: []*bc.Block{
 				types.MapBlock(&mockBlocks[0].Block),
-			},
-			attachTxStatus: []*bc.TransactionStatus{
-				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
-					&bc.TxVerifyResult{StatusFail: false},
-				}},
 			},
 		},
 		{
@@ -52,14 +45,6 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 			},
 			attachBlock: []*bc.Block{
 				types.MapBlock(&mockBlocks[1].Block),
-			},
-			attachTxStatus: []*bc.TransactionStatus{
-				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-				}},
 			},
 		},
 		{
@@ -83,22 +68,6 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 			},
 			detachBlock: []*bc.Block{
 				types.MapBlock(&mockBlocks[2].Block),
-			},
-			attachTxStatus: []*bc.TransactionStatus{
-				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-				}},
-				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-				}},
-			},
-			detachTxStatus: []*bc.TransactionStatus{
-				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-				}},
 			},
 		},
 		{
@@ -178,49 +147,6 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 				types.MapBlock(&mockBlocks[6].Block),
 				types.MapBlock(&mockBlocks[5].Block),
 			},
-			attachTxStatus: []*bc.TransactionStatus{
-				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-				}},
-				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-				}},
-			},
-			detachTxStatus: []*bc.TransactionStatus{
-
-				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-				}},
-				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-				}},
-				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-				}},
-				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-				}},
-				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-				}},
-			},
 		},
 		{
 			desc: "detach block 2, attach block 1. Chain trading",
@@ -247,37 +173,6 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 			detachBlock: []*bc.Block{
 				types.MapBlock(&mockBlocks[13].Block),
 				types.MapBlock(&mockBlocks[12].Block),
-			},
-			attachTxStatus: []*bc.TransactionStatus{
-				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-				}},
-				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-				}},
-				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-				}},
-			},
-			detachTxStatus: []*bc.TransactionStatus{
-				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-				}},
-				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-					&bc.TxVerifyResult{StatusFail: false},
-				}},
 			},
 		},
 	}

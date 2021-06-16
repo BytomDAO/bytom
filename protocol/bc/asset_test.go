@@ -1,8 +1,8 @@
 package bc
 
 import (
-	"testing"
 	"encoding/hex"
+	"testing"
 
 	"golang.org/x/crypto/sha3"
 )
@@ -29,19 +29,19 @@ func TestComputeAssetIDReally(t *testing.T) {
 		wantAssetID   string
 	}{
 		{
-			program: "ae2039294f652632eee970765550c245f0b0314256b4b93aadc86279fdb45db3b70e5151ad",
+			program:       "ae2039294f652632eee970765550c245f0b0314256b4b93aadc86279fdb45db3b70e5151ad",
 			rawDefinition: "7b0a202022646563696d616c73223a20382c0a2020226465736372697074696f6e223a207b7d2c0a2020226e616d65223a2022222c0a20202273796d626f6c223a2022220a7d",
-			wantAssetID: "07c7ced3f37f48ea39da6971c89f90e9cff3202d54b0a911f12ace8501f3834e",
+			wantAssetID:   "07c7ced3f37f48ea39da6971c89f90e9cff3202d54b0a911f12ace8501f3834e",
 		},
 		{
-			program: "ae20620b1755451738b04f42822f4b37186563f824c9c30d485987298918f96395fe5151ad",
+			program:       "ae20620b1755451738b04f42822f4b37186563f824c9c30d485987298918f96395fe5151ad",
 			rawDefinition: "7b0a202022646563696d616c73223a20382c0a2020226465736372697074696f6e223a207b7d2c0a2020226e616d65223a2022222c0a20202273796d6f626f6c223a2022220a7d",
-			wantAssetID: "0dafd0f0e42f06f3bf9a8cf5787519d3860650f27a2b3393d34e1fe06e89b469",
+			wantAssetID:   "0dafd0f0e42f06f3bf9a8cf5787519d3860650f27a2b3393d34e1fe06e89b469",
 		},
 		{
-			program: "ae20db11f9dfa39c9e66421c530fe027218edd3d5b1cd98f24c826f4d9c0cd131a475151ad",
+			program:       "ae20db11f9dfa39c9e66421c530fe027218edd3d5b1cd98f24c826f4d9c0cd131a475151ad",
 			rawDefinition: "7b0a202022646563696d616c73223a20382c0a2020226465736372697074696f6e223a207b7d2c0a2020226e616d65223a2022222c0a20202273796d626f6c223a2022220a7d",
-			wantAssetID: "a5bc30d8d0ad051e6e352ebc21d79ba798cd8c436e89f4149969c2c562371791",
+			wantAssetID:   "a5bc30d8d0ad051e6e352ebc21d79ba798cd8c436e89f4149969c2c562371791",
 		},
 	}
 
@@ -61,17 +61,5 @@ func TestComputeAssetIDReally(t *testing.T) {
 		if assetID.String() != c.wantAssetID {
 			t.Errorf("got asset id:%s, want asset id:%s", assetID.String(), c.wantAssetID)
 		}
-	}
-}
-
-var assetIDSink AssetID
-
-func BenchmarkComputeAssetID(b *testing.B) {
-	var (
-		issuanceScript = []byte{5}
-	)
-
-	for i := 0; i < b.N; i++ {
-		assetIDSink = ComputeAssetID(issuanceScript, 1, &EmptyStringHash)
 	}
 }

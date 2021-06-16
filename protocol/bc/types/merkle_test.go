@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"strings"
 
-	"math/rand"
 	"testing"
 	"time"
 
@@ -680,19 +679,4 @@ func mockTransactions(txCount int) ([]*Tx, []*bc.Tx) {
 		bcTxs = append(bcTxs, tx.Tx)
 	}
 	return txs, bcTxs
-}
-
-func mockStatuses(statusCount int) []*bc.TxVerifyResult {
-	var statuses []*bc.TxVerifyResult
-	for i := 0; i < statusCount; i++ {
-		status := &bc.TxVerifyResult{}
-		fail := rand.Intn(2)
-		if fail == 0 {
-			status.StatusFail = true
-		} else {
-			status.StatusFail = false
-		}
-		statuses = append(statuses, status)
-	}
-	return statuses
 }

@@ -90,8 +90,8 @@ func TestMapSpendTx(t *testing.T) {
 			if !bytes.Equal(newOut.ControlProgram.Code, oldOut.ControlProgram) {
 				t.Errorf("header.ResultIds[%d].(*output).ControlProgram.Code is %x, expected %x", i, newOut.ControlProgram.Code, oldOut.ControlProgram)
 			}
-			if !reflect.DeepEqual(newOut.StateData.StateData, oldOut.StateData) {
-				t.Errorf("header.ResultIds[%d].(*output).StateData.StateData is %x, expected %x", i, newOut.StateData.StateData, oldOut.StateData)
+			if !reflect.DeepEqual(newOut.StateData, oldOut.StateData) {
+				t.Errorf("header.ResultIds[%d].(*output).StateData.StateData is %x, expected %x", i, newOut.StateData, oldOut.StateData)
 			}
 
 		}

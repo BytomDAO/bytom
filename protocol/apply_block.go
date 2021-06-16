@@ -127,6 +127,10 @@ func (c *Casper) replayCheckpoint(hash bc.Hash) (*treeNode, error) {
 			return nil, err
 		}
 
+		if err := node.checkpoint.ApplyValidatorReward(attachBlock); err != nil {
+			return nil, err
+		}
+
 		if err := node.checkpoint.Increase(attachBlock); err != nil {
 			return nil, err
 		}
