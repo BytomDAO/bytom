@@ -346,7 +346,7 @@ func TestMerkleRootRealTx(t *testing.T) {
 			"00",
 		}, ""),
 	}
-	wantMerkleRoot := "25b984047650029965ba604e4bbd534bca448ddedced5df40e25cd245d4e70f1"
+	wantMerkleRoot := "a23ae3e435a7bdfb52cb92b58be6e658982fd883283caf9547f9df50d65881df"
 
 	var txs []*bc.Tx
 	for _, rawTx := range rawTxs {

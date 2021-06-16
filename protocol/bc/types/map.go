@@ -102,7 +102,7 @@ func (mh *mapHelper) mapSpendInput(i int, input *SpendInput) {
 		Position: input.SourcePosition,
 	}
 
-	prevout := bc.NewOutput(src, prog, input.StateData, 0) // ordinal doesn't matter for prevouts, only for result outputs
+	prevout := bc.NewOriginalOutput(src, prog, input.StateData, 0) // ordinal doesn't matter for prevouts, only for result outputs
 	prevoutID := mh.addEntry(prevout)
 
 	// create entry for spend
@@ -162,7 +162,7 @@ func (mh *mapHelper) initMux() {
 
 	// connect the inputs to the mux
 	for _, spend := range mh.spends {
-		spentOutput := mh.entryMap[*spend.SpentOutputId].(*bc.Output)
+		spentOutput := mh.entryMap[*spend.SpentOutputId].(*bc.OriginalOutput)
 		spend.SetDestination(&muxID, spentOutput.Source.Value, spend.Ordinal)
 	}
 
@@ -193,7 +193,7 @@ func (mh *mapHelper) mapOutputs() {
 			resultID = mh.addEntry(r)
 
 		case out.OutputType() == OriginalOutputType:
-			o := bc.NewOutput(src, prog, out.StateData, uint64(i))
+			o := bc.NewOriginalOutput(src, prog, out.StateData, uint64(i))
 			resultID = mh.addEntry(o)
 
 		case out.OutputType() == VoteOutputType:

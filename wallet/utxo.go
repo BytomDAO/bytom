@@ -69,7 +69,7 @@ func (w *Wallet) detachUtxos(batch dbm.Batch, b *types.Block) {
 	for txIndex := len(b.Transactions) - 1; txIndex >= 0; txIndex-- {
 		tx := b.Transactions[txIndex]
 		for j := range tx.Outputs {
-			resOut, err := tx.Output(*tx.ResultIds[j])
+			resOut, err := tx.OriginalOutput(*tx.ResultIds[j])
 			if err != nil {
 				continue
 			}
@@ -154,7 +154,7 @@ func txInToUtxos(tx *types.Tx) []*account.UTXO {
 
 		switch inp := e.(type) {
 		case *bc.Spend:
-			resOut, err := tx.Output(*inp.SpentOutputId)
+			resOut, err := tx.OriginalOutput(*inp.SpentOutputId)
 			if err != nil {
 				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("txInToUtxos fail on get resOut")
 				continue
@@ -206,7 +206,7 @@ func txOutToUtxos(tx *types.Tx, blockHeight uint64) []*account.UTXO {
 
 		var utxo *account.UTXO
 		switch bcOut := entryOutput.(type) {
-		case *bc.Output:
+		case *bc.OriginalOutput:
 			if out.AssetAmount.Amount == uint64(0) {
 				continue
 			}

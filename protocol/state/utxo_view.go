@@ -21,7 +21,7 @@ func NewUtxoViewpoint() *UtxoViewpoint {
 
 func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx) error {
 	for _, prevout := range tx.SpentOutputIDs {
-		_, err := tx.Output(prevout)
+		_, err := tx.OriginalOutput(prevout)
 		if err != nil {
 			return err
 		}
@@ -40,7 +40,7 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx) error {
 	}
 
 	for _, id := range tx.TxHeader.ResultIds {
-		_, err := tx.Output(*id)
+		_, err := tx.OriginalOutput(*id)
 		if err != nil {
 			// error due to it's a retirement, utxo doesn't care this output type so skip it
 			continue
@@ -71,7 +71,7 @@ func (view *UtxoViewpoint) CanSpend(hash *bc.Hash) bool {
 
 func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx) error {
 	for _, prevout := range tx.SpentOutputIDs {
-		_, err := tx.Output(prevout)
+		_, err := tx.OriginalOutput(prevout)
 		if err != nil {
 			return err
 		}
@@ -88,7 +88,7 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx) error {
 	}
 
 	for _, id := range tx.TxHeader.ResultIds {
-		_, err := tx.Output(*id)
+		_, err := tx.OriginalOutput(*id)
 		if err != nil {
 			// error due to it's a retirement, utxo doesn't care this output type so skip it
 			continue

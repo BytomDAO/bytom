@@ -274,7 +274,7 @@ func txFee(tx *types.Tx) uint64 {
 // CreateSpendInput create SpendInput which spent the output from tx
 func CreateSpendInput(tx *types.Tx, outputIndex uint64) (*types.SpendInput, error) {
 	outputID := tx.ResultIds[outputIndex]
-	output, ok := tx.Entries[*outputID].(*bc.Output)
+	output, ok := tx.Entries[*outputID].(*bc.OriginalOutput)
 	if !ok {
 		return nil, fmt.Errorf("retirement can't be spent")
 	}

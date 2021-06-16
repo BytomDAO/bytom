@@ -85,7 +85,7 @@ func (a *API) getBlock(ins BlockReq) Response {
 		}
 
 		resOutID := orig.ResultIds[0]
-		resOut, ok := orig.Entries[*resOutID].(*bc.Output)
+		resOut, ok := orig.Entries[*resOutID].(*bc.OriginalOutput)
 		if ok {
 			tx.MuxID = *resOut.Source.Ref
 		} else {
