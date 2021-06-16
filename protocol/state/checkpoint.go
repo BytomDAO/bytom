@@ -126,7 +126,12 @@ func (c *Checkpoint) ContainsVerification(validatorOrder int, sourceHash *bc.Has
 // Increase will increase the height of checkpoint
 func (c *Checkpoint) Increase(block *types.Block) error {
 	empty := bc.Hash{}
-	if (c.Hash == empty && block.PreviousBlockHash != c.ParentHash) || (c.Hash != empty && block.PreviousBlockHash != c.Hash) {
+	prevHash := c.Hash
+	if c.Hash == empty {
+		prevHash = c.ParentHash
+	}
+
+	if block.PreviousBlockHash != prevHash {
 		return errIncreaseCheckpoint
 	}
 
