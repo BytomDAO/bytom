@@ -5,7 +5,9 @@ import (
 
 	"github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/bc/types"
 )
 
 const (
@@ -30,6 +32,8 @@ const (
 	// Finalized if checkpoint c is justified and there is a sup link c→c′ where c′is a direct child of c
 	Finalized
 )
+
+var errIncreaseCheckpoint = errors.New("invalid block for increase checkpoint")
 
 // SupLink is an ordered pair of checkpoints (a, b), also written a → b,
 // such that at least 2/3 of validators have published votes with source a and target b.
@@ -67,6 +71,28 @@ type Checkpoint struct {
 	Rewards    map[string]uint64 // controlProgram -> num of reward
 	Votes      map[string]uint64 // pubKey -> num of vote
 	Guaranties map[string]uint64 // pubKey -> num of guaranty
+
+	MergeCheckpoint func(bc.Hash) `json:"-"`
+}
+
+// NewCheckpoint create a new checkpoint instance
+func NewCheckpoint(parent *Checkpoint) *Checkpoint {
+	checkpoint := &Checkpoint{
+		ParentHash: parent.Hash,
+		Parent:     parent,
+		Status:     Growing,
+		Rewards:    make(map[string]uint64),
+		Votes:      make(map[string]uint64),
+		Guaranties: make(map[string]uint64),
+	}
+
+	for pubKey, num := range parent.Votes {
+		checkpoint.Votes[pubKey] = num
+	}
+	for pubKey, num := range parent.Guaranties {
+		checkpoint.Guaranties[pubKey] = num
+	}
+	return checkpoint
 }
 
 // AddVerification add a valid verification to checkpoint's supLink
@@ -95,6 +121,25 @@ func (c *Checkpoint) ContainsVerification(validatorOrder int, sourceHash *bc.Has
 		}
 	}
 	return false
+}
+
+// Increase will increase the height of checkpoint
+func (c *Checkpoint) Increase(block *types.Block) error {
+	empty := bc.Hash{}
+	prevHash := c.Hash
+	if c.Hash == empty {
+		prevHash = c.ParentHash
+	}
+
+	if block.PreviousBlockHash != prevHash {
+		return errIncreaseCheckpoint
+	}
+
+	c.Hash = block.Hash()
+	c.Height = block.Height
+	c.Timestamp = block.Timestamp
+	c.MergeCheckpoint(c.Hash)
+	return nil
 }
 
 // Validator represent the participants of the PoS network

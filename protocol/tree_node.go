@@ -26,7 +26,7 @@ func makeTree(root *state.Checkpoint, successors []*state.Checkpoint) *treeNode 
 		for _, successor := range parentToSuccessors[node.checkpoint.Hash] {
 			child := &treeNode{checkpoint: successor}
 			successor.Parent = node.checkpoint
-			node.children = append(node.children, child)
+			node.addChild(child)
 			nodes = append(nodes, child)
 		}
 		nodes = nodes[1:]
@@ -35,13 +35,21 @@ func makeTree(root *state.Checkpoint, successors []*state.Checkpoint) *treeNode 
 }
 
 func (t *treeNode) addChild(child *treeNode) {
-	for i, n := range t.children {
-		if n.checkpoint.Hash == child.checkpoint.Hash {
-			t.children[i] = child
-			return
+	child.checkpoint.MergeCheckpoint = t.mergeCheckpoint
+	t.children = append(t.children, child)
+}
+
+func (t *treeNode) mergeCheckpoint(hash bc.Hash) {
+	count := 0
+	for i, child := range t.children {
+		if child.checkpoint.Hash == hash {
+			count++
+			if count == 2 {
+				t.children = append(t.children[0:i], t.children[i+1:]...)
+				break
+			}
 		}
 	}
-	t.children = append(t.children, child)
 }
 
 func (t *treeNode) nodeByHash(blockHash bc.Hash) (*treeNode, error) {

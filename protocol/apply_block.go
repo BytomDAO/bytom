@@ -71,21 +71,7 @@ func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, 
 	checkpoint := node.checkpoint
 	if mod := block.Height % state.BlocksOfEpoch; mod == 1 {
 		parent := checkpoint
-		checkpoint = &state.Checkpoint{
-			ParentHash: parent.Hash,
-			Parent:     parent,
-			Status:     state.Growing,
-			Rewards:    make(map[string]uint64),
-			Votes:      make(map[string]uint64),
-			Guaranties: make(map[string]uint64),
-		}
-
-		for pubKey, num := range parent.Votes {
-			checkpoint.Votes[pubKey] = num
-		}
-		for pubKey, num := range parent.Guaranties {
-			checkpoint.Guaranties[pubKey] = num
-		}
+		checkpoint = state.NewCheckpoint(parent)
 		node.addChild(&treeNode{checkpoint: checkpoint})
 	} else if mod == 0 {
 		checkpoint.Status = state.Unjustified
@@ -98,10 +84,7 @@ func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, 
 		return nil, err
 	}
 
-	checkpoint.Height = block.Height
-	checkpoint.Hash = block.Hash()
-	checkpoint.Timestamp = block.Timestamp
-	return checkpoint, nil
+	return checkpoint, checkpoint.Increase(block)
 }
 
 func (c *Casper) checkpointNodeByHash(blockHash bc.Hash) (*treeNode, error) {
@@ -137,17 +120,7 @@ func (c *Casper) replayCheckpoint(hash bc.Hash) (*treeNode, error) {
 		return nil, err
 	}
 
-	node := &treeNode{
-		checkpoint: &state.Checkpoint{
-			ParentHash: parent.checkpoint.Hash,
-			Parent:     parent.checkpoint,
-			Status:     state.Growing,
-			Rewards:    make(map[string]uint64),
-			Votes:      make(map[string]uint64),
-			Guaranties: make(map[string]uint64),
-		},
-	}
-
+	node := &treeNode{checkpoint: state.NewCheckpoint(parent.checkpoint)}
 	parent.addChild(node)
 	for _, attachBlock := range attachBlocks {
 		if err := applyTransactions(node.checkpoint, attachBlock.Transactions); err != nil {
@@ -158,9 +131,9 @@ func (c *Casper) replayCheckpoint(hash bc.Hash) (*treeNode, error) {
 			return nil, err
 		}
 
-		node.checkpoint.Hash = attachBlock.Hash()
-		node.checkpoint.Height = attachBlock.Height
-		node.checkpoint.Timestamp = attachBlock.Timestamp
+		if err := node.checkpoint.Increase(attachBlock); err != nil {
+			return nil, err
+		}
 	}
 	return node, nil
 }
