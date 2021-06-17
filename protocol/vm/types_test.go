@@ -48,42 +48,6 @@ func TestAsBool(t *testing.T) {
 	}
 }
 
-func TestInt64(t *testing.T) {
-	cases := []struct {
-		num  int64
-		data []byte
-	}{
-		{0, []byte{}},
-		{1, []byte{0x01}},
-		{255, []byte{0xff}},
-		{256, []byte{0x00, 0x01}},
-		{1 << 16, []byte{0x00, 0x00, 0x01}},
-		{-1, []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
-		{-2, []byte{0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
-	}
-
-	for _, c := range cases {
-		gotData := Int64Bytes(c.num)
-
-		if !bytes.Equal(gotData, c.data) {
-			t.Errorf("Int64Bytes(%d) = %x want %x", c.num, gotData, c.data)
-		}
-
-		gotNum, _ := AsInt64(c.data)
-
-		if gotNum != c.num {
-			t.Errorf("AsInt64(%x) = %d want %d", c.data, gotNum, c.num)
-		}
-	}
-
-	data := []byte{1, 1, 1, 1, 1, 1, 1, 1, 1}
-	_, err := AsInt64(data)
-	want := ErrBadValue
-	if err != want {
-		t.Errorf("AsInt64(%x) = %v want %v", data, err, want)
-	}
-}
-
 func TestBigIntBytes(t *testing.T) {
 	tests := []struct {
 		input []byte

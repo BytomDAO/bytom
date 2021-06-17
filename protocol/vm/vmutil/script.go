@@ -111,7 +111,7 @@ func P2SHProgram(scriptHash []byte) ([]byte, error) {
 	builder.AddOp(vm.OP_SHA3)
 	builder.AddData(scriptHash)
 	builder.AddOp(vm.OP_EQUALVERIFY)
-	builder.AddInt64(-1)
+	builder.AddInt64(0)
 	builder.AddOp(vm.OP_SWAP)
 	builder.AddInt64(0)
 	builder.AddOp(vm.OP_CHECKPREDICATE)

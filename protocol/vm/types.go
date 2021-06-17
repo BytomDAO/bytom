@@ -41,24 +41,6 @@ func Int64Bytes(n int64) []byte {
 	return res
 }
 
-// AsInt64 convert bytes to int64
-func AsInt64(b []byte) (int64, error) {
-	if len(b) == 0 {
-		return 0, nil
-	}
-	if len(b) > 8 {
-		return 0, ErrBadValue
-	}
-
-	var padded [8]byte
-	copy(padded[:], b)
-
-	res := binary.LittleEndian.Uint64(padded[:])
-	// converting uint64 to int64 is a safe operation that
-	// preserves all data
-	return int64(res), nil
-}
-
 // BigIntBytes conv big int to little endian bytes, uint256 is version 1.1.1
 func BigIntBytes(n *uint256.Int) []byte {
 	return reverse(n.Bytes())
