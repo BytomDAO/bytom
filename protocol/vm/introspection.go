@@ -89,15 +89,15 @@ func opProgram(vm *virtualMachine) error {
 }
 
 func opIndex(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
 
 	if vm.context.DestPos == nil {
 		return ErrContext
 	}
-	return vm.pushInt64(int64(*vm.context.DestPos), true)
+
+	return vm.pushBigInt(uint256.NewInt().SetUint64(*vm.context.DestPos), true)
 }
 
 func opEntryID(vm *virtualMachine) error {

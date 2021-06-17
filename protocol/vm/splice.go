@@ -1,6 +1,10 @@
 package vm
 
-import "github.com/bytom/bytom/math/checked"
+import (
+	"github.com/holiman/uint256"
+
+	"github.com/bytom/bytom/math/checked"
+)
 
 func opCat(vm *virtualMachine) error {
 	err := vm.applyCost(4)
@@ -131,19 +135,16 @@ func opRight(vm *virtualMachine) error {
 }
 
 func opSize(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
+
 	str, err := vm.top()
 	if err != nil {
 		return err
 	}
-	err = vm.pushInt64(int64(len(str)), true)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	return vm.pushBigInt(uint256.NewInt().SetUint64(uint64(len(str))), true)
 }
 
 func opCatpushdata(vm *virtualMachine) error {

@@ -168,10 +168,6 @@ func (vm *virtualMachine) pushBool(b bool, deferred bool) error {
 	return vm.push(BoolBytes(b), deferred)
 }
 
-func (vm *virtualMachine) pushInt64(n int64, deferred bool) error {
-	return vm.push(Int64Bytes(n), deferred)
-}
-
 func (vm *virtualMachine) pushBigInt(n *uint256.Int, deferred bool) error {
 	return vm.push(BigIntBytes(n), deferred)
 }
