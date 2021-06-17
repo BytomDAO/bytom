@@ -132,7 +132,7 @@ func (c *Casper) setFinalized(checkpoint *state.Checkpoint) {
 
 func (c *Casper) tryRollback(oldBestHash bc.Hash) error {
 	if newBestHash := c.bestChain(); oldBestHash != newBestHash {
-		msg := &rollbackMsg{bestHash: newBestHash}
+		msg := &rollbackMsg{bestHash: newBestHash, reply: make(chan error)}
 		c.rollbackCh <- msg
 		return <-msg.reply
 	}
