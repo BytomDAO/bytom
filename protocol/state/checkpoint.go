@@ -174,7 +174,12 @@ func (c *Checkpoint) Validators() map[string]*Validator {
 	}
 
 	sort.Slice(validators, func(i, j int) bool {
-		return validators[i].Guaranty+validators[i].Vote > validators[j].Guaranty+validators[j].Vote
+		numI := validators[i].Guaranty+validators[i].Vote
+		numJ := validators[j].Guaranty+validators[j].Vote
+		if numI != numJ {
+			return numI > numJ
+		}
+		return validators[i].PubKey > validators[j].PubKey
 	})
 
 	result := make(map[string]*Validator)
