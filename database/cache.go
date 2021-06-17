@@ -138,6 +138,7 @@ func (c *cache) lookupMainChainHash(height uint64) (*bc.Hash, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return hash.(*bc.Hash), nil
 }
 
