@@ -59,17 +59,15 @@ func Verify(context *Context, gasLimit int64) (gasLeft int64, err error) {
 		runLimit:          gasLimit,
 		context:           context,
 	}
-	stateData := context.StateData
-	for i, state := range stateData {
+
+	for i, state := range context.StateData {
 		if err = vm.pushAlt(state, false); err != nil {
 			return vm.runLimit, errors.Wrapf(err, "pushing initial statedata %d", i)
 		}
 	}
 
-	args := context.Arguments
-	for i, arg := range args {
-		err = vm.push(arg, false)
-		if err != nil {
+	for i, arg := range context.Arguments {
+		if err = vm.push(arg, false); err != nil {
 			return vm.runLimit, errors.Wrapf(err, "pushing initial argument %d", i)
 		}
 	}
@@ -79,7 +77,7 @@ func Verify(context *Context, gasLimit int64) (gasLeft int64, err error) {
 		err = ErrFalseVMResult
 	}
 
-	return vm.runLimit, wrapErr(err, vm, args)
+	return vm.runLimit, wrapErr(err, vm, context.Arguments)
 }
 
 // falseResult returns true iff the stack is empty or the top
@@ -90,8 +88,7 @@ func (vm *virtualMachine) falseResult() bool {
 
 func (vm *virtualMachine) run() error {
 	for vm.pc = 0; vm.pc < uint32(len(vm.program)); { // handle vm.pc updates in step
-		err := vm.step()
-		if err != nil {
+		if err := vm.step(); err != nil {
 			return err
 		}
 	}
@@ -125,16 +122,15 @@ func (vm *virtualMachine) step() error {
 
 	vm.deferredCost = 0
 	vm.data = inst.Data
-	err = ops[inst.Op].fn(vm)
-	if err != nil {
+	if err = ops[inst.Op].fn(vm); err != nil {
 		return err
 	}
-	err = vm.applyCost(vm.deferredCost)
-	if err != nil {
-		return err
-	}
-	vm.pc = vm.nextPC
 
+	if err = vm.applyCost(vm.deferredCost); err != nil {
+		return err
+	}
+
+	vm.pc = vm.nextPC
 	if TraceOut != nil {
 		for i := len(vm.dataStack) - 1; i >= 0; i-- {
 			fmt.Fprintf(TraceOut, "  stack %d: %x\n", len(vm.dataStack)-1-i, vm.dataStack[i])
@@ -148,12 +144,10 @@ func (vm *virtualMachine) push(data []byte, deferred bool) error {
 	cost := 8 + int64(len(data))
 	if deferred {
 		vm.deferCost(cost)
-	} else {
-		err := vm.applyCost(cost)
-		if err != nil {
-			return err
-		}
+	} else if err := vm.applyCost(cost); err != nil {
+		return err
 	}
+
 	vm.dataStack = append(vm.dataStack, data)
 	return nil
 }
@@ -162,14 +156,11 @@ func (vm *virtualMachine) pushAlt(data []byte, deferred bool) error {
 	cost := 8 + int64(len(data))
 	if deferred {
 		vm.deferCost(cost)
-	} else {
-		err := vm.applyCost(cost)
-		if err != nil {
-			return err
-		}
+	} else if err := vm.applyCost(cost); err != nil {
+		return err
 	}
-	vm.altStack = append(vm.altStack, data)
 
+	vm.altStack = append(vm.altStack, data)
 	return nil
 }
 
@@ -207,8 +198,8 @@ func (vm *virtualMachine) popInt64(deferred bool) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	n, err := AsInt64(bytes)
-	return n, err
+
+	return AsInt64(bytes)
 }
 
 func (vm *virtualMachine) popBigInt(deferred bool) (*uint256.Int, error) {
@@ -224,6 +215,7 @@ func (vm *virtualMachine) top() ([]byte, error) {
 	if len(vm.dataStack) == 0 {
 		return nil, ErrDataStackUnderflow
 	}
+
 	return vm.dataStack[len(vm.dataStack)-1], nil
 }
 
@@ -233,6 +225,7 @@ func (vm *virtualMachine) applyCost(n int64) error {
 		vm.runLimit = 0
 		return ErrRunLimitExceeded
 	}
+
 	vm.runLimit -= n
 	return nil
 }

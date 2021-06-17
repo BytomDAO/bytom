@@ -20,14 +20,6 @@ func opPushdata(vm *virtualMachine) error {
 	return vm.push(d, false)
 }
 
-func op1Negate(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
-		return err
-	}
-	return vm.pushInt64(-1, false)
-}
-
 func opNop(vm *virtualMachine) error {
 	return vm.applyCost(1)
 }
