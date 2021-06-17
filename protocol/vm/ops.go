@@ -226,8 +226,6 @@ var (
 		OP_PUSHDATA2: {OP_PUSHDATA2, "PUSHDATA2", opPushdata},
 		OP_PUSHDATA4: {OP_PUSHDATA4, "PUSHDATA4", opPushdata},
 
-		OP_1NEGATE: {OP_1NEGATE, "1NEGATE", op1Negate},
-
 		OP_NOP: {OP_NOP, "NOP", opNop},
 
 		// control flow

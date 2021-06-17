@@ -31,23 +31,6 @@ func TestPushdataOps(t *testing.T) {
 			dataStack: [][]byte{},
 		},
 		wantErr: ErrRunLimitExceeded,
-	}, {
-		op: OP_1NEGATE,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{},
-		},
-		wantVM: &virtualMachine{
-			runLimit:  49983,
-			dataStack: [][]byte{Int64Bytes(-1)},
-		},
-	}, {
-		op: OP_1NEGATE,
-		startVM: &virtualMachine{
-			runLimit:  1,
-			dataStack: [][]byte{},
-		},
-		wantErr: ErrRunLimitExceeded,
 	}}
 
 	pushdataops := []Op{OP_PUSHDATA1, OP_PUSHDATA2, OP_PUSHDATA4}
