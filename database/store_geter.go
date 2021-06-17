@@ -112,5 +112,6 @@ func GetMainChainHash(db dbm.DB, height uint64) (*bc.Hash, error) {
 	if err := hash.UnmarshalText(binaryHash); err != nil {
 		return nil, err
 	}
+
 	return hash, nil
 }
