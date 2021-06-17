@@ -16,6 +16,7 @@ type Store interface {
 	GetStoreStatus() *BlockStoreState
 	GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error
 	GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)
+	GetMainChainHash(uint64) (*bc.Hash, error)
 	GetContract(hash [32]byte) ([]byte, error)
 
 	GetCheckpoint(*bc.Hash) (*state.Checkpoint, error)
