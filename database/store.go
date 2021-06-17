@@ -64,7 +64,11 @@ func NewStore(db dbm.DB) *Store {
 		return GetBlockHashesByHeight(db, height)
 	}
 
-	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillBlockHashesFn)
+	fillMainChainHashFn := func(height uint64) (*bc.Hash, error) {
+		return GetMainChainHash(db, height)
+	}
+
+	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillBlockHashesFn, fillMainChainHashFn)
 	return &Store{
 		db:    db,
 		cache: cache,
@@ -107,6 +111,11 @@ func (s *Store) SaveBlockHeader(blockHeader *types.BlockHeader) error {
 // GetBlockHashesByHeight return the block hash by the specified height
 func (s *Store) GetBlockHashesByHeight(height uint64) ([]*bc.Hash, error) {
 	return s.cache.lookupBlockHashesByHeight(height)
+}
+
+// GetMainChainHash return the block hash by the specified height
+func (s *Store) GetMainChainHash(height uint64) (*bc.Hash, error) {
+	return s.cache.lookupMainChainHash(height)
 }
 
 // SaveBlock persists a new block in the protocol.

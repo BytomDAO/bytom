@@ -17,10 +17,10 @@ func (bh *BlockHeader) writeForHash(w io.Writer) {
 // its body.
 func NewBlockHeader(version, height uint64, previousBlockID *Hash, timestamp uint64, transactionsRoot *Hash) *BlockHeader {
 	return &BlockHeader{
-		Version:           version,
-		Height:            height,
-		PreviousBlockId:   previousBlockID,
-		Timestamp:         timestamp,
-		TransactionsRoot:  transactionsRoot,
+		Version:          version,
+		Height:           height,
+		PreviousBlockId:  previousBlockID,
+		Timestamp:        timestamp,
+		TransactionsRoot: transactionsRoot,
 	}
 }

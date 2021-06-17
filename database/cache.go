@@ -14,32 +14,38 @@ const (
 	maxCachedBlockHeaders      = 4096
 	maxCachedBlockTransactions = 1024
 	maxCachedBlockHashes       = 8192
+	maxCachedMainChainHashes   = 8192
 )
 
 type fillBlockHeaderFn func(hash *bc.Hash) (*types.BlockHeader, error)
 type fillBlockTransactionsFn func(hash *bc.Hash) ([]*types.Tx, error)
 type fillBlockHashesFn func(height uint64) ([]*bc.Hash, error)
+type fillMainChainHashFn func(height uint64) (*bc.Hash, error)
 
-func newCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransactionsFn, fillBlockHashes fillBlockHashesFn) cache {
+func newCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransactionsFn, fillBlockHashes fillBlockHashesFn, fillMainChainHash fillMainChainHashFn) cache {
 	return cache{
-		lruBlockHeaders: common.NewCache(maxCachedBlockHeaders),
-		lruBlockTxs:     common.NewCache(maxCachedBlockTransactions),
-		lruBlockHashes:  common.NewCache(maxCachedBlockHashes),
+		lruBlockHeaders:    common.NewCache(maxCachedBlockHeaders),
+		lruBlockTxs:        common.NewCache(maxCachedBlockTransactions),
+		lruBlockHashes:     common.NewCache(maxCachedBlockHashes),
+		lruMainChainHashes: common.NewCache(maxCachedMainChainHashes),
 
 		fillBlockHeaderFn:      fillBlockHeader,
 		fillBlockTransactionFn: fillBlockTxs,
 		fillBlockHashesFn:      fillBlockHashes,
+		fillMainChainHashFn:    fillMainChainHash,
 	}
 }
 
 type cache struct {
-	lruBlockHeaders *common.Cache
-	lruBlockTxs     *common.Cache
-	lruBlockHashes  *common.Cache
+	lruBlockHeaders    *common.Cache
+	lruBlockTxs        *common.Cache
+	lruBlockHashes     *common.Cache
+	lruMainChainHashes *common.Cache
 
 	fillBlockHashesFn      func(uint64) ([]*bc.Hash, error)
 	fillBlockTransactionFn func(hash *bc.Hash) ([]*types.Tx, error)
 	fillBlockHeaderFn      func(hash *bc.Hash) (*types.BlockHeader, error)
+	fillMainChainHashFn    func(uint64) (*bc.Hash, error)
 
 	sf singleflight.Group
 }
@@ -66,6 +72,7 @@ func (c *cache) lookupBlockHashesByHeight(height uint64) ([]*bc.Hash, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return hashes.([]*bc.Hash), nil
 }
 
@@ -111,4 +118,30 @@ func (c *cache) lookupBlockTxs(hash *bc.Hash) ([]*types.Tx, error) {
 		return nil, err
 	}
 	return blockTxs.([]*types.Tx), nil
+}
+
+func (c *cache) lookupMainChainHash(height uint64) (*bc.Hash, error) {
+	if hash, ok := c.lruMainChainHashes.Get(height); ok {
+		return hash.(*bc.Hash), nil
+	}
+
+	heightStr := strconv.FormatUint(height, 10)
+	hash, err := c.sf.Do("BlockHashByHeight:"+heightStr, func() (interface{}, error) {
+		hash, err := c.fillMainChainHashFn(height)
+		if err != nil {
+			return nil, err
+		}
+
+		c.lruMainChainHashes.Add(height, hash)
+		return hash, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return hash.(*bc.Hash), nil
+}
+
+func (c *cache) removeMainChainHash(height uint64) {
+	c.lruMainChainHashes.Remove(height)
 }

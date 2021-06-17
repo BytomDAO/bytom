@@ -16,15 +16,23 @@ const (
 	blockStore byte = iota
 	blockHashes
 	blockHeader
-	blockTransactons
+	blockTransactions
+	mainChainIndex
 )
 
 var (
 	// BlockHashesKeyPrefix key Prefix
-	BlockHashesKeyPrefix = []byte{blockHashes, colon}
-	blockHeaderKeyPrefix = []byte{blockHeader, colon}
-	blockTransactionsKey = []byte{blockTransactons, colon}
+	BlockHashesKeyPrefix    = []byte{blockHashes, colon}
+	blockHeaderKeyPrefix    = []byte{blockHeader, colon}
+	blockTransactionsKey    = []byte{blockTransactions, colon}
+	mainChainIndexKeyPrefix = []byte{mainChainIndex, colon}
 )
+
+func calcMainChainIndexPrefix(height uint64) []byte {
+	buf := [8]byte{}
+	binary.BigEndian.PutUint64(buf[:], height)
+	return append(mainChainIndexKeyPrefix, buf[:]...)
+}
 
 // CalcBlockHeaderKey make up header key with prefix + hash
 func CalcBlockHeaderKey(hash *bc.Hash) []byte {
@@ -91,4 +99,19 @@ func GetBlockHashesByHeight(db dbm.DB, height uint64) ([]*bc.Hash, error) {
 		return nil, err
 	}
 	return hashes, nil
+}
+
+// GetMainChainHash return BlockHash by given height
+func GetMainChainHash(db dbm.DB, height uint64) (*bc.Hash, error) {
+	binaryHash := db.Get(calcMainChainIndexPrefix(height))
+	if binaryHash == nil {
+		return nil, fmt.Errorf("There are no BlockHash with given height %d", height)
+	}
+
+	hash := &bc.Hash{}
+	if err := hash.UnmarshalText(binaryHash); err != nil {
+		return nil, err
+	}
+
+	return hash, nil
 }

@@ -23,8 +23,8 @@ var (
 			Hash:   testutil.MustDecodeHash("a1770c17493b87c43e85c2ab811023a8566907838c2237e7d72071c5f4713c5b"),
 			Status: state.Justified,
 			Votes: map[string]uint64{
-				"a2c5cbbc128485dccf41b7baec85ec9c7bd9418bc0c5ea23f4eeb621725bf9f0f863e6920e6ffc7a9a4ed8e43de568067ef8277fd45d3188c528a9f148f8d2f5": 1E8,
-				"a7ac9f585075d9f30313e290fc7a4e35e6af741cffe020e0ffd4f2e4527f0080746bd53f43d5559da7ba5b134e3f67bd851ca66d2c6955e3493abbb32c68d6fa": 1E8,
+				"a2c5cbbc128485dccf41b7baec85ec9c7bd9418bc0c5ea23f4eeb621725bf9f0f863e6920e6ffc7a9a4ed8e43de568067ef8277fd45d3188c528a9f148f8d2f5": 1e8,
+				"a7ac9f585075d9f30313e290fc7a4e35e6af741cffe020e0ffd4f2e4527f0080746bd53f43d5559da7ba5b134e3f67bd851ca66d2c6955e3493abbb32c68d6fa": 1e8,
 			},
 		},
 		{
@@ -93,23 +93,29 @@ func TestRollback(t *testing.T) {
 }
 
 type mockStore2 struct{}
+
 func (s *mockStore2) GetCheckpointsByHeight(u uint64) ([]*state.Checkpoint, error) { return nil, nil }
 func (s *mockStore2) SaveCheckpoints([]*state.Checkpoint) error                    { return nil }
-func (s *mockStore2) CheckpointsFromNode(height uint64, hash *bc.Hash) ([]*state.Checkpoint, error) { return nil, nil }
-func (s *mockStore2) BlockExist(hash *bc.Hash) bool                                { return false }
-func (s *mockStore2) GetBlock(*bc.Hash) (*types.Block, error)                      { return nil, nil }
-func (s *mockStore2) GetStoreStatus() *BlockStoreState                             { return nil }
-func (s *mockStore2) GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error     { return nil }
-func (s *mockStore2) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)                 { return nil, nil }
-func (s *mockStore2) GetContract(hash [32]byte) ([]byte, error)                    { return nil, nil }
-func (s *mockStore2) LoadBlockIndex(uint64) (*state.BlockIndex, error)             { return nil, nil }
-func (s *mockStore2) SaveBlock(*types.Block) error                                 { return nil }
-func (s *mockStore2) SaveBlockHeader(*types.BlockHeader) error                     { return nil }
-func (s *mockStore2) SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint, *state.ContractViewpoint, uint64, *bc.Hash) error { return nil }
+func (s *mockStore2) CheckpointsFromNode(height uint64, hash *bc.Hash) ([]*state.Checkpoint, error) {
+	return nil, nil
+}
+func (s *mockStore2) BlockExist(hash *bc.Hash) bool                            { return false }
+func (s *mockStore2) GetBlock(*bc.Hash) (*types.Block, error)                  { return nil, nil }
+func (s *mockStore2) GetStoreStatus() *BlockStoreState                         { return nil }
+func (s *mockStore2) GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error { return nil }
+func (s *mockStore2) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)             { return nil, nil }
+func (s *mockStore2) GetMainChainHash(uint64) (*bc.Hash, error)                { return nil, nil }
+func (s *mockStore2) GetContract(hash [32]byte) ([]byte, error)                { return nil, nil }
+func (s *mockStore2) LoadBlockIndex(uint64) (*state.BlockIndex, error)         { return nil, nil }
+func (s *mockStore2) SaveBlock(*types.Block) error                             { return nil }
+func (s *mockStore2) SaveBlockHeader(*types.BlockHeader) error                 { return nil }
+func (s *mockStore2) SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint, *state.ContractViewpoint, uint64, *bc.Hash) error {
+	return nil
+}
 func (s *mockStore2) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
 	return &types.BlockHeader{}, nil
 }
-func (s *mockStore2) GetCheckpoint(hash *bc.Hash) (*state.Checkpoint, error)       {
+func (s *mockStore2) GetCheckpoint(hash *bc.Hash) (*state.Checkpoint, error) {
 	for _, c := range checkpoints {
 		if c.Hash == *hash {
 			return c, nil
