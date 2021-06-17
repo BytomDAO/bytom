@@ -31,8 +31,9 @@ type Chain struct {
 	processRollbackCh chan *rollbackMsg
 	eventDispatcher   *event.Dispatcher
 
-	cond     sync.Cond
-	bestNode *state.BlockNode
+	cond            sync.Cond
+	bestNode        *state.BlockNode
+	bestBlockHeader *types.BlockHeader // the last block on current main chain
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
@@ -64,8 +65,9 @@ func NewChainWithOrphanManage(store Store, txPool *TxPool, manage *OrphanManage,
 		return nil, err
 	}
 
-	c.bestNode = c.index.GetNode(storeStatus.Hash)
-	c.index.SetMainChain(c.bestNode)
+	node := c.index.GetNode(storeStatus.Hash)
+	c.bestBlockHeader = node.BlockHeader()
+	c.index.SetMainChain(node)
 
 	casper, err := newCasper(store, storeStatus, c.processRollbackCh)
 	if err != nil {
@@ -147,14 +149,15 @@ func (c *Chain) ProcessBlockVerification(v *Verification) error {
 func (c *Chain) BestBlockHeight() uint64 {
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
-	return c.bestNode.Height
+	return c.bestBlockHeader.Height
 }
 
 // BestBlockHash return the hash of the chain tail block
 func (c *Chain) BestBlockHash() *bc.Hash {
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
-	return &c.bestNode.Hash
+	bestHash := c.bestBlockHeader.Hash()
+	return &bestHash
 }
 
 // GetValidator return validator by specified blockHash and timestamp
@@ -216,9 +219,10 @@ func (c *Chain) setState(node *state.BlockNode, view *state.UtxoViewpoint, contr
 	defer c.cond.L.Unlock()
 
 	c.index.SetMainChain(node)
-	c.bestNode = node
+	c.bestBlockHeader = node.BlockHeader()
 
-	log.WithFields(log.Fields{"module": logModule, "height": c.bestNode.Height, "hash": c.bestNode.Hash.String()}).Debug("chain best status has been update")
+	hash := c.bestBlockHeader.Hash()
+	log.WithFields(log.Fields{"module": logModule, "height": c.bestBlockHeader.Height, "hash": hash.String()}).Debug("chain best status has been update")
 	c.cond.Broadcast()
 	return nil
 }
@@ -229,7 +233,7 @@ func (c *Chain) BlockWaiter(height uint64) <-chan struct{} {
 	go func() {
 		c.cond.L.Lock()
 		defer c.cond.L.Unlock()
-		for c.bestNode.Height < height {
+		for c.bestBlockHeader.Height < height {
 			c.cond.Wait()
 		}
 		ch <- struct{}{}

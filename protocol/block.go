@@ -58,22 +58,36 @@ func (c *Chain) GetHeaderByHeight(height uint64) (*types.BlockHeader, error) {
 	return node.BlockHeader(), nil
 }
 
-func (c *Chain) calcReorganizeNodes(node *state.BlockNode) ([]*state.BlockNode, []*state.BlockNode) {
-	var attachNodes []*state.BlockNode
-	var detachNodes []*state.BlockNode
+func (c *Chain) calcReorganizeNodes(beginAttach *types.BlockHeader, beginDetach *types.BlockHeader) ([]*types.BlockHeader, []*types.BlockHeader, error) {
+	var err error
+	var attachBlockHeaders []*types.BlockHeader
+	var detachBlockHeaders []*types.BlockHeader
 
-	attachNode := node
-	for c.index.NodeByHeight(attachNode.Height) != attachNode {
-		attachNodes = append([]*state.BlockNode{attachNode}, attachNodes...)
-		attachNode = attachNode.Parent
-	}
+	for attachBlockHeader, detachBlockHeader := beginAttach, beginDetach; detachBlockHeader.Hash() != attachBlockHeader.Hash(); {
+		var attachRollback, detachRollBack bool
+		if attachRollback = attachBlockHeader.Height >= detachBlockHeader.Height; attachRollback {
+			attachBlockHeaders = append([]*types.BlockHeader{attachBlockHeader}, attachBlockHeaders...)
+		}
 
-	detachNode := c.bestNode
-	for detachNode != attachNode {
-		detachNodes = append(detachNodes, detachNode)
-		detachNode = detachNode.Parent
+		if detachRollBack = attachBlockHeader.Height <= detachBlockHeader.Height; detachRollBack {
+			detachBlockHeaders = append(detachBlockHeaders, detachBlockHeader)
+		}
+
+		if attachRollback {
+			attachBlockHeader, err = c.store.GetBlockHeader(&attachBlockHeader.PreviousBlockHash)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
+
+		if detachRollBack {
+			detachBlockHeader, err = c.store.GetBlockHeader(&detachBlockHeader.PreviousBlockHash)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
 	}
-	return attachNodes, detachNodes
+	return attachBlockHeaders, detachBlockHeaders, nil
 }
 
 func (c *Chain) connectBlock(block *types.Block) (err error) {
@@ -114,13 +128,18 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 }
 
 func (c *Chain) reorganizeChain(node *state.BlockNode) error {
-	attachNodes, detachNodes := c.calcReorganizeNodes(node)
+	attachNodes, detachNodes, err := c.calcReorganizeNodes(node.BlockHeader(), node.Parent.BlockHeader())
+	if err != nil {
+		return err
+	}
+
 	utxoView := state.NewUtxoViewpoint()
 	contractView := state.NewContractViewpoint()
 
 	txsToRestore := map[bc.Hash]*types.Tx{}
 	for _, detachNode := range detachNodes {
-		b, err := c.store.GetBlock(&detachNode.Hash)
+		hash := detachNode.Hash()
+		b, err := c.store.GetBlock(&hash)
 		if err != nil {
 			return err
 		}
@@ -146,7 +165,8 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 
 	txsToRemove := map[bc.Hash]*types.Tx{}
 	for _, attachNode := range attachNodes {
-		b, err := c.store.GetBlock(&attachNode.Hash)
+		hash := attachNode.Hash()
+		b, err := c.store.GetBlock(&hash)
 		if err != nil {
 			return err
 		}
@@ -318,7 +338,7 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 		return c.orphanManage.BlockExist(&blockHash), nil
 	}
 
-	if parent := c.index.GetNode(&block.PreviousBlockHash); parent == nil {
+	if _, err := c.store.GetBlockHeader(&block.PreviousBlockHash); err != nil {
 		c.orphanManage.Add(block)
 		return true, nil
 	}
@@ -328,22 +348,28 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	}
 
 	bestBlock := c.saveSubBlock(block)
-	bestBlockHash := bestBlock.Hash()
-	bestNode := c.index.GetNode(&bestBlockHash)
+	bestBlockHeader := &bestBlock.BlockHeader
 
-	if bestNode.Parent == c.bestNode {
+	c.cond.L.Lock()
+	defer c.cond.L.Unlock()
+	if bestBlockHeader.PreviousBlockHash == c.bestBlockHeader.Hash() {
 		log.WithFields(log.Fields{"module": logModule}).Debug("append block to the end of mainchain")
 		return false, c.connectBlock(bestBlock)
 	}
 
-	return false, c.applyForkChainToCasper(bestNode)
+	return false, c.applyForkChainToCasper(bestBlockHeader)
 }
 
-func (c *Chain) applyForkChainToCasper(bestNode *state.BlockNode) error {
-	attachNodes, _ := c.calcReorganizeNodes(bestNode)
+func (c *Chain) applyForkChainToCasper(beginAttach *types.BlockHeader) error {
+	attachNodes, _, err := c.calcReorganizeNodes(beginAttach, c.bestBlockHeader)
+	if err != nil {
+		return err
+	}
+
 	var reply *applyBlockReply
 	for _, node := range attachNodes {
-		block, err := c.store.GetBlock(&node.Hash)
+		hash := node.Hash()
+		block, err := c.store.GetBlock(&hash)
 		if err != nil {
 			return err
 		}
@@ -353,7 +379,7 @@ func (c *Chain) applyForkChainToCasper(bestNode *state.BlockNode) error {
 			return err
 		}
 
-		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Info("apply fork node")
+		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": hash.String()}).Info("apply fork node")
 
 		if reply.verification != nil {
 			if err := c.broadcastVerification(reply.verification); err != nil {
@@ -361,14 +387,16 @@ func (c *Chain) applyForkChainToCasper(bestNode *state.BlockNode) error {
 			}
 		}
 	}
-	if reply.bestHash != c.bestNode.Hash {
+
+	if reply.bestHash != c.bestBlockHeader.Hash() {
 		return c.rollback(reply.bestHash)
 	}
+
 	return nil
 }
 
 func (c *Chain) rollback(bestHash bc.Hash) error {
-	if c.bestNode.Hash == bestHash {
+	if c.bestBlockHeader.Hash() == bestHash {
 		return nil
 	}
 
