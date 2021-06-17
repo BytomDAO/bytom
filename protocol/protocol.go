@@ -31,10 +31,9 @@ type Chain struct {
 	processRollbackCh chan *rollbackMsg
 	eventDispatcher   *event.Dispatcher
 
-	cond               sync.Cond
-	bestNode           *state.BlockNode
-	bestBlockHeader    *types.BlockHeader // the last block on current main chain
-	lastIrrBlockHeader *types.BlockHeader // the last irreversible block
+	cond            sync.Cond
+	bestNode        *state.BlockNode
+	bestBlockHeader *types.BlockHeader // the last block on current main chain
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
