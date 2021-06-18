@@ -1,6 +1,10 @@
 package vm
 
-import "github.com/bytom/bytom/math/checked"
+import (
+	"github.com/holiman/uint256"
+
+	"github.com/bytom/bytom/math/checked"
+)
 
 func opToAltStack(vm *virtualMachine) error {
 	err := vm.applyCost(2)
@@ -139,15 +143,11 @@ func opIfDup(vm *virtualMachine) error {
 }
 
 func opDepth(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
-	err = vm.pushInt64(int64(len(vm.dataStack)), false)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	return vm.pushBigInt(uint256.NewInt().SetUint64(uint64(len(vm.dataStack))), false)
 }
 
 func opDrop(vm *virtualMachine) error {

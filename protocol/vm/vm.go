@@ -168,10 +168,6 @@ func (vm *virtualMachine) pushBool(b bool, deferred bool) error {
 	return vm.push(BoolBytes(b), deferred)
 }
 
-func (vm *virtualMachine) pushInt64(n int64, deferred bool) error {
-	return vm.push(Int64Bytes(n), deferred)
-}
-
 func (vm *virtualMachine) pushBigInt(n *uint256.Int, deferred bool) error {
 	return vm.push(BigIntBytes(n), deferred)
 }
@@ -194,12 +190,20 @@ func (vm *virtualMachine) pop(deferred bool) ([]byte, error) {
 }
 
 func (vm *virtualMachine) popInt64(deferred bool) (int64, error) {
-	bytes, err := vm.pop(deferred)
+	bigInt, err := vm.popBigInt(deferred)
 	if err != nil {
 		return 0, err
 	}
 
-	return AsInt64(bytes)
+	if !bigInt.IsUint64() {
+		return 0, ErrBadValue
+	}
+
+	i := int64(bigInt.Uint64())
+	if i < 0 {
+		return 0, ErrBadValue
+	}
+	return i, nil
 }
 
 func (vm *virtualMachine) popBigInt(deferred bool) (*uint256.Int, error) {
