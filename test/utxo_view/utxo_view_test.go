@@ -176,23 +176,23 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 			},
 		},
 	}
-	node := blockNode(types.MapBlock(&mockBlocks[0].Block).BlockHeader)
+	mockBlockHeader := &mockBlocks[0].Block.BlockHeader
 	defer os.RemoveAll("temp")
 
 	for index, c := range cases {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
 		store := database.NewStore(testDB)
 
-		utxoViewpoint0 := state.NewUtxoViewpoint()
+		utxoViewpoint := state.NewUtxoViewpoint()
 		for k, v := range c.before {
-			utxoViewpoint0.Entries[k] = v
+			utxoViewpoint.Entries[k] = v
 		}
 		contractView := state.NewContractViewpoint()
-		if err := store.SaveChainStatus(node, utxoViewpoint0, contractView, 0, &bc.Hash{}); err != nil {
+		if err := store.SaveChainStatus(mockBlockHeader, mockBlockHeader, []*types.BlockHeader{mockBlockHeader}, utxoViewpoint, contractView); err != nil {
 			t.Error(err)
 		}
 
-		utxoViewpoint := state.NewUtxoViewpoint()
+		utxoViewpoint = state.NewUtxoViewpoint()
 		for _, block := range c.detachBlock {
 			if err := store.GetTransactionsUtxo(utxoViewpoint, block.Transactions); err != nil {
 				t.Error(err)
@@ -210,7 +210,7 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 				t.Error(err)
 			}
 		}
-		if err := store.SaveChainStatus(node, utxoViewpoint, contractView, 0, &bc.Hash{}); err != nil {
+		if err := store.SaveChainStatus(mockBlockHeader, mockBlockHeader, []*types.BlockHeader{mockBlockHeader}, utxoViewpoint, contractView); err != nil {
 			t.Error(err)
 		}
 

@@ -109,7 +109,7 @@ func (s *mockStore2) GetContract(hash [32]byte) ([]byte, error)                {
 func (s *mockStore2) LoadBlockIndex(uint64) (*state.BlockIndex, error)         { return nil, nil }
 func (s *mockStore2) SaveBlock(*types.Block) error                             { return nil }
 func (s *mockStore2) SaveBlockHeader(*types.BlockHeader) error                 { return nil }
-func (s *mockStore2) SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint, *state.ContractViewpoint, uint64, *bc.Hash) error {
+func (s *mockStore2) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, *state.ContractViewpoint) error {
 	return nil
 }
 func (s *mockStore2) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
