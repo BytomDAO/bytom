@@ -188,7 +188,7 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 			utxoViewpoint.Entries[k] = v
 		}
 		contractView := state.NewContractViewpoint()
-		if err := store.SaveChainStatus(mockBlockHeader, mockBlockHeader, []*types.BlockHeader{mockBlockHeader}, utxoViewpoint, contractView); err != nil {
+		if err := store.SaveChainStatus(mockBlockHeader, []*types.BlockHeader{mockBlockHeader}, utxoViewpoint, contractView, 0, &bc.Hash{}); err != nil {
 			t.Error(err)
 		}
 
@@ -210,7 +210,7 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 				t.Error(err)
 			}
 		}
-		if err := store.SaveChainStatus(mockBlockHeader, mockBlockHeader, []*types.BlockHeader{mockBlockHeader}, utxoViewpoint, contractView); err != nil {
+		if err := store.SaveChainStatus(mockBlockHeader, []*types.BlockHeader{mockBlockHeader}, utxoViewpoint, contractView, 0, &bc.Hash{}); err != nil {
 			t.Error(err)
 		}
 

@@ -108,7 +108,7 @@ func (s *mockStore2) GetMainChainHash(uint64) (*bc.Hash, error)                {
 func (s *mockStore2) GetContract([32]byte) ([]byte, error)                     { return nil, nil }
 func (s *mockStore2) SaveBlock(*types.Block) error                             { return nil }
 func (s *mockStore2) SaveBlockHeader(*types.BlockHeader) error                 { return nil }
-func (s *mockStore2) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, *state.ContractViewpoint) error {
+func (s *mockStore2) SaveChainStatus(*types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, *state.ContractViewpoint, uint64, *bc.Hash) error {
 	return nil
 }
 func (s *mockStore2) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
