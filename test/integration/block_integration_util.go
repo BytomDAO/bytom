@@ -18,7 +18,6 @@ import (
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
-	"github.com/bytom/bytom/protocol/state"
 	"github.com/bytom/bytom/testutil"
 )
 
@@ -37,7 +36,6 @@ type processBlockTestCase struct {
 	desc             string
 	initStore        []storeEntry
 	wantStore        []storeEntry
-	wantBlockIndex   *state.BlockIndex
 	initOrphanManage *protocol.OrphanManage
 	wantOrphanManage *protocol.OrphanManage
 	wantIsOrphan     bool

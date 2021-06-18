@@ -105,8 +105,7 @@ func (s *mockStore2) GetStoreStatus() *BlockStoreState                         {
 func (s *mockStore2) GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error { return nil }
 func (s *mockStore2) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)             { return nil, nil }
 func (s *mockStore2) GetMainChainHash(uint64) (*bc.Hash, error)                { return nil, nil }
-func (s *mockStore2) GetContract(hash [32]byte) ([]byte, error)                { return nil, nil }
-func (s *mockStore2) LoadBlockIndex(uint64) (*state.BlockIndex, error)         { return nil, nil }
+func (s *mockStore2) GetContract([32]byte) ([]byte, error)                     { return nil, nil }
 func (s *mockStore2) SaveBlock(*types.Block) error                             { return nil }
 func (s *mockStore2) SaveBlockHeader(*types.BlockHeader) error                 { return nil }
 func (s *mockStore2) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, *state.ContractViewpoint) error {
