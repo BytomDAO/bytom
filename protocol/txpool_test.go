@@ -111,7 +111,6 @@ func (s *mockStore) GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error { 
 func (s *mockStore) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)             { return nil, nil }
 func (s *mockStore) GetMainChainHash(uint64) (*bc.Hash, error)                { return nil, nil }
 func (s *mockStore) GetContract(hash [32]byte) ([]byte, error)                { return nil, nil }
-func (s *mockStore) LoadBlockIndex(uint64) (*state.BlockIndex, error)         { return nil, nil }
 func (s *mockStore) SaveBlock(*types.Block) error                             { return nil }
 func (s *mockStore) SaveBlockHeader(*types.BlockHeader) error                 { return nil }
 func (s *mockStore) SaveChainStatus(*types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, *state.ContractViewpoint, uint64, *bc.Hash) error {
@@ -616,7 +615,6 @@ func (s *mockStore1) GetTransactionsUtxo(utxoView *state.UtxoViewpoint, tx []*bc
 func (s *mockStore1) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)     { return nil, nil }
 func (s *mockStore1) GetMainChainHash(uint64) (*bc.Hash, error)        { return nil, nil }
 func (s *mockStore1) GetContract(hash [32]byte) ([]byte, error)        { return nil, nil }
-func (s *mockStore1) LoadBlockIndex(uint64) (*state.BlockIndex, error) { return nil, nil }
 func (s *mockStore1) SaveBlock(*types.Block) error                     { return nil }
 func (s *mockStore1) SaveBlockHeader(*types.BlockHeader) error         { return nil }
 func (s *mockStore1) SaveChainStatus(*types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, *state.ContractViewpoint, uint64, *bc.Hash) error {

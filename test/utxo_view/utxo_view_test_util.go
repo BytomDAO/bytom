@@ -6,7 +6,6 @@ import (
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
-	"github.com/bytom/bytom/protocol/state"
 	"github.com/bytom/bytom/testutil"
 )
 
@@ -47,22 +46,6 @@ func (t *tx) getSpentOutputID(index int) bc.Hash {
 
 func (t *tx) OutputHash(outIndex int) *bc.Hash {
 	return t.Tx.ResultIds[outIndex]
-}
-
-func blockNode(header *bc.BlockHeader) *state.BlockNode {
-	h := types.BlockHeader{
-		Version:           header.Version,
-		Height:            header.Height,
-		PreviousBlockHash: *header.PreviousBlockId,
-		Timestamp:         header.Timestamp,
-	}
-	return &state.BlockNode{
-		Parent:    nil,
-		Hash:      h.Hash(),
-		Version:   h.Version,
-		Height:    h.Height,
-		Timestamp: h.Timestamp,
-	}
 }
 
 func mustDecodeHex(str string) []byte {
