@@ -124,7 +124,7 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		return err
 	}
 
-	if block.Height > lastJustifiedHeader.Height {
+	if block.Height > lastJustifiedHeader.Height && (block.Height-lastJustifiedHeader.Height)%state.BlocksOfEpoch == 0 {
 		finalizedBlockHeader = &block.BlockHeader
 	}
 	if err := c.setState(&block.BlockHeader, finalizedBlockHeader, []*types.BlockHeader{&block.BlockHeader}, utxoView, contractView); err != nil {
@@ -200,7 +200,7 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 			return err
 		}
 
-		if attachBlock.Height > lastJustifiedHeader.Height {
+		if attachBlock.Height > lastJustifiedHeader.Height && (attachBlock.Height-lastJustifiedHeader.Height)%state.BlocksOfEpoch == 0 {
 			finalizedBlockHeader = attachNode
 		}
 
@@ -367,8 +367,6 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	bestBlock := c.saveSubBlock(block)
 	bestBlockHeader := &bestBlock.BlockHeader
 
-	c.cond.L.Lock()
-	defer c.cond.L.Unlock()
 	if bestBlockHeader.PreviousBlockHash == c.bestBlockHeader.Hash() {
 		log.WithFields(log.Fields{"module": logModule}).Debug("append block to the end of mainchain")
 		return false, c.connectBlock(bestBlock)
