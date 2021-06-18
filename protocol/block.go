@@ -348,8 +348,6 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	bestBlock := c.saveSubBlock(block)
 	bestBlockHeader := &bestBlock.BlockHeader
 
-	c.cond.L.Lock()
-	defer c.cond.L.Unlock()
 	if bestBlockHeader.PreviousBlockHash == c.bestBlockHeader.Hash() {
 		log.WithFields(log.Fields{"module": logModule}).Debug("append block to the end of mainchain")
 		return false, c.connectBlock(bestBlock)
