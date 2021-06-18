@@ -240,7 +240,7 @@ func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error
 }
 
 // SaveChainStatus save the core's newest status && delete old status
-func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint, contractView *state.ContractViewpoint, finalizedHeight uint64, finalizedHash *bc.Hash) error {
+func (s *Store) SaveChainStatus(blockHeader, finalizedBlockHeader *types.BlockHeader, mainBlockHeaders []*types.BlockHeader, view *state.UtxoViewpoint, contractView *state.ContractViewpoint) error {
 	batch := s.db.NewBatch()
 	if err := saveUtxoView(batch, view); err != nil {
 		return err
@@ -254,13 +254,41 @@ func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint
 		return err
 	}
 
-	bytes, err := json.Marshal(protocol.BlockStoreState{Height: node.Height, Hash: &node.Hash, FinalizedHeight: finalizedHeight, FinalizedHash: finalizedHash})
+	blockHeaderHash := blockHeader.Hash()
+	finalizedHash := finalizedBlockHeader.Hash()
+	bytes, err := json.Marshal(
+		protocol.BlockStoreState{
+			Height:          blockHeader.Height,
+			Hash:            &blockHeaderHash,
+			FinalizedHeight: finalizedBlockHeader.Height,
+			FinalizedHash:   &finalizedHash,
+		})
 	if err != nil {
 		return err
 	}
 
 	batch.Set(BlockStoreKey, bytes)
+
+	var clearCacheFuncs []func()
+	// save main chain blockHeaders
+	for _, blockHeader := range mainBlockHeaders {
+		bh := blockHeader
+		blockHash := bh.Hash()
+		binaryBlockHash, err := blockHash.MarshalText()
+		if err != nil {
+			return errors.Wrap(err, "Marshal block hash")
+		}
+
+		batch.Set(calcMainChainIndexPrefix(bh.Height), binaryBlockHash)
+		clearCacheFuncs = append(clearCacheFuncs, func() {
+			s.cache.removeMainChainHash(bh.Height)
+		})
+	}
 	batch.Write()
+	for _, clearCacheFunc := range clearCacheFuncs {
+		clearCacheFunc()
+	}
+
 	return nil
 }
 

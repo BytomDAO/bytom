@@ -31,9 +31,10 @@ type Chain struct {
 	processRollbackCh chan *rollbackMsg
 	eventDispatcher   *event.Dispatcher
 
-	cond            sync.Cond
-	bestNode        *state.BlockNode
-	bestBlockHeader *types.BlockHeader // the last block on current main chain
+	cond                 sync.Cond
+	bestNode             *state.BlockNode
+	bestBlockHeader      *types.BlockHeader // the last block on current main chain
+	finalizedBlockHeader *types.BlockHeader
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
@@ -102,13 +103,9 @@ func (c *Chain) initChainStatus() error {
 		return err
 	}
 
-	node, err := state.NewBlockNode(&genesisBlock.BlockHeader, nil)
-	if err != nil {
-		return err
-	}
-
 	contractView := state.NewContractViewpoint()
-	return c.store.SaveChainStatus(node, utxoView, contractView, 0, &checkpoint.Hash)
+	genesisBlockHeader := &genesisBlock.BlockHeader
+	return c.store.SaveChainStatus(genesisBlockHeader, genesisBlockHeader, []*types.BlockHeader{genesisBlockHeader}, utxoView, contractView)
 }
 
 func newCasper(store Store, storeStatus *BlockStoreState, rollbackCh chan *rollbackMsg) (*Casper, error) {
@@ -209,17 +206,16 @@ func (c *Chain) SignBlockHeader(blockHeader *types.BlockHeader) {
 }
 
 // This function must be called with mu lock in above level
-func (c *Chain) setState(node *state.BlockNode, view *state.UtxoViewpoint, contractView *state.ContractViewpoint) error {
-	finalizedHeight, finalizedHash := c.casper.LastFinalized()
-	if err := c.store.SaveChainStatus(node, view, contractView, finalizedHeight, &finalizedHash); err != nil {
+func (c *Chain) setState(blockHeader, finalizedBlockHeader *types.BlockHeader, mainBlockHeaders []*types.BlockHeader, view *state.UtxoViewpoint, contractView *state.ContractViewpoint) error {
+	if err := c.store.SaveChainStatus(blockHeader, finalizedBlockHeader, mainBlockHeaders, view, contractView); err != nil {
 		return err
 	}
 
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
 
-	c.index.SetMainChain(node)
-	c.bestBlockHeader = node.BlockHeader()
+	c.bestBlockHeader = blockHeader
+	c.finalizedBlockHeader = finalizedBlockHeader
 
 	hash := c.bestBlockHeader.Hash()
 	log.WithFields(log.Fields{"module": logModule, "height": c.bestBlockHeader.Height, "hash": hash.String()}).Debug("chain best status has been update")
