@@ -202,52 +202,43 @@ func opOver(vm *virtualMachine) error {
 }
 
 func opPick(vm *virtualMachine) error {
-	err := vm.applyCost(2)
+	if err := vm.applyCost(2); err != nil {
+		return err
+	}
+
+	n, err := vm.popBigInt(false)
 	if err != nil {
 		return err
 	}
-	n, err := vm.popInt64(false)
-	if err != nil {
-		return err
-	}
-	if n < 0 {
-		return ErrBadValue
-	}
-	off, ok := checked.AddInt64(n, 1)
+
+	off, ok := checked.AddInt64(int64(n.Uint64()), 1)
 	if !ok {
 		return ErrBadValue
 	}
+
 	if int64(len(vm.dataStack)) < off {
 		return ErrDataStackUnderflow
 	}
-	err = vm.push(vm.dataStack[int64(len(vm.dataStack))-(off)], false)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	return vm.push(vm.dataStack[int64(len(vm.dataStack))-(off)], false)
 }
 
 func opRoll(vm *virtualMachine) error {
-	err := vm.applyCost(2)
+	if err := vm.applyCost(2); err != nil {
+		return err
+	}
+
+	n, err := vm.popBigInt(false)
 	if err != nil {
 		return err
 	}
-	n, err := vm.popInt64(false)
-	if err != nil {
-		return err
-	}
-	if n < 0 {
-		return ErrBadValue
-	}
-	off, ok := checked.AddInt64(n, 1)
+
+	off, ok := checked.AddInt64(int64(n.Uint64()), 1)
 	if !ok {
 		return ErrBadValue
 	}
-	err = rot(vm, off)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	return rot(vm, off)
 }
 
 func opRot(vm *virtualMachine) error {
