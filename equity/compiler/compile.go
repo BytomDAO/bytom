@@ -725,7 +725,7 @@ func compileExpr(b *builder, stk stack, contract *Contract, clause *Clause, env 
 						stk = b.addData(stk, entry.c.Body)
 						stk = b.addCatPushdata(stk, partialName)
 					}
-					stk = b.addData(stk, vm.Int64Bytes(0))
+					stk = b.addData(stk, vm.Uint64Bytes(0))
 					stk = b.addCatPushdata(stk, partialName)
 					stk = b.addData(stk, []byte{byte(vm.OP_CHECKPREDICATE)})
 					stk = b.addCat(stk, e.String())

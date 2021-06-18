@@ -37,52 +37,50 @@ func doOKNotOK(t *testing.T, expectOK bool) {
 		args    [][]byte
 		wantErr bool
 	}{
-		{"TRUE", nil ,false},
+		{"TRUE", nil, false},
 
 		// bitwise ops
-		{"INVERT 0xfef0 EQUAL", [][]byte{{0x01, 0x0f}},false},
+		{"INVERT 0xfef0 EQUAL", [][]byte{{0x01, 0x0f}}, false},
 
-		{"AND 0x02 EQUAL", [][]byte{{0x03}, {0x06}},false},
-		{"AND 0x02 EQUAL", [][]byte{{0x03, 0xff}, {0x06}},false},
+		{"AND 0x02 EQUAL", [][]byte{{0x03}, {0x06}}, false},
+		{"AND 0x02 EQUAL", [][]byte{{0x03, 0xff}, {0x06}}, false},
 
-		{"OR 0x07 EQUAL", [][]byte{{0x03}, {0x06}},false},
-		{"OR 0x07ff EQUAL", [][]byte{{0x03, 0xff}, {0x06}},false},
+		{"OR 0x07 EQUAL", [][]byte{{0x03}, {0x06}}, false},
+		{"OR 0x07ff EQUAL", [][]byte{{0x03, 0xff}, {0x06}}, false},
 
-		{"XOR 0x05 EQUAL", [][]byte{{0x03}, {0x06}},false},
-		{"XOR 0x05ff EQUAL", [][]byte{{0x03, 0xff}, {0x06}},false},
+		{"XOR 0x05 EQUAL", [][]byte{{0x03}, {0x06}}, false},
+		{"XOR 0x05ff EQUAL", [][]byte{{0x03, 0xff}, {0x06}}, false},
 
 		// numeric and logical ops
-		{"1ADD 2 NUMEQUAL", [][]byte{{0x01}},false},
+		{"1ADD 2 NUMEQUAL", [][]byte{{0x01}}, false},
 		{"1ADD 0 NUMEQUAL", [][]byte{mocks.U256NumNegative1}, true},
 
-		{"1SUB 1 NUMEQUAL", [][]byte{Int64Bytes(2)}, false},
-		{"1SUB -1 NUMEQUAL", [][]byte{Int64Bytes(0)}, true},
+		{"1SUB 1 NUMEQUAL", [][]byte{Uint64Bytes(2)}, false},
+		{"1SUB -1 NUMEQUAL", [][]byte{Uint64Bytes(0)}, true},
 
-		{"2MUL 2 NUMEQUAL", [][]byte{Int64Bytes(1)}, false},
-		{"2MUL 0 NUMEQUAL", [][]byte{Int64Bytes(0)}, false},
+		{"2MUL 2 NUMEQUAL", [][]byte{Uint64Bytes(1)}, false},
+		{"2MUL 0 NUMEQUAL", [][]byte{Uint64Bytes(0)}, false},
 
-		{"2DIV 1 NUMEQUAL", [][]byte{Int64Bytes(2)}, false},
-		{"2DIV 0 NUMEQUAL", [][]byte{Int64Bytes(1)}, false},
-		{"2DIV 0 NUMEQUAL", [][]byte{Int64Bytes(0)}, false},
-		{"2DIV -1 NUMEQUAL", [][]byte{Int64Bytes(-1)}, true},
-		{"2DIV -1 NUMEQUAL", [][]byte{Int64Bytes(-2)}, true},
+		{"2DIV 1 NUMEQUAL", [][]byte{Uint64Bytes(2)}, false},
+		{"2DIV 0 NUMEQUAL", [][]byte{Uint64Bytes(1)}, false},
+		{"2DIV 0 NUMEQUAL", [][]byte{Uint64Bytes(0)}, false},
 
-		{"0NOTEQUAL", [][]byte{Int64Bytes(1)}, false},
-		{"0NOTEQUAL NOT", [][]byte{Int64Bytes(0)}, false},
+		{"0NOTEQUAL", [][]byte{Uint64Bytes(1)}, false},
+		{"0NOTEQUAL NOT", [][]byte{Uint64Bytes(0)}, false},
 
-		{"ADD 5 NUMEQUAL", [][]byte{Int64Bytes(2), Int64Bytes(3)}, false},
+		{"ADD 5 NUMEQUAL", [][]byte{Uint64Bytes(2), Uint64Bytes(3)}, false},
 
-		{"SUB 2 NUMEQUAL", [][]byte{Int64Bytes(5), Int64Bytes(3)}, false},
+		{"SUB 2 NUMEQUAL", [][]byte{Uint64Bytes(5), Uint64Bytes(3)}, false},
 
-		{"MUL 6 NUMEQUAL", [][]byte{Int64Bytes(2), Int64Bytes(3)}, false},
+		{"MUL 6 NUMEQUAL", [][]byte{Uint64Bytes(2), Uint64Bytes(3)}, false},
 
-		{"DIV 2 NUMEQUAL", [][]byte{Int64Bytes(6), Int64Bytes(3)}, false},
+		{"DIV 2 NUMEQUAL", [][]byte{Uint64Bytes(6), Uint64Bytes(3)}, false},
 
-		{"MOD 0 NUMEQUAL", [][]byte{Int64Bytes(6), Int64Bytes(2)}, false},
-		{"MOD 2 NUMEQUAL", [][]byte{Int64Bytes(12), Int64Bytes(10)}, false},
+		{"MOD 0 NUMEQUAL", [][]byte{Uint64Bytes(6), Uint64Bytes(2)}, false},
+		{"MOD 2 NUMEQUAL", [][]byte{Uint64Bytes(12), Uint64Bytes(10)}, false},
 
-		{"LSHIFT 2 NUMEQUAL", [][]byte{Int64Bytes(1), Int64Bytes(1)}, false},
-		{"LSHIFT 4 NUMEQUAL", [][]byte{Int64Bytes(1), Int64Bytes(2)}, false},
+		{"LSHIFT 2 NUMEQUAL", [][]byte{Uint64Bytes(1), Uint64Bytes(1)}, false},
+		{"LSHIFT 4 NUMEQUAL", [][]byte{Uint64Bytes(1), Uint64Bytes(2)}, false},
 
 		{"1 1 BOOLAND", nil, false},
 		{"1 0 BOOLAND NOT", nil, false},

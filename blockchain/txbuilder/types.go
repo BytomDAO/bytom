@@ -64,7 +64,7 @@ type StrArgument struct {
 
 // IntegerArgument is the integer argument for run contract
 type IntegerArgument struct {
-	Value int64 `json:"value"`
+	Value uint64 `json:"value"`
 }
 
 // BoolArgument is the boolean argument for run contract
