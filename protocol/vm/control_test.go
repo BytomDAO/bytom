@@ -157,14 +157,7 @@ func TestControlOps(t *testing.T) {
 		op: OP_CHECKPREDICATE,
 		startVM: &virtualMachine{
 			runLimit:  50000,
-			dataStack: [][]byte{{}, {}, Int64Bytes(-1)},
-		},
-		wantErr: ErrBadValue,
-	}, {
-		op: OP_CHECKPREDICATE,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{{}, {}, Int64Bytes(50000)},
+			dataStack: [][]byte{{}, {}, Uint64Bytes(50000)},
 		},
 		wantErr: ErrRunLimitExceeded,
 	}, {

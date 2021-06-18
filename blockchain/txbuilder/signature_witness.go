@@ -104,7 +104,7 @@ func (sw SignatureWitness) materialize(args *[][]byte) error {
 	// assumes that everything already in the arg list before this call
 	// to Materialize is input to the signature program, so N is
 	// len(*args).
-	*args = append(*args, vm.Int64Bytes(int64(len(*args))))
+	*args = append(*args, vm.Uint64Bytes(uint64(len(*args))))
 
 	var nsigs int
 	for i := 0; i < len(sw.Sigs) && nsigs < sw.Quorum; i++ {

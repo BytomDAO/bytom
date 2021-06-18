@@ -54,5 +54,5 @@ func PushDataInt64(n int64) []byte {
 	if n >= 1 && n <= 16 {
 		return []byte{uint8(OP_1) + uint8(n) - 1}
 	}
-	return PushDataBytes(Int64Bytes(n))
+	return PushDataBytes(Uint64Bytes(uint64(n)))
 }
