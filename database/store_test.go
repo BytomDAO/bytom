@@ -30,11 +30,11 @@ func TestSaveChainStatus(t *testing.T) {
 	}
 
 	contractView := state.NewContractViewpoint()
-	if err := store.SaveChainStatus(blockHeader, blockHeader, []*types.BlockHeader{blockHeader}, view, contractView); err != nil {
+	if err := store.SaveChainStatus(blockHeader, []*types.BlockHeader{blockHeader}, view, contractView, 0, &bc.Hash{}); err != nil {
 		t.Fatal(err)
 	}
 
-	expectStatus := &protocol.BlockStoreState{Height: blockHeader.Height, Hash: &blockHash, FinalizedHeight: blockHeader.Height, FinalizedHash: &blockHash}
+	expectStatus := &protocol.BlockStoreState{Height: blockHeader.Height, Hash: &blockHash, FinalizedHeight: 0, FinalizedHash: &bc.Hash{}}
 	if !testutil.DeepEqual(store.GetStoreStatus(), expectStatus) {
 		t.Errorf("got block status:%v, expect block status:%v", store.GetStoreStatus(), expectStatus)
 	}

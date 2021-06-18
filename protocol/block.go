@@ -118,16 +118,7 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		return err
 	}
 
-	finalizedBlockHeader := c.finalizedBlockHeader
-	lastJustifiedHeader, err := c.LastJustifiedHeader()
-	if err != nil {
-		return err
-	}
-
-	if block.Height > lastJustifiedHeader.Height {
-		finalizedBlockHeader = &block.BlockHeader
-	}
-	if err := c.setState(&block.BlockHeader, finalizedBlockHeader, []*types.BlockHeader{&block.BlockHeader}, utxoView, contractView); err != nil {
+	if err := c.setState(&block.BlockHeader, []*types.BlockHeader{&block.BlockHeader}, utxoView, contractView); err != nil {
 		return err
 	}
 
@@ -174,7 +165,6 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 	}
 
 	txsToRemove := map[bc.Hash]*types.Tx{}
-	finalizedBlockHeader := c.finalizedBlockHeader
 	for _, attachNode := range attachNodes {
 		hash := attachNode.Hash()
 		b, err := c.store.GetBlock(&hash)
@@ -195,15 +185,6 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 			return err
 		}
 
-		lastJustifiedHeader, err := c.LastJustifiedHeader()
-		if err != nil {
-			return err
-		}
-
-		if attachBlock.Height > lastJustifiedHeader.Height {
-			finalizedBlockHeader = attachNode
-		}
-
 		for _, tx := range b.Transactions {
 			if _, ok := txsToRestore[tx.ID]; !ok {
 				txsToRemove[tx.ID] = tx
@@ -215,7 +196,7 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 		log.WithFields(log.Fields{"module": logModule, "height": attachNode.Height, "hash": hash.String()}).Debug("attach from mainchain")
 	}
 
-	if err := c.setState(blockHeader, finalizedBlockHeader, []*types.BlockHeader{blockHeader}, utxoView, contractView); err != nil {
+	if err := c.setState(blockHeader, []*types.BlockHeader{blockHeader}, utxoView, contractView); err != nil {
 		return err
 	}
 

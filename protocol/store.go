@@ -26,7 +26,7 @@ type Store interface {
 
 	SaveBlock(*types.Block) error
 	SaveBlockHeader(*types.BlockHeader) error
-	SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, *state.ContractViewpoint) error
+	SaveChainStatus(*types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, *state.ContractViewpoint, uint64, *bc.Hash) error
 }
 
 // BlockStoreState represents the core's db status
