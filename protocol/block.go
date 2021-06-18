@@ -58,7 +58,7 @@ func (c *Chain) GetHeaderByHeight(height uint64) (*types.BlockHeader, error) {
 	return node.BlockHeader(), nil
 }
 
-func (c *Chain) calcReorganizeNodes(beginAttach *types.BlockHeader, beginDetach *types.BlockHeader) ([]*types.BlockHeader, []*types.BlockHeader, error) {
+func (c *Chain) calcReorganizeChain(beginAttach *types.BlockHeader, beginDetach *types.BlockHeader) ([]*types.BlockHeader, []*types.BlockHeader, error) {
 	var err error
 	var attachBlockHeaders []*types.BlockHeader
 	var detachBlockHeaders []*types.BlockHeader
@@ -116,8 +116,11 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		return err
 	}
 
-	node := c.index.GetNode(&bcBlock.ID)
-	if err := c.setState(node, utxoView, contractView); err != nil {
+	finalizedBlockHeader := c.finalizedBlockHeader
+	if block.Height > c.LastJustifiedHeader().Height {
+		finalizedBlockHeader = &block.BlockHeader
+	}
+	if err := c.setState(&block.BlockHeader, finalizedBlockHeader, []*types.BlockHeader{&block.BlockHeader}, utxoView, contractView); err != nil {
 		return err
 	}
 
@@ -127,8 +130,8 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 	return nil
 }
 
-func (c *Chain) reorganizeChain(node *state.BlockNode) error {
-	attachNodes, detachNodes, err := c.calcReorganizeNodes(node.BlockHeader(), node.Parent.BlockHeader())
+func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
+	attachNodes, detachNodes, err := c.calcReorganizeChain(blockHeader, c.bestBlockHeader)
 	if err != nil {
 		return err
 	}
@@ -160,10 +163,11 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 		for _, tx := range b.Transactions {
 			txsToRestore[tx.ID] = tx
 		}
-		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Debug("detach from mainchain")
+		log.WithFields(log.Fields{"module": logModule, "height": detachNode.Height, "hash": hash.String()}).Debug("detach from mainchain")
 	}
 
 	txsToRemove := map[bc.Hash]*types.Tx{}
+	finalizedBlockHeader := c.finalizedBlockHeader
 	for _, attachNode := range attachNodes {
 		hash := attachNode.Hash()
 		b, err := c.store.GetBlock(&hash)
@@ -184,6 +188,10 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			return err
 		}
 
+		if attachBlock.Height > c.LastJustifiedHeader().Height {
+			finalizedBlockHeader = attachNode
+		}
+
 		for _, tx := range b.Transactions {
 			if _, ok := txsToRestore[tx.ID]; !ok {
 				txsToRemove[tx.ID] = tx
@@ -192,10 +200,10 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			}
 		}
 
-		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Debug("attach from mainchain")
+		log.WithFields(log.Fields{"module": logModule, "height": attachNode.Height, "hash": hash.String()}).Debug("attach from mainchain")
 	}
 
-	if err := c.setState(node, utxoView, contractView); err != nil {
+	if err := c.setState(blockHeader, finalizedBlockHeader, []*types.BlockHeader{blockHeader}, utxoView, contractView); err != nil {
 		return err
 	}
 
@@ -361,7 +369,7 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 }
 
 func (c *Chain) applyForkChainToCasper(beginAttach *types.BlockHeader) error {
-	attachNodes, _, err := c.calcReorganizeNodes(beginAttach, c.bestBlockHeader)
+	attachNodes, _, err := c.calcReorganizeChain(beginAttach, c.bestBlockHeader)
 	if err != nil {
 		return err
 	}
@@ -400,7 +408,11 @@ func (c *Chain) rollback(bestHash bc.Hash) error {
 		return nil
 	}
 
-	node := c.index.GetNode(&bestHash)
+	blockHeader, err := c.GetHeaderByHash(&bestHash)
+	if err != nil {
+		return err
+	}
+
 	log.WithFields(log.Fields{"module": logModule, "bestHash": bestHash.String()}).Info("start to reorganize chain")
-	return c.reorganizeChain(node)
+	return c.reorganizeChain(blockHeader)
 }

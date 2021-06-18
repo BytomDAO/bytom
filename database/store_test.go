@@ -141,7 +141,8 @@ func TestSaveChainStatus(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	store := NewStore(testDB)
 
-	node := &state.BlockNode{Height: 100, Hash: bc.Hash{V0: 0, V1: 1, V2: 2, V3: 3}}
+	blockHeader := &types.BlockHeader{Height: 100}
+	blockHash := blockHeader.Hash() //Hash: bc.Hash{V0: 0, V1: 1, V2: 2, V3: 3}
 	view := &state.UtxoViewpoint{
 		Entries: map[bc.Hash]*storage.UtxoEntry{
 			bc.Hash{V0: 1, V1: 2, V2: 3, V3: 4}: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 100, Spent: false},
@@ -151,11 +152,11 @@ func TestSaveChainStatus(t *testing.T) {
 	}
 
 	contractView := state.NewContractViewpoint()
-	if err := store.SaveChainStatus(node, view, contractView, 0, &bc.Hash{}); err != nil {
+	if err := store.SaveChainStatus(blockHeader, blockHeader, []*types.BlockHeader{blockHeader}, view, contractView); err != nil {
 		t.Fatal(err)
 	}
 
-	expectStatus := &protocol.BlockStoreState{Height: node.Height, Hash: &node.Hash, FinalizedHeight: 0, FinalizedHash: &bc.Hash{}}
+	expectStatus := &protocol.BlockStoreState{Height: blockHeader.Height, Hash: &blockHash, FinalizedHeight: blockHeader.Height, FinalizedHash: &blockHash}
 	if !testutil.DeepEqual(store.GetStoreStatus(), expectStatus) {
 		t.Errorf("got block status:%v, expect block status:%v", store.GetStoreStatus(), expectStatus)
 	}
