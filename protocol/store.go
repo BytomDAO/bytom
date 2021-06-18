@@ -24,7 +24,6 @@ type Store interface {
 	GetCheckpointsByHeight(uint64) ([]*state.Checkpoint, error)
 	SaveCheckpoints([]*state.Checkpoint) error
 
-	LoadBlockIndex(uint64) (*state.BlockIndex, error)
 	SaveBlock(*types.Block) error
 	SaveBlockHeader(*types.BlockHeader) error
 	SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, *state.ContractViewpoint) error

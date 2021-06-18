@@ -195,50 +195,6 @@ func (s *Store) GetStoreStatus() *protocol.BlockStoreState {
 	return loadBlockStoreStateJSON(s.db)
 }
 
-// LoadBlockIndex loadblockIndex by bestHeight
-func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error) {
-	startTime := time.Now()
-	blockIndex := state.NewBlockIndex()
-	bhIter := s.db.IteratorPrefix(BlockHeaderIndexPrefix)
-	defer bhIter.Release()
-
-	var lastNode *state.BlockNode
-	for bhIter.Next() {
-		bh := &types.BlockHeader{}
-		if err := bh.UnmarshalText(bhIter.Value()); err != nil {
-			return nil, err
-		}
-
-		// If a block with a height greater than the best height of state is added to the index,
-		// It may cause a bug that the new block cant not be process properly.
-		if bh.Height > stateBestHeight {
-			break
-		}
-
-		var parent *state.BlockNode
-		if lastNode == nil || lastNode.Hash == bh.PreviousBlockHash {
-			parent = lastNode
-		} else {
-			parent = blockIndex.GetNode(&bh.PreviousBlockHash)
-		}
-
-		node, err := state.NewBlockNode(bh, parent)
-		if err != nil {
-			return nil, err
-		}
-
-		blockIndex.AddNode(node)
-		lastNode = node
-	}
-
-	log.WithFields(log.Fields{
-		"module":   logModule,
-		"height":   stateBestHeight,
-		"duration": time.Since(startTime),
-	}).Debug("initialize load history block index from database")
-	return blockIndex, nil
-}
-
 // SaveChainStatus save the core's newest status && delete old status
 func (s *Store) SaveChainStatus(blockHeader, finalizedBlockHeader *types.BlockHeader, mainBlockHeaders []*types.BlockHeader, view *state.UtxoViewpoint, contractView *state.ContractViewpoint) error {
 	batch := s.db.NewBatch()
