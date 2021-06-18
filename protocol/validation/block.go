@@ -104,7 +104,7 @@ func checkoutRewardCoinbase(tx *bc.Tx, checkpoint *state.Checkpoint) error {
 }
 
 // ValidateBlockHeader check the block's header
-func ValidateBlockHeader(b *bc.Block, parent *state.BlockNode) error {
+func ValidateBlockHeader(b *bc.Block, parent *types.BlockHeader) error {
 	if b.Version != 1 {
 		return errors.WithDetailf(errVersionRegression, "previous block verson %d, current block version %d", parent.Version, b.Version)
 	}
@@ -112,18 +112,19 @@ func ValidateBlockHeader(b *bc.Block, parent *state.BlockNode) error {
 		return errors.WithDetailf(errMisorderedBlockHeight, "previous block height %d, current block height %d", parent.Height, b.Height)
 	}
 
-	if parent.Hash != *b.PreviousBlockId {
-		return errors.WithDetailf(errMismatchedBlock, "previous block ID %x, current block wants %x", parent.Hash.Bytes(), b.PreviousBlockId.Bytes())
+	hash := parent.Hash()
+	if hash != *b.PreviousBlockId {
+		return errors.WithDetailf(errMismatchedBlock, "previous block ID %x, current block wants %x", parent.Hash().Bytes(), b.PreviousBlockId.Bytes())
 	}
 
-	if err := checkBlockTime(b, parent.BlockHeader()); err != nil {
+	if err := checkBlockTime(b, parent); err != nil {
 		return err
 	}
 	return nil
 }
 
 // ValidateBlock validates a block and the transactions within.
-func ValidateBlock(b *bc.Block, parent *state.BlockNode, checkpoint *state.Checkpoint, converter ProgramConverterFunc) error {
+func ValidateBlock(b *bc.Block, parent *types.BlockHeader, checkpoint *state.Checkpoint, converter ProgramConverterFunc) error {
 	startTime := time.Now()
 	if err := ValidateBlockHeader(b, parent); err != nil {
 		return err

@@ -22,7 +22,6 @@ const (
 
 // Chain provides functions for working with the Bytom block chain.
 type Chain struct {
-	index             *state.BlockIndex
 	orphanManage      *OrphanManage
 	txPool            *TxPool
 	store             Store
@@ -32,7 +31,6 @@ type Chain struct {
 	eventDispatcher   *event.Dispatcher
 
 	cond                 sync.Cond
-	bestNode             *state.BlockNode
 	bestBlockHeader      *types.BlockHeader // the last block on current main chain
 	finalizedBlockHeader *types.BlockHeader
 }
@@ -62,13 +60,15 @@ func NewChainWithOrphanManage(store Store, txPool *TxPool, manage *OrphanManage,
 	}
 
 	var err error
-	if c.index, err = store.LoadBlockIndex(storeStatus.Height); err != nil {
+	c.bestBlockHeader, err = c.store.GetBlockHeader(storeStatus.Hash)
+	if err != nil {
 		return nil, err
 	}
 
-	node := c.index.GetNode(storeStatus.Hash)
-	c.bestBlockHeader = node.BlockHeader()
-	c.index.SetMainChain(node)
+	c.finalizedBlockHeader, err = c.store.GetBlockHeader(storeStatus.FinalizedHash)
+	if err != nil {
+		return nil, err
+	}
 
 	casper, err := newCasper(store, storeStatus, c.processRollbackCh)
 	if err != nil {
@@ -118,10 +118,9 @@ func newCasper(store Store, storeStatus *BlockStoreState, rollbackCh chan *rollb
 }
 
 // LastFinalizedHeader returns the last finalized block header of the block chain
-func (c *Chain) LastJustifiedHeader() *types.BlockHeader {
+func (c *Chain) LastJustifiedHeader() (*types.BlockHeader, error) {
 	_, hash := c.casper.LastJustified()
-	node := c.index.GetNode(&hash)
-	return node.BlockHeader()
+	return c.store.GetBlockHeader(&hash)
 }
 
 // ProcessBlockVerification process block verification
@@ -186,17 +185,24 @@ func getValidatorOrder(startTimestamp, blockTimestamp, numOfValidators uint64) u
 
 // BestBlockHeader returns the chain tail block
 func (c *Chain) BestBlockHeader() *types.BlockHeader {
-	node := c.index.BestNode()
-	return node.BlockHeader()
+	c.cond.L.Lock()
+	defer c.cond.L.Unlock()
+	return c.bestBlockHeader
 }
 
 // InMainChain checks wheather a block is in the main chain
 func (c *Chain) InMainChain(hash bc.Hash) bool {
-	return c.index.InMainchain(hash)
-}
+	blockHeader, err := c.store.GetBlockHeader(&hash)
+	if err != nil {
+		return false
+	}
 
-func (c *Chain) GetBlockIndex() *state.BlockIndex {
-	return c.index
+	blockHash, err := c.store.GetMainChainHash(blockHeader.Height)
+	if err != nil {
+		log.WithFields(log.Fields{"module": logModule, "height": blockHeader.Height}).Debug("not contain block hash in main chain for specified height")
+		return false
+	}
+	return *blockHash == hash
 }
 
 func (c *Chain) SignBlockHeader(blockHeader *types.BlockHeader) {

@@ -27,8 +27,8 @@ func NewChain() *Chain {
 	}
 }
 
-func (c *Chain) LastJustifiedHeader() *types.BlockHeader {
-	return nil
+func (c *Chain) LastJustifiedHeader() (*types.BlockHeader, error) {
+	return nil, nil
 }
 
 func (c *Chain) BestBlockHeader() *types.BlockHeader {

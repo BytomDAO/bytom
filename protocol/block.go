@@ -23,7 +23,11 @@ var (
 
 // BlockExist check is a block in chain or orphan
 func (c *Chain) BlockExist(hash *bc.Hash) bool {
-	return c.index.BlockExist(hash) || c.orphanManage.BlockExist(hash)
+	if _, err := c.store.GetBlockHeader(hash); err == nil {
+		return true
+	}
+
+	return c.orphanManage.BlockExist(hash)
 }
 
 // GetBlockByHash return a block by given hash
@@ -33,29 +37,27 @@ func (c *Chain) GetBlockByHash(hash *bc.Hash) (*types.Block, error) {
 
 // GetBlockByHeight return a block header by given height
 func (c *Chain) GetBlockByHeight(height uint64) (*types.Block, error) {
-	node := c.index.NodeByHeight(height)
-	if node == nil {
-		return nil, errors.New("can't find block in given height")
+	hash, err := c.store.GetMainChainHash(height)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't find block in given height")
 	}
-	return c.store.GetBlock(&node.Hash)
+
+	return c.store.GetBlock(hash)
 }
 
 // GetHeaderByHash return a block header by given hash
 func (c *Chain) GetHeaderByHash(hash *bc.Hash) (*types.BlockHeader, error) {
-	node := c.index.GetNode(hash)
-	if node == nil {
-		return nil, errors.New("can't find block header in given hash")
-	}
-	return node.BlockHeader(), nil
+	return c.store.GetBlockHeader(hash)
 }
 
 // GetHeaderByHeight return a block header by given height
 func (c *Chain) GetHeaderByHeight(height uint64) (*types.BlockHeader, error) {
-	node := c.index.NodeByHeight(height)
-	if node == nil {
-		return nil, errors.New("can't find block header in given height")
+	hash, err := c.store.GetMainChainHash(height)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't find block header in given height")
 	}
-	return node.BlockHeader(), nil
+
+	return c.store.GetBlockHeader(hash)
 }
 
 func (c *Chain) calcReorganizeChain(beginAttach *types.BlockHeader, beginDetach *types.BlockHeader) ([]*types.BlockHeader, []*types.BlockHeader, error) {
@@ -117,7 +119,12 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 	}
 
 	finalizedBlockHeader := c.finalizedBlockHeader
-	if block.Height > c.LastJustifiedHeader().Height {
+	lastJustifiedHeader, err := c.LastJustifiedHeader()
+	if err != nil {
+		return err
+	}
+
+	if block.Height > lastJustifiedHeader.Height {
 		finalizedBlockHeader = &block.BlockHeader
 	}
 	if err := c.setState(&block.BlockHeader, finalizedBlockHeader, []*types.BlockHeader{&block.BlockHeader}, utxoView, contractView); err != nil {
@@ -188,7 +195,12 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 			return err
 		}
 
-		if attachBlock.Height > c.LastJustifiedHeader().Height {
+		lastJustifiedHeader, err := c.LastJustifiedHeader()
+		if err != nil {
+			return err
+		}
+
+		if attachBlock.Height > lastJustifiedHeader.Height {
 			finalizedBlockHeader = attachNode
 		}
 
@@ -251,7 +263,10 @@ func (c *Chain) broadcastVerification(v *Verification) error {
 // SaveBlock will validate and save block into storage
 func (c *Chain) saveBlock(block *types.Block) error {
 	bcBlock := types.MapBlock(block)
-	parent := c.index.GetNode(&block.PreviousBlockHash)
+	parent, err := c.store.GetBlockHeader(&block.PreviousBlockHash)
+	if err != nil {
+		return err
+	}
 
 	checkpoint, err := c.PrevCheckpointByPrevHash(&block.PreviousBlockHash)
 	if err != nil {
@@ -267,12 +282,6 @@ func (c *Chain) saveBlock(block *types.Block) error {
 	}
 
 	c.orphanManage.Delete(&bcBlock.ID)
-	node, err := state.NewBlockNode(&block.BlockHeader, parent)
-	if err != nil {
-		return err
-	}
-
-	c.index.AddNode(node)
 	return nil
 }
 
