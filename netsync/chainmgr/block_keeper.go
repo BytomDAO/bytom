@@ -253,7 +253,12 @@ func (bk *blockKeeper) syncWorker() {
 				continue
 			}
 
-			if err := bk.peers.BroadcastNewStatus(bk.chain.BestBlockHeader(), bk.chain.LastJustifiedHeader()); err != nil {
+			lastJustifiedHeader, err := bk.chain.LastJustifiedHeader()
+			if err != nil {
+				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail get last just justified header")
+			}
+
+			if err := bk.peers.BroadcastNewStatus(bk.chain.BestBlockHeader(), lastJustifiedHeader); err != nil {
 				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on syncWorker broadcast new status")
 			}
 		case <-bk.quit:

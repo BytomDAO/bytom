@@ -91,13 +91,6 @@ func (p *processBlockTestCase) Run() error {
 		}
 	}
 
-	if p.wantBlockIndex != nil {
-		blockIndex := chain.GetBlockIndex()
-		if !blockIndex.Equals(p.wantBlockIndex) {
-			return fmt.Errorf("#case(%s) want block index:%v, got block index:%v", p.desc, *p.wantBlockIndex, *blockIndex)
-		}
-	}
-
 	if p.wantOrphanManage != nil {
 		if !orphanManage.Equals(p.wantOrphanManage) {
 			return fmt.Errorf("#case(%s) want orphan manage:%v, got orphan manage:%v", p.desc, *p.wantOrphanManage, *orphanManage)

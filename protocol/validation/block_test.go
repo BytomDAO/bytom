@@ -185,14 +185,14 @@ func TestValidateBlockHeader(t *testing.T) {
 	cases := []struct {
 		desc   string
 		block  *bc.Block
-		parent *state.BlockNode
+		parent *types.BlockHeader
 		err    error
 	}{
 		{
 			block: &bc.Block{BlockHeader: &bc.BlockHeader{
 				Version: 2,
 			}},
-			parent: &state.BlockNode{
+			parent: &types.BlockHeader{
 				Version: 1,
 			},
 			err: errVersionRegression,
@@ -202,7 +202,7 @@ func TestValidateBlockHeader(t *testing.T) {
 				Version: 1,
 				Height:  20,
 			}},
-			parent: &state.BlockNode{
+			parent: &types.BlockHeader{
 				Version: 1,
 				Height:  18,
 			},
@@ -213,12 +213,12 @@ func TestValidateBlockHeader(t *testing.T) {
 			block: &bc.Block{BlockHeader: &bc.BlockHeader{
 				Version:         1,
 				Height:          20,
-				PreviousBlockId: &bc.Hash{V0: 18},
+				Timestamp:       1523358600,
+				PreviousBlockId: &bc.Hash{V0: 0},
 			}},
-			parent: &state.BlockNode{
+			parent: &types.BlockHeader{
 				Version: 1,
 				Height:  19,
-				Hash:    bc.Hash{V0: 19},
 			},
 			err: errMismatchedBlock,
 		},
@@ -226,17 +226,21 @@ func TestValidateBlockHeader(t *testing.T) {
 			block: &bc.Block{
 				ID: bc.Hash{V0: 1},
 				BlockHeader: &bc.BlockHeader{
-					Version:         1,
-					Height:          1,
-					Timestamp:       1523358600,
-					PreviousBlockId: &bc.Hash{V0: 0},
+					Version:   1,
+					Height:    1,
+					Timestamp: 1523358600,
+					PreviousBlockId: &bc.Hash{
+						V0: 10968299288729461209,
+						V1: 17851598738986808076,
+						V2: 17553284542460068090,
+						V3: 12480263069146267151,
+					},
 				},
 			},
-			parent: &state.BlockNode{
+			parent: &types.BlockHeader{
 				Version:   1,
 				Height:    0,
 				Timestamp: 1523352600,
-				Hash:      bc.Hash{V0: 0},
 			},
 			err: nil,
 		},
@@ -248,7 +252,7 @@ func TestValidateBlockHeader(t *testing.T) {
 					Version: 2,
 				},
 			},
-			parent: &state.BlockNode{
+			parent: &types.BlockHeader{
 				Version: 1,
 			},
 			err: errVersionRegression,
@@ -261,7 +265,7 @@ func TestValidateBlockHeader(t *testing.T) {
 					Version: 0,
 				},
 			},
-			parent: &state.BlockNode{
+			parent: &types.BlockHeader{
 				Version: 1,
 			},
 			err: errVersionRegression,
@@ -274,7 +278,7 @@ func TestValidateBlockHeader(t *testing.T) {
 					Version: math.MaxUint64,
 				},
 			},
-			parent: &state.BlockNode{
+			parent: &types.BlockHeader{
 				Version: 1,
 			},
 			err: errVersionRegression,
@@ -291,11 +295,17 @@ func TestValidateBlockHeader(t *testing.T) {
 // TestValidateBlock test the ValidateBlock function
 func TestValidateBlock(t *testing.T) {
 	cp, _ := vmutil.DefaultCoinbaseProgram()
+	parent := &types.BlockHeader{
+		Version:   1,
+		Height:    state.BlocksOfEpoch,
+		Timestamp: 1523352600,
+	}
+	parentHash := parent.Hash()
+
 	converter := func(prog []byte) ([]byte, error) { return nil, nil }
 	cases := []struct {
 		desc       string
 		block      *bc.Block
-		parent     *state.BlockNode
 		checkpoint *state.Checkpoint
 		err        error
 	}{
@@ -307,7 +317,7 @@ func TestValidateBlock(t *testing.T) {
 					Version:          1,
 					Height:           state.BlocksOfEpoch + 1,
 					Timestamp:        1523358600,
-					PreviousBlockId:  &bc.Hash{V0: 0},
+					PreviousBlockId:  &parentHash,
 					TransactionsRoot: &bc.Hash{V0: 1},
 				},
 				Transactions: []*bc.Tx{
@@ -321,12 +331,6 @@ func TestValidateBlock(t *testing.T) {
 					}),
 				},
 			},
-			parent: &state.BlockNode{
-				Version:   1,
-				Height:    state.BlocksOfEpoch,
-				Timestamp: 1523352600,
-				Hash:      bc.Hash{V0: 0},
-			},
 			checkpoint: &state.Checkpoint{
 				Rewards: map[string]uint64{hex.EncodeToString(cp): 41250000000}},
 			err: errMismatchedMerkleRoot,
@@ -339,7 +343,7 @@ func TestValidateBlock(t *testing.T) {
 					Version:          1,
 					Height:           state.BlocksOfEpoch + 1,
 					Timestamp:        1523358600,
-					PreviousBlockId:  &bc.Hash{V0: 0},
+					PreviousBlockId:  &parentHash,
 					TransactionsRoot: &bc.Hash{V0: 6294987741126419124, V1: 12520373106916389157, V2: 5040806596198303681, V3: 1151748423853876189},
 				},
 				Transactions: []*bc.Tx{
@@ -353,12 +357,6 @@ func TestValidateBlock(t *testing.T) {
 					}),
 				},
 			},
-			parent: &state.BlockNode{
-				Version:   1,
-				Height:    state.BlocksOfEpoch,
-				Timestamp: 1523352600,
-				Hash:      bc.Hash{V0: 0},
-			},
 			checkpoint: &state.Checkpoint{
 				Rewards: map[string]uint64{hex.EncodeToString(cp): 41250000000},
 			},
@@ -367,7 +365,7 @@ func TestValidateBlock(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		err := ValidateBlock(c.block, c.parent, c.checkpoint, converter)
+		err := ValidateBlock(c.block, parent, c.checkpoint, converter)
 		if rootErr(err) != c.err {
 			t.Errorf("case #%d (%s) got error %s, want %s", i, c.desc, err, c.err)
 		}
@@ -378,19 +376,21 @@ func TestValidateBlock(t *testing.T) {
 func TestGasOverBlockLimit(t *testing.T) {
 	cp, _ := vmutil.DefaultCoinbaseProgram()
 	converter := func(prog []byte) ([]byte, error) { return nil, nil }
-	parent := &state.BlockNode{
-		Version:   1,
-		Height:    0,
-		Timestamp: 1523352600,
-		Hash:      bc.Hash{V0: 0},
+	parent := &types.BlockHeader{
+		Version:           1,
+		Height:            0,
+		Timestamp:         1523352600,
+		PreviousBlockHash: bc.Hash{V0: 0},
 	}
+
+	parentHash := parent.Hash()
 	block := &bc.Block{
 		ID: bc.Hash{V0: 1},
 		BlockHeader: &bc.BlockHeader{
 			Version:          1,
 			Height:           1,
 			Timestamp:        1523358600,
-			PreviousBlockId:  &bc.Hash{V0: 0},
+			PreviousBlockId:  &parentHash,
 			TransactionsRoot: &bc.Hash{V0: 1},
 		},
 		Transactions: []*bc.Tx{
