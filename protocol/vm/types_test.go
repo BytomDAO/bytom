@@ -127,9 +127,9 @@ func TestAsBigInt(t *testing.T) {
 }
 
 func TestInt64BigIntConvert(t *testing.T) {
-	cases := []int64{0, 1, 2, 1024, 65536, 9223372036854775807}
+	cases := []uint64{0, 1, 2, 1024, 65536, 9223372036854775807}
 	for i, c := range cases {
-		x := Int64Bytes(c)
+		x := Uint64Bytes(c)
 		y := BigIntBytes(uint256.NewInt().SetUint64(uint64(c)))
 		if !testutil.DeepEqual(x, y) {
 			t.Errorf("case %d fail on compare %d bytes", i, c)

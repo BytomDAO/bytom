@@ -46,20 +46,6 @@ func TestSpliceOps(t *testing.T) {
 		op: OP_SUBSTR,
 		startVM: &virtualMachine{
 			runLimit:  50000,
-			dataStack: [][]byte{[]byte("helloworld"), {3}, Int64Bytes(-1)},
-		},
-		wantErr: ErrBadValue,
-	}, {
-		op: OP_SUBSTR,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{[]byte("helloworld"), Int64Bytes(-1), {5}},
-		},
-		wantErr: ErrBadValue,
-	}, {
-		op: OP_SUBSTR,
-		startVM: &virtualMachine{
-			runLimit:  50000,
 			dataStack: [][]byte{[]byte("helloworld"), {6}, {5}},
 		},
 		wantErr: ErrBadValue,
@@ -85,13 +71,6 @@ func TestSpliceOps(t *testing.T) {
 		op: OP_LEFT,
 		startVM: &virtualMachine{
 			runLimit:  50000,
-			dataStack: [][]byte{[]byte("helloworld"), Int64Bytes(-1)},
-		},
-		wantErr: ErrBadValue,
-	}, {
-		op: OP_LEFT,
-		startVM: &virtualMachine{
-			runLimit:  50000,
 			dataStack: [][]byte{[]byte("helloworld"), {11}},
 		},
 		wantErr: ErrBadValue,
@@ -113,13 +92,6 @@ func TestSpliceOps(t *testing.T) {
 			deferredCost: -19,
 			dataStack:    [][]byte{[]byte("world")},
 		},
-	}, {
-		op: OP_RIGHT,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{[]byte("helloworld"), Int64Bytes(-1)},
-		},
-		wantErr: ErrBadValue,
 	}, {
 		op: OP_RIGHT,
 		startVM: &virtualMachine{

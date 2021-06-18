@@ -1,8 +1,6 @@
 package vm
 
 import (
-	"encoding/binary"
-
 	"github.com/holiman/uint256"
 )
 
@@ -26,19 +24,9 @@ func AsBool(bytes []byte) bool {
 	return false
 }
 
-// Int64Bytes convert int64 to bytes
-func Int64Bytes(n int64) []byte {
-	if n == 0 {
-		return []byte{}
-	}
-	res := make([]byte, 8)
-	// converting int64 to uint64 is a safe operation that
-	// preserves all data
-	binary.LittleEndian.PutUint64(res, uint64(n))
-	for len(res) > 0 && res[len(res)-1] == 0 {
-		res = res[:len(res)-1]
-	}
-	return res
+// Uint64Bytes convert uint64 to bytes in vm
+func Uint64Bytes(n uint64) []byte {
+	return BigIntBytes(uint256.NewInt().SetUint64(n))
 }
 
 // BigIntBytes conv big int to little endian bytes, uint256 is version 1.1.1
