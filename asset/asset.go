@@ -126,7 +126,7 @@ func (reg *Registry) getNextAssetIndex() uint64 {
 }
 
 // Define defines a new Asset.
-func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, limitHeight int64, alias string, issuanceProgram chainjson.HexBytes) (*Asset, error) {
+func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, limitHeight uint64, alias string, issuanceProgram chainjson.HexBytes) (*Asset, error) {
 	var err error
 	var assetSigner *signers.Signer
 
@@ -363,7 +363,7 @@ func serializeAssetDef(def map[string]interface{}) ([]byte, error) {
 	return json.MarshalIndent(def, "", "  ")
 }
 
-func multisigIssuanceProgram(pubkeys []ed25519.PublicKey, nrequired int, blockHeight int64) (program []byte, vmversion uint64, err error) {
+func multisigIssuanceProgram(pubkeys []ed25519.PublicKey, nrequired int, blockHeight uint64) (program []byte, vmversion uint64, err error) {
 	issuanceProg, err := vmutil.P2SPMultiSigProgramWithHeight(pubkeys, nrequired, blockHeight)
 	if err != nil {
 		return nil, 0, err

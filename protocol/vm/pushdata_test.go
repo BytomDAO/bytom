@@ -140,7 +140,7 @@ func TestPushDataBytes(t *testing.T) {
 
 func TestPushdataInt64(t *testing.T) {
 	type test struct {
-		num  int64
+		num  uint64
 		want []byte
 	}
 	cases := []test{{
@@ -155,23 +155,17 @@ func TestPushdataInt64(t *testing.T) {
 	}, {
 		num:  256,
 		want: []byte{byte(OP_DATA_2), 0x00, 0x01},
-	}, {
-		num:  -1,
-		want: []byte{byte(OP_DATA_8), 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
-	}, {
-		num:  -2,
-		want: []byte{byte(OP_DATA_8), 0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 	}}
 
 	for i := 1; i <= 16; i++ {
 		cases = append(cases, test{
-			num:  int64(i),
+			num:  uint64(i),
 			want: []byte{byte(OP_1) - 1 + byte(i)},
 		})
 	}
 
 	for _, c := range cases {
-		got := PushDataInt64(c.num)
+		got := PushDataUint64(c.num)
 
 		if !bytes.Equal(got, c.want) {
 			t.Errorf("PushDataInt64(%d) = %x want %x", c.num, got, c.want)

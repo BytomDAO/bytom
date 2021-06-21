@@ -50,7 +50,7 @@ func opAnd(vm *virtualMachine) error {
 	for i := 0; i < min; i++ {
 		res = append(res, a[i]&b[i])
 	}
-	return vm.push(res, true)
+	return vm.pushDataStack(res, true)
 }
 
 func opOr(vm *virtualMachine) error {
@@ -103,7 +103,7 @@ func doOr(vm *virtualMachine, xor bool) error {
 
 		res = append(res, resByte)
 	}
-	return vm.push(res, true)
+	return vm.pushDataStack(res, true)
 }
 
 func opEqual(vm *virtualMachine) error {

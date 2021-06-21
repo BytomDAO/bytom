@@ -28,9 +28,9 @@ func (b *Builder) addP2SPMultiSig(pubkeys []ed25519.PublicKey, nrequired int) er
 	for _, p := range pubkeys {
 		b.AddData(p)
 	}
-	b.AddInt64(int64(nrequired))    // stack is now [... SIG SIG SIG PREDICATEHASH PUB PUB PUB M]
-	b.AddInt64(int64(len(pubkeys))) // stack is now [... SIG SIG SIG PREDICATEHASH PUB PUB PUB M N]
-	b.AddOp(vm.OP_CHECKMULTISIG)    // stack is now [... NARGS]
+	b.AddUint64(uint64(nrequired))    // stack is now [... SIG SIG SIG PREDICATEHASH PUB PUB PUB M]
+	b.AddUint64(uint64(len(pubkeys))) // stack is now [... SIG SIG SIG PREDICATEHASH PUB PUB PUB M N]
+	b.AddOp(vm.OP_CHECKMULTISIG)      // stack is now [... NARGS]
 	return nil
 }
 
@@ -44,7 +44,7 @@ func DefaultCoinbaseProgram() ([]byte, error) {
 // P2WPKHProgram return the segwit pay to public key hash
 func P2WPKHProgram(hash []byte) ([]byte, error) {
 	builder := NewBuilder()
-	builder.AddInt64(0)
+	builder.AddUint64(0)
 	builder.AddData(hash)
 	return builder.Build()
 }
@@ -52,7 +52,7 @@ func P2WPKHProgram(hash []byte) ([]byte, error) {
 // P2WSHProgram return the segwit pay to script hash
 func P2WSHProgram(hash []byte) ([]byte, error) {
 	builder := NewBuilder()
-	builder.AddInt64(0)
+	builder.AddUint64(0)
 	builder.AddData(hash)
 	return builder.Build()
 }
@@ -111,9 +111,9 @@ func P2SHProgram(scriptHash []byte) ([]byte, error) {
 	builder.AddOp(vm.OP_SHA3)
 	builder.AddData(scriptHash)
 	builder.AddOp(vm.OP_EQUALVERIFY)
-	builder.AddInt64(0)
+	builder.AddUint64(0)
 	builder.AddOp(vm.OP_SWAP)
-	builder.AddInt64(0)
+	builder.AddUint64(0)
 	builder.AddOp(vm.OP_CHECKPREDICATE)
 	return builder.Build()
 }
@@ -128,10 +128,10 @@ func P2SPMultiSigProgram(pubkeys []ed25519.PublicKey, nrequired int) ([]byte, er
 }
 
 // P2SPMultiSigProgramWithHeight generates the script with block height for control transaction output
-func P2SPMultiSigProgramWithHeight(pubkeys []ed25519.PublicKey, nrequired int, blockHeight int64) ([]byte, error) {
+func P2SPMultiSigProgramWithHeight(pubkeys []ed25519.PublicKey, nrequired int, blockHeight uint64) ([]byte, error) {
 	builder := NewBuilder()
 	if blockHeight > 0 {
-		builder.AddInt64(blockHeight)
+		builder.AddUint64(blockHeight)
 		builder.AddOp(vm.OP_BLOCKHEIGHT)
 		builder.AddOp(vm.OP_GREATERTHAN)
 		builder.AddOp(vm.OP_VERIFY)

@@ -58,7 +58,7 @@ func opAsset(vm *virtualMachine) error {
 	if vm.context.AssetID == nil {
 		return ErrContext
 	}
-	return vm.push(*vm.context.AssetID, true)
+	return vm.pushDataStack(*vm.context.AssetID, true)
 }
 
 func opAmount(vm *virtualMachine) error {
@@ -80,7 +80,7 @@ func opProgram(vm *virtualMachine) error {
 		return err
 	}
 
-	return vm.push(vm.context.Code, true)
+	return vm.pushDataStack(vm.context.Code, true)
 }
 
 func opIndex(vm *virtualMachine) error {
@@ -100,7 +100,7 @@ func opEntryID(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	return vm.push(vm.context.EntryID, true)
+	return vm.pushDataStack(vm.context.EntryID, true)
 }
 
 func opOutputID(vm *virtualMachine) error {
@@ -112,7 +112,7 @@ func opOutputID(vm *virtualMachine) error {
 	if vm.context.SpentOutputID == nil {
 		return ErrContext
 	}
-	return vm.push(*vm.context.SpentOutputID, true)
+	return vm.pushDataStack(*vm.context.SpentOutputID, true)
 }
 
 func opBlockHeight(vm *virtualMachine) error {

@@ -7,29 +7,27 @@ import (
 )
 
 func opCat(vm *virtualMachine) error {
-	err := vm.applyCost(4)
-	if err != nil {
+	if err := vm.applyCost(4); err != nil {
 		return err
 	}
+
 	b, err := vm.pop(true)
 	if err != nil {
 		return err
 	}
+
 	a, err := vm.pop(true)
 	if err != nil {
 		return err
 	}
+
 	lens := int64(len(a) + len(b))
-	err = vm.applyCost(lens)
-	if err != nil {
+	if err = vm.applyCost(lens); err != nil {
 		return err
 	}
+
 	vm.deferCost(-lens)
-	err = vm.push(append(a, b...), true)
-	if err != nil {
-		return err
-	}
-	return nil
+	return vm.pushDataStack(append(a, b...), true)
 }
 
 func opSubstr(vm *virtualMachine) error {
@@ -72,7 +70,7 @@ func opSubstr(vm *virtualMachine) error {
 		return ErrBadValue
 	}
 
-	return vm.push(str[offset:end], true)
+	return vm.pushDataStack(str[offset:end], true)
 }
 
 func opLeft(vm *virtualMachine) error {
@@ -104,7 +102,7 @@ func opLeft(vm *virtualMachine) error {
 		return ErrBadValue
 	}
 
-	return vm.push(str[:size], true)
+	return vm.pushDataStack(str[:size], true)
 }
 
 func opRight(vm *virtualMachine) error {
@@ -131,12 +129,13 @@ func opRight(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
+
 	lstr := int64(len(str))
 	if size > lstr {
 		return ErrBadValue
 	}
 
-	return vm.push(str[lstr-size:], true)
+	return vm.pushDataStack(str[lstr-size:], true)
 }
 
 func opSize(vm *virtualMachine) error {
@@ -153,24 +152,25 @@ func opSize(vm *virtualMachine) error {
 }
 
 func opCatpushdata(vm *virtualMachine) error {
-	err := vm.applyCost(4)
-	if err != nil {
+	if err := vm.applyCost(4); err != nil {
 		return err
 	}
+
 	b, err := vm.pop(true)
 	if err != nil {
 		return err
 	}
+
 	a, err := vm.pop(true)
 	if err != nil {
 		return err
 	}
-	lb := len(b)
-	lens := int64(len(a) + lb)
-	err = vm.applyCost(lens)
-	if err != nil {
+
+	lens := int64(len(a) + len(b))
+	if err = vm.applyCost(lens); err != nil {
 		return err
 	}
+
 	vm.deferCost(-lens)
-	return vm.push(append(a, PushDataBytes(b)...), true)
+	return vm.pushDataStack(append(a, PushDataBytes(b)...), true)
 }
