@@ -5,8 +5,7 @@ import (
 )
 
 func opCheckOutput(vm *virtualMachine) error {
-	err := vm.applyCost(16)
-	if err != nil {
+	if err := vm.applyCost(16); err != nil {
 		return err
 	}
 
@@ -14,13 +13,12 @@ func opCheckOutput(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	vmVersion, err := vm.popInt64(true)
+
+	vmVersion, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	if vmVersion < 0 {
-		return ErrBadValue
-	}
+
 	assetID, err := vm.pop(true)
 	if err != nil {
 		return err
@@ -35,19 +33,16 @@ func opCheckOutput(vm *virtualMachine) error {
 		return ErrBadValue
 	}
 
-	index, err := vm.popInt64(true)
+	index, err := vm.popBigInt(true)
 	if err != nil {
 		return err
-	}
-	if index < 0 {
-		return ErrBadValue
 	}
 
 	if vm.context.CheckOutput == nil {
 		return ErrContext
 	}
 
-	ok, err := vm.context.CheckOutput(uint64(index), amount, assetID, uint64(vmVersion), code, vm.altStack, vm.expansionReserved)
+	ok, err := vm.context.CheckOutput(uint64(index.Uint64()), amount, assetID, uint64(vmVersion.Uint64()), code, vm.altStack, vm.expansionReserved)
 	if err != nil {
 		return err
 	}

@@ -33,91 +33,99 @@ func opCat(vm *virtualMachine) error {
 }
 
 func opSubstr(vm *virtualMachine) error {
-	err := vm.applyCost(4)
+	if err := vm.applyCost(4); err != nil {
+		return err
+	}
+
+	sizeBigInt, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	size, err := vm.popInt64(true)
+
+	size, err := bigIntInt64(sizeBigInt)
 	if err != nil {
 		return err
 	}
-	if size < 0 {
-		return ErrBadValue
-	}
-	err = vm.applyCost(size)
-	if err != nil {
+
+	if err = vm.applyCost(size); err != nil {
 		return err
 	}
+
 	vm.deferCost(-size)
-	offset, err := vm.popInt64(true)
+	offsetBigInt, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	if offset < 0 {
-		return ErrBadValue
+
+	offset, err := bigIntInt64(offsetBigInt)
+	if err != nil {
+		return err
 	}
+
 	str, err := vm.pop(true)
 	if err != nil {
 		return err
 	}
+
 	end, ok := checked.AddInt64(offset, size)
 	if !ok || end > int64(len(str)) {
 		return ErrBadValue
 	}
-	err = vm.push(str[offset:end], true)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	return vm.push(str[offset:end], true)
 }
 
 func opLeft(vm *virtualMachine) error {
-	err := vm.applyCost(4)
+	if err := vm.applyCost(4); err != nil {
+		return err
+	}
+
+	sizeBigInt, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	size, err := vm.popInt64(true)
+
+	size, err := bigIntInt64(sizeBigInt)
 	if err != nil {
 		return err
 	}
-	if size < 0 {
-		return ErrBadValue
-	}
-	err = vm.applyCost(size)
-	if err != nil {
+
+	if err = vm.applyCost(size); err != nil {
 		return err
 	}
+
 	vm.deferCost(-size)
 	str, err := vm.pop(true)
 	if err != nil {
 		return err
 	}
+
 	if size > int64(len(str)) {
 		return ErrBadValue
 	}
-	err = vm.push(str[:size], true)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	return vm.push(str[:size], true)
 }
 
 func opRight(vm *virtualMachine) error {
-	err := vm.applyCost(4)
+	if err := vm.applyCost(4); err != nil {
+		return err
+	}
+
+	sizeBigInt, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	size, err := vm.popInt64(true)
+
+	size, err := bigIntInt64(sizeBigInt)
 	if err != nil {
 		return err
 	}
-	if size < 0 {
-		return ErrBadValue
-	}
-	err = vm.applyCost(size)
-	if err != nil {
+
+	if err = vm.applyCost(size); err != nil {
 		return err
 	}
+
 	vm.deferCost(-size)
 	str, err := vm.pop(true)
 	if err != nil {
@@ -127,11 +135,8 @@ func opRight(vm *virtualMachine) error {
 	if size > lstr {
 		return ErrBadValue
 	}
-	err = vm.push(str[lstr-size:], true)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	return vm.push(str[lstr-size:], true)
 }
 
 func opSize(vm *virtualMachine) error {

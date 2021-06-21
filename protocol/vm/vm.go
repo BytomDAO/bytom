@@ -72,8 +72,7 @@ func Verify(context *Context, gasLimit int64) (gasLeft int64, err error) {
 		}
 	}
 
-	err = vm.run()
-	if err == nil && vm.falseResult() {
+	if err = vm.run(); err == nil && vm.falseResult() {
 		err = ErrFalseVMResult
 	}
 
@@ -176,6 +175,7 @@ func (vm *virtualMachine) pop(deferred bool) ([]byte, error) {
 	if len(vm.dataStack) == 0 {
 		return nil, ErrDataStackUnderflow
 	}
+
 	res := vm.dataStack[len(vm.dataStack)-1]
 	vm.dataStack = vm.dataStack[:len(vm.dataStack)-1]
 
@@ -187,23 +187,6 @@ func (vm *virtualMachine) pop(deferred bool) ([]byte, error) {
 	}
 
 	return res, nil
-}
-
-func (vm *virtualMachine) popInt64(deferred bool) (int64, error) {
-	bigInt, err := vm.popBigInt(deferred)
-	if err != nil {
-		return 0, err
-	}
-
-	if !bigInt.IsUint64() {
-		return 0, ErrBadValue
-	}
-
-	i := int64(bigInt.Uint64())
-	if i < 0 {
-		return 0, ErrBadValue
-	}
-	return i, nil
 }
 
 func (vm *virtualMachine) popBigInt(deferred bool) (*uint256.Int, error) {

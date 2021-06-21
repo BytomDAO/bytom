@@ -67,22 +67,35 @@ func opCheckSig(vm *virtualMachine) error {
 }
 
 func opCheckMultiSig(vm *virtualMachine) error {
-	numPubkeys, err := vm.popInt64(true)
+	numPubkeysBigInt, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
+
+	numPubkeys, err := bigIntInt64(numPubkeysBigInt)
+	if err != nil {
+		return err
+	}
+
 	pubCost, ok := checked.MulInt64(numPubkeys, 1024)
 	if numPubkeys < 0 || !ok {
 		return ErrBadValue
 	}
-	err = vm.applyCost(pubCost)
+
+	if err = vm.applyCost(pubCost); err != nil {
+		return err
+	}
+
+	numSigsBigInt, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	numSigs, err := vm.popInt64(true)
+
+	numSigs, err := bigIntInt64(numSigsBigInt)
 	if err != nil {
 		return err
 	}
+
 	if numSigs < 0 || numSigs > numPubkeys || (numPubkeys > 0 && numSigs == 0) {
 		return ErrBadValue
 	}
