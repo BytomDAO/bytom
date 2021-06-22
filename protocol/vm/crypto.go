@@ -37,7 +37,7 @@ func doHash(vm *virtualMachine, hashFactory func() hash.Hash) error {
 	if err != nil {
 		return err
 	}
-	return vm.push(h.Sum(nil), false)
+	return vm.pushDataStack(h.Sum(nil), false)
 }
 
 func opCheckSig(vm *virtualMachine) error {
@@ -148,7 +148,7 @@ func opTxSigHash(vm *virtualMachine) error {
 	if vm.context.TxSigHash == nil {
 		return ErrContext
 	}
-	return vm.push(vm.context.TxSigHash(), false)
+	return vm.pushDataStack(vm.context.TxSigHash(), false)
 }
 
 func opHash160(vm *virtualMachine) error {
@@ -162,5 +162,5 @@ func opHash160(vm *virtualMachine) error {
 		return err
 	}
 
-	return vm.push(crypto.Ripemd160(data), false)
+	return vm.pushDataStack(crypto.Ripemd160(data), false)
 }

@@ -61,13 +61,13 @@ func Verify(context *Context, gasLimit int64) (gasLeft int64, err error) {
 	}
 
 	for i, state := range context.StateData {
-		if err = vm.pushAlt(state, false); err != nil {
+		if err = vm.pushAltStack(state, false); err != nil {
 			return vm.runLimit, errors.Wrapf(err, "pushing initial statedata %d", i)
 		}
 	}
 
 	for i, arg := range context.Arguments {
-		if err = vm.push(arg, false); err != nil {
+		if err = vm.pushDataStack(arg, false); err != nil {
 			return vm.runLimit, errors.Wrapf(err, "pushing initial argument %d", i)
 		}
 	}
@@ -115,6 +115,7 @@ func (vm *virtualMachine) step() error {
 		if vm.expansionReserved {
 			return ErrDisallowedOpcode
 		}
+
 		vm.pc = vm.nextPC
 		return vm.applyCost(1)
 	}
@@ -139,7 +140,7 @@ func (vm *virtualMachine) step() error {
 	return nil
 }
 
-func (vm *virtualMachine) push(data []byte, deferred bool) error {
+func (vm *virtualMachine) pushDataStack(data []byte, deferred bool) error {
 	cost := 8 + int64(len(data))
 	if deferred {
 		vm.deferCost(cost)
@@ -151,7 +152,7 @@ func (vm *virtualMachine) push(data []byte, deferred bool) error {
 	return nil
 }
 
-func (vm *virtualMachine) pushAlt(data []byte, deferred bool) error {
+func (vm *virtualMachine) pushAltStack(data []byte, deferred bool) error {
 	cost := 8 + int64(len(data))
 	if deferred {
 		vm.deferCost(cost)
@@ -164,11 +165,11 @@ func (vm *virtualMachine) pushAlt(data []byte, deferred bool) error {
 }
 
 func (vm *virtualMachine) pushBool(b bool, deferred bool) error {
-	return vm.push(BoolBytes(b), deferred)
+	return vm.pushDataStack(BoolBytes(b), deferred)
 }
 
 func (vm *virtualMachine) pushBigInt(n *uint256.Int, deferred bool) error {
-	return vm.push(BigIntBytes(n), deferred)
+	return vm.pushDataStack(BigIntBytes(n), deferred)
 }
 
 func (vm *virtualMachine) pop(deferred bool) ([]byte, error) {

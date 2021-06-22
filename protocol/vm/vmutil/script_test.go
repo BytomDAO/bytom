@@ -107,7 +107,7 @@ func TestP2SPMultiSigProgramWithHeight(t *testing.T) {
 	tests := []struct {
 		pubkeys     []ed25519.PublicKey
 		nrequired   int
-		height      int64
+		height      uint64
 		wantProgram string
 		wantErr     error
 	}{
@@ -125,12 +125,6 @@ func TestP2SPMultiSigProgramWithHeight(t *testing.T) {
 			pubkeys:     []ed25519.PublicKey{pub1, pub2, pub3},
 			nrequired:   2,
 			wantProgram: "ae20988650ff921c82d47a953527894f792572ba63197c56e5fe79e5df0c444d6bb6207192bf4eac0789ee19c88dfa87861cf59e215820f7bdb7be02761d9ed92e6c62208bcd251d9f4e03877130b6e6f1d577eda562375f07c3cdfad8f1d541002fd1a35253ad",
-		},
-		{
-			pubkeys:   []ed25519.PublicKey{pub1},
-			nrequired: 1,
-			height:    -1,
-			wantErr:   errors.WithDetail(ErrBadValue, "negative blockHeight"),
 		},
 		{
 			pubkeys:     []ed25519.PublicKey{pub1},

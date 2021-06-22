@@ -27,8 +27,8 @@ func NewBuilder() *Builder {
 }
 
 // AddInt64 adds a pushdata instruction for an integer value.
-func (b *Builder) AddInt64(n int64) *Builder {
-	b.program = append(b.program, vm.PushDataInt64(n)...)
+func (b *Builder) AddUint64(n uint64) *Builder {
+	b.program = append(b.program, vm.PushDataUint64(n)...)
 	return b
 }
 

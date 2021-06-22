@@ -3,21 +3,21 @@ package vm
 import "encoding/binary"
 
 func opFalse(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
+
 	return vm.pushBool(false, false)
 }
 
 func opPushdata(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
+
 	d := make([]byte, len(vm.data))
 	copy(d, vm.data)
-	return vm.push(d, false)
+	return vm.pushDataStack(d, false)
 }
 
 func opNop(vm *virtualMachine) error {
@@ -46,13 +46,15 @@ func PushDataBytes(in []byte) []byte {
 	return append([]byte{byte(OP_PUSHDATA4), b[0], b[1], b[2], b[3]}, in...)
 }
 
-// PushDataInt64 push int64 to stack
-func PushDataInt64(n int64) []byte {
+// PushDataUint64 push int64 to stack
+func PushDataUint64(n uint64) []byte {
 	if n == 0 {
 		return []byte{byte(OP_0)}
 	}
+
 	if n >= 1 && n <= 16 {
 		return []byte{uint8(OP_1) + uint8(n) - 1}
 	}
-	return PushDataBytes(Uint64Bytes(uint64(n)))
+
+	return PushDataBytes(Uint64Bytes(n))
 }
