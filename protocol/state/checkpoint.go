@@ -10,12 +10,6 @@ import (
 	"github.com/bytom/bytom/protocol/bc/types"
 )
 
-const (
-	// BlocksOfEpoch represent the block num in one epoch
-	BlocksOfEpoch = 100
-	minMortgage   = 1000000
-)
-
 // CheckpointStatus represent current status of checkpoint
 type CheckpointStatus uint8
 
@@ -160,7 +154,7 @@ func (c *Checkpoint) Validators() map[string]*Validator {
 
 	//  todo use vote num to generate validators in test version
 	for pubKey, mortgageNum := range c.Votes {
-		if mortgageNum >= minMortgage {
+		if mortgageNum >= consensus.ActiveNetParams.MinGuarantyNum {
 			validators = append(validators, &Validator{
 				PubKey:   pubKey,
 				Vote:     c.Votes[pubKey],

@@ -118,7 +118,7 @@ func (c *Checkpoint) ApplyFederationReward() error {
 	}
 
 	federationScript := config.CommonConfig.Federation.FederationScript
-	c.Rewards[federationScript] = federationReward * BlocksOfEpoch
+	c.Rewards[federationScript] = federationReward * consensus.ActiveNetParams.BlocksOfEpoch
 	return nil
 }
 

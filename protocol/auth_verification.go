@@ -6,6 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/state"
 )
@@ -238,7 +239,8 @@ func makeVerification(supLink *state.SupLink, checkpoint *state.Checkpoint, pubK
 }
 
 func validate(v *Verification) error {
-	if v.SourceHeight%state.BlocksOfEpoch != 0 || v.TargetHeight%state.BlocksOfEpoch != 0 {
+	blocksOfEpoch := consensus.ActiveNetParams.BlocksOfEpoch
+	if v.SourceHeight%blocksOfEpoch != 0 || v.TargetHeight%blocksOfEpoch != 0 {
 		return errVoteToGrowingCheckpoint
 	}
 
