@@ -72,11 +72,8 @@ func RetireProgram(comment []byte) ([]byte, error) {
 func RegisterProgram(contract []byte) ([]byte, error) {
 	builder := NewBuilder()
 	builder.AddOp(vm.OP_FAIL)
-	builder.AddOp(vm.OP_PUSHDATA1)
 	builder.AddData([]byte(bcrp.BCRP))
-	builder.AddOp(vm.OP_PUSHDATA1)
 	builder.AddData([]byte{byte(bcrp.Version)})
-	builder.AddOp(vm.OP_PUSHDATA1)
 	builder.AddData(contract)
 	return builder.Build()
 }
@@ -85,8 +82,7 @@ func RegisterProgram(contract []byte) ([]byte, error) {
 // follow BCRP(bytom contract register protocol)
 func CallContractProgram(hash []byte) ([]byte, error) {
 	builder := NewBuilder()
-	builder.AddOp(vm.OP_1)
-	builder.AddOp(vm.OP_PUSHDATA1)
+	builder.AddData([]byte(bcrp.BCRP))
 	builder.AddData(hash)
 	return builder.Build()
 }
