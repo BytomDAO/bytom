@@ -30,8 +30,9 @@ func TestIsBCRPScript(t *testing.T) {
 			program:  "6a4c04626372704c01024c2820e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c0",
 			expected: false,
 		},
+
 		{
-			program:  "6a4c04626372704c01014c2820e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c0",
+			program:  "6a046263727001012820e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c0",
 			expected: true,
 		},
 	}
@@ -71,7 +72,7 @@ func TestIsCallContractScript(t *testing.T) {
 			expected: false,
 		},
 		{
-			program:  "514c204e4f02d43bf50171f7f25d046b7f016002da410fc00d2e8902e7b170c98cf946",
+			program:  "0462637270204e4f02d43bf50171f7f25d046b7f016002da410fc00d2e8902e7b170c98cf946",
 			expected: true,
 		},
 	}
