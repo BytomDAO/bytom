@@ -5,14 +5,15 @@ import (
 )
 
 func opVerify(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
+
 	p, err := vm.pop(true)
 	if err != nil {
 		return err
 	}
+
 	if AsBool(p) {
 		return nil
 	}
@@ -20,10 +21,10 @@ func opVerify(vm *virtualMachine) error {
 }
 
 func opFail(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
+
 	return ErrReturn
 }
 
@@ -92,24 +93,25 @@ func opCheckPredicate(vm *virtualMachine) error {
 }
 
 func opJump(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
+
 	address := binary.LittleEndian.Uint32(vm.data)
 	vm.nextPC = address
 	return nil
 }
 
 func opJumpIf(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
+
 	p, err := vm.pop(true)
 	if err != nil {
 		return err
 	}
+
 	if AsBool(p) {
 		address := binary.LittleEndian.Uint32(vm.data)
 		vm.nextPC = address
