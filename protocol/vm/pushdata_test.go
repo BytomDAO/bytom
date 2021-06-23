@@ -61,7 +61,7 @@ func TestPushdataOps(t *testing.T) {
 		})
 	}
 
-	pushops := append(pushdataops, OP_FALSE, OP_1NEGATE, OP_NOP)
+	pushops := append(pushdataops, OP_FALSE, OP_NOP)
 	for _, op := range pushops {
 		cases = append(cases, testStruct{
 			op: op,

@@ -135,9 +135,8 @@ func P2SPMultiSigProgramWithHeight(pubkeys []ed25519.PublicKey, nrequired int, b
 		builder.AddOp(vm.OP_BLOCKHEIGHT)
 		builder.AddOp(vm.OP_GREATERTHAN)
 		builder.AddOp(vm.OP_VERIFY)
-	} else if blockHeight < 0 {
-		return nil, errors.WithDetail(ErrBadValue, "negative blockHeight")
 	}
+
 	if err := builder.addP2SPMultiSig(pubkeys, nrequired); err != nil {
 		return nil, err
 	}

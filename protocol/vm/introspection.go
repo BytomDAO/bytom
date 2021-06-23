@@ -23,6 +23,7 @@ func opCheckOutput(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
+
 	amountInt, err := vm.popBigInt(true)
 	if err != nil {
 		return err
@@ -50,8 +51,7 @@ func opCheckOutput(vm *virtualMachine) error {
 }
 
 func opAsset(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
 
@@ -62,8 +62,7 @@ func opAsset(vm *virtualMachine) error {
 }
 
 func opAmount(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
 
@@ -75,8 +74,7 @@ func opAmount(vm *virtualMachine) error {
 }
 
 func opProgram(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
 
@@ -96,16 +94,14 @@ func opIndex(vm *virtualMachine) error {
 }
 
 func opEntryID(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
 	return vm.pushDataStack(vm.context.EntryID, true)
 }
 
 func opOutputID(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
 
@@ -116,8 +112,7 @@ func opOutputID(vm *virtualMachine) error {
 }
 
 func opBlockHeight(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
 
