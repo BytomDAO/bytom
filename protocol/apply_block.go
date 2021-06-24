@@ -6,6 +6,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/config"
+	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/math/checked"
 	"github.com/bytom/bytom/protocol/bc"
@@ -24,7 +25,7 @@ type applyBlockReply struct {
 // it will return verification when an epoch is reached and the current node is the validator, otherwise return nil
 // the chain module must broadcast the verification
 func (c *Casper) ApplyBlock(block *types.Block) (*applyBlockReply, error) {
-	if block.Height%state.BlocksOfEpoch == 1 {
+	if block.Height%consensus.ActiveNetParams.BlocksOfEpoch == 1 {
 		c.newEpochCh <- block.PreviousBlockHash
 	}
 
@@ -69,7 +70,7 @@ func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, 
 	}
 
 	checkpoint := node.checkpoint
-	if mod := block.Height % state.BlocksOfEpoch; mod == 1 {
+	if mod := block.Height % consensus.ActiveNetParams.BlocksOfEpoch; mod == 1 {
 		parent := checkpoint
 		checkpoint = state.NewCheckpoint(parent)
 		node.addChild(&treeNode{checkpoint: checkpoint})
@@ -107,7 +108,7 @@ func (c *Casper) replayCheckpoint(hash bc.Hash) (*treeNode, error) {
 			return nil, err
 		}
 
-		if prevBlock.Height%state.BlocksOfEpoch == 0 {
+		if prevBlock.Height%consensus.ActiveNetParams.BlocksOfEpoch == 0 {
 			break
 		}
 
@@ -146,23 +147,11 @@ func applyTransactions(target *state.Checkpoint, transactions []*types.Tx) error
 					return err
 				}
 			}
-
-			if isGuarantyProgram(input.ControlProgram()) {
-				if err := processWithdrawal(decodeGuarantyArgs(input.ControlProgram()), target); err != nil {
-					return err
-				}
-			}
 		}
 
 		for _, output := range tx.Outputs {
 			if _, ok := output.TypedOutput.(*types.VoteOutput); ok {
 				if err := processVote(output, target); err != nil {
-					return err
-				}
-			}
-
-			if isGuarantyProgram(output.ControlProgram) {
-				if err := processGuaranty(decodeGuarantyArgs(output.ControlProgram), target); err != nil {
 					return err
 				}
 			}
@@ -174,7 +163,7 @@ func applyTransactions(target *state.Checkpoint, transactions []*types.Tx) error
 // applySupLinks copy the block's supLink to the checkpoint
 func (c *Casper) applySupLinks(target *state.Checkpoint, supLinks []*types.SupLink, validators map[string]*state.Validator) ([]*state.Checkpoint, error) {
 	affectedCheckpoints := []*state.Checkpoint{target}
-	if target.Height%state.BlocksOfEpoch != 0 {
+	if target.Height%consensus.ActiveNetParams.BlocksOfEpoch != 0 {
 		return nil, nil
 	}
 
@@ -216,7 +205,7 @@ func (c *Casper) applyMyVerification(target *state.Checkpoint, block *types.Bloc
 }
 
 func (c *Casper) myVerification(target *state.Checkpoint, validators map[string]*state.Validator) (*Verification, error) {
-	if target.Height%state.BlocksOfEpoch != 0 {
+	if target.Height%consensus.ActiveNetParams.BlocksOfEpoch != 0 {
 		return nil, nil
 	}
 
@@ -253,48 +242,6 @@ func (c *Casper) myVerification(target *state.Checkpoint, validators map[string]
 	return nil, nil
 }
 
-type guarantyArgs struct {
-	Amount uint64
-	PubKey []byte
-}
-
-func isGuarantyProgram(program []byte) bool {
-	return false
-}
-
-func decodeGuarantyArgs(program []byte) *guarantyArgs {
-	return nil
-}
-
-func processWithdrawal(guarantyArgs *guarantyArgs, checkpoint *state.Checkpoint) error {
-	pubKey := hex.EncodeToString(guarantyArgs.PubKey)
-	guarantyNum := checkpoint.Guaranties[pubKey]
-	guarantyNum, ok := checked.SubUint64(guarantyNum, guarantyArgs.Amount)
-	if !ok {
-		return checked.ErrOverflow
-	}
-
-	checkpoint.Guaranties[pubKey] = guarantyNum
-	// TODO delete the evil validator when receive the confiscate transaction
-	return nil
-}
-
-func processGuaranty(guarantyArgs *guarantyArgs, checkpoint *state.Checkpoint) error {
-	if guarantyArgs.Amount < minGuaranty {
-		return errGuarantyLessThanMinimum
-	}
-
-	pubKey := hex.EncodeToString(guarantyArgs.PubKey)
-	guarantyNum := checkpoint.Guaranties[pubKey]
-	guarantyNum, ok := checked.AddUint64(guarantyNum, guarantyArgs.Amount)
-	if !ok {
-		return checked.ErrOverflow
-	}
-
-	checkpoint.Guaranties[pubKey] = guarantyNum
-	return nil
-}
-
 func processVeto(input *types.VetoInput, checkpoint *state.Checkpoint) error {
 	pubKey := hex.EncodeToString(input.Vote)
 	voteNum := checkpoint.Votes[pubKey]
@@ -310,10 +257,6 @@ func processVeto(input *types.VetoInput, checkpoint *state.Checkpoint) error {
 func processVote(output *types.TxOutput, checkpoint *state.Checkpoint) error {
 	voteOutput := output.TypedOutput.(*types.VoteOutput)
 	pubKey := hex.EncodeToString(voteOutput.Vote)
-	if checkpoint.Guaranties[pubKey] < minGuaranty {
-		return errVoteToNonValidator
-	}
-
 	voteNum := checkpoint.Votes[pubKey]
 	voteNum, ok := checked.AddUint64(voteNum, output.Amount)
 	if !ok {

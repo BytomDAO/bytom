@@ -47,7 +47,7 @@ func checkCoinbaseAmount(b *bc.Block, checkpoint *state.Checkpoint) error {
 		return errors.Wrap(ErrWrongCoinbaseTransaction, "tx header resultIds is empty")
 	}
 
-	if b.Height%state.BlocksOfEpoch != 1 || b.Height == 1 {
+	if b.Height%consensus.ActiveNetParams.BlocksOfEpoch != 1 || b.Height == 1 {
 		output, err := tx.OriginalOutput(*tx.TxHeader.ResultIds[0])
 		if err != nil {
 			return err

@@ -6,6 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/common"
+	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/state"
@@ -20,8 +21,6 @@ var (
 	errVoteToNonValidator       = errors.New("pubKey of vote is not validator")
 	errGuarantyLessThanMinimum  = errors.New("guaranty less than minimum")
 )
-
-const minGuaranty = 0
 
 // Casper is BFT based proof of stack consensus algorithm, it provides safety and liveness in theory,
 // it's design mainly refers to https://github.com/ethereum/research/blob/master/papers/casper-basics/casper_basics.pdf
@@ -196,7 +195,7 @@ func (c *Casper) parentCheckpointHashByPrevHash(prevBlockHash *bc.Hash) (*bc.Has
 			return nil, err
 		}
 
-		if prevBlock.Height%state.BlocksOfEpoch == 0 {
+		if prevBlock.Height%consensus.ActiveNetParams.BlocksOfEpoch == 0 {
 			c.prevCheckpointCache.Add(*prevBlockHash, prevHash)
 			return prevHash, nil
 		}

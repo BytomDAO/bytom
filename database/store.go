@@ -340,7 +340,7 @@ func (s *Store) saveCheckpoints(batch dbm.Batch, checkpoints []*state.Checkpoint
 			return err
 		}
 
-		if checkpoint.Height%state.BlocksOfEpoch != 1 {
+		if checkpoint.Height%consensus.ActiveNetParams.BlocksOfEpoch != 1 {
 			header, err := s.GetBlockHeader(&checkpoint.Hash)
 			if err != nil {
 				return err

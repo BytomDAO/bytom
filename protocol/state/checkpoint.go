@@ -10,12 +10,6 @@ import (
 	"github.com/bytom/bytom/protocol/bc/types"
 )
 
-const (
-	// BlocksOfEpoch represent the block num in one epoch
-	BlocksOfEpoch = 100
-	minMortgage   = 1000000
-)
-
 // CheckpointStatus represent current status of checkpoint
 type CheckpointStatus uint8
 
@@ -70,7 +64,6 @@ type Checkpoint struct {
 
 	Rewards    map[string]uint64 // controlProgram -> num of reward
 	Votes      map[string]uint64 // pubKey -> num of vote
-	Guaranties map[string]uint64 // pubKey -> num of guaranty
 
 	MergeCheckpoint func(bc.Hash) `json:"-"`
 }
@@ -83,14 +76,10 @@ func NewCheckpoint(parent *Checkpoint) *Checkpoint {
 		Status:     Growing,
 		Rewards:    make(map[string]uint64),
 		Votes:      make(map[string]uint64),
-		Guaranties: make(map[string]uint64),
 	}
 
 	for pubKey, num := range parent.Votes {
 		checkpoint.Votes[pubKey] = num
-	}
-	for pubKey, num := range parent.Guaranties {
-		checkpoint.Guaranties[pubKey] = num
 	}
 	return checkpoint
 }
@@ -148,7 +137,6 @@ type Validator struct {
 	PubKey   string
 	Order    int
 	Vote     uint64
-	Guaranty uint64
 }
 
 // Validators return next epoch of validators, if the status of checkpoint is growing, return empty
@@ -158,13 +146,11 @@ func (c *Checkpoint) Validators() map[string]*Validator {
 		return nil
 	}
 
-	//  todo use vote num to generate validators in test version
-	for pubKey, mortgageNum := range c.Votes {
-		if mortgageNum >= minMortgage {
+	for pubKey, voteNum := range c.Votes {
+		if voteNum >= consensus.ActiveNetParams.MinValidatorVoteNum {
 			validators = append(validators, &Validator{
 				PubKey:   pubKey,
 				Vote:     c.Votes[pubKey],
-				Guaranty: mortgageNum,
 			})
 		}
 	}
@@ -174,8 +160,8 @@ func (c *Checkpoint) Validators() map[string]*Validator {
 	}
 
 	sort.Slice(validators, func(i, j int) bool {
-		numI := validators[i].Guaranty+validators[i].Vote
-		numJ := validators[j].Guaranty+validators[j].Vote
+		numI := validators[i].Vote
+		numJ := validators[j].Vote
 		if numI != numJ {
 			return numI > numJ
 		}
