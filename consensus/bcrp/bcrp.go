@@ -30,28 +30,15 @@ func IsBCRPScript(prog []byte) bool {
 		return false
 	}
 
-	if inst[1].Op != vm.OP_PUSHDATA1 {
+	if inst[1].Op != vm.OP_DATA_4 || !bytes.Equal(inst[1].Data, []byte(BCRP)) {
 		return false
 	}
 
-	if !bytes.Equal(inst[1].Data, []byte(BCRP)) {
+	if inst[2].Op != vm.OP_DATA_1 || !bytes.Equal(inst[2].Data, []byte{byte(Version)}) {
 		return false
 	}
 
-	if inst[2].Op != vm.OP_PUSHDATA1 {
-		return false
-	}
-
-	// version 1
-	if !bytes.Equal(inst[2].Data, []byte{byte(Version)}) {
-		return false
-	}
-
-	if inst[3].Op != vm.OP_PUSHDATA1 {
-		return false
-	}
-
-	return true
+	return len(inst[3].Data) > 0
 }
 
 // IsCallContractScript checks if a program is script call contract registered by BCRP
@@ -66,11 +53,11 @@ func IsCallContractScript(prog []byte) bool {
 		return false
 	}
 
-	if insts[0].Op != vm.OP_1 {
+	if insts[0].Op != vm.OP_DATA_4 || !bytes.Equal(insts[0].Data, []byte(BCRP)) {
 		return false
 	}
 
-	return insts[1].Op == vm.OP_PUSHDATA1 && len(insts[1].Data) == consensus.BCRPContractHashDataSize
+	return insts[1].Op == vm.OP_DATA_32 && len(insts[1].Data) == consensus.BCRPContractHashDataSize
 }
 
 // ParseContractHash parse contract hash from call BCRP script

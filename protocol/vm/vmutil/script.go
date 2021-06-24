@@ -72,11 +72,8 @@ func RetireProgram(comment []byte) ([]byte, error) {
 func RegisterProgram(contract []byte) ([]byte, error) {
 	builder := NewBuilder()
 	builder.AddOp(vm.OP_FAIL)
-	builder.AddOp(vm.OP_PUSHDATA1)
 	builder.AddData([]byte(bcrp.BCRP))
-	builder.AddOp(vm.OP_PUSHDATA1)
 	builder.AddData([]byte{byte(bcrp.Version)})
-	builder.AddOp(vm.OP_PUSHDATA1)
 	builder.AddData(contract)
 	return builder.Build()
 }
@@ -85,8 +82,7 @@ func RegisterProgram(contract []byte) ([]byte, error) {
 // follow BCRP(bytom contract register protocol)
 func CallContractProgram(hash []byte) ([]byte, error) {
 	builder := NewBuilder()
-	builder.AddOp(vm.OP_1)
-	builder.AddOp(vm.OP_PUSHDATA1)
+	builder.AddData([]byte(bcrp.BCRP))
 	builder.AddData(hash)
 	return builder.Build()
 }
@@ -135,9 +131,8 @@ func P2SPMultiSigProgramWithHeight(pubkeys []ed25519.PublicKey, nrequired int, b
 		builder.AddOp(vm.OP_BLOCKHEIGHT)
 		builder.AddOp(vm.OP_GREATERTHAN)
 		builder.AddOp(vm.OP_VERIFY)
-	} else if blockHeight < 0 {
-		return nil, errors.WithDetail(ErrBadValue, "negative blockHeight")
 	}
+
 	if err := builder.addP2SPMultiSig(pubkeys, nrequired); err != nil {
 		return nil, err
 	}

@@ -2,13 +2,10 @@ package vm
 
 import (
 	"github.com/holiman/uint256"
-
-	"github.com/bytom/bytom/math/checked"
 )
 
 func op1Add(vm *virtualMachine) error {
-	err := vm.applyCost(2)
-	if err != nil {
+	if err := vm.applyCost(2); err != nil {
 		return err
 	}
 
@@ -17,11 +14,7 @@ func op1Add(vm *virtualMachine) error {
 		return err
 	}
 
-	num, ok := checked.NewUInt256("1")
-	if !ok {
-		return ErrBadValue
-	}
-
+	num := uint256.NewInt().SetUint64(1)
 	if num.Add(n, num); num.Sign() < 0 {
 		return ErrRange
 	}
@@ -30,8 +23,7 @@ func op1Add(vm *virtualMachine) error {
 }
 
 func op1Sub(vm *virtualMachine) error {
-	err := vm.applyCost(2)
-	if err != nil {
+	if err := vm.applyCost(2); err != nil {
 		return err
 	}
 
@@ -40,11 +32,7 @@ func op1Sub(vm *virtualMachine) error {
 		return err
 	}
 
-	num, ok := checked.NewUInt256("1")
-	if !ok {
-		return ErrBadValue
-	}
-
+	num := uint256.NewInt().SetUint64(1)
 	if num.Sub(n, num); num.Sign() < 0 {
 		return ErrRange
 	}
@@ -53,8 +41,7 @@ func op1Sub(vm *virtualMachine) error {
 }
 
 func op2Mul(vm *virtualMachine) error {
-	err := vm.applyCost(2)
-	if err != nil {
+	if err := vm.applyCost(2); err != nil {
 		return err
 	}
 
@@ -63,11 +50,7 @@ func op2Mul(vm *virtualMachine) error {
 		return err
 	}
 
-	num, ok := checked.NewUInt256("2")
-	if !ok {
-		return ErrBadValue
-	}
-
+	num := uint256.NewInt().SetUint64(2)
 	if num.Mul(n, num); num.Sign() < 0 {
 		return ErrRange
 	}
@@ -90,8 +73,7 @@ func op2Div(vm *virtualMachine) error {
 }
 
 func opNot(vm *virtualMachine) error {
-	err := vm.applyCost(2)
-	if err != nil {
+	if err := vm.applyCost(2); err != nil {
 		return err
 	}
 
@@ -104,8 +86,7 @@ func opNot(vm *virtualMachine) error {
 }
 
 func op0NotEqual(vm *virtualMachine) error {
-	err := vm.applyCost(2)
-	if err != nil {
+	if err := vm.applyCost(2); err != nil {
 		return err
 	}
 
@@ -118,8 +99,7 @@ func op0NotEqual(vm *virtualMachine) error {
 }
 
 func opAdd(vm *virtualMachine) error {
-	err := vm.applyCost(2)
-	if err != nil {
+	if err := vm.applyCost(2); err != nil {
 		return err
 	}
 
@@ -141,8 +121,7 @@ func opAdd(vm *virtualMachine) error {
 }
 
 func opSub(vm *virtualMachine) error {
-	err := vm.applyCost(2)
-	if err != nil {
+	if err := vm.applyCost(2); err != nil {
 		return err
 	}
 
@@ -164,8 +143,7 @@ func opSub(vm *virtualMachine) error {
 }
 
 func opMul(vm *virtualMachine) error {
-	err := vm.applyCost(8)
-	if err != nil {
+	if err := vm.applyCost(8); err != nil {
 		return err
 	}
 
@@ -187,8 +165,7 @@ func opMul(vm *virtualMachine) error {
 }
 
 func opDiv(vm *virtualMachine) error {
-	err := vm.applyCost(8)
-	if err != nil {
+	if err := vm.applyCost(8); err != nil {
 		return err
 	}
 
@@ -210,8 +187,7 @@ func opDiv(vm *virtualMachine) error {
 }
 
 func opMod(vm *virtualMachine) error {
-	err := vm.applyCost(8)
-	if err != nil {
+	if err := vm.applyCost(8); err != nil {
 		return err
 	}
 
@@ -233,8 +209,7 @@ func opMod(vm *virtualMachine) error {
 }
 
 func opLshift(vm *virtualMachine) error {
-	err := vm.applyCost(8)
-	if err != nil {
+	if err := vm.applyCost(8); err != nil {
 		return err
 	}
 
@@ -261,8 +236,7 @@ func opLshift(vm *virtualMachine) error {
 }
 
 func opRshift(vm *virtualMachine) error {
-	err := vm.applyCost(8)
-	if err != nil {
+	if err := vm.applyCost(8); err != nil {
 		return err
 	}
 
@@ -286,14 +260,15 @@ func opRshift(vm *virtualMachine) error {
 }
 
 func opBoolAnd(vm *virtualMachine) error {
-	err := vm.applyCost(2)
-	if err != nil {
+	if err := vm.applyCost(2); err != nil {
 		return err
 	}
+
 	b, err := vm.pop(true)
 	if err != nil {
 		return err
 	}
+
 	a, err := vm.pop(true)
 	if err != nil {
 		return err
@@ -302,14 +277,15 @@ func opBoolAnd(vm *virtualMachine) error {
 }
 
 func opBoolOr(vm *virtualMachine) error {
-	err := vm.applyCost(2)
-	if err != nil {
+	if err := vm.applyCost(2); err != nil {
 		return err
 	}
+
 	b, err := vm.pop(true)
 	if err != nil {
 		return err
 	}
+
 	a, err := vm.pop(true)
 	if err != nil {
 		return err
@@ -331,8 +307,7 @@ func opNumEqual(vm *virtualMachine) error {
 }
 
 func opNumEqualVerify(vm *virtualMachine) error {
-	err := vm.applyCost(2)
-	if err != nil {
+	if err := vm.applyCost(2); err != nil {
 		return err
 	}
 
@@ -373,18 +348,20 @@ func opGreaterThanOrEqual(vm *virtualMachine) error {
 }
 
 func doNumCompare(vm *virtualMachine, op int) error {
-	err := vm.applyCost(2)
-	if err != nil {
+	if err := vm.applyCost(2); err != nil {
 		return err
 	}
+
 	y, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
+
 	x, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
+
 	var res bool
 	switch op {
 	case cmpLess:
@@ -404,8 +381,7 @@ func doNumCompare(vm *virtualMachine, op int) error {
 }
 
 func opMin(vm *virtualMachine) error {
-	err := vm.applyCost(2)
-	if err != nil {
+	if err := vm.applyCost(2); err != nil {
 		return err
 	}
 
@@ -426,8 +402,7 @@ func opMin(vm *virtualMachine) error {
 }
 
 func opMax(vm *virtualMachine) error {
-	err := vm.applyCost(2)
-	if err != nil {
+	if err := vm.applyCost(2); err != nil {
 		return err
 	}
 
@@ -448,10 +423,10 @@ func opMax(vm *virtualMachine) error {
 }
 
 func opWithin(vm *virtualMachine) error {
-	err := vm.applyCost(4)
-	if err != nil {
+	if err := vm.applyCost(4); err != nil {
 		return err
 	}
+
 	max, err := vm.popBigInt(true)
 	if err != nil {
 		return err

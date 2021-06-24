@@ -24,42 +24,47 @@ func doHash(vm *virtualMachine, hashFactory func() hash.Hash) error {
 	if err != nil {
 		return err
 	}
+
 	cost := int64(len(x))
 	if cost < 64 {
 		cost = 64
 	}
-	err = vm.applyCost(cost)
-	if err != nil {
+
+	if err = vm.applyCost(cost); err != nil {
 		return err
 	}
+
 	h := hashFactory()
-	_, err = h.Write(x)
-	if err != nil {
+	if _, err = h.Write(x); err != nil {
 		return err
 	}
 	return vm.pushDataStack(h.Sum(nil), false)
 }
 
 func opCheckSig(vm *virtualMachine) error {
-	err := vm.applyCost(1024)
-	if err != nil {
+	if err := vm.applyCost(1024); err != nil {
 		return err
 	}
+
 	pubkeyBytes, err := vm.pop(true)
 	if err != nil {
 		return err
 	}
+
 	msg, err := vm.pop(true)
 	if err != nil {
 		return err
 	}
+
 	sig, err := vm.pop(true)
 	if err != nil {
 		return err
 	}
+
 	if len(msg) != 32 {
 		return ErrBadValue
 	}
+
 	if len(pubkeyBytes) != ed25519.PublicKeySize {
 		return vm.pushBool(false, true)
 	}
@@ -99,6 +104,7 @@ func opCheckMultiSig(vm *virtualMachine) error {
 	if numSigs < 0 || numSigs > numPubkeys || (numPubkeys > 0 && numSigs == 0) {
 		return ErrBadValue
 	}
+
 	pubkeyByteses := make([][]byte, 0, numPubkeys)
 	for i := int64(0); i < numPubkeys; i++ {
 		pubkeyBytes, err := vm.pop(true)
@@ -107,13 +113,16 @@ func opCheckMultiSig(vm *virtualMachine) error {
 		}
 		pubkeyByteses = append(pubkeyByteses, pubkeyBytes)
 	}
+
 	msg, err := vm.pop(true)
 	if err != nil {
 		return err
 	}
+
 	if len(msg) != 32 {
 		return ErrBadValue
 	}
+
 	sigs := make([][]byte, 0, numSigs)
 	for i := int64(0); i < numSigs; i++ {
 		sig, err := vm.pop(true)
@@ -137,17 +146,19 @@ func opCheckMultiSig(vm *virtualMachine) error {
 		}
 		pubkeys = pubkeys[1:]
 	}
+
 	return vm.pushBool(len(sigs) == 0, true)
 }
 
 func opTxSigHash(vm *virtualMachine) error {
-	err := vm.applyCost(256)
-	if err != nil {
+	if err := vm.applyCost(256); err != nil {
 		return err
 	}
+
 	if vm.context.TxSigHash == nil {
 		return ErrContext
 	}
+
 	return vm.pushDataStack(vm.context.TxSigHash(), false)
 }
 
