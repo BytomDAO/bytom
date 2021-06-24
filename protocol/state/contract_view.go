@@ -35,12 +35,12 @@ func (view *ContractViewpoint) ApplyBlock(block *types.Block) {
 
 // DetachBlock detach block contract to contract view
 func (view *ContractViewpoint) DetachBlock(block *types.Block) {
-	for _, tx := range block.Transactions {
-		for _, output := range tx.Outputs {
+	for i := len(block.Transactions) - 1; i >= 0; i-- {
+		for _, output := range block.Transactions[i].Outputs {
 			if program := output.ControlProgram; bcrp.IsBCRPScript(program) {
 				var hash [32]byte
 				sha3pool.Sum256(hash[:], program)
-				view.DetachEntries[hash] = append(tx.ID.Bytes(), program...)
+				view.DetachEntries[hash] = append(block.Transactions[i].ID.Bytes(), program...)
 			}
 		}
 	}
