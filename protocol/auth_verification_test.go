@@ -32,11 +32,11 @@ var (
 			ParentHash: testutil.MustDecodeHash("a1770c17493b87c43e85c2ab811023a8566907838c2237e7d72071c5f4713c5b"),
 			Hash:       testutil.MustDecodeHash("104da9966d3ef81d20a67a0aa79d3979b2542adeb52666deff64f63ecbfe2535"),
 			Status:     state.Unjustified,
-			SupLinks: []*state.SupLink{
+			SupLinks: []*types.SupLink{
 				{
 					SourceHeight: 0,
 					SourceHash:   testutil.MustDecodeHash("a1770c17493b87c43e85c2ab811023a8566907838c2237e7d72071c5f4713c5b"),
-					Signatures:   [consensus.MaxNumOfValidators]string{"aaa"},
+					Signatures:   [consensus.MaxNumOfValidators][]byte{[]byte{0xaa}},
 				},
 			},
 		},

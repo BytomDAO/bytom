@@ -21,7 +21,7 @@ type Verification struct {
 	TargetHash   bc.Hash
 	SourceHeight uint64
 	TargetHeight uint64
-	Signature    string
+	Signature    []byte
 	PubKey       string
 }
 
@@ -32,18 +32,13 @@ func (v *Verification) Sign(xPrv chainkd.XPrv) error {
 		return err
 	}
 
-	v.Signature = hex.EncodeToString(xPrv.Sign(message))
+	v.Signature = xPrv.Sign(message)
 	return nil
 }
 
 // VerifySignature verify the signature of encode message of verification
 func (v *Verification) VerifySignature() error {
 	pubKey, err := hex.DecodeString(v.PubKey)
-	if err != nil {
-		return err
-	}
-
-	signature, err := hex.DecodeString(v.Signature)
 	if err != nil {
 		return err
 	}
@@ -55,7 +50,7 @@ func (v *Verification) VerifySignature() error {
 
 	var xPub chainkd.XPub
 	copy(xPub[:], pubKey)
-	if !xPub.Verify(message, signature) {
+	if !xPub.Verify(message, v.Signature) {
 		return errVerifySignature
 	}
 

@@ -1,13 +1,13 @@
 package protocol
 
 import (
-	"encoding/hex"
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
 )
 
@@ -100,12 +100,7 @@ func (c *Casper) saveVerificationToHeader(v *Verification, validatorOrder int) e
 		return err
 	}
 
-	signature, err := hex.DecodeString(v.Signature)
-	if err != nil {
-		return err
-	}
-
-	blockHeader.SupLinks.AddSupLink(v.SourceHeight, v.SourceHash, signature, validatorOrder)
+	blockHeader.SupLinks.AddSupLink(v.SourceHeight, v.SourceHash, v.Signature, validatorOrder)
 	return c.store.SaveBlockHeader(blockHeader)
 }
 
@@ -191,7 +186,7 @@ func (c *Casper) verifySameHeight(v *Verification, validatorOrder int, trackEvil
 
 	for _, checkpoint := range checkpoints {
 		for _, supLink := range checkpoint.SupLinks {
-			if supLink.Signatures[validatorOrder] != "" && checkpoint.Hash != v.TargetHash {
+			if len(supLink.Signatures[validatorOrder]) != 0 && checkpoint.Hash != v.TargetHash {
 				if trackEvilValidator {
 					c.evilValidators[v.PubKey] = []*Verification{v, makeVerification(supLink, checkpoint, v.PubKey, validatorOrder)}
 				}
@@ -210,7 +205,7 @@ func (c *Casper) verifySpanHeight(v *Verification, validatorOrder int, trackEvil
 		}
 
 		for _, supLink := range checkpoint.SupLinks {
-			if supLink.Signatures[validatorOrder] != "" {
+			if len(supLink.Signatures[validatorOrder]) != 0 {
 				if (checkpoint.Height < v.TargetHeight && supLink.SourceHeight > v.SourceHeight) ||
 					(checkpoint.Height > v.TargetHeight && supLink.SourceHeight < v.SourceHeight) {
 					if trackEvilValidator {
@@ -227,7 +222,7 @@ func (c *Casper) verifySpanHeight(v *Verification, validatorOrder int, trackEvil
 	return nil
 }
 
-func makeVerification(supLink *state.SupLink, checkpoint *state.Checkpoint, pubKey string, validatorOrder int) *Verification {
+func makeVerification(supLink *types.SupLink, checkpoint *state.Checkpoint, pubKey string, validatorOrder int) *Verification {
 	return &Verification{
 		SourceHash:   supLink.SourceHash,
 		TargetHash:   checkpoint.Hash,

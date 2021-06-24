@@ -226,18 +226,13 @@ func (c *Chain) broadcastVerification(v *Verification) error {
 		return err
 	}
 
-	signature, err := hex.DecodeString(v.Signature)
-	if err != nil {
-		return err
-	}
-
 	return c.eventDispatcher.Post(event.BlockVerificationEvent{
 		SourceHeight: v.SourceHeight,
 		SourceHash:   v.SourceHash,
 		TargetHeight: v.TargetHeight,
 		TargetHash:   v.TargetHash,
 		PubKey:       pubKey,
-		Signature:    signature,
+		Signature:    v.Signature,
 	})
 }
 
