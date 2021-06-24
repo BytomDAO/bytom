@@ -114,9 +114,7 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 	}
 
 	contractView := state.NewContractViewpoint()
-	if err := contractView.ApplyBlock(block); err != nil {
-		return err
-	}
+	contractView.ApplyBlock(block)
 
 	if err := c.setState(&block.BlockHeader, []*types.BlockHeader{&block.BlockHeader}, utxoView, contractView); err != nil {
 		return err
@@ -154,10 +152,7 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 			return err
 		}
 
-		if err := contractView.DetachBlock(b); err != nil {
-			return err
-		}
-
+		contractView.DetachBlock(b)
 		for _, tx := range b.Transactions {
 			txsToRestore[tx.ID] = tx
 		}
@@ -181,10 +176,7 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 			return err
 		}
 
-		if err := contractView.ApplyBlock(b); err != nil {
-			return err
-		}
-
+		contractView.ApplyBlock(b)
 		for _, tx := range b.Transactions {
 			if _, ok := txsToRestore[tx.ID]; !ok {
 				txsToRemove[tx.ID] = tx
