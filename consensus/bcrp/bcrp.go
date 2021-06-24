@@ -42,27 +42,7 @@ func IsBCRPScript(prog []byte) bool {
 		return false
 	}
 
-	if len(inst[3].Data) <= 0 {
-		return false
-	}
-
-	if len(inst[3].Data) <= 75 && !(inst[3].Op >= vm.OP_DATA_1 && inst[3].Op <= vm.OP_DATA_75) {
-		return false
-	}
-
-	if len(inst[3].Data) > 75 && len(inst[3].Data) < 1<<8 && inst[3].Op != vm.OP_PUSHDATA1 {
-		return false
-	}
-
-	if len(inst[3].Data) >= 1<<8 && len(inst[3].Data) < 1<<16 && inst[3].Op != vm.OP_PUSHDATA2 {
-		return false
-	}
-
-	if len(inst[3].Data) >= 1<<16 && inst[3].Op != vm.OP_PUSHDATA4 {
-		return false
-	}
-
-	return true
+	return len(inst[3].Data) > 0
 }
 
 // IsCallContractScript checks if a program is script call contract registered by BCRP
