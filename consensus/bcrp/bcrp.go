@@ -15,7 +15,11 @@ const BCRP = "bcrp"
 const Version = 1
 
 // IsBCRPScript checks if a control program is bytom contract register protocol
-// BCRP script format: OP_FAIL + OP_PUSHDATA1 + "04" + hex("bcrp") + OP_PUSHDATA1 + "01" + "01" + OP_PUSHDATA1 + len(contract) + contract
+// BCRP script format: OP_FAIL + OP_DATA_4 + "bcrp" + OP_DATA_1 + "1" + {{dynamic_op}} + contract
+// 0 < len(contract) <= 75       dynamic_op -> OP_DATA_N
+// 75 <len(contract) < 256       dynamic_op -> OP_PUSHDATA1
+// 256 <= len(contract) < 65536  dynamic_op -> OP_PUSHDATA2
+// len(contract) >= 65536        dynamic_op -> OP_PUSHDATA4
 func IsBCRPScript(prog []byte) bool {
 	inst, err := vm.ParseProgram(prog)
 	if err != nil {
@@ -38,11 +42,31 @@ func IsBCRPScript(prog []byte) bool {
 		return false
 	}
 
-	return len(inst[3].Data) > 0
+	if len(inst[3].Data) <= 0 {
+		return false
+	}
+
+	if len(inst[3].Data) <= 75 && !(inst[3].Op >= vm.OP_DATA_1 && inst[3].Op <= vm.OP_DATA_75) {
+		return false
+	}
+
+	if len(inst[3].Data) > 75 && len(inst[3].Data) < 1<<8 && inst[3].Op != vm.OP_PUSHDATA1 {
+		return false
+	}
+
+	if len(inst[3].Data) >= 1<<8 && len(inst[3].Data) < 1<<16 && inst[3].Op != vm.OP_PUSHDATA2 {
+		return false
+	}
+
+	if len(inst[3].Data) >= 1<<16 && inst[3].Op != vm.OP_PUSHDATA4 {
+		return false
+	}
+
+	return true
 }
 
 // IsCallContractScript checks if a program is script call contract registered by BCRP
-// call contract script format: OP_1 + OP_PUSHDATA1 + SHA3-256(contract)
+// call contract script format: OP_DATA_4 + "bcrp"+ OP_DATA_32 + SHA3-256(contract)
 func IsCallContractScript(prog []byte) bool {
 	insts, err := vm.ParseProgram(prog)
 	if err != nil {
@@ -61,7 +85,7 @@ func IsCallContractScript(prog []byte) bool {
 }
 
 // ParseContractHash parse contract hash from call BCRP script
-// call BCRP script format: OP_1 + OP_DATA_32 + SHA3-256(contract)
+// call contract script format: OP_DATA_4 + "bcrp"+ OP_DATA_32 + SHA3-256(contract)
 func ParseContractHash(prog []byte) ([32]byte, error) {
 	insts, err := vm.ParseProgram(prog)
 	if err != nil {
