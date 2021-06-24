@@ -21,11 +21,6 @@ func NewUtxoViewpoint() *UtxoViewpoint {
 
 func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx) error {
 	for _, prevout := range tx.SpentOutputIDs {
-		_, err := tx.OriginalOutput(prevout)
-		if err != nil {
-			return err
-		}
-
 		entry, ok := view.Entries[prevout]
 		if !ok {
 			return errors.New("fail to find utxo entry")
