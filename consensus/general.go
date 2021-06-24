@@ -47,8 +47,8 @@ type CasperConfig struct {
 	// BlocksOfEpoch represent the block num in one epoch
 	BlocksOfEpoch uint64
 
-	// MinGuarantyNum is the minimum guaranty number of become validator
-	MinGuarantyNum uint64
+	// MinValidatorVoteNum is the minimum vote number of become validator
+	MinValidatorVoteNum uint64
 
 	// VotePendingBlockNumber is the locked block number of vote utxo
 	VotePendingBlockNumber uint64
@@ -139,7 +139,7 @@ var MainNetParams = Params{
 		BlockTimeInterval:      6000,
 		MaxTimeOffsetMs:        24000,
 		BlocksOfEpoch:          100,
-		MinGuarantyNum:         1E14,
+		MinValidatorVoteNum:    1E14,
 		VotePendingBlockNumber: 181440,
 	},
 	Checkpoints: []Checkpoint{
@@ -184,7 +184,7 @@ var TestNetParams = Params{
 		BlockTimeInterval:      6000,
 		MaxTimeOffsetMs:        24000,
 		BlocksOfEpoch:          100,
-		MinGuarantyNum:         1E8,
+		MinValidatorVoteNum:    1E8,
 		VotePendingBlockNumber: 10,
 	},
 	Checkpoints: []Checkpoint{
@@ -212,7 +212,7 @@ var SoloNetParams = Params{
 		BlockTimeInterval:      6000,
 		MaxTimeOffsetMs:        24000,
 		BlocksOfEpoch:          100,
-		MinGuarantyNum:         1E8,
+		MinValidatorVoteNum:    1E8,
 		VotePendingBlockNumber: 10,
 	},
 	Checkpoints: []Checkpoint{},

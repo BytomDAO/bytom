@@ -147,23 +147,11 @@ func applyTransactions(target *state.Checkpoint, transactions []*types.Tx) error
 					return err
 				}
 			}
-
-			if isGuarantyProgram(input.ControlProgram()) {
-				if err := processWithdrawal(decodeGuarantyArgs(input.ControlProgram()), target); err != nil {
-					return err
-				}
-			}
 		}
 
 		for _, output := range tx.Outputs {
 			if _, ok := output.TypedOutput.(*types.VoteOutput); ok {
 				if err := processVote(output, target); err != nil {
-					return err
-				}
-			}
-
-			if isGuarantyProgram(output.ControlProgram) {
-				if err := processGuaranty(decodeGuarantyArgs(output.ControlProgram), target); err != nil {
 					return err
 				}
 			}
@@ -254,48 +242,6 @@ func (c *Casper) myVerification(target *state.Checkpoint, validators map[string]
 	return nil, nil
 }
 
-type guarantyArgs struct {
-	Amount uint64
-	PubKey []byte
-}
-
-func isGuarantyProgram(program []byte) bool {
-	return false
-}
-
-func decodeGuarantyArgs(program []byte) *guarantyArgs {
-	return nil
-}
-
-func processWithdrawal(guarantyArgs *guarantyArgs, checkpoint *state.Checkpoint) error {
-	pubKey := hex.EncodeToString(guarantyArgs.PubKey)
-	guarantyNum := checkpoint.Guaranties[pubKey]
-	guarantyNum, ok := checked.SubUint64(guarantyNum, guarantyArgs.Amount)
-	if !ok {
-		return checked.ErrOverflow
-	}
-
-	checkpoint.Guaranties[pubKey] = guarantyNum
-	// TODO delete the evil validator when receive the confiscate transaction
-	return nil
-}
-
-func processGuaranty(guarantyArgs *guarantyArgs, checkpoint *state.Checkpoint) error {
-	if guarantyArgs.Amount < consensus.ActiveNetParams.MinGuarantyNum {
-		return errGuarantyLessThanMinimum
-	}
-
-	pubKey := hex.EncodeToString(guarantyArgs.PubKey)
-	guarantyNum := checkpoint.Guaranties[pubKey]
-	guarantyNum, ok := checked.AddUint64(guarantyNum, guarantyArgs.Amount)
-	if !ok {
-		return checked.ErrOverflow
-	}
-
-	checkpoint.Guaranties[pubKey] = guarantyNum
-	return nil
-}
-
 func processVeto(input *types.VetoInput, checkpoint *state.Checkpoint) error {
 	pubKey := hex.EncodeToString(input.Vote)
 	voteNum := checkpoint.Votes[pubKey]
@@ -311,10 +257,6 @@ func processVeto(input *types.VetoInput, checkpoint *state.Checkpoint) error {
 func processVote(output *types.TxOutput, checkpoint *state.Checkpoint) error {
 	voteOutput := output.TypedOutput.(*types.VoteOutput)
 	pubKey := hex.EncodeToString(voteOutput.Vote)
-	if checkpoint.Guaranties[pubKey] < consensus.ActiveNetParams.MinGuarantyNum {
-		return errVoteToNonValidator
-	}
-
 	voteNum := checkpoint.Votes[pubKey]
 	voteNum, ok := checked.AddUint64(voteNum, output.Amount)
 	if !ok {

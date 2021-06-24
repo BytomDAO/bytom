@@ -50,12 +50,6 @@ func pledgeRate(checkpoint *Checkpoint) (float64, error) {
 		}
 	}
 
-	for _, guaranty := range checkpoint.Guaranties {
-		if totalVotes, ok = checked.AddUint64(totalVotes, guaranty); !ok {
-			return 0.0, errors.Wrap(checked.ErrOverflow)
-		}
-	}
-
 	if totalVotes > totalSupply {
 		return 0.0, errors.New("validators total votes exceed total supply")
 	}
