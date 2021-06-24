@@ -195,12 +195,7 @@ func (c *Casper) applyMyVerification(target *state.Checkpoint, block *types.Bloc
 		return nil, nil
 	}
 
-	signature, err := hex.DecodeString(v.Signature)
-	if err != nil {
-		return nil, err
-	}
-
-	block.SupLinks.AddSupLink(v.SourceHeight, v.SourceHash, signature, validators[v.PubKey].Order)
+	block.SupLinks.AddSupLink(v.SourceHeight, v.SourceHash, v.Signature, validators[v.PubKey].Order)
 	return v, c.store.SaveBlockHeader(&block.BlockHeader)
 }
 
@@ -313,7 +308,7 @@ func supLinkToVerifications(supLink *types.SupLink, validators map[string]*state
 			TargetHash:   targetHash,
 			SourceHeight: supLink.SourceHeight,
 			TargetHeight: targetHeight,
-			Signature:    hex.EncodeToString(signature),
+			Signature:    signature,
 			PubKey:       validatorList[i].PubKey,
 		})
 	}
