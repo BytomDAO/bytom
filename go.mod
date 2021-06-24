@@ -3,7 +3,7 @@ module github.com/bytom/bytom
 go 1.16
 
 replace (
-	github.com/prometheus/prometheus/util/flock => ./lib/github.com/prometheus/prometheus/util/flock
+	github.com/tendermint/ed25519 => ./lib/github.com/tendermint/ed25519
 	github.com/tendermint/go-wire => github.com/tendermint/go-amino v0.6.2
 	github.com/zondax/ledger-goclient => github.com/Zondax/ledger-cosmos-go v0.1.0
 	golang.org/x/crypto => ./lib/golang.org/x/crypto
@@ -12,6 +12,7 @@ replace (
 )
 
 require (
+	github.com/prometheus/prometheus v1.8.2 // indirect
 	github.com/btcsuite/btcd v0.21.0-beta // indirect
 	github.com/btcsuite/go-socks v0.0.0-20170105172521-4720035b7bfd
 	github.com/cespare/cp v1.1.1
@@ -39,7 +40,6 @@ require (
 	github.com/pborman/uuid v1.2.1
 	github.com/pelletier/go-toml v1.9.0 // indirect
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/prometheus/util/flock v0.0.0-00010101000000-000000000000
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/afero v1.6.0 // indirect
 	github.com/spf13/cast v1.3.1 // indirect
@@ -55,7 +55,7 @@ require (
 	github.com/toqueteos/webbrowser v1.2.0
 	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
 	golang.org/x/net v0.0.0-20210410081132-afb366fc7cd1 // indirect
-	golang.org/x/sys v0.0.0-20210412220455-f1c623a9e750 // indirect
+	golang.org/x/sys  v0.0.0-20210412220455-f1c623a9e750 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/fatih/set.v0 v0.2.1
 	gopkg.in/ini.v1 v1.62.0 // indirect
