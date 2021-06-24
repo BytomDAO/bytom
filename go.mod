@@ -3,7 +3,7 @@ module github.com/bytom/bytom
 go 1.16
 
 replace (
-	github.com/prometheus/prometheus/util/flock => ./lib/github.com/prometheus/prometheus/util/flock
+	github.com/tendermint/ed25519 => ./lib/github.com/tendermint/ed25519
 	github.com/tendermint/go-wire => github.com/tendermint/go-amino v0.6.2
 	github.com/zondax/ledger-goclient => github.com/Zondax/ledger-cosmos-go v0.1.0
 	golang.org/x/crypto => ./lib/golang.org/x/crypto
@@ -39,7 +39,7 @@ require (
 	github.com/pborman/uuid v1.2.1
 	github.com/pelletier/go-toml v1.9.0 // indirect
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/prometheus/util/flock v0.0.0-00010101000000-000000000000
+	github.com/prometheus/prometheus v1.8.2
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/afero v1.6.0 // indirect
 	github.com/spf13/cast v1.3.1 // indirect
