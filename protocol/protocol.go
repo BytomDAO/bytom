@@ -30,8 +30,8 @@ type Chain struct {
 	processRollbackCh chan *rollbackMsg
 	eventDispatcher   *event.Dispatcher
 
-	cond                 sync.Cond
-	bestBlockHeader      *types.BlockHeader // the last block on current main chain
+	cond            sync.Cond
+	bestBlockHeader *types.BlockHeader // the last block on current main chain
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
@@ -124,14 +124,13 @@ func (c *Chain) ProcessBlockVerification(v *Verification) error {
 	}
 
 	pubKey, _ := hex.DecodeString(v.PubKey)
-	signature, _ := hex.DecodeString(v.Signature)
 	return c.eventDispatcher.Post(event.BlockVerificationEvent{
 		SourceHeight: v.SourceHeight,
 		SourceHash:   v.SourceHash,
 		TargetHeight: v.TargetHeight,
 		TargetHash:   v.TargetHash,
 		PubKey:       pubKey,
-		Signature:    signature,
+		Signature:    v.Signature,
 	})
 }
 

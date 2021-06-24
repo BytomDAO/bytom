@@ -2,7 +2,6 @@ package database
 
 import (
 	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
 	"time"
 
@@ -269,7 +268,7 @@ func (s *Store) GetCheckpoint(hash *bc.Hash) (*state.Checkpoint, error) {
 		return nil, err
 	}
 
-	setSupLinkToCheckpoint(checkpoint, header.SupLinks)
+	checkpoint.SupLinks = append(checkpoint.SupLinks, header.SupLinks...)
 	return checkpoint, nil
 }
 
@@ -314,7 +313,7 @@ func (s *Store) loadCheckpointsFromIter(iter dbm.Iterator) ([]*state.Checkpoint,
 			return nil, err
 		}
 
-		setSupLinkToCheckpoint(checkpoint, header.SupLinks)
+		checkpoint.SupLinks = append(checkpoint.SupLinks, header.SupLinks...)
 		checkpoints = append(checkpoints, checkpoint)
 	}
 	return checkpoints, nil
@@ -359,19 +358,4 @@ func (s *Store) saveCheckpoints(batch dbm.Batch, checkpoints []*state.Checkpoint
 		}).Info("checkpoint saved on disk")
 	}
 	return nil
-}
-
-func setSupLinkToCheckpoint(c *state.Checkpoint, supLinks types.SupLinks) {
-	for _, supLink := range supLinks {
-		var signatures [consensus.MaxNumOfValidators]string
-		for i, signature := range supLink.Signatures {
-			signatures[i] = hex.EncodeToString(signature)
-		}
-
-		c.SupLinks = append(c.SupLinks, &state.SupLink{
-			SourceHeight: supLink.SourceHeight,
-			SourceHash:   supLink.SourceHash,
-			Signatures:   signatures,
-		})
-	}
 }
