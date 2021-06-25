@@ -495,8 +495,12 @@ func createStoreItems(mainChainIndexes []int, attachBlocks []*attachBlock, extra
 				if output.ControlProgram[0] == 0x6a {
 					continue
 				}
+				utxoType := storage.NormalUTXOType
+				if i == 0 {
+					utxoType = storage.CoinbaseUTXOType
+				}
 				items = append(items, &storeItem{key: database.CalcUtxoKey(tx.Tx.ResultIds[j]),
-					val: &storage.UtxoEntry{IsCoinBase: i == 0, BlockHeight: block.Height, Spent: false},
+					val: &storage.UtxoEntry{Type: utxoType, BlockHeight: block.Height, Spent: false},
 				})
 			}
 		}
@@ -556,7 +560,7 @@ func spendUTXO(spendOutputID bc.Hash, items storeItems, blockHeight uint64) int 
 		if string(database.CalcUtxoKey(&spendOutputID)) != string(item.key) {
 			continue
 		}
-		if utxo.Spent || (utxo.IsCoinBase && utxo.BlockHeight+consensus.CoinbasePendingBlockNumber > blockHeight) {
+		if utxo.Spent || (utxo.Type == storage.CoinbaseUTXOType && utxo.BlockHeight+consensus.CoinbasePendingBlockNumber > blockHeight) {
 			panic("utxo can not be use")
 		}
 		utxo.Spent = true

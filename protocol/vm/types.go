@@ -48,6 +48,18 @@ func AsBigInt(b []byte) (*uint256.Int, error) {
 	return res, nil
 }
 
+func bigIntInt64(n *uint256.Int) (int64, error) {
+	if !n.IsUint64() {
+		return 0, ErrBadValue
+	}
+
+	i := int64(n.Uint64())
+	if i < 0 {
+		return 0, ErrBadValue
+	}
+	return i, nil
+}
+
 // reverse []byte.
 func reverse(b []byte) []byte {
 	for i, j := 0, len(b)-1; i < j; i, j = i+1, j-1 {

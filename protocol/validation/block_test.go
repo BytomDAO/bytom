@@ -91,7 +91,7 @@ func TestCheckCoinbaseAmount(t *testing.T) {
 		},
 		{
 			block: &types.Block{
-				BlockHeader: types.BlockHeader{Height: state.BlocksOfEpoch + 1},
+				BlockHeader: types.BlockHeader{Height: consensus.ActiveNetParams.BlocksOfEpoch + 1},
 				Transactions: []*types.Tx{
 					types.NewTx(types.TxData{
 						Inputs: []*types.TxInput{types.NewCoinbaseInput(nil)},
@@ -108,7 +108,7 @@ func TestCheckCoinbaseAmount(t *testing.T) {
 		},
 		{
 			block: &types.Block{
-				BlockHeader: types.BlockHeader{Height: state.BlocksOfEpoch + 1},
+				BlockHeader: types.BlockHeader{Height: consensus.ActiveNetParams.BlocksOfEpoch + 1},
 				Transactions: []*types.Tx{
 					types.NewTx(types.TxData{
 						Inputs: []*types.TxInput{types.NewCoinbaseInput(nil)},
@@ -126,7 +126,7 @@ func TestCheckCoinbaseAmount(t *testing.T) {
 		},
 		{
 			block: &types.Block{
-				BlockHeader: types.BlockHeader{Height: state.BlocksOfEpoch + 1},
+				BlockHeader: types.BlockHeader{Height: consensus.ActiveNetParams.BlocksOfEpoch + 1},
 				Transactions: []*types.Tx{
 					types.NewTx(types.TxData{
 						Inputs: []*types.TxInput{types.NewCoinbaseInput(nil)},
@@ -144,7 +144,7 @@ func TestCheckCoinbaseAmount(t *testing.T) {
 		},
 		{
 			block: &types.Block{
-				BlockHeader: types.BlockHeader{Height: state.BlocksOfEpoch + 1},
+				BlockHeader: types.BlockHeader{Height: consensus.ActiveNetParams.BlocksOfEpoch + 1},
 				Transactions: []*types.Tx{
 					types.NewTx(types.TxData{
 						Inputs: []*types.TxInput{types.NewCoinbaseInput(nil)},
@@ -297,7 +297,7 @@ func TestValidateBlock(t *testing.T) {
 	cp, _ := vmutil.DefaultCoinbaseProgram()
 	parent := &types.BlockHeader{
 		Version:   1,
-		Height:    state.BlocksOfEpoch,
+		Height:    consensus.ActiveNetParams.BlocksOfEpoch,
 		Timestamp: 1523352600,
 	}
 	parentHash := parent.Hash()
@@ -315,7 +315,7 @@ func TestValidateBlock(t *testing.T) {
 				ID: bc.Hash{V0: 1},
 				BlockHeader: &bc.BlockHeader{
 					Version:          1,
-					Height:           state.BlocksOfEpoch + 1,
+					Height:           consensus.ActiveNetParams.BlocksOfEpoch + 1,
 					Timestamp:        1523358600,
 					PreviousBlockId:  &parentHash,
 					TransactionsRoot: &bc.Hash{V0: 1},
@@ -341,7 +341,7 @@ func TestValidateBlock(t *testing.T) {
 				ID: bc.Hash{V0: 1},
 				BlockHeader: &bc.BlockHeader{
 					Version:          1,
-					Height:           state.BlocksOfEpoch + 1,
+					Height:           consensus.ActiveNetParams.BlocksOfEpoch + 1,
 					Timestamp:        1523358600,
 					PreviousBlockId:  &parentHash,
 					TransactionsRoot: &bc.Hash{V0: 6294987741126419124, V1: 12520373106916389157, V2: 5040806596198303681, V3: 1151748423853876189},

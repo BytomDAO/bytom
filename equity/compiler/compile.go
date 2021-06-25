@@ -139,13 +139,13 @@ func Instantiate(body []byte, params []*Param, recursive bool, args []ContractAr
 		a := args[i]
 		switch {
 		case a.B != nil:
-			var n int64
+			var n uint64
 			if *a.B {
 				n = 1
 			}
-			b.AddInt64(n)
+			b.AddUint64(n)
 		case a.I != nil:
-			b.AddInt64(*a.I)
+			b.AddUint64(uint64(*a.I))
 		case a.S != nil:
 			b.AddData(*a.S)
 		}
@@ -160,7 +160,7 @@ func Instantiate(body []byte, params []*Param, recursive bool, args []ContractAr
 		b.AddOp(vm.OP_DEPTH)
 		b.AddData(body)
 	}
-	b.AddInt64(0)
+	b.AddUint64(0)
 	b.AddOp(vm.OP_CHECKPREDICATE)
 	return b.Build()
 }

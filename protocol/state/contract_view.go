@@ -21,31 +21,27 @@ func NewContractViewpoint() *ContractViewpoint {
 }
 
 // ApplyBlock apply block contract to contract view
-func (view *ContractViewpoint) ApplyBlock(block *types.Block) error {
+func (view *ContractViewpoint) ApplyBlock(block *types.Block) {
 	for _, tx := range block.Transactions {
 		for _, output := range tx.Outputs {
-			program := output.ControlProgram
-			if bcrp.IsBCRPScript(program) {
+			if program := output.ControlProgram; bcrp.IsBCRPScript(program) {
 				var hash [32]byte
 				sha3pool.Sum256(hash[:], program)
 				view.AttachEntries[hash] = append(tx.ID.Bytes(), program...)
 			}
 		}
 	}
-	return nil
 }
 
 // DetachBlock detach block contract to contract view
-func (view *ContractViewpoint) DetachBlock(block *types.Block) error {
-	for _, tx := range block.Transactions {
-		for _, output := range tx.Outputs {
-			program := output.ControlProgram
-			if bcrp.IsBCRPScript(program) {
+func (view *ContractViewpoint) DetachBlock(block *types.Block) {
+	for i := len(block.Transactions) - 1; i >= 0; i-- {
+		for _, output := range block.Transactions[i].Outputs {
+			if program := output.ControlProgram; bcrp.IsBCRPScript(program) {
 				var hash [32]byte
 				sha3pool.Sum256(hash[:], program)
-				view.DetachEntries[hash] = append(tx.ID.Bytes(), program...)
+				view.DetachEntries[hash] = append(block.Transactions[i].ID.Bytes(), program...)
 			}
 		}
 	}
-	return nil
 }

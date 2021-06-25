@@ -3,16 +3,16 @@ package vm
 import "bytes"
 
 func opInvert(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
+
 	top, err := vm.top()
 	if err != nil {
 		return err
 	}
-	err = vm.applyCost(int64(len(top)))
-	if err != nil {
+
+	if err = vm.applyCost(int64(len(top))); err != nil {
 		return err
 	}
 	// Could rewrite top in place but maybe it's a shared data
@@ -26,31 +26,34 @@ func opInvert(vm *virtualMachine) error {
 }
 
 func opAnd(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
+
 	b, err := vm.pop(true)
 	if err != nil {
 		return err
 	}
+
 	a, err := vm.pop(true)
 	if err != nil {
 		return err
 	}
+
 	min, max := len(a), len(b)
 	if min > max {
 		min, max = max, min
 	}
-	err = vm.applyCost(int64(min))
-	if err != nil {
+
+	if err = vm.applyCost(int64(min)); err != nil {
 		return err
 	}
+
 	res := make([]byte, 0, min)
 	for i := 0; i < min; i++ {
 		res = append(res, a[i]&b[i])
 	}
-	return vm.push(res, true)
+	return vm.pushDataStack(res, true)
 }
 
 func opOr(vm *virtualMachine) error {
@@ -62,26 +65,29 @@ func opXor(vm *virtualMachine) error {
 }
 
 func doOr(vm *virtualMachine, xor bool) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
+
 	b, err := vm.pop(true)
 	if err != nil {
 		return err
 	}
+
 	a, err := vm.pop(true)
 	if err != nil {
 		return err
 	}
+
 	min, max := len(a), len(b)
 	if min > max {
 		min, max = max, min
 	}
-	err = vm.applyCost(int64(max))
-	if err != nil {
+
+	if err = vm.applyCost(int64(max)); err != nil {
 		return err
 	}
+
 	res := make([]byte, 0, max)
 	for i := 0; i < max; i++ {
 		var aByte, bByte, resByte byte
@@ -103,7 +109,7 @@ func doOr(vm *virtualMachine, xor bool) error {
 
 		res = append(res, resByte)
 	}
-	return vm.push(res, true)
+	return vm.pushDataStack(res, true)
 }
 
 func opEqual(vm *virtualMachine) error {
@@ -111,6 +117,7 @@ func opEqual(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
+
 	return vm.pushBool(res, true)
 }
 
@@ -119,6 +126,7 @@ func opEqualVerify(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
+
 	if res {
 		return nil
 	}
@@ -126,24 +134,26 @@ func opEqualVerify(vm *virtualMachine) error {
 }
 
 func doEqual(vm *virtualMachine) (bool, error) {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return false, err
 	}
+
 	b, err := vm.pop(true)
 	if err != nil {
 		return false, err
 	}
+
 	a, err := vm.pop(true)
 	if err != nil {
 		return false, err
 	}
+
 	min, max := len(a), len(b)
 	if min > max {
 		min, max = max, min
 	}
-	err = vm.applyCost(int64(min))
-	if err != nil {
+
+	if err = vm.applyCost(int64(min)); err != nil {
 		return false, err
 	}
 	return bytes.Equal(a, b), nil

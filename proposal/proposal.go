@@ -165,7 +165,7 @@ func (b *blockBuilder) createCoinbaseTx() (tx *types.Tx, err error) {
 		return nil, err
 	}
 
-	if b.block.Height%state.BlocksOfEpoch == 1 && b.block.Height != 1 {
+	if b.block.Height%consensus.ActiveNetParams.BlocksOfEpoch == 1 && b.block.Height != 1 {
 		for controlProgram, amount := range checkpoint.Rewards {
 			if controlProgram == hex.EncodeToString(script) {
 				builder.Outputs()[0].Amount = amount

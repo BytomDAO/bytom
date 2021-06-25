@@ -114,7 +114,7 @@ func (m *Manager) handleBlockVerificationMsg(peerID string, msg *BlockVerificati
 		TargetHash:   msg.TargetHash,
 		SourceHeight: msg.SourceHeight,
 		TargetHeight: msg.TargetHeight,
-		Signature:    hex.EncodeToString(msg.Signature),
+		Signature:    msg.Signature,
 		PubKey:       hex.EncodeToString(msg.PubKey),
 	}); err != nil {
 		m.peers.ProcessIllegal(peerID, security.LevelMsgIllegal, err.Error())

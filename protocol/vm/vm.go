@@ -61,19 +61,18 @@ func Verify(context *Context, gasLimit int64) (gasLeft int64, err error) {
 	}
 
 	for i, state := range context.StateData {
-		if err = vm.pushAlt(state, false); err != nil {
+		if err = vm.pushAltStack(state, false); err != nil {
 			return vm.runLimit, errors.Wrapf(err, "pushing initial statedata %d", i)
 		}
 	}
 
 	for i, arg := range context.Arguments {
-		if err = vm.push(arg, false); err != nil {
+		if err = vm.pushDataStack(arg, false); err != nil {
 			return vm.runLimit, errors.Wrapf(err, "pushing initial argument %d", i)
 		}
 	}
 
-	err = vm.run()
-	if err == nil && vm.falseResult() {
+	if err = vm.run(); err == nil && vm.falseResult() {
 		err = ErrFalseVMResult
 	}
 
@@ -116,6 +115,7 @@ func (vm *virtualMachine) step() error {
 		if vm.expansionReserved {
 			return ErrDisallowedOpcode
 		}
+
 		vm.pc = vm.nextPC
 		return vm.applyCost(1)
 	}
@@ -140,7 +140,7 @@ func (vm *virtualMachine) step() error {
 	return nil
 }
 
-func (vm *virtualMachine) push(data []byte, deferred bool) error {
+func (vm *virtualMachine) pushDataStack(data []byte, deferred bool) error {
 	cost := 8 + int64(len(data))
 	if deferred {
 		vm.deferCost(cost)
@@ -152,7 +152,7 @@ func (vm *virtualMachine) push(data []byte, deferred bool) error {
 	return nil
 }
 
-func (vm *virtualMachine) pushAlt(data []byte, deferred bool) error {
+func (vm *virtualMachine) pushAltStack(data []byte, deferred bool) error {
 	cost := 8 + int64(len(data))
 	if deferred {
 		vm.deferCost(cost)
@@ -165,17 +165,18 @@ func (vm *virtualMachine) pushAlt(data []byte, deferred bool) error {
 }
 
 func (vm *virtualMachine) pushBool(b bool, deferred bool) error {
-	return vm.push(BoolBytes(b), deferred)
+	return vm.pushDataStack(BoolBytes(b), deferred)
 }
 
 func (vm *virtualMachine) pushBigInt(n *uint256.Int, deferred bool) error {
-	return vm.push(BigIntBytes(n), deferred)
+	return vm.pushDataStack(BigIntBytes(n), deferred)
 }
 
 func (vm *virtualMachine) pop(deferred bool) ([]byte, error) {
 	if len(vm.dataStack) == 0 {
 		return nil, ErrDataStackUnderflow
 	}
+
 	res := vm.dataStack[len(vm.dataStack)-1]
 	vm.dataStack = vm.dataStack[:len(vm.dataStack)-1]
 
@@ -187,23 +188,6 @@ func (vm *virtualMachine) pop(deferred bool) ([]byte, error) {
 	}
 
 	return res, nil
-}
-
-func (vm *virtualMachine) popInt64(deferred bool) (int64, error) {
-	bigInt, err := vm.popBigInt(deferred)
-	if err != nil {
-		return 0, err
-	}
-
-	if !bigInt.IsUint64() {
-		return 0, ErrBadValue
-	}
-
-	i := int64(bigInt.Uint64())
-	if i < 0 {
-		return 0, ErrBadValue
-	}
-	return i, nil
 }
 
 func (vm *virtualMachine) popBigInt(deferred bool) (*uint256.Int, error) {

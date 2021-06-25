@@ -114,9 +114,7 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 	}
 
 	contractView := state.NewContractViewpoint()
-	if err := contractView.ApplyBlock(block); err != nil {
-		return err
-	}
+	contractView.ApplyBlock(block)
 
 	if err := c.setState(&block.BlockHeader, []*types.BlockHeader{&block.BlockHeader}, utxoView, contractView); err != nil {
 		return err
@@ -154,10 +152,7 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 			return err
 		}
 
-		if err := contractView.DetachBlock(b); err != nil {
-			return err
-		}
-
+		contractView.DetachBlock(b)
 		for _, tx := range b.Transactions {
 			txsToRestore[tx.ID] = tx
 		}
@@ -181,10 +176,7 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 			return err
 		}
 
-		if err := contractView.ApplyBlock(b); err != nil {
-			return err
-		}
-
+		contractView.ApplyBlock(b)
 		for _, tx := range b.Transactions {
 			if _, ok := txsToRestore[tx.ID]; !ok {
 				txsToRemove[tx.ID] = tx
@@ -226,18 +218,13 @@ func (c *Chain) broadcastVerification(v *Verification) error {
 		return err
 	}
 
-	signature, err := hex.DecodeString(v.Signature)
-	if err != nil {
-		return err
-	}
-
 	return c.eventDispatcher.Post(event.BlockVerificationEvent{
 		SourceHeight: v.SourceHeight,
 		SourceHash:   v.SourceHash,
 		TargetHeight: v.TargetHeight,
 		TargetHash:   v.TargetHash,
 		PubKey:       pubKey,
-		Signature:    signature,
+		Signature:    v.Signature,
 	})
 }
 
@@ -348,8 +335,6 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	bestBlock := c.saveSubBlock(block)
 	bestBlockHeader := &bestBlock.BlockHeader
 
-	c.cond.L.Lock()
-	defer c.cond.L.Unlock()
 	if bestBlockHeader.PreviousBlockHash == c.bestBlockHeader.Hash() {
 		log.WithFields(log.Fields{"module": logModule}).Debug("append block to the end of mainchain")
 		return false, c.connectBlock(bestBlock)

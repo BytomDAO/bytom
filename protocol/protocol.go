@@ -130,14 +130,13 @@ func (c *Chain) ProcessBlockVerification(v *Verification) error {
 	}
 
 	pubKey, _ := hex.DecodeString(v.PubKey)
-	signature, _ := hex.DecodeString(v.Signature)
 	return c.eventDispatcher.Post(event.BlockVerificationEvent{
 		SourceHeight: v.SourceHeight,
 		SourceHash:   v.SourceHash,
 		TargetHeight: v.TargetHeight,
 		TargetHash:   v.TargetHash,
 		PubKey:       pubKey,
-		Signature:    signature,
+		Signature:    v.Signature,
 	})
 }
 
