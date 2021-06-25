@@ -53,7 +53,7 @@ func (ctx *chainTestContext) validateExecution(block *types.Block) error {
 			if utxoEntry == nil {
 				continue
 			}
-			if !utxoEntry.IsCoinBase {
+			if utxoEntry.Type != storage.CoinbaseUTXOType {
 				return fmt.Errorf("found non-coinbase spent utxo entry")
 			}
 			if !utxoEntry.Spent {
