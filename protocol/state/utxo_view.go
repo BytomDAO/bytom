@@ -60,16 +60,22 @@ func (view *UtxoViewpoint) applyOutputUtxo(block *bc.Block, tx *bc.Tx) error {
 			continue
 		}
 
-		utxoType := storage.NormalUTXOType
+
+		var utxoType uint32
+		var amount uint64
 		switch output := entryOutput.(type) {
 		case *bc.OriginalOutput:
-			if output.Source.Value.Amount == uint64(0) {
-				continue
-			}
+			amount = output.Source.Value.Amount
+			utxoType = storage.NormalUTXOType
 		case *bc.VoteOutput:
+			amount = output.Source.Value.Amount
 			utxoType = storage.VoteUTXOType
 		default:
 			// due to it's a retirement, utxo doesn't care this output type so skip it
+			continue
+		}
+
+		if amount == 0 {
 			continue
 		}
 
@@ -141,16 +147,21 @@ func (view *UtxoViewpoint) detachOutputUtxo(tx *bc.Tx) error {
 			continue
 		}
 
-		utxoType := storage.NormalUTXOType
+		var utxoType uint32
+		var amount uint64
 		switch output := entryOutput.(type) {
 		case *bc.OriginalOutput:
-			if output.Source.Value.Amount == uint64(0) {
-				continue
-			}
+			amount = output.Source.Value.Amount
+			utxoType = storage.NormalUTXOType
 		case *bc.VoteOutput:
+			amount = output.Source.Value.Amount
 			utxoType = storage.VoteUTXOType
 		default:
 			// due to it's a retirement, utxo doesn't care this output type so skip it
+			continue
+		}
+
+		if amount == 0 {
 			continue
 		}
 
