@@ -18,32 +18,32 @@ type VersionInfo struct {
 
 // NetInfo indicate net information
 type NetInfo struct {
-	Listening         bool         `json:"listening"`
-	Syncing           bool         `json:"syncing"`
-	Mining            bool         `json:"mining"`
-	PeerCount         int          `json:"peer_count"`
-	CurrentBlock      uint64       `json:"current_block"`
-	HighestBlock      uint64       `json:"highest_block"`
-	IrreversibleBlock uint64       `json:"irreversible_block"`
-	NetWorkID         string       `json:"network_id"`
-	Version           *VersionInfo `json:"version_info"`
+	Listening      bool         `json:"listening"`
+	Syncing        bool         `json:"syncing"`
+	Mining         bool         `json:"mining"`
+	PeerCount      int          `json:"peer_count"`
+	CurrentBlock   uint64       `json:"current_block"`
+	HighestBlock   uint64       `json:"highest_block"`
+	FinalizedBlock uint64       `json:"finalized_block"`
+	NetWorkID      string       `json:"network_id"`
+	Version        *VersionInfo `json:"version_info"`
 }
 
 // GetNodeInfo return net information
 func (a *API) GetNodeInfo() (*NetInfo, error) {
-	irreversibleBlockHeader, err := a.chain.LastJustifiedHeader()
+	finalizedBlockHeader, err := a.chain.LastFinalizedHeader()
 	if err != nil {
 		return nil, err
 	}
 
 	info := &NetInfo{
-		Listening:         a.sync.IsListening(),
-		Syncing:           !a.sync.IsCaughtUp(),
-		Mining:            a.blockProposer.IsProposing(),
-		PeerCount:         a.sync.PeerCount(),
-		CurrentBlock:      a.chain.BestBlockHeight(),
-		IrreversibleBlock: irreversibleBlockHeader.Height,
-		NetWorkID:         a.sync.GetNetwork(),
+		Listening:      a.sync.IsListening(),
+		Syncing:        !a.sync.IsCaughtUp(),
+		Mining:         a.blockProposer.IsProposing(),
+		PeerCount:      a.sync.PeerCount(),
+		CurrentBlock:   a.chain.BestBlockHeight(),
+		FinalizedBlock: finalizedBlockHeader.Height,
+		NetWorkID:      a.sync.GetNetwork(),
 		Version: &VersionInfo{
 			Version: version.Version,
 			Update:  version.Status.VersionStatus(),
