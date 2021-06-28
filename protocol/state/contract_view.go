@@ -27,7 +27,9 @@ func (view *ContractViewpoint) ApplyBlock(block *types.Block) {
 			if program := output.ControlProgram; bcrp.IsBCRPScript(program) {
 				var hash [32]byte
 				sha3pool.Sum256(hash[:], program)
-				view.AttachEntries[hash] = append(tx.ID.Bytes(), program...)
+				if _, ok := view.AttachEntries[hash]; !ok {
+					view.AttachEntries[hash] = append(tx.ID.Bytes(), program...)
+				}
 			}
 		}
 	}
