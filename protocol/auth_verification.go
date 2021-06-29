@@ -7,7 +7,6 @@ import (
 
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/protocol/bc"
-	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
 )
 
@@ -214,17 +213,6 @@ func (c *Casper) verifySpanHeight(v *Verification, validatorOrder int) error {
 		return errSpanHeightInVerification
 	}
 	return nil
-}
-
-func makeVerification(supLink *types.SupLink, checkpoint *state.Checkpoint, pubKey string, validatorOrder int) *Verification {
-	return &Verification{
-		SourceHash:   supLink.SourceHash,
-		TargetHash:   checkpoint.Hash,
-		SourceHeight: supLink.SourceHeight,
-		TargetHeight: checkpoint.Height,
-		Signature:    supLink.Signatures[validatorOrder],
-		PubKey:       pubKey,
-	}
 }
 
 func validate(v *Verification) error {
