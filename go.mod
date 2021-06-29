@@ -57,7 +57,7 @@ require (
 	golang.org/x/net v0.0.0-20210410081132-afb366fc7cd1 // indirect
 	golang.org/x/sys v0.0.0-20210412220455-f1c623a9e750 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
-	gopkg.in/fatih/set.v0 v0.2.1
+	gopkg.in/fatih/set.v0 v0.1.0
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	gopkg.in/karalabe/cookiejar.v2 v2.0.0-20150724131613-8dcd6a7f4951
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect

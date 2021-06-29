@@ -128,7 +128,7 @@ func TestCheckUpdate(t *testing.T) {
 		status := &UpdateStatus{
 			maxVerSeen:    c.localVer,
 			notified:      false,
-			seedSet:       set.New(set.ThreadSafe).(*set.Set),
+			seedSet:       set.New(),
 			versionStatus: noUpdate,
 		}
 		for i, remoteVer := range c.remotePeers {
