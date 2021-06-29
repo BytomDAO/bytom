@@ -91,7 +91,7 @@ func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, 
 func (c *Casper) checkpointNodeByHash(blockHash bc.Hash) (*treeNode, error) {
 	node, err := c.tree.nodeByHash(blockHash)
 	if err != nil {
-		logrus.WithField("err", err).Error("fail find checkpoint, start to reorganize checkpoint")
+		logrus.WithFields(logrus.Fields{"err": err, "module": logModule}).Error("fail find checkpoint, start to reorganize checkpoint")
 
 		return c.replayCheckpoint(blockHash)
 	}
@@ -170,7 +170,7 @@ func (c *Casper) applySupLinks(target *state.Checkpoint, supLinks []*types.SupLi
 	for _, supLink := range supLinks {
 		var validVerifications []*Verification
 		for _, v := range supLinkToVerifications(supLink, validators, target.Hash, target.Height) {
-			if validate(v) == nil && c.verifyVerification(v, validators[v.PubKey].Order, true) == nil {
+			if validate(v) == nil && c.verifyVerification(v, validators[v.PubKey].Order) == nil {
 				validVerifications = append(validVerifications, v)
 			}
 		}
@@ -228,7 +228,7 @@ func (c *Casper) myVerification(target *state.Checkpoint, validators map[string]
 			return nil, err
 		}
 
-		if err := c.verifyVerification(v, validatorOrder, false); err != nil {
+		if err := c.verifyVerification(v, validatorOrder); err != nil {
 			return nil, nil
 		}
 

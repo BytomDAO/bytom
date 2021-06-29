@@ -18,8 +18,6 @@ var (
 	errVoteToSameCheckpoint     = errors.New("source height and target height in verification is equals")
 	errSameHeightInVerification = errors.New("validator publish two distinct votes for the same target height")
 	errSpanHeightInVerification = errors.New("validator publish vote within the span of its other votes")
-	errVoteToNonValidator       = errors.New("pubKey of vote is not validator")
-	errGuarantyLessThanMinimum  = errors.New("guaranty less than minimum")
 )
 
 // Casper is BFT based proof of stack consensus algorithm, it provides safety and liveness in theory,
@@ -30,8 +28,6 @@ type Casper struct {
 	rollbackCh chan *rollbackMsg
 	newEpochCh chan bc.Hash
 	store      Store
-	// pubKey -> conflicting verifications
-	evilValidators map[string][]*Verification
 	// block hash -> previous checkpoint hash
 	prevCheckpointCache *common.Cache
 	// block hash + pubKey -> verification
@@ -44,7 +40,7 @@ type Casper struct {
 // the others must be successors of first one
 func NewCasper(store Store, checkpoints []*state.Checkpoint, rollbackCh chan *rollbackMsg) *Casper {
 	if checkpoints[0].Height != 0 && checkpoints[0].Status != state.Finalized {
-		log.Panic("first element of checkpoints must genesis or in finalized status")
+		log.WithFields(log.Fields{"module": logModule}).Panic("first element of checkpoints must genesis or in finalized status")
 	}
 
 	casper := &Casper{
@@ -52,7 +48,6 @@ func NewCasper(store Store, checkpoints []*state.Checkpoint, rollbackCh chan *ro
 		rollbackCh:          rollbackCh,
 		newEpochCh:          make(chan bc.Hash),
 		store:               store,
-		evilValidators:      make(map[string][]*Verification),
 		prevCheckpointCache: common.NewCache(1024),
 		verificationCache:   common.NewCache(1024),
 	}
@@ -104,29 +99,6 @@ func (c *Casper) parentCheckpointByPrevHash(prevBlockHash *bc.Hash) (*state.Chec
 	}
 
 	return c.store.GetCheckpoint(hash)
-}
-
-// EvilValidator represent a validator who broadcast two distinct verification that violate the commandment
-type EvilValidator struct {
-	PubKey string
-	V1     *Verification
-	V2     *Verification
-}
-
-// EvilValidators return all evil validators
-func (c *Casper) EvilValidators() []*EvilValidator {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	var validators []*EvilValidator
-	for pubKey, verifications := range c.evilValidators {
-		validators = append(validators, &EvilValidator{
-			PubKey: pubKey,
-			V1:     verifications[0],
-			V2:     verifications[1],
-		})
-	}
-	return validators
 }
 
 func (c *Casper) bestChain() bc.Hash {

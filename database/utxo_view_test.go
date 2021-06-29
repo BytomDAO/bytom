@@ -23,22 +23,22 @@ func TestSaveUtxoView(t *testing.T) {
 	}{
 		{
 			hash:      bc.Hash{V0: 0},
-			utxoEntry: storage.NewUtxoEntry(true, 0, true),
+			utxoEntry: storage.NewUtxoEntry(storage.CoinbaseUTXOType, 0, true),
 			exist:     true,
 		},
 		{
 			hash:      bc.Hash{V0: 1},
-			utxoEntry: storage.NewUtxoEntry(true, 0, false),
+			utxoEntry: storage.NewUtxoEntry(storage.CoinbaseUTXOType, 0, false),
 			exist:     true,
 		},
 		{
 			hash:      bc.Hash{V0: 2},
-			utxoEntry: storage.NewUtxoEntry(false, 0, false),
+			utxoEntry: storage.NewUtxoEntry(storage.NormalUTXOType, 0, false),
 			exist:     true,
 		},
 		{
 			hash:      bc.Hash{V0: 3},
-			utxoEntry: storage.NewUtxoEntry(false, 0, true),
+			utxoEntry: storage.NewUtxoEntry(storage.NormalUTXOType, 0, true),
 			exist:     false,
 		},
 	}
@@ -74,7 +74,7 @@ func TestGetTransactionsUtxo(t *testing.T) {
 	batch := testDB.NewBatch()
 	inputView := state.NewUtxoViewpoint()
 	for i := 0; i <= 2; i++ {
-		inputView.Entries[bc.Hash{V0: uint64(i)}] = storage.NewUtxoEntry(false, uint64(i), false)
+		inputView.Entries[bc.Hash{V0: uint64(i)}] = storage.NewUtxoEntry(storage.NormalUTXOType, uint64(i), false)
 	}
 	saveUtxoView(batch, inputView)
 	batch.Write()
@@ -105,7 +105,7 @@ func TestGetTransactionsUtxo(t *testing.T) {
 			inputView: state.NewUtxoViewpoint(),
 			fetchView: &state.UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, false),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, false),
 				},
 			},
 			err: false,
@@ -122,8 +122,8 @@ func TestGetTransactionsUtxo(t *testing.T) {
 			inputView: state.NewUtxoViewpoint(),
 			fetchView: &state.UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, false),
-					bc.Hash{V0: 1}: storage.NewUtxoEntry(false, 1, false),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, false),
+					bc.Hash{V0: 1}: storage.NewUtxoEntry(storage.NormalUTXOType, 1, false),
 				},
 			},
 			err: false,
@@ -145,9 +145,9 @@ func TestGetTransactionsUtxo(t *testing.T) {
 			inputView: state.NewUtxoViewpoint(),
 			fetchView: &state.UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, false),
-					bc.Hash{V0: 1}: storage.NewUtxoEntry(false, 1, false),
-					bc.Hash{V0: 2}: storage.NewUtxoEntry(false, 2, false),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, false),
+					bc.Hash{V0: 1}: storage.NewUtxoEntry(storage.NormalUTXOType, 1, false),
+					bc.Hash{V0: 2}: storage.NewUtxoEntry(storage.NormalUTXOType, 2, false),
 				},
 			},
 			err: false,
@@ -160,12 +160,12 @@ func TestGetTransactionsUtxo(t *testing.T) {
 			},
 			inputView: &state.UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 1, false),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.NormalUTXOType, 1, false),
 				},
 			},
 			fetchView: &state.UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 1, false),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.NormalUTXOType, 1, false),
 				},
 			},
 			err: false,
