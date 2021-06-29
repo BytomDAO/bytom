@@ -7,7 +7,6 @@ import (
 
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/protocol/bc"
-	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
 )
 
@@ -59,7 +58,7 @@ func (c *Casper) AuthVerification(v *Verification) error {
 
 func (c *Casper) authVerification(v *Verification, target *state.Checkpoint, validators map[string]*state.Validator) error {
 	validator := validators[v.PubKey]
-	if err := c.verifyVerification(v, validator.Order, true); err != nil {
+	if err := c.verifyVerification(v, validator.Order); err != nil {
 		return err
 	}
 
@@ -117,7 +116,7 @@ func (c *Casper) setFinalized(checkpoint *state.Checkpoint) {
 	checkpoint.Status = state.Finalized
 	newRoot, err := c.tree.nodeByHash(checkpoint.Hash)
 	if err != nil {
-		log.WithField("err", err).Error("source checkpoint before the last finalized checkpoint")
+		log.WithFields(log.Fields{"err": err, "module": logModule}).Error("source checkpoint before the last finalized checkpoint")
 		return
 	}
 
@@ -139,7 +138,7 @@ func (c *Casper) authVerificationLoop() {
 	for blockHash := range c.newEpochCh {
 		validators, err := c.Validators(&blockHash)
 		if err != nil {
-			log.WithField("err", err).Error("get validators when auth verification")
+			log.WithFields(log.Fields{"err": err, "module": logModule}).Error("get validators when auth verification")
 			continue
 		}
 
@@ -153,14 +152,14 @@ func (c *Casper) authVerificationLoop() {
 			v := verification.(*Verification)
 			target, err := c.store.GetCheckpoint(&v.TargetHash)
 			if err != nil {
-				log.WithField("err", err).Error("get target checkpoint")
+				log.WithFields(log.Fields{"err": err, "module": logModule}).Error("get target checkpoint")
 				c.verificationCache.Remove(key)
 				continue
 			}
 
 			c.mu.Lock()
 			if err := c.authVerification(v, target, validators); err != nil {
-				log.WithField("err", err).Error("auth verification in cache")
+				log.WithFields(log.Fields{"err": err, "module": logModule}).Error("auth verification in cache")
 			}
 			c.mu.Unlock()
 
@@ -169,16 +168,16 @@ func (c *Casper) authVerificationLoop() {
 	}
 }
 
-func (c *Casper) verifyVerification(v *Verification, validatorOrder int, trackEvilValidator bool) error {
-	if err := c.verifySameHeight(v, validatorOrder, trackEvilValidator); err != nil {
+func (c *Casper) verifyVerification(v *Verification, validatorOrder int) error {
+	if err := c.verifySameHeight(v, validatorOrder); err != nil {
 		return err
 	}
 
-	return c.verifySpanHeight(v, validatorOrder, trackEvilValidator)
+	return c.verifySpanHeight(v, validatorOrder)
 }
 
 // a validator must not publish two distinct votes for the same target height
-func (c *Casper) verifySameHeight(v *Verification, validatorOrder int, trackEvilValidator bool) error {
+func (c *Casper) verifySameHeight(v *Verification, validatorOrder int) error {
 	checkpoints, err := c.store.GetCheckpointsByHeight(v.TargetHeight)
 	if err != nil {
 		return err
@@ -187,9 +186,6 @@ func (c *Casper) verifySameHeight(v *Verification, validatorOrder int, trackEvil
 	for _, checkpoint := range checkpoints {
 		for _, supLink := range checkpoint.SupLinks {
 			if len(supLink.Signatures[validatorOrder]) != 0 && checkpoint.Hash != v.TargetHash {
-				if trackEvilValidator {
-					c.evilValidators[v.PubKey] = []*Verification{v, makeVerification(supLink, checkpoint, v.PubKey, validatorOrder)}
-				}
 				return errSameHeightInVerification
 			}
 		}
@@ -198,7 +194,7 @@ func (c *Casper) verifySameHeight(v *Verification, validatorOrder int, trackEvil
 }
 
 // a validator must not vote within the span of its other votes.
-func (c *Casper) verifySpanHeight(v *Verification, validatorOrder int, trackEvilValidator bool) error {
+func (c *Casper) verifySpanHeight(v *Verification, validatorOrder int) error {
 	if c.tree.findOnlyOne(func(checkpoint *state.Checkpoint) bool {
 		if checkpoint.Height == v.TargetHeight {
 			return false
@@ -208,9 +204,6 @@ func (c *Casper) verifySpanHeight(v *Verification, validatorOrder int, trackEvil
 			if len(supLink.Signatures[validatorOrder]) != 0 {
 				if (checkpoint.Height < v.TargetHeight && supLink.SourceHeight > v.SourceHeight) ||
 					(checkpoint.Height > v.TargetHeight && supLink.SourceHeight < v.SourceHeight) {
-					if trackEvilValidator {
-						c.evilValidators[v.PubKey] = []*Verification{v, makeVerification(supLink, checkpoint, v.PubKey, validatorOrder)}
-					}
 					return true
 				}
 			}
@@ -220,17 +213,6 @@ func (c *Casper) verifySpanHeight(v *Verification, validatorOrder int, trackEvil
 		return errSpanHeightInVerification
 	}
 	return nil
-}
-
-func makeVerification(supLink *types.SupLink, checkpoint *state.Checkpoint, pubKey string, validatorOrder int) *Verification {
-	return &Verification{
-		SourceHash:   supLink.SourceHash,
-		TargetHash:   checkpoint.Hash,
-		SourceHeight: supLink.SourceHeight,
-		TargetHeight: checkpoint.Height,
-		Signature:    supLink.Signatures[validatorOrder],
-		PubKey:       pubKey,
-	}
 }
 
 func validate(v *Verification) error {
