@@ -111,9 +111,15 @@ func newCasper(store Store, storeStatus *BlockStoreState, rollbackCh chan *rollb
 	return NewCasper(store, checkpoints, rollbackCh), nil
 }
 
-// LastFinalizedHeader returns the last finalized block header of the block chain
+// LastJustifiedHeader return the last justified block header of the block chain
 func (c *Chain) LastJustifiedHeader() (*types.BlockHeader, error) {
 	_, hash := c.casper.LastJustified()
+	return c.store.GetBlockHeader(&hash)
+}
+
+// LastFinalizedHeader return the last finalized block header of the block chain
+func (c *Chain) LastFinalizedHeader() (*types.BlockHeader, error) {
+	_, hash := c.casper.LastFinalized()
 	return c.store.GetBlockHeader(&hash)
 }
 
