@@ -12,6 +12,7 @@ import (
 	"github.com/bytom/bytom/event"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/protocol/casper"
 	"github.com/bytom/bytom/protocol/state"
 )
 
@@ -24,10 +25,10 @@ const (
 type Chain struct {
 	orphanManage      *OrphanManage
 	txPool            *TxPool
-	store             Store
-	casper            *Casper
+	store             state.Store
+	casper            *casper.Casper
 	processBlockCh    chan *processBlockMsg
-	processRollbackCh chan *rollbackMsg
+	processRollbackCh chan *casper.RollbackMsg
 	eventDispatcher   *event.Dispatcher
 
 	cond            sync.Cond
@@ -35,17 +36,17 @@ type Chain struct {
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
-func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher) (*Chain, error) {
+func NewChain(store state.Store, txPool *TxPool, eventDispatcher *event.Dispatcher) (*Chain, error) {
 	return NewChainWithOrphanManage(store, txPool, NewOrphanManage(), eventDispatcher)
 }
 
-func NewChainWithOrphanManage(store Store, txPool *TxPool, manage *OrphanManage, eventDispatcher *event.Dispatcher) (*Chain, error) {
+func NewChainWithOrphanManage(store state.Store, txPool *TxPool, manage *OrphanManage, eventDispatcher *event.Dispatcher) (*Chain, error) {
 	c := &Chain{
 		orphanManage:      manage,
 		eventDispatcher:   eventDispatcher,
 		txPool:            txPool,
 		store:             store,
-		processRollbackCh: make(chan *rollbackMsg, maxProcessRollbackSize),
+		processRollbackCh: make(chan *casper.RollbackMsg, maxProcessRollbackSize),
 		processBlockCh:    make(chan *processBlockMsg, maxProcessBlockChSize),
 	}
 	c.cond.L = new(sync.Mutex)
@@ -102,13 +103,13 @@ func (c *Chain) initChainStatus() error {
 	return c.store.SaveChainStatus(genesisBlockHeader, []*types.BlockHeader{genesisBlockHeader}, utxoView, contractView, 0, &checkpoint.Hash)
 }
 
-func newCasper(store Store, storeStatus *BlockStoreState, rollbackCh chan *rollbackMsg) (*Casper, error) {
+func newCasper(store state.Store, storeStatus *state.BlockStoreState, rollbackCh chan *casper.RollbackMsg) (*casper.Casper, error) {
 	checkpoints, err := store.CheckpointsFromNode(storeStatus.FinalizedHeight, storeStatus.FinalizedHash)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewCasper(store, checkpoints, rollbackCh), nil
+	return casper.NewCasper(store, checkpoints, rollbackCh), nil
 }
 
 // LastJustifiedHeader return the last justified block header of the block chain
@@ -124,7 +125,7 @@ func (c *Chain) LastFinalizedHeader() (*types.BlockHeader, error) {
 }
 
 // ProcessBlockVerification process block verification
-func (c *Chain) ProcessBlockVerification(v *Verification) error {
+func (c *Chain) ProcessBlockVerification(v *casper.Verification) error {
 	if err := c.casper.AuthVerification(v); err != nil {
 		return err
 	}
@@ -157,17 +158,17 @@ func (c *Chain) BestBlockHash() *bc.Hash {
 
 // AllValidators return all validators has vote num
 func (c *Chain) AllValidators(blockHash *bc.Hash) ([]*state.Validator, error) {
-	 parentCheckpoint, err := c.casper.parentCheckpoint(blockHash)
-	 if err != nil {
-	 	return nil, err
-	 }
+	parentCheckpoint, err := c.casper.ParentCheckpoint(blockHash)
+	if err != nil {
+		return nil, err
+	}
 
-	 return parentCheckpoint.AllValidators(), nil
+	return parentCheckpoint.AllValidators(), nil
 }
 
 // GetValidator return validator by specified blockHash and timestamp
 func (c *Chain) GetValidator(prevHash *bc.Hash, timeStamp uint64) (*state.Validator, error) {
-	parentCheckpoint, err := c.casper.parentCheckpointByPrevHash(prevHash)
+	parentCheckpoint, err := c.casper.ParentCheckpointByPrevHash(prevHash)
 	if err != nil {
 		return nil, err
 	}
@@ -260,5 +261,5 @@ func (c *Chain) GetTxPool() *TxPool {
 
 // PrevCheckpointByPrevHash get previous checkpoint by previous block hash
 func (c *Chain) PrevCheckpointByPrevHash(preBlockHash *bc.Hash) (*state.Checkpoint, error) {
-	return c.casper.parentCheckpointByPrevHash(preBlockHash)
+	return c.casper.ParentCheckpointByPrevHash(preBlockHash)
 }

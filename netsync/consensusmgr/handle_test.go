@@ -13,9 +13,9 @@ import (
 	"github.com/bytom/bytom/event"
 	"github.com/bytom/bytom/netsync/peers"
 	"github.com/bytom/bytom/p2p"
-	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/protocol/casper"
 )
 
 type p2peer struct {
@@ -95,7 +95,7 @@ func (c *mockChain) ProcessBlock(*types.Block) (bool, error) {
 	return false, nil
 }
 
-func (c *mockChain) ProcessBlockVerification(*protocol.Verification) error {
+func (c *mockChain) ProcessBlockVerification(*casper.Verification) error {
 	return nil
 }
 
@@ -226,7 +226,7 @@ func TestProcessBlockVerificationMsg(t *testing.T) {
 	}
 
 	signature := []byte{0x01, 0x02}
-	msg := NewBlockVerificationMsg(100, 200, block.Hash(),  block.Hash(), []byte{0x03, 0x04}, signature)
+	msg := NewBlockVerificationMsg(100, 200, block.Hash(), block.Hash(), []byte{0x03, 0x04}, signature)
 
 	mgr.processMsg(peerID, 0, msg)
 
