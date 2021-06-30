@@ -10,14 +10,10 @@ import (
 	"github.com/bytom/bytom/protocol/bc/types"
 )
 
-const (
-	rewardThreshold = 0.5
-)
-
 //  validatorRewardPerBlock the number of rewards each block validator can get
 func validatorRewardPerBlock(checkpoint *Checkpoint) (uint64, error) {
-	if pledgeRate := checkpoint.pledgeRate(); pledgeRate <= rewardThreshold {
-		return uint64((pledgeRate + rewardThreshold) * float64(consensus.BlockReward)), nil
+	if pledgeRate := checkpoint.pledgeRate(); pledgeRate <= consensus.RewardThreshold {
+		return uint64((pledgeRate + consensus.RewardThreshold) * float64(consensus.BlockReward)), nil
 	}
 
 	return consensus.BlockReward, nil

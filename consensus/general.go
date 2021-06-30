@@ -16,8 +16,10 @@ const (
 	MaxGasAmount     = int64(200000)
 	DefaultGasCredit = int64(30000)
 
+	// These configs need add to casper config in elegant way
 	MaxNumOfValidators = int(10)
 	InitBTMSupply      = 15.66 * 1e16
+	RewardThreshold    = 0.5
 	BlockReward        = uint64(570776255)
 
 	// config parameter for coinbase reward
