@@ -155,15 +155,25 @@ func (c *Chain) BestBlockHash() *bc.Hash {
 	return &bestHash
 }
 
+// AllValidators return all validators has vote num
+func (c *Chain) AllValidators(blockHash *bc.Hash) ([]*state.Validator, error) {
+	 parentCheckpoint, err := c.casper.parentCheckpoint(blockHash)
+	 if err != nil {
+	 	return nil, err
+	 }
+
+	 return parentCheckpoint.AllValidators(), nil
+}
+
 // GetValidator return validator by specified blockHash and timestamp
 func (c *Chain) GetValidator(prevHash *bc.Hash, timeStamp uint64) (*state.Validator, error) {
-	prevCheckpoint, err := c.casper.parentCheckpointByPrevHash(prevHash)
+	parentCheckpoint, err := c.casper.parentCheckpointByPrevHash(prevHash)
 	if err != nil {
 		return nil, err
 	}
 
-	validators := prevCheckpoint.Validators()
-	startTimestamp := prevCheckpoint.Timestamp + consensus.ActiveNetParams.BlockTimeInterval
+	validators := parentCheckpoint.EffectiveValidators()
+	startTimestamp := parentCheckpoint.Timestamp + consensus.ActiveNetParams.BlockTimeInterval
 	order := getValidatorOrder(startTimestamp, timeStamp, uint64(len(validators)))
 	for _, validator := range validators {
 		if validator.Order == int(order) {

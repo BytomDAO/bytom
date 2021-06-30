@@ -80,7 +80,7 @@ func (c *Casper) Validators(blockHash *bc.Hash) (map[string]*state.Validator, er
 		return nil, err
 	}
 
-	return checkpoint.Validators(), nil
+	return checkpoint.EffectiveValidators(), nil
 }
 
 func (c *Casper) parentCheckpoint(blockHash *bc.Hash) (*state.Checkpoint, error) {

@@ -60,7 +60,9 @@ func NewCheckpoint(parent *Checkpoint) *Checkpoint {
 	}
 
 	for pubKey, num := range parent.Votes {
-		checkpoint.Votes[pubKey] = num
+		if num != 0 {
+			checkpoint.Votes[pubKey] = num
+		}
 	}
 	return checkpoint
 }
@@ -116,39 +118,17 @@ func (c *Checkpoint) Increase(block *types.Block) error {
 // Validator represent the participants of the PoS network
 // Responsible for block generation and verification
 type Validator struct {
-	PubKey string
-	Order  int
-	Vote   uint64
+	PubKey  string
+	Order   int
+	VoteNum uint64
 }
 
-// Validators return next epoch of validators, if the status of checkpoint is growing, return empty
-func (c *Checkpoint) Validators() map[string]*Validator {
-	var validators []*Validator
-	if c.Status == Growing {
-		return nil
-	}
-
-	for pubKey, voteNum := range c.Votes {
-		if voteNum >= consensus.ActiveNetParams.MinValidatorVoteNum {
-			validators = append(validators, &Validator{
-				PubKey: pubKey,
-				Vote:   c.Votes[pubKey],
-			})
-		}
-	}
-
+// EffectiveValidators return next epoch of effective validators, if the status of checkpoint is growing, return empty
+func (c *Checkpoint) EffectiveValidators() map[string]*Validator {
+	validators := c.AllValidators()
 	if len(validators) == 0 {
 		return federationValidators()
 	}
-
-	sort.Slice(validators, func(i, j int) bool {
-		numI := validators[i].Vote
-		numJ := validators[j].Vote
-		if numI != numJ {
-			return numI > numJ
-		}
-		return validators[i].PubKey > validators[j].PubKey
-	})
 
 	result := make(map[string]*Validator)
 	for i := 0; i < len(validators) && i < consensus.MaxNumOfValidators; i++ {
@@ -157,6 +137,33 @@ func (c *Checkpoint) Validators() map[string]*Validator {
 		result[validator.PubKey] = validator
 	}
 	return result
+}
+
+// AllValidators return all validators has vote num
+func (c *Checkpoint) AllValidators() []*Validator {
+	var validators []*Validator
+	if c.Status == Growing {
+		return nil
+	}
+
+	for pubKey, voteNum := range c.Votes {
+		if voteNum >= consensus.ActiveNetParams.MinValidatorVoteNum {
+			validators = append(validators, &Validator{
+				PubKey:  pubKey,
+				VoteNum: c.Votes[pubKey],
+			})
+		}
+	}
+
+	sort.Slice(validators, func(i, j int) bool {
+		numI := validators[i].VoteNum
+		numJ := validators[j].VoteNum
+		if numI != numJ {
+			return numI > numJ
+		}
+		return validators[i].PubKey > validators[j].PubKey
+	})
+	return validators
 }
 
 func federationValidators() map[string]*Validator {
