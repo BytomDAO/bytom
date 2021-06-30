@@ -123,8 +123,8 @@ type Validator struct {
 	VoteNum uint64
 }
 
-// Validators return next epoch of effective validators, if the status of checkpoint is growing, return empty
-func (c *Checkpoint) Validators() map[string]*Validator {
+// EffectiveValidators return next epoch of effective validators, if the status of checkpoint is growing, return empty
+func (c *Checkpoint) EffectiveValidators() map[string]*Validator {
 	validators := c.AllValidators()
 	if len(validators) == 0 {
 		return federationValidators()

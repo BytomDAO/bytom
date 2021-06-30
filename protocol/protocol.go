@@ -172,7 +172,7 @@ func (c *Chain) GetValidator(prevHash *bc.Hash, timeStamp uint64) (*state.Valida
 		return nil, err
 	}
 
-	validators := parentCheckpoint.Validators()
+	validators := parentCheckpoint.EffectiveValidators()
 	startTimestamp := parentCheckpoint.Timestamp + consensus.ActiveNetParams.BlockTimeInterval
 	order := getValidatorOrder(startTimestamp, timeStamp, uint64(len(validators)))
 	for _, validator := range validators {
