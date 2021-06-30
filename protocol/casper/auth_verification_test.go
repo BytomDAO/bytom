@@ -59,11 +59,11 @@ func TestRollback(t *testing.T) {
 	casper := NewCasper(&mockStore2{}, checkpoints, make(chan *RollbackMsg))
 	casper.prevCheckpointCache.Add(checkpoints[1].Hash, &checkpoints[0].Hash)
 	go func() {
-		RollbackMsg := <-casper.rollbackCh
-		if RollbackMsg.BestHash != checkpoints[1].Hash {
-			t.Fatalf("want best chain %s, got %s\n", checkpoints[1].Hash.String(), RollbackMsg.BestHash.String())
+		rollbackMsg := <-casper.rollbackCh
+		if rollbackMsg.BestHash != checkpoints[1].Hash {
+			t.Fatalf("want best chain %s, got %s\n", checkpoints[1].Hash.String(), rollbackMsg.BestHash.String())
 		}
-		RollbackMsg.Reply <- nil
+		rollbackMsg.Reply <- nil
 	}()
 
 	if bestHash := casper.bestChain(); bestHash != checkpoints[3].Hash {
