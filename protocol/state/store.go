@@ -1,10 +1,9 @@
-package protocol
+package state
 
 import (
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
-	"github.com/bytom/bytom/protocol/state"
 )
 
 // Store provides storage interface for blockchain data
@@ -14,19 +13,19 @@ type Store interface {
 	GetBlock(*bc.Hash) (*types.Block, error)
 	GetBlockHeader(*bc.Hash) (*types.BlockHeader, error)
 	GetStoreStatus() *BlockStoreState
-	GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error
+	GetTransactionsUtxo(*UtxoViewpoint, []*bc.Tx) error
 	GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)
 	GetMainChainHash(uint64) (*bc.Hash, error)
 	GetContract(hash [32]byte) ([]byte, error)
 
-	GetCheckpoint(*bc.Hash) (*state.Checkpoint, error)
-	CheckpointsFromNode(height uint64, hash *bc.Hash) ([]*state.Checkpoint, error)
-	GetCheckpointsByHeight(uint64) ([]*state.Checkpoint, error)
-	SaveCheckpoints([]*state.Checkpoint) error
+	GetCheckpoint(*bc.Hash) (*Checkpoint, error)
+	CheckpointsFromNode(height uint64, hash *bc.Hash) ([]*Checkpoint, error)
+	GetCheckpointsByHeight(uint64) ([]*Checkpoint, error)
+	SaveCheckpoints([]*Checkpoint) error
 
 	SaveBlock(*types.Block) error
 	SaveBlockHeader(*types.BlockHeader) error
-	SaveChainStatus(*types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, *state.ContractViewpoint, uint64, *bc.Hash) error
+	SaveChainStatus(*types.BlockHeader, []*types.BlockHeader, *UtxoViewpoint, *ContractViewpoint, uint64, *bc.Hash) error
 }
 
 // BlockStoreState represents the core's db status

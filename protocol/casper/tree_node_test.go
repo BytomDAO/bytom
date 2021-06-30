@@ -1,4 +1,4 @@
-package protocol
+package casper
 
 import (
 	"testing"
@@ -12,18 +12,18 @@ import (
 func TestMergeCheckpoint(t *testing.T) {
 	parent := &treeNode{
 		checkpoint: &state.Checkpoint{
-			Height:          0,
-			Hash:            testutil.MustDecodeHash("a4de8b26e4394ebc5f63e9c805cc682ae6fa47df141d4fe2a238d7c11ccbd87f"),
-			ParentHash:      bc.Hash{},
-			Parent:          nil,
-			Timestamp:       1563606689,
-			Status:          state.Justified,
+			Height:     0,
+			Hash:       testutil.MustDecodeHash("a4de8b26e4394ebc5f63e9c805cc682ae6fa47df141d4fe2a238d7c11ccbd87f"),
+			ParentHash: bc.Hash{},
+			Parent:     nil,
+			Timestamp:  1563606689,
+			Status:     state.Justified,
 		},
 	}
 
 	block := &types.Block{
-		BlockHeader:  types.BlockHeader{
-			Height:   1,
+		BlockHeader: types.BlockHeader{
+			Height:            1,
 			PreviousBlockHash: testutil.MustDecodeHash("a4de8b26e4394ebc5f63e9c805cc682ae6fa47df141d4fe2a238d7c11ccbd87f"),
 			Timestamp:         1563606700,
 		},

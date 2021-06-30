@@ -1,4 +1,4 @@
-package protocol
+package casper
 
 import (
 	"sync"
@@ -13,6 +13,8 @@ import (
 )
 
 var (
+	logModule = "casper"
+
 	errPubKeyIsNotValidator     = errors.New("pub key is not in validators of target checkpoint")
 	errVoteToGrowingCheckpoint  = errors.New("validator publish vote to growing checkpoint")
 	errVoteToSameCheckpoint     = errors.New("source height and target height in verification is equals")
@@ -20,14 +22,20 @@ var (
 	errSpanHeightInVerification = errors.New("validator publish vote within the span of its other votes")
 )
 
+// RollbackMsg sent the rollback msg to chain core
+type RollbackMsg struct {
+	BestHash bc.Hash
+	Reply    chan error
+}
+
 // Casper is BFT based proof of stack consensus algorithm, it provides safety and liveness in theory,
 // it's design mainly refers to https://github.com/ethereum/research/blob/master/papers/casper-basics/casper_basics.pdf
 type Casper struct {
 	mu         sync.RWMutex
 	tree       *treeNode
-	rollbackCh chan *rollbackMsg
+	rollbackCh chan *RollbackMsg
 	newEpochCh chan bc.Hash
-	store      Store
+	store      state.Store
 	// block hash -> previous checkpoint hash
 	prevCheckpointCache *common.Cache
 	// block hash + pubKey -> verification
@@ -38,7 +46,7 @@ type Casper struct {
 // argument checkpoints load the checkpoints from leveldb
 // the first element of checkpoints must genesis checkpoint or the last finalized checkpoint in order to reduce memory space
 // the others must be successors of first one
-func NewCasper(store Store, checkpoints []*state.Checkpoint, rollbackCh chan *rollbackMsg) *Casper {
+func NewCasper(store state.Store, checkpoints []*state.Checkpoint, rollbackCh chan *RollbackMsg) *Casper {
 	if checkpoints[0].Height != 0 && checkpoints[0].Status != state.Finalized {
 		log.WithFields(log.Fields{"module": logModule}).Panic("first element of checkpoints must genesis or in finalized status")
 	}
@@ -75,7 +83,7 @@ func (c *Casper) LastJustified() (uint64, bc.Hash) {
 // Validators return the validators by specified block hash
 // e.g. if the block num of epoch is 100, and the block height corresponding to the block hash is 130, then will return the voting results of height in 0~100
 func (c *Casper) Validators(blockHash *bc.Hash) (map[string]*state.Validator, error) {
-	checkpoint, err := c.parentCheckpoint(blockHash)
+	checkpoint, err := c.ParentCheckpoint(blockHash)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +91,7 @@ func (c *Casper) Validators(blockHash *bc.Hash) (map[string]*state.Validator, er
 	return checkpoint.EffectiveValidators(), nil
 }
 
-func (c *Casper) parentCheckpoint(blockHash *bc.Hash) (*state.Checkpoint, error) {
+func (c *Casper) ParentCheckpoint(blockHash *bc.Hash) (*state.Checkpoint, error) {
 	hash, err := c.parentCheckpointHash(blockHash)
 	if err != nil {
 		return nil, err
@@ -92,7 +100,7 @@ func (c *Casper) parentCheckpoint(blockHash *bc.Hash) (*state.Checkpoint, error)
 	return c.store.GetCheckpoint(hash)
 }
 
-func (c *Casper) parentCheckpointByPrevHash(prevBlockHash *bc.Hash) (*state.Checkpoint, error) {
+func (c *Casper) ParentCheckpointByPrevHash(prevBlockHash *bc.Hash) (*state.Checkpoint, error) {
 	hash, err := c.parentCheckpointHashByPrevHash(prevBlockHash)
 	if err != nil {
 		return nil, err

@@ -9,6 +9,7 @@ import (
 	"github.com/bytom/bytom/event"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/protocol/casper"
 	"github.com/bytom/bytom/protocol/state"
 	"github.com/bytom/bytom/protocol/validation"
 )
@@ -107,8 +108,8 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		return err
 	}
 
-	if reply.verification != nil {
-		if err := c.broadcastVerification(reply.verification); err != nil {
+	if reply.Verification != nil {
+		if err := c.broadcastVerification(reply.Verification); err != nil {
 			return err
 		}
 	}
@@ -212,7 +213,7 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 	return nil
 }
 
-func (c *Chain) broadcastVerification(v *Verification) error {
+func (c *Chain) broadcastVerification(v *casper.Verification) error {
 	pubKey, err := hex.DecodeString(v.PubKey)
 	if err != nil {
 		return err
@@ -297,11 +298,6 @@ func (c *Chain) ProcessBlock(block *types.Block) (bool, error) {
 	return response.isOrphan, response.err
 }
 
-type rollbackMsg struct {
-	bestHash bc.Hash
-	reply    chan error
-}
-
 func (c *Chain) blockProcessor() {
 	for {
 		select {
@@ -309,8 +305,8 @@ func (c *Chain) blockProcessor() {
 			isOrphan, err := c.processBlock(msg.block)
 			msg.reply <- processBlockResponse{isOrphan: isOrphan, err: err}
 		case msg := <-c.processRollbackCh:
-			err := c.rollback(msg.bestHash)
-			msg.reply <- err
+			err := c.rollback(msg.BestHash)
+			msg.Reply <- err
 		}
 	}
 }
@@ -349,7 +345,7 @@ func (c *Chain) applyForkChainToCasper(beginAttach *types.BlockHeader) error {
 		return err
 	}
 
-	var reply *applyBlockReply
+	var reply *casper.ApplyBlockReply
 	for _, node := range attachNodes {
 		hash := node.Hash()
 		block, err := c.store.GetBlock(&hash)
@@ -364,15 +360,15 @@ func (c *Chain) applyForkChainToCasper(beginAttach *types.BlockHeader) error {
 
 		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": hash.String()}).Info("apply fork node")
 
-		if reply.verification != nil {
-			if err := c.broadcastVerification(reply.verification); err != nil {
+		if reply.Verification != nil {
+			if err := c.broadcastVerification(reply.Verification); err != nil {
 				return err
 			}
 		}
 	}
 
-	if reply.bestHash != c.bestBlockHeader.Hash() {
-		return c.rollback(reply.bestHash)
+	if reply.BestHash != c.bestBlockHeader.Hash() {
+		return c.rollback(reply.BestHash)
 	}
 
 	return nil

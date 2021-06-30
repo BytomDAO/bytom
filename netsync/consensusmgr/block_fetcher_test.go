@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/bytom/bytom/netsync/peers"
-	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/protocol/casper"
 )
 
 type peerMgr struct {
@@ -46,7 +46,7 @@ func (c *chain) ProcessBlock(block *types.Block) (bool, error) {
 	return false, nil
 }
 
-func (c *chain) ProcessBlockVerification(*protocol.Verification) error {
+func (c *chain) ProcessBlockVerification(*casper.Verification) error {
 	return nil
 }
 

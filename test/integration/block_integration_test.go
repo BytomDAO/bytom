@@ -5,9 +5,9 @@ import (
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/database"
 	"github.com/bytom/bytom/database/storage"
-	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/protocol/state"
 	"github.com/bytom/bytom/testutil"
 )
 
@@ -511,7 +511,7 @@ func createStoreItems(mainChainIndexes []int, attachBlocks []*attachBlock, extra
 	bestBlockHash := betBlock.Hash()
 	items = append(items, &storeItem{
 		key: database.BlockStoreKey,
-		val: &protocol.BlockStoreState{Height: betBlock.Height, Hash: &bestBlockHash},
+		val: &state.BlockStoreState{Height: betBlock.Height, Hash: &bestBlockHash},
 	})
 	return items
 }

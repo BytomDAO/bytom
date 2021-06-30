@@ -1,4 +1,4 @@
-package protocol
+package casper
 
 import (
 	"encoding/hex"
@@ -14,9 +14,9 @@ import (
 	"github.com/bytom/bytom/protocol/state"
 )
 
-type applyBlockReply struct {
-	verification *Verification
-	bestHash     bc.Hash
+type ApplyBlockReply struct {
+	Verification *Verification
+	BestHash     bc.Hash
 }
 
 // ApplyBlock used to receive a new block from upper layer, it provides idempotence
@@ -24,7 +24,7 @@ type applyBlockReply struct {
 // the tree of checkpoint will grow with the arrival of new blocks
 // it will return verification when an epoch is reached and the current node is the validator, otherwise return nil
 // the chain module must broadcast the verification
-func (c *Casper) ApplyBlock(block *types.Block) (*applyBlockReply, error) {
+func (c *Casper) ApplyBlock(block *types.Block) (*ApplyBlockReply, error) {
 	if block.Height%consensus.ActiveNetParams.BlocksOfEpoch == 1 {
 		c.newEpochCh <- block.PreviousBlockHash
 	}
@@ -33,7 +33,7 @@ func (c *Casper) ApplyBlock(block *types.Block) (*applyBlockReply, error) {
 	defer c.mu.Unlock()
 
 	if _, err := c.tree.nodeByHash(block.Hash()); err == nil {
-		return &applyBlockReply{bestHash: c.bestChain()}, nil
+		return &ApplyBlockReply{BestHash: c.bestChain()}, nil
 	}
 
 	target, err := c.applyBlockToCheckpoint(block)
@@ -60,7 +60,7 @@ func (c *Casper) ApplyBlock(block *types.Block) (*applyBlockReply, error) {
 		return nil, err
 	}
 
-	return &applyBlockReply{verification: verification, bestHash: c.bestChain()}, c.saveCheckpoints(affectedCheckpoints)
+	return &ApplyBlockReply{Verification: verification, BestHash: c.bestChain()}, c.saveCheckpoints(affectedCheckpoints)
 }
 
 func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, error) {

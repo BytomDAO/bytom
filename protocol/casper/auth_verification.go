@@ -1,4 +1,4 @@
-package protocol
+package casper
 
 import (
 	"fmt"
@@ -127,9 +127,9 @@ func (c *Casper) setFinalized(checkpoint *state.Checkpoint) {
 
 func (c *Casper) tryRollback(oldBestHash bc.Hash) error {
 	if newBestHash := c.bestChain(); oldBestHash != newBestHash {
-		msg := &rollbackMsg{bestHash: newBestHash, reply: make(chan error)}
+		msg := &RollbackMsg{BestHash: newBestHash, Reply: make(chan error)}
 		c.rollbackCh <- msg
-		return <-msg.reply
+		return <-msg.Reply
 	}
 	return nil
 }

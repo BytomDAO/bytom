@@ -12,7 +12,6 @@ import (
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/errors"
-	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
@@ -29,12 +28,12 @@ var (
 	BlockHeaderIndexPrefix = []byte("BH:")
 )
 
-func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
+func loadBlockStoreStateJSON(db dbm.DB) *state.BlockStoreState {
 	bytes := db.Get(BlockStoreKey)
 	if bytes == nil {
 		return nil
 	}
-	bsj := &protocol.BlockStoreState{}
+	bsj := &state.BlockStoreState{}
 	if err := json.Unmarshal(bytes, bsj); err != nil {
 		common.PanicCrisis(common.Fmt("Could not unmarshal bytes: %X", bytes))
 	}
@@ -190,7 +189,7 @@ func (s *Store) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) err
 }
 
 // GetStoreStatus return the BlockStoreStateJSON
-func (s *Store) GetStoreStatus() *protocol.BlockStoreState {
+func (s *Store) GetStoreStatus() *state.BlockStoreState {
 	return loadBlockStoreStateJSON(s.db)
 }
 
@@ -211,7 +210,7 @@ func (s *Store) SaveChainStatus(blockHeader *types.BlockHeader, mainBlockHeaders
 
 	blockHeaderHash := blockHeader.Hash()
 	bytes, err := json.Marshal(
-		protocol.BlockStoreState{
+		state.BlockStoreState{
 			Height:          blockHeader.Height,
 			Hash:            &blockHeaderHash,
 			FinalizedHeight: finalizedHeight,
