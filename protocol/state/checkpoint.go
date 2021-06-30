@@ -37,16 +37,16 @@ type Checkpoint struct {
 	Height     uint64
 	Hash       bc.Hash
 	ParentHash bc.Hash
-	// only save in the memory, not be persisted
-	Parent    *Checkpoint `json:"-"`
-	Timestamp uint64
-	SupLinks  []*types.SupLink `json:"-"`
-	Status    CheckpointStatus
+	Timestamp  uint64
+	Status     CheckpointStatus
 
 	Rewards map[string]uint64 // controlProgram -> num of reward
 	Votes   map[string]uint64 // pubKey -> num of vote
 
-	MergeCheckpoint func(bc.Hash) `json:"-"`
+	// only save in the memory, not be persisted
+	Parent          *Checkpoint      `json:"-"`
+	SupLinks        []*types.SupLink `json:"-"`
+	MergeCheckpoint func(bc.Hash)    `json:"-"`
 }
 
 // NewCheckpoint create a new checkpoint instance
@@ -141,11 +141,11 @@ func (c *Checkpoint) EffectiveValidators() map[string]*Validator {
 
 // AllValidators return all validators has vote num
 func (c *Checkpoint) AllValidators() []*Validator {
-	var validators []*Validator
 	if c.Status == Growing {
 		return nil
 	}
 
+	var validators []*Validator
 	for pubKey, voteNum := range c.Votes {
 		if voteNum >= consensus.ActiveNetParams.MinValidatorVoteNum {
 			validators = append(validators, &Validator{
@@ -156,8 +156,7 @@ func (c *Checkpoint) AllValidators() []*Validator {
 	}
 
 	sort.Slice(validators, func(i, j int) bool {
-		numI := validators[i].VoteNum
-		numJ := validators[j].VoteNum
+		numI, numJ := validators[i].VoteNum, validators[j].VoteNum
 		if numI != numJ {
 			return numI > numJ
 		}
