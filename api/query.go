@@ -12,7 +12,6 @@ import (
 	"github.com/bytom/bytom/asset"
 	"github.com/bytom/bytom/blockchain/query"
 	"github.com/bytom/bytom/blockchain/signers"
-	"github.com/bytom/bytom/blockchain/txbuilder"
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	chainjson "github.com/bytom/bytom/encoding/json"
@@ -268,7 +267,7 @@ func (a *API) decodeRawTransaction(ctx context.Context, ins struct {
 		tx.Outputs = append(tx.Outputs, a.wallet.BuildAnnotatedOutput(&ins.Tx, i))
 	}
 
-	tx.Fee = txbuilder.CalculateTxFee(&ins.Tx)
+	tx.Fee = ins.Tx.Fee()
 	return NewSuccessResponse(tx)
 }
 

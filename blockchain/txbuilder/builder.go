@@ -137,6 +137,6 @@ func (b *TemplateBuilder) Build() (*Template, *types.TxData, error) {
 	}
 
 	tpl.Transaction = types.NewTx(*tx)
-	tpl.Fee = CalculateTxFee(tpl.Transaction)
+	tpl.Fee = tx.Fee()
 	return tpl, tx, nil
 }
