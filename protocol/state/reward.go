@@ -10,51 +10,30 @@ import (
 	"github.com/bytom/bytom/protocol/bc/types"
 )
 
-const (
-	totalSupply       = 15.66 * 1e16
-	singleBlockReward = uint64(570776255) // AnnualSupply(0.3 * 1e16) / AnnualBlock(365 * 24 * 60 * 10)
-	rewardThreshold   = 0.5
-)
-
 //  validatorRewardPerBlock the number of rewards each block validator can get
-func validatorRewardPerBlock(checkpoint *Checkpoint) (uint64, error) {
-	pledgeRate, err := pledgeRate(checkpoint)
-	if err != nil {
-		return 0, nil
+func validatorRewardPerBlock(checkpoint *Checkpoint) uint64 {
+	if pledgeRate := checkpoint.pledgeRate(); pledgeRate <= consensus.RewardThreshold {
+		return uint64((pledgeRate + consensus.RewardThreshold) * float64(consensus.BlockReward))
 	}
 
-	if pledgeRate <= rewardThreshold {
-		return uint64((pledgeRate + rewardThreshold) * float64(singleBlockReward)), nil
-	}
-
-	return singleBlockReward, nil
+	return consensus.BlockReward
 }
 
 // federationBlockReward the number of rewards each block federation can get
 func federationBlockReward(checkpoint *Checkpoint) (uint64, error) {
-	validatorReward, err := validatorRewardPerBlock(checkpoint)
-	if err != nil {
-		return 0, err
-	}
-
-	return singleBlockReward - validatorReward, nil
+	validatorReward := validatorRewardPerBlock(checkpoint)
+	return consensus.BlockReward - validatorReward, nil
 }
 
 // pledgeRate validator's pledge rate
-func pledgeRate(checkpoint *Checkpoint) (float64, error) {
+func (c *Checkpoint) pledgeRate() float64 {
 	var totalVotes uint64
-	var ok bool
-	for _, vote := range checkpoint.Votes {
-		if totalVotes, ok = checked.AddUint64(totalVotes, vote); !ok {
-			return 0.0, errors.Wrap(checked.ErrOverflow)
-		}
+	for _, vote := range c.Votes {
+		totalVotes += vote
 	}
 
-	if totalVotes > totalSupply {
-		return 0.0, errors.New("validators total votes exceed total supply")
-	}
-
-	return float64(totalVotes) / totalSupply, nil
+	totalSupply := c.Height*consensus.BlockReward + consensus.InitBTMSupply
+	return float64(totalVotes) / float64(totalSupply)
 }
 
 // ApplyValidatorReward calculate the coinbase reward for validator
@@ -86,11 +65,7 @@ func (c *Checkpoint) ApplyValidatorReward(block *types.Block) error {
 		return errors.New("the checkpoint parent is nil")
 	}
 
-	validatorReward, err := validatorRewardPerBlock(c.Parent)
-	if err != nil {
-		return err
-	}
-
+	validatorReward := validatorRewardPerBlock(c.Parent)
 	validatorScript := hex.EncodeToString(controlProgram)
 	c.Rewards[validatorScript] += feeAmount + validatorReward
 	return nil

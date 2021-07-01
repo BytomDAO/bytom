@@ -1,6 +1,7 @@
 // +build functional
 
 package test
+
 import (
 	"os"
 	"testing"
@@ -52,14 +53,6 @@ func TestBlockHeader(t *testing.T) {
 			prevHeight: chain.BestBlockHeight,
 			timestamp:  func() uint64 { return chain.BestBlockHeader().Timestamp + 1 },
 			prevHash:   func() *bc.Hash { hash := genesisHeader.Hash(); return &hash },
-			valid:      false,
-		},
-		{
-			desc:       "invalid timestamp, greater than MaxTimeOffsetSeconds from system time",
-			version:    func() uint64 { return chain.BestBlockHeader().Version },
-			prevHeight: chain.BestBlockHeight,
-			timestamp:  func() uint64 { return uint64(time.Now().Unix()) + consensus.MaxTimeOffsetSeconds + 60 },
-			prevHash:   chain.BestBlockHash,
 			valid:      false,
 		},
 		{
