@@ -1,4 +1,4 @@
-package protocol
+package casper
 
 import (
 	"testing"
@@ -56,14 +56,14 @@ var (
 )
 
 func TestRollback(t *testing.T) {
-	casper := NewCasper(&mockStore2{}, checkpoints, make(chan *rollbackMsg))
+	casper := NewCasper(&mockStore2{}, checkpoints, make(chan *RollbackMsg))
 	casper.prevCheckpointCache.Add(checkpoints[1].Hash, &checkpoints[0].Hash)
 	go func() {
 		rollbackMsg := <-casper.rollbackCh
-		if rollbackMsg.bestHash != checkpoints[1].Hash {
-			t.Fatalf("want best chain %s, got %s\n", checkpoints[1].Hash.String(), rollbackMsg.bestHash.String())
+		if rollbackMsg.BestHash != checkpoints[1].Hash {
+			t.Fatalf("want best chain %s, got %s\n", checkpoints[1].Hash.String(), rollbackMsg.BestHash.String())
 		}
-		rollbackMsg.reply <- nil
+		rollbackMsg.Reply <- nil
 	}()
 
 	if bestHash := casper.bestChain(); bestHash != checkpoints[3].Hash {
@@ -101,7 +101,7 @@ func (s *mockStore2) CheckpointsFromNode(height uint64, hash *bc.Hash) ([]*state
 }
 func (s *mockStore2) BlockExist(hash *bc.Hash) bool                            { return false }
 func (s *mockStore2) GetBlock(*bc.Hash) (*types.Block, error)                  { return nil, nil }
-func (s *mockStore2) GetStoreStatus() *BlockStoreState                         { return nil }
+func (s *mockStore2) GetStoreStatus() *state.BlockStoreState                   { return nil }
 func (s *mockStore2) GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error { return nil }
 func (s *mockStore2) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)             { return nil, nil }
 func (s *mockStore2) GetMainChainHash(uint64) (*bc.Hash, error)                { return nil, nil }

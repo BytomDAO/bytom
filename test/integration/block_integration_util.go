@@ -18,6 +18,7 @@ import (
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/protocol/state"
 	"github.com/bytom/bytom/testutil"
 )
 
@@ -97,7 +98,7 @@ func (p *processBlockTestCase) Run() error {
 	return nil
 }
 
-func initStore(c *processBlockTestCase) (protocol.Store, dbm.DB, error) {
+func initStore(c *processBlockTestCase) (state.Store, dbm.DB, error) {
 	testDB := dbm.NewDB("testdb", "leveldb", dbDir)
 	batch := testDB.NewBatch()
 	for _, entry := range c.initStore {
@@ -127,7 +128,7 @@ type storeEntry struct {
 func serialItem(item *storeItem) ([]storeEntry, error) {
 	var storeEntrys []storeEntry
 	switch item.val.(type) {
-	case *protocol.BlockStoreState:
+	case *state.BlockStoreState:
 		bytes, err := json.Marshal(item.val)
 		if err != nil {
 			return nil, err

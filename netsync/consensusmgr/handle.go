@@ -10,9 +10,9 @@ import (
 	"github.com/bytom/bytom/netsync/peers"
 	"github.com/bytom/bytom/p2p"
 	"github.com/bytom/bytom/p2p/security"
-	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/protocol/casper"
 )
 
 // Switch is the interface for p2p switch.
@@ -25,7 +25,7 @@ type Chain interface {
 	BestBlockHeight() uint64
 	GetHeaderByHash(*bc.Hash) (*types.BlockHeader, error)
 	ProcessBlock(*types.Block) (bool, error)
-	ProcessBlockVerification(*protocol.Verification) error
+	ProcessBlockVerification(*casper.Verification) error
 }
 
 type Peers interface {
@@ -109,7 +109,7 @@ func (m *Manager) handleBlockProposeMsg(peerID string, msg *BlockProposeMsg) {
 
 func (m *Manager) handleBlockVerificationMsg(peerID string, msg *BlockVerificationMsg) {
 	m.peers.MarkBlockVerification(peerID, msg.Signature)
-	if err := m.chain.ProcessBlockVerification(&protocol.Verification{
+	if err := m.chain.ProcessBlockVerification(&casper.Verification{
 		SourceHash:   msg.SourceHash,
 		TargetHash:   msg.TargetHash,
 		SourceHeight: msg.SourceHeight,

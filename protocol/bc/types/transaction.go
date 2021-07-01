@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/encoding/blockchain"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
@@ -95,6 +96,27 @@ func (tx *TxData) UnmarshalText(p []byte) error {
 		return fmt.Errorf("trailing garbage (%d bytes)", trailing)
 	}
 	return nil
+}
+
+func (tx *TxData) Fee() uint64 {
+	inputBTM, outputBTM := uint64(0), uint64(0)
+	for _, input := range tx.Inputs {
+		if input.AssetID() == *consensus.BTMAssetID {
+			inputBTM += input.Amount()
+		}
+	}
+
+	for _, output := range tx.Outputs {
+		if *output.AssetId == *consensus.BTMAssetID {
+			outputBTM += output.Amount
+		}
+	}
+
+	if inputBTM > outputBTM {
+		return inputBTM - outputBTM
+	}
+
+	return 0
 }
 
 func (tx *TxData) readFrom(r *blockchain.Reader) (err error) {

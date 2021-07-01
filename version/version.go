@@ -61,7 +61,7 @@ func init() {
 	Status = &UpdateStatus{
 		maxVerSeen:    Version,
 		notified:      false,
-		seedSet:       set.New(set.ThreadSafe).(*set.Set),
+		seedSet:       set.New(),
 		versionStatus: noUpdate,
 	}
 }
