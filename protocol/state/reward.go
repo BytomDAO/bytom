@@ -50,11 +50,7 @@ func (c *Checkpoint) ApplyValidatorReward(block *types.Block) error {
 	}
 
 	for _, tx := range block.Transactions {
-		txFee, err := calculateTxFee(tx)
-		if err != nil {
-			return errors.Wrap(checked.ErrOverflow, "calculate transaction fee")
-		}
-
+		txFee := tx.Fee()
 		feeAmount, ok = checked.AddUint64(feeAmount, txFee)
 		if !ok {
 			return errors.Wrap(checked.ErrOverflow, "calculate validator reward")
@@ -89,30 +85,4 @@ func (c *Checkpoint) ApplyFederationReward() error {
 	federationScript := config.CommonConfig.Federation.FederationScript
 	c.Rewards[federationScript] = federationReward * consensus.ActiveNetParams.BlocksOfEpoch
 	return nil
-}
-
-// calculateTxFee calculate transaction fee
-func calculateTxFee(tx *types.Tx) (fee uint64, err error) {
-	var ok bool
-	for _, input := range tx.Inputs {
-		if input.InputType() == types.CoinbaseInputType {
-			return 0, nil
-		}
-
-		if input.AssetID() == *consensus.BTMAssetID {
-			if fee, ok = checked.AddUint64(fee, input.Amount()); !ok {
-				return 0, checked.ErrOverflow
-			}
-		}
-	}
-
-	for _, output := range tx.Outputs {
-		if *output.AssetAmount.AssetId == *consensus.BTMAssetID {
-			if fee, ok = checked.SubUint64(fee, output.AssetAmount.Amount); !ok {
-				return 0, checked.ErrOverflow
-			}
-		}
-	}
-
-	return
 }
