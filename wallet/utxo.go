@@ -16,7 +16,7 @@ import (
 )
 
 // GetAccountUtxos return all account unspent outputs
-func (w *Wallet) GetAccountUtxos(accountID string, id string, unconfirmed, isSmartContract bool) []*account.UTXO {
+func (w *Wallet) GetAccountUtxos(accountID string, id string, unconfirmed, isSmartContract, vote bool) []*account.UTXO {
 	prefix := account.UTXOPreFix
 	if isSmartContract {
 		prefix = account.SUTXOPrefix
@@ -34,6 +34,10 @@ func (w *Wallet) GetAccountUtxos(accountID string, id string, unconfirmed, isSma
 		accountUtxo := &account.UTXO{}
 		if err := json.Unmarshal(accountUtxoIter.Value(), accountUtxo); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Warn("GetAccountUtxos fail on unmarshal utxo")
+			continue
+		}
+
+		if vote && accountUtxo.Vote == nil {
 			continue
 		}
 

@@ -289,7 +289,7 @@ func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 		}
 		accountID = acc.ID
 	}
-	accountUTXOs := a.wallet.GetAccountUtxos(accountID, filter.ID, filter.Unconfirmed, filter.SmartContract)
+	accountUTXOs := a.wallet.GetAccountUtxos(accountID, filter.ID, filter.Unconfirmed, filter.SmartContract, false)
 
 	UTXOs := []query.AnnotatedUTXO{}
 	for _, utxo := range accountUTXOs {
@@ -420,4 +420,24 @@ func (a *API) listPubKeys(ctx context.Context, ins struct {
 		RootXPub:    account.XPubs[0],
 		PubKeyInfos: pubKeyInfos,
 	})
+}
+
+func (a *API) listAccountVotes(ctx context.Context, filter struct {
+	AccountID    string `json:"account_id"`
+	AccountAlias string `json:"account_alias"`
+}) Response {
+	accountID := filter.AccountID
+	if filter.AccountAlias != "" {
+		acc, err := a.wallet.AccountMgr.FindByAlias(filter.AccountAlias)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+		accountID = acc.ID
+	}
+
+	votes, err := a.wallet.GetAccountVotes(accountID, "")
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(votes)
 }
