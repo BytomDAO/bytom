@@ -122,6 +122,7 @@ func (c *Casper) setFinalized(checkpoint *state.Checkpoint) {
 
 	// update the checkpoint state in memory
 	newRoot.checkpoint.Status = state.Finalized
+	newRoot.checkpoint.Parent = nil
 	c.tree = newRoot
 }
 
