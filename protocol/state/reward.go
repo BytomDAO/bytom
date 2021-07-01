@@ -11,21 +11,17 @@ import (
 )
 
 //  validatorRewardPerBlock the number of rewards each block validator can get
-func validatorRewardPerBlock(checkpoint *Checkpoint) (uint64, error) {
+func validatorRewardPerBlock(checkpoint *Checkpoint) uint64 {
 	if pledgeRate := checkpoint.pledgeRate(); pledgeRate <= consensus.RewardThreshold {
-		return uint64((pledgeRate + consensus.RewardThreshold) * float64(consensus.BlockReward)), nil
+		return uint64((pledgeRate + consensus.RewardThreshold) * float64(consensus.BlockReward))
 	}
 
-	return consensus.BlockReward, nil
+	return consensus.BlockReward
 }
 
 // federationBlockReward the number of rewards each block federation can get
 func federationBlockReward(checkpoint *Checkpoint) (uint64, error) {
-	validatorReward, err := validatorRewardPerBlock(checkpoint)
-	if err != nil {
-		return 0, err
-	}
-
+	validatorReward := validatorRewardPerBlock(checkpoint)
 	return consensus.BlockReward - validatorReward, nil
 }
 
@@ -69,11 +65,7 @@ func (c *Checkpoint) ApplyValidatorReward(block *types.Block) error {
 		return errors.New("the checkpoint parent is nil")
 	}
 
-	validatorReward, err := validatorRewardPerBlock(c.Parent)
-	if err != nil {
-		return err
-	}
-
+	validatorReward := validatorRewardPerBlock(c.Parent)
 	validatorScript := hex.EncodeToString(controlProgram)
 	c.Rewards[validatorScript] += feeAmount + validatorReward
 	return nil
