@@ -314,7 +314,7 @@ func (c *Chain) blockProcessor() {
 // ProcessBlock is the entry for handle block insert
 func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	blockHash := block.Hash()
-	if c.BlockExist(&blockHash) {
+	if c.BlockExist(&blockHash) && c.bestBlockHeader.Height >= block.Height {
 		log.WithFields(log.Fields{"module": logModule, "hash": blockHash.String(), "height": block.Height}).Info("block has been processed")
 		return c.orphanManage.BlockExist(&blockHash), nil
 	}
