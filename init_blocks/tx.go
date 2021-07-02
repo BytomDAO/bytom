@@ -110,6 +110,14 @@ func buildAllTxs(assetTotals []AssetTotal, asset2distributions map[string][]Addr
 	return allTXs
 }
 
+func sumBalance(addrBalances []AddressBalance) uint64 {
+	sum := uint64(0)
+	for _, addrBalance := range addrBalances {
+		sum += addrBalance.Balance
+	}
+	return sum
+}
+
 func buildAssetTXs(output *bc.OriginalOutput, addrBalances []AddressBalance) []*types.Tx {
 	preOut := output
 	var txs []*types.Tx
@@ -120,6 +128,15 @@ func buildAssetTXs(output *bc.OriginalOutput, addrBalances []AddressBalance) []*
 		} else {
 			batchAddrBalances = addrBalances[i : i+OutputCntPerTx]
 		}
+
+		outputs := buildOutputs(*preOut.Source.Value.AssetId, batchAddrBalances)
+		leftBalance := preOut.Source.Value.Amount - sumBalance(addrBalances)
+		if leftBalance < 0 {
+			log.Fatal("left balance less zero")
+		}
+
+		changeOutput := types.NewOriginalTxOutput(*preOut.Source.Value.AssetId, leftBalance, preOut.ControlProgram.Code, nil)
+		outputs = append(outputs, changeOutput)
 
 		txData := types.TxData{
 			Version: 1,
@@ -134,7 +151,7 @@ func buildAssetTXs(output *bc.OriginalOutput, addrBalances []AddressBalance) []*
 					preOut.StateData),
 			},
 
-			Outputs: buildOutputs(*preOut.Source.Value.AssetId, batchAddrBalances),
+			Outputs: outputs,
 		}
 
 		tx := types.NewTx(txData)

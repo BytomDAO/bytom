@@ -2,6 +2,7 @@ package initblocks
 
 import (
 	"fmt"
+	"github.com/bytom/bytom/protocol/bc/types"
 	"testing"
 )
 
@@ -14,5 +15,10 @@ func TestInitBlocks(t *testing.T) {
 		}
 
 		fmt.Println(string(text))
+
+		block := new(types.Block)
+		if err := block.UnmarshalText(text); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
