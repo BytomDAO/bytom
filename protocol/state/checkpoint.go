@@ -44,9 +44,8 @@ type Checkpoint struct {
 	Votes   map[string]uint64 // pubKey -> num of vote
 
 	// only save in the memory, not be persisted
-	Parent          *Checkpoint      `json:"-"`
-	SupLinks        []*types.SupLink `json:"-"`
-	MergeCheckpoint func(bc.Hash)    `json:"-"`
+	Parent   *Checkpoint      `json:"-"`
+	SupLinks []*types.SupLink `json:"-"`
 }
 
 // NewCheckpoint create a new checkpoint instance
@@ -111,7 +110,6 @@ func (c *Checkpoint) Increase(block *types.Block) error {
 	c.Hash = block.Hash()
 	c.Height = block.Height
 	c.Timestamp = block.Timestamp
-	c.MergeCheckpoint(c.Hash)
 	return nil
 }
 

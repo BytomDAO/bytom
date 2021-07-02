@@ -31,7 +31,6 @@ func (c *Casper) ApplyBlock(block *types.Block) (*ApplyBlockReply, error) {
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
-
 	if _, err := c.tree.nodeByHash(block.Hash()); err == nil {
 		return &ApplyBlockReply{BestHash: c.bestChain()}, nil
 	}
