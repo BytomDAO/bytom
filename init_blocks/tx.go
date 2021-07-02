@@ -76,7 +76,7 @@ func buildOutputs(assetID bc.AssetID, addrBalances []AddressBalance) []*types.Tx
 	return outputs
 }
 
-func buildGenesisTx(assetTotals []AssetTotal) *types.Tx {
+func buildGenesisTx(assetTotals []assetTotal) *types.Tx {
 	contract, err := hex.DecodeString("00148c9d063ff74ee6d9ffa88d83aeb038068366c4c4")
 	if err != nil {
 		log.Panicf("fail on decode genesis tx output control program")
@@ -90,16 +90,15 @@ func buildGenesisTx(assetTotals []AssetTotal) *types.Tx {
 
 	txData := types.TxData{
 		Version: 1,
-		Inputs: []*types.TxInput{
-			types.NewCoinbaseInput([]byte("Information is power. -- Jan/11/2013. Computing is power. -- Apr/24/2018.")),
-		},
+		Inputs:  []*types.TxInput{types.NewCoinbaseInput([]byte("Information is power. -- Jan/11/2013. Computing is power. -- Apr/24/2018."))},
 		Outputs: outputs,
 	}
 	return types.NewTx(txData)
 }
 
-func buildAllTxs(assetTotals []AssetTotal, asset2distributions map[string][]AddressBalance) []*types.Tx {
+func buildAllTxs(asset2distributions map[string][]AddressBalance) []*types.Tx {
 	var allTXs []*types.Tx
+	assetTotals := calcAssetTotals(asset2distributions)
 	genesisTx := buildGenesisTx(assetTotals)
 	for i, output := range genesisTx.Outputs {
 		addrBalances := asset2distributions[output.AssetId.String()]
@@ -122,41 +121,45 @@ func buildAssetTXs(output *bc.OriginalOutput, addrBalances []AddressBalance) []*
 	preOut := output
 	var txs []*types.Tx
 	for i := 0; i < len(addrBalances); i += OutputCntPerTx {
-		var batchAddrBalances []AddressBalance
-		if len(addrBalances[i:]) < OutputCntPerTx {
-			batchAddrBalances = addrBalances[i:]
-		} else {
-			batchAddrBalances = addrBalances[i : i+OutputCntPerTx]
-		}
-
-		outputs := buildOutputs(*preOut.Source.Value.AssetId, batchAddrBalances)
-		leftBalance := preOut.Source.Value.Amount - sumBalance(addrBalances)
-		if leftBalance < 0 {
-			log.Fatal("left balance less zero")
-		}
-
-		changeOutput := types.NewOriginalTxOutput(*preOut.Source.Value.AssetId, leftBalance, preOut.ControlProgram.Code, nil)
-		outputs = append(outputs, changeOutput)
-
-		txData := types.TxData{
-			Version: 1,
-			Inputs: []*types.TxInput{
-				types.NewSpendInput(
-					nil,
-					*preOut.Source.Ref,
-					*preOut.Source.Value.AssetId,
-					preOut.Source.Value.Amount,
-					preOut.Source.Position,
-					preOut.ControlProgram.Code,
-					preOut.StateData),
-			},
-
-			Outputs: outputs,
-		}
-
-		tx := types.NewTx(txData)
-		txs = append(txs, tx)
+		tx := buildTx(preOut, partSlice(addrBalances, i, OutputCntPerTx))
 		preOut = getTxOriginalOutput(tx, len(tx.Outputs)-1)
+		txs = append(txs, tx)
 	}
 	return txs
+}
+
+func buildTx(preOut *bc.OriginalOutput, addrBalances []AddressBalance) *types.Tx {
+	source := preOut.Source
+	value := preOut.Source.Value
+	ctlProgram := preOut.ControlProgram.Code
+
+	input := types.NewSpendInput(nil, *source.Ref, *value.AssetId, value.Amount, source.Position, ctlProgram, preOut.StateData)
+	outputs := buildOutputs(*value.AssetId, addrBalances)
+	leftBalance := value.Amount - sumBalance(addrBalances)
+	if leftBalance < 0 {
+		log.Fatal("left balance less zero")
+	}
+
+	changeOutput := types.NewOriginalTxOutput(*value.AssetId, leftBalance, ctlProgram, nil)
+	outputs = append(outputs, changeOutput)
+
+	txData := types.TxData{
+		Version: 1,
+		Inputs:  []*types.TxInput{input},
+		Outputs: outputs,
+	}
+
+	return types.NewTx(txData)
+}
+
+func partSlice(addrBalances []AddressBalance, i, cnt int) []AddressBalance {
+	if i > len(addrBalances) {
+		return nil
+	}
+
+	if len(addrBalances[i:]) < cnt {
+		return addrBalances[i:]
+	}
+
+	return addrBalances[i : i+cnt]
 }

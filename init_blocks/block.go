@@ -7,12 +7,12 @@ import (
 	"github.com/bytom/bytom/protocol/bc/types"
 )
 
-func initBlocks(assetTotals []AssetTotal, asset2distributions map[string][]AddressBalance) []*types.Block {
+func initBlocks(asset2distributions map[string][]AddressBalance) []*types.Block {
 	var blocks []*types.Block
 	var height uint64
 	var preBlockHash bc.Hash
 
-	allTxs := buildAllTxs(assetTotals, asset2distributions)
+	allTxs := buildAllTxs(asset2distributions)
 	for i := 0; i < len(allTxs); i += TxCntPerBlock {
 		var batchTxs []*types.Tx
 		if len(allTxs[i:]) < TxCntPerBlock {
