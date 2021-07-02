@@ -44,6 +44,7 @@ type GetBlockResp struct {
 	Size                   uint64     `json:"size"`
 	Version                uint64     `json:"version"`
 	Height                 uint64     `json:"height"`
+	Validator              string     `json:"validator"`
 	PreviousBlockHash      *bc.Hash   `json:"previous_block_hash"`
 	Timestamp              uint64     `json:"timestamp"`
 	TransactionsMerkleRoot *bc.Hash   `json:"transaction_merkle_root"`
@@ -63,11 +64,22 @@ func (a *API) getBlock(ins BlockReq) Response {
 		return NewErrorResponse(err)
 	}
 
+	var validatorPubKey string
+	if block.Height > 0 {
+		validator, err := a.chain.GetValidator(&block.PreviousBlockHash, block.Timestamp)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+
+		validatorPubKey = validator.PubKey
+	}
+
 	resp := &GetBlockResp{
 		Hash:                   &blockHash,
 		Size:                   uint64(len(rawBlock)),
 		Version:                block.Version,
 		Height:                 block.Height,
+		Validator:              validatorPubKey,
 		PreviousBlockHash:      &block.PreviousBlockHash,
 		Timestamp:              block.Timestamp,
 		TransactionsMerkleRoot: &block.TransactionsMerkleRoot,
