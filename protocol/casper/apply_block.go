@@ -1,14 +1,11 @@
 package casper
 
 import (
-	"encoding/hex"
-
 	"github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/errors"
-	"github.com/bytom/bytom/math/checked"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
@@ -40,10 +37,7 @@ func (c *Casper) ApplyBlock(block *types.Block) (*ApplyBlockReply, error) {
 		return nil, errors.Wrap(err, "apply block to checkpoint")
 	}
 
-	if err := applyTransactions(target, block.Transactions); err != nil {
-		return nil, err
-	}
-
+	target.ApplyVotes(block)
 	validators, err := c.Validators(&target.Hash)
 	if err != nil {
 		return nil, err
@@ -123,10 +117,7 @@ func (c *Casper) replayCheckpoint(hash bc.Hash) (*treeNode, error) {
 	node := &treeNode{checkpoint: state.NewCheckpoint(parent.checkpoint)}
 	parent.addChild(node)
 	for _, attachBlock := range attachBlocks {
-		if err := applyTransactions(node.checkpoint, attachBlock.Transactions); err != nil {
-			return nil, err
-		}
-
+		node.checkpoint.ApplyVotes(attachBlock)
 		if err := node.checkpoint.ApplyValidatorReward(attachBlock); err != nil {
 			return nil, err
 		}
@@ -136,27 +127,6 @@ func (c *Casper) replayCheckpoint(hash bc.Hash) (*treeNode, error) {
 		}
 	}
 	return node, nil
-}
-
-func applyTransactions(target *state.Checkpoint, transactions []*types.Tx) error {
-	for _, tx := range transactions {
-		for _, input := range tx.Inputs {
-			if vetoInput, ok := input.TypedInput.(*types.VetoInput); ok {
-				if err := processVeto(vetoInput, target); err != nil {
-					return err
-				}
-			}
-		}
-
-		for _, output := range tx.Outputs {
-			if _, ok := output.TypedOutput.(*types.VoteOutput); ok {
-				if err := processVote(output, target); err != nil {
-					return err
-				}
-			}
-		}
-	}
-	return nil
 }
 
 // applySupLinks copy the block's supLink to the checkpoint
@@ -234,31 +204,6 @@ func (c *Casper) myVerification(target *state.Checkpoint, validators map[string]
 		return v, nil
 	}
 	return nil, nil
-}
-
-func processVeto(input *types.VetoInput, checkpoint *state.Checkpoint) error {
-	pubKey := hex.EncodeToString(input.Vote)
-	voteNum := checkpoint.Votes[pubKey]
-	voteNum, ok := checked.SubUint64(voteNum, input.Amount)
-	if !ok {
-		return checked.ErrOverflow
-	}
-
-	checkpoint.Votes[pubKey] = voteNum
-	return nil
-}
-
-func processVote(output *types.TxOutput, checkpoint *state.Checkpoint) error {
-	voteOutput := output.TypedOutput.(*types.VoteOutput)
-	pubKey := hex.EncodeToString(voteOutput.Vote)
-	voteNum := checkpoint.Votes[pubKey]
-	voteNum, ok := checked.AddUint64(voteNum, output.Amount)
-	if !ok {
-		return checked.ErrOverflow
-	}
-
-	checkpoint.Votes[pubKey] = voteNum
-	return nil
 }
 
 func (c *Casper) lastJustifiedCheckpoint(branch *state.Checkpoint) *state.Checkpoint {

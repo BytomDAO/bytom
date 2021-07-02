@@ -1,6 +1,7 @@
 package state
 
 import (
+	"encoding/hex"
 	"sort"
 
 	"github.com/bytom/bytom/config"
@@ -161,6 +162,27 @@ func (c *Checkpoint) AllValidators() []*Validator {
 		return validators[i].PubKey > validators[j].PubKey
 	})
 	return validators
+}
+
+func (c *Checkpoint) ApplyVotes(block *types.Block) {
+	for _, tx := range block.Transactions {
+		for _, input := range tx.Inputs {
+			if vetoInput, ok := input.TypedInput.(*types.VetoInput); ok {
+				pubKey := hex.EncodeToString(vetoInput.Vote)
+				if c.Votes[pubKey] > vetoInput.Amount {
+					c.Votes[pubKey] -= vetoInput.Amount
+				} else {
+					delete(c.Votes, pubKey)
+				}
+			}
+		}
+
+		for _, output := range tx.Outputs {
+			if voteOutput, ok := output.TypedOutput.(*types.VoteOutput); ok {
+				c.Votes[hex.EncodeToString(voteOutput.Vote)] += output.Amount
+			}
+		}
+	}
 }
 
 func federationValidators() map[string]*Validator {
