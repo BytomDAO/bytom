@@ -36,8 +36,8 @@ func (c *Checkpoint) pledgeRate() float64 {
 	return float64(totalVotes) / float64(totalSupply)
 }
 
-// ApplyValidatorReward calculate the coinbase reward for validator
-func (c *Checkpoint) ApplyValidatorReward(block *types.Block) error {
+// applyValidatorReward calculate the coinbase reward for validator
+func (c *Checkpoint) applyValidatorReward(block *types.Block) error {
 	var (
 		controlProgram []byte
 		feeAmount      uint64
@@ -67,8 +67,8 @@ func (c *Checkpoint) ApplyValidatorReward(block *types.Block) error {
 	return nil
 }
 
-// ApplyFederationReward  federation gain the reward in an epoch
-func (c *Checkpoint) ApplyFederationReward() error {
+// applyFederationReward  federation gain the reward in an epoch
+func (c *Checkpoint) applyFederationReward() error {
 	if c.Parent == nil {
 		return errors.New("the checkpoint parent is nil")
 	}
