@@ -43,11 +43,8 @@ func (c *Checkpoint) applyValidatorReward(block *types.Block) {
 
 // applyFederationReward  federation gain the reward in an epoch
 func (c *Checkpoint) applyFederationReward() {
-	federationReward := c.federationReward()
-	if federationReward == 0 {
-		return
+	if federationReward := c.federationReward(); federationReward != 0 {
+		federationScript := config.CommonConfig.Federation.FederationScript
+		c.Rewards[federationScript] += federationReward
 	}
-
-	federationScript := config.CommonConfig.Federation.FederationScript
-	c.Rewards[federationScript] = federationReward * consensus.ActiveNetParams.BlocksOfEpoch
 }
