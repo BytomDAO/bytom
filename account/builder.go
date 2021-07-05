@@ -235,15 +235,7 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 	}
 
 	if res.change > 0 {
-		acp, err := a.accounts.CreateAddress(a.AccountID, true)
-		if err != nil {
-			return errors.Wrap(err, "creating control program")
-		}
-
-		// Don't insert the control program until callbacks are executed.
-		a.accounts.insertControlProgramDelayed(b, acp)
-		// TODL: fill account state data
-		if err = b.AddOutput(types.NewOriginalTxOutput(*a.AssetId, res.change, acp.ControlProgram, nil)); err != nil {
+		if err = b.AddOutput(types.NewOriginalTxOutput(*a.AssetId, res.change, res.utxos[0].ControlProgram, nil)); err != nil {
 			return errors.Wrap(err, "adding change output")
 		}
 	}
