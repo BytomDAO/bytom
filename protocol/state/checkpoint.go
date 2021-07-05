@@ -108,9 +108,16 @@ func (c *Checkpoint) Increase(block *types.Block) error {
 		return errIncreaseCheckpoint
 	}
 
+	if block.Height%consensus.ActiveNetParams.BlocksOfEpoch == 0 {
+		c.Status = Unjustified
+	}
+
 	c.Hash = block.Hash()
 	c.Height = block.Height
 	c.Timestamp = block.Timestamp
+	c.applyVotes(block)
+	c.applyValidatorReward(block)
+	c.applyFederationReward()
 	return nil
 }
 
@@ -164,7 +171,7 @@ func (c *Checkpoint) AllValidators() []*Validator {
 	return validators
 }
 
-func (c *Checkpoint) ApplyVotes(block *types.Block) {
+func (c *Checkpoint) applyVotes(block *types.Block) {
 	for _, tx := range block.Transactions {
 		for _, input := range tx.Inputs {
 			if vetoInput, ok := input.TypedInput.(*types.VetoInput); ok {

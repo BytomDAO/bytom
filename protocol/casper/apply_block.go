@@ -37,7 +37,6 @@ func (c *Casper) ApplyBlock(block *types.Block) (*ApplyBlockReply, error) {
 		return nil, errors.Wrap(err, "apply block to checkpoint")
 	}
 
-	target.ApplyVotes(block)
 	validators, err := c.Validators(&target.Hash)
 	if err != nil {
 		return nil, err
@@ -67,15 +66,6 @@ func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, 
 		parent := checkpoint
 		checkpoint = state.NewCheckpoint(parent)
 		node.addChild(&treeNode{checkpoint: checkpoint})
-	} else if mod == 0 {
-		checkpoint.Status = state.Unjustified
-		if err := checkpoint.ApplyFederationReward(); err != nil {
-			return nil, err
-		}
-	}
-
-	if err := checkpoint.ApplyValidatorReward(block); err != nil {
-		return nil, err
 	}
 
 	return checkpoint, checkpoint.Increase(block)
@@ -85,7 +75,6 @@ func (c *Casper) checkpointNodeByHash(blockHash bc.Hash) (*treeNode, error) {
 	node, err := c.tree.nodeByHash(blockHash)
 	if err != nil {
 		logrus.WithFields(logrus.Fields{"err": err, "module": logModule}).Error("fail find checkpoint, start to reorganize checkpoint")
-
 		return c.replayCheckpoint(blockHash)
 	}
 
@@ -117,11 +106,6 @@ func (c *Casper) replayCheckpoint(hash bc.Hash) (*treeNode, error) {
 	node := &treeNode{checkpoint: state.NewCheckpoint(parent.checkpoint)}
 	parent.addChild(node)
 	for _, attachBlock := range attachBlocks {
-		node.checkpoint.ApplyVotes(attachBlock)
-		if err := node.checkpoint.ApplyValidatorReward(attachBlock); err != nil {
-			return nil, err
-		}
-
 		if err := node.checkpoint.Increase(attachBlock); err != nil {
 			return nil, err
 		}
