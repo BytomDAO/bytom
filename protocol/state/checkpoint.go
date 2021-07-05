@@ -52,6 +52,9 @@ type Checkpoint struct {
 // NewCheckpoint create a new checkpoint instance
 func NewCheckpoint(parent *Checkpoint) *Checkpoint {
 	checkpoint := &Checkpoint{
+		Height:     parent.Height,
+		Hash:       parent.Hash,
+		Timestamp:  parent.Timestamp,
 		ParentHash: parent.Hash,
 		Parent:     parent,
 		Status:     Growing,
@@ -98,13 +101,7 @@ func (c *Checkpoint) ContainsVerification(validatorOrder int, sourceHash *bc.Has
 
 // Increase will increase the height of checkpoint
 func (c *Checkpoint) Increase(block *types.Block) error {
-	empty := bc.Hash{}
-	prevHash := c.Hash
-	if c.Hash == empty {
-		prevHash = c.ParentHash
-	}
-
-	if block.PreviousBlockHash != prevHash {
+	if block.PreviousBlockHash != c.Hash {
 		return errIncreaseCheckpoint
 	}
 
