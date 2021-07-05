@@ -61,14 +61,13 @@ func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, 
 		return nil, err
 	}
 
-	checkpoint := node.checkpoint
 	if mod := block.Height % consensus.ActiveNetParams.BlocksOfEpoch; mod == 1 {
-		parent := checkpoint
-		checkpoint = state.NewCheckpoint(parent)
+		checkpoint := node.checkpoint.NextCheckpoint(block)
 		node.addChild(&treeNode{checkpoint: checkpoint})
+		return checkpoint, nil
 	}
 
-	return checkpoint, checkpoint.Increase(block)
+	return node.checkpoint, node.checkpoint.Increase(block)
 }
 
 func (c *Casper) checkpointNodeByHash(blockHash bc.Hash) (*treeNode, error) {
@@ -85,17 +84,17 @@ func (c *Casper) replayCheckpoint(hash bc.Hash) (*treeNode, error) {
 	prevHash := hash
 	var attachBlocks []*types.Block
 	for {
-		prevBlock, err := c.store.GetBlock(&prevHash)
+		block, err := c.store.GetBlock(&prevHash)
 		if err != nil {
 			return nil, err
 		}
 
-		if prevBlock.Height%consensus.ActiveNetParams.BlocksOfEpoch == 0 {
+		if block.Height%consensus.ActiveNetParams.BlocksOfEpoch == 0 {
 			break
 		}
 
-		attachBlocks = append([]*types.Block{prevBlock}, attachBlocks...)
-		prevHash = prevBlock.PreviousBlockHash
+		attachBlocks = append([]*types.Block{block}, attachBlocks...)
+		prevHash = block.PreviousBlockHash
 	}
 
 	parent, err := c.tree.nodeByHash(prevHash)
@@ -103,9 +102,9 @@ func (c *Casper) replayCheckpoint(hash bc.Hash) (*treeNode, error) {
 		return nil, err
 	}
 
-	node := &treeNode{checkpoint: state.NewCheckpoint(parent.checkpoint)}
+	node := &treeNode{checkpoint: parent.checkpoint.NextCheckpoint(attachBlocks[0])}
 	parent.addChild(node)
-	for _, attachBlock := range attachBlocks {
+	for _, attachBlock := range attachBlocks[1:] {
 		if err := node.checkpoint.Increase(attachBlock); err != nil {
 			return nil, err
 		}

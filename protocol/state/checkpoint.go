@@ -50,20 +50,22 @@ type Checkpoint struct {
 }
 
 // NewCheckpoint create a new checkpoint instance
-func NewCheckpoint(parent *Checkpoint) *Checkpoint {
+func (c *Checkpoint) NextCheckpoint(block *types.Block) *Checkpoint {
 	checkpoint := &Checkpoint{
-		ParentHash: parent.Hash,
-		Parent:     parent,
+		ParentHash: c.Hash,
+		Parent:     c,
 		Status:     Growing,
 		Rewards:    make(map[string]uint64),
 		Votes:      make(map[string]uint64),
 	}
 
-	for pubKey, num := range parent.Votes {
+	for pubKey, num := range c.Votes {
 		if num != 0 {
 			checkpoint.Votes[pubKey] = num
 		}
 	}
+
+	checkpoint.increase(block)
 	return checkpoint
 }
 
@@ -89,7 +91,7 @@ func (c *Checkpoint) AddVerification(sourceHash bc.Hash, sourceHeight uint64, va
 // sourceHash not as filter if is nil,
 func (c *Checkpoint) ContainsVerification(validatorOrder int, sourceHash *bc.Hash) bool {
 	for _, supLink := range c.SupLinks {
-		if (sourceHash == nil || supLink.SourceHash == *sourceHash) && len(supLink.Signatures[validatorOrder]) != 0 {
+		if supLink.SourceHash == *sourceHash && len(supLink.Signatures[validatorOrder]) != 0 {
 			return true
 		}
 	}
@@ -98,16 +100,15 @@ func (c *Checkpoint) ContainsVerification(validatorOrder int, sourceHash *bc.Has
 
 // Increase will increase the height of checkpoint
 func (c *Checkpoint) Increase(block *types.Block) error {
-	empty := bc.Hash{}
-	prevHash := c.Hash
-	if c.Hash == empty {
-		prevHash = c.ParentHash
-	}
-
-	if block.PreviousBlockHash != prevHash {
+	if block.PreviousBlockHash != c.Hash {
 		return errIncreaseCheckpoint
 	}
 
+	c.increase(block)
+	return nil
+}
+
+func (c *Checkpoint) increase(block *types.Block) {
 	if block.Height%consensus.ActiveNetParams.BlocksOfEpoch == 0 {
 		c.Status = Unjustified
 	}
@@ -118,7 +119,6 @@ func (c *Checkpoint) Increase(block *types.Block) error {
 	c.applyVotes(block)
 	c.applyValidatorReward(block)
 	c.applyFederationReward()
-	return nil
 }
 
 // Validator represent the participants of the PoS network
