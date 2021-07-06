@@ -38,6 +38,39 @@ func (t *treeNode) addChild(child *treeNode) {
 	t.children = append(t.children, child)
 }
 
+func (t *treeNode) bestNode(justifiedHeight uint64) (*treeNode, uint64) {
+	if t.checkpoint.Status == state.Justified {
+		justifiedHeight = t.checkpoint.Height
+	}
+
+	bestNode, bestHeight := t, justifiedHeight
+	for _, child := range t.children {
+		bestChild, childHeight := child.bestNode(justifiedHeight)
+		if childHeight > justifiedHeight || (childHeight == bestHeight && bestChild.checkpoint.Height > bestNode.checkpoint.Height) ||
+			(childHeight == bestHeight && bestChild.checkpoint.Height == bestNode.checkpoint.Height && bestChild.checkpoint.Hash.String() > bestNode.checkpoint.Hash.String()) {
+			bestHeight = childHeight
+			bestNode = bestChild
+		}
+	}
+	return bestNode, bestHeight
+}
+
+func (t *treeNode) lastJustified() *treeNode {
+	var selected *treeNode
+	if t.checkpoint.Status == state.Justified {
+		selected = t
+	}
+
+	for _, child := range t.children {
+		if childSelected := child.lastJustified(); childSelected == nil {
+			continue
+		} else if selected == nil || childSelected.checkpoint.Height > selected.checkpoint.Height {
+			selected = childSelected
+		}
+	}
+	return selected
+}
+
 func (t *treeNode) nodeByHash(blockHash bc.Hash) (*treeNode, error) {
 	if c := t.findOnlyOne(func(c *state.Checkpoint) bool {
 		return c.Hash == blockHash

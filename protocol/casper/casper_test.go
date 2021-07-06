@@ -109,8 +109,8 @@ func TestBestChain(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		if _, bestHash, _ := chainOfMaxJustifiedHeight(c.tree, c.tree.checkpoint.Height); bestHash != c.wantBestHash {
-			t.Errorf("case #%d(%s) want best hash:%s, got best hash:%s\n", i, c.desc, c.wantBestHash.String(), bestHash.String())
+		if bestNode, _ := c.tree.bestNode(0); bestNode.checkpoint.Hash != c.wantBestHash {
+			t.Errorf("case #%d(%s) want best hash:%s, got best hash:%s\n", i, c.desc, c.wantBestHash.String(), bestNode.checkpoint.Hash.String())
 		}
 	}
 }
