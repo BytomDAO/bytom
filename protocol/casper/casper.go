@@ -70,7 +70,7 @@ func (c *Casper) LastFinalized() (uint64, bc.Hash) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	root := c.tree.checkpoint
+	root := c.tree.Checkpoint
 	return root.Height, root.Hash
 }
 
@@ -79,7 +79,7 @@ func (c *Casper) LastJustified() (uint64, bc.Hash) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	if node := c.tree.lastJustified(); node != nil {
-		return node.checkpoint.Height, node.checkpoint.Hash
+		return node.Height, node.Hash
 	}
 
 	return 0, bc.Hash{}
@@ -117,7 +117,7 @@ func (c *Casper) ParentCheckpointByPrevHash(prevBlockHash *bc.Hash) (*state.Chec
 func (c *Casper) bestChain() bc.Hash {
 	// root is init justified
 	bestNode, _ := c.tree.bestNode(0)
-	return bestNode.checkpoint.Hash
+	return bestNode.Hash
 }
 
 func (c *Casper) parentCheckpointHash(blockHash *bc.Hash) (*bc.Hash, error) {
