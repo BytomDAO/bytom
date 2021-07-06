@@ -43,16 +43,17 @@ func (t *treeNode) bestNode(justifiedHeight uint64) (*treeNode, uint64) {
 		justifiedHeight = t.Height
 	}
 
-	bestNode, bestHeight := t, justifiedHeight
+	bestNode, bestJustified := t, justifiedHeight
 	for _, child := range t.children {
-		bestChild, childHeight := child.bestNode(justifiedHeight)
-		if childHeight > bestHeight || (childHeight == bestHeight && bestChild.Height > bestNode.Height) ||
-			(childHeight == bestHeight && bestChild.Height == bestNode.Height && bestChild.Hash.String() > bestNode.Hash.String()) {
-			bestHeight = childHeight
+		bestChild, childJustified := child.bestNode(justifiedHeight)
+		if childJustified > bestJustified || (childJustified == bestJustified && bestChild.Height > bestNode.Height) ||
+			(childJustified == bestJustified && bestChild.Height == bestNode.Height && bestChild.Hash.String() > bestNode.Hash.String()) {
+			bestJustified = childJustified
 			bestNode = bestChild
 		}
 	}
-	return bestNode, bestHeight
+
+	return bestNode, bestJustified
 }
 
 func (t *treeNode) lastJustified() *treeNode {
