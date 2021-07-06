@@ -48,8 +48,7 @@ func (t *treeNode) bestNode(justifiedHeight uint64) (*treeNode, uint64) {
 		bestChild, childJustified := child.bestNode(justifiedHeight)
 		if childJustified > bestJustified || (childJustified == bestJustified && bestChild.Height > bestNode.Height) ||
 			(childJustified == bestJustified && bestChild.Height == bestNode.Height && bestChild.Hash.String() > bestNode.Hash.String()) {
-			bestJustified = childJustified
-			bestNode = bestChild
+			bestNode, bestJustified = bestChild, childJustified
 		}
 	}
 
