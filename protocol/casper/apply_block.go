@@ -117,7 +117,7 @@ func (c *Casper) replayCheckpoint(hash bc.Hash) (*treeNode, error) {
 func (c *Casper) applySupLinks(target *state.Checkpoint, supLinks []*types.SupLink, validators map[string]*state.Validator) ([]*state.Checkpoint, error) {
 	affectedCheckpoints := []*state.Checkpoint{target}
 	if target.Height%consensus.ActiveNetParams.BlocksOfEpoch != 0 {
-		return nil, nil
+		return affectedCheckpoints, nil
 	}
 
 	for _, supLink := range supLinks {
