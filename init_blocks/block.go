@@ -14,13 +14,7 @@ func initBlocks(asset2distributions map[string][]AddressBalance) []*types.Block 
 
 	allTxs := buildAllTxs(asset2distributions)
 	for i := 0; i < len(allTxs); i += TxCntPerBlock {
-		var batchTxs []*types.Tx
-		if len(allTxs[i:]) < TxCntPerBlock {
-			batchTxs = allTxs[i:]
-		} else {
-			batchTxs = allTxs[i : i+TxCntPerBlock]
-		}
-
+		batchTxs := getBatchTxs(allTxs, i, TxCntPerBlock)
 		block := buildBlock(batchTxs, preBlockHash, height)
 		blocks = append(blocks, block)
 
@@ -29,6 +23,18 @@ func initBlocks(asset2distributions map[string][]AddressBalance) []*types.Block 
 	}
 
 	return blocks
+}
+
+func getBatchTxs(allTxs []*types.Tx, offset, limit int) []*types.Tx {
+	if offset > len(allTxs) {
+		return nil
+	}
+
+	if len(allTxs[offset:]) < limit {
+		return allTxs[offset:]
+	}
+
+	return allTxs[offset : offset+limit]
 }
 
 func buildBlock(txs []*types.Tx, preBlockHash bc.Hash, height uint64) *types.Block {

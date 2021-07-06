@@ -11,15 +11,15 @@ const (
 
 // AddressBalance address and balance
 type AddressBalance struct {
-	Address string
-	Balance uint64
+	ControlProgram string
+	Balance        uint64
 }
 
 //RawBalance raw balance from file
 type RawBalance struct {
-	Address string
-	Asset   string
-	Balance uint64
+	ControlProgram string `json:"AddressScript"`
+	Asset          string `json:"Asset"`
+	Balance        uint64 `json:"Balance"`
 }
 
 type assetTotal struct {
@@ -47,7 +47,7 @@ func calcAssetTotals(asset2distributions map[string][]AddressBalance) []assetTot
 	return assetTotals
 }
 
-func classifyByAsset(file string) (map[string][]AddressBalance, error) {
+func mapAssetDistributions(file string) (map[string][]AddressBalance, error) {
 	lines, err := ReadFileLines(file)
 	if err != nil {
 		return nil, err
@@ -62,8 +62,8 @@ func classifyByAsset(file string) (map[string][]AddressBalance, error) {
 
 		asset2distributions[raw.Asset] = append(asset2distributions[raw.Asset],
 			AddressBalance{
-				Address: raw.Address,
-				Balance: raw.Balance,
+				ControlProgram: raw.ControlProgram,
+				Balance:        raw.Balance,
 			})
 	}
 	return asset2distributions, nil

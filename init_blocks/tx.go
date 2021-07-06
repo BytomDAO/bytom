@@ -2,17 +2,13 @@ package initblocks
 
 import (
 	"encoding/hex"
-	"errors"
-
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/bytom/common"
-	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
-	"github.com/bytom/bytom/protocol/vm/vmutil"
 )
 
+// NewAssetID new asset id by string
 func NewAssetID(str string) bc.AssetID {
 	assetBytes, err := hex.DecodeString(str)
 	if err != nil {
@@ -22,29 +18,6 @@ func NewAssetID(str string) bc.AssetID {
 	var bs [32]byte
 	copy(bs[:], assetBytes)
 	return bc.NewAssetID(bs)
-}
-
-func AddressToControlProgram(addressStr string) ([]byte, error) {
-	address, err := common.DecodeAddress(addressStr, &consensus.ActiveNetParams)
-	if err != nil {
-		return nil, err
-	}
-
-	program := []byte{}
-	redeemContract := address.ScriptAddress()
-	switch address.(type) {
-	case *common.AddressWitnessPubKeyHash:
-		program, err = vmutil.P2WPKHProgram(redeemContract)
-	case *common.AddressWitnessScriptHash:
-		program, err = vmutil.P2WSHProgram(redeemContract)
-	default:
-		return nil, errors.New("unsupport address type")
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	return program, nil
 }
 
 func getTxOriginalOutput(tx *types.Tx, i int) *bc.OriginalOutput {
@@ -65,7 +38,7 @@ func getTxOriginalOutput(tx *types.Tx, i int) *bc.OriginalOutput {
 func buildOutputs(assetID bc.AssetID, addrBalances []AddressBalance) []*types.TxOutput {
 	var outputs []*types.TxOutput
 	for _, addrBalance := range addrBalances {
-		controlProgram, err := AddressToControlProgram(addrBalance.Address)
+		controlProgram, err := hex.DecodeString(addrBalance.ControlProgram)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -152,14 +125,14 @@ func buildTx(preOut *bc.OriginalOutput, addrBalances []AddressBalance) *types.Tx
 	return types.NewTx(txData)
 }
 
-func partSlice(addrBalances []AddressBalance, i, cnt int) []AddressBalance {
-	if i > len(addrBalances) {
+func partSlice(addrBalances []AddressBalance, offset, limit int) []AddressBalance {
+	if offset > len(addrBalances) {
 		return nil
 	}
 
-	if len(addrBalances[i:]) < cnt {
-		return addrBalances[i:]
+	if len(addrBalances[offset:]) < limit {
+		return addrBalances[offset:]
 	}
 
-	return addrBalances[i : i+cnt]
+	return addrBalances[offset : offset+limit]
 }
