@@ -5,6 +5,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/event"
 	"github.com/bytom/bytom/protocol/bc"
@@ -231,6 +232,10 @@ func (c *Chain) broadcastVerification(v *casper.Verification) error {
 
 // SaveBlock will validate and save block into storage
 func (c *Chain) saveBlock(block *types.Block) error {
+	if err := c.verifyBlockSignature(&block.BlockHeader); err != nil {
+		return err
+	}
+
 	bcBlock := types.MapBlock(block)
 	parent, err := c.store.GetBlockHeader(&block.PreviousBlockHash)
 	if err != nil {
@@ -278,6 +283,22 @@ func (c *Chain) saveSubBlock(block *types.Block) *types.Block {
 		}
 	}
 	return bestBlock
+}
+
+func (c *Chain) verifyBlockSignature(blockHeader *types.BlockHeader) error {
+	validator, err := c.GetValidator(&blockHeader.PreviousBlockHash, blockHeader.Timestamp)
+	if err != nil {
+		return err
+	}
+
+	xPub := chainkd.XPub{}
+	pubKey, _ := hex.DecodeString(validator.PubKey)
+	copy(xPub[:], pubKey)
+	if ok := xPub.Verify(blockHeader.Hash().Bytes(), blockHeader.BlockWitness); !ok {
+		return errors.New("fail to verify block header signature")
+	}
+
+	return nil
 }
 
 type processBlockResponse struct {
