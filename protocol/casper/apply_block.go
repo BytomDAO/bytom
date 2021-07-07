@@ -68,7 +68,7 @@ func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, 
 }
 
 func (c *Casper) checkpointNodeByHash(hash bc.Hash) (*treeNode, error) {
-	if node, err := c.tree.nodeByHash(hash); err != nil {
+	if node, err := c.tree.nodeByHash(hash); err == nil {
 		return node, nil
 	}
 
