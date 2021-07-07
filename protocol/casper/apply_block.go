@@ -77,8 +77,8 @@ func (c *Casper) checkpointNodeByHash(hash bc.Hash) (*treeNode, error) {
 		return nil, err
 	}
 
-	if block.Height%consensus.ActiveNetParams.BlocksOfEpoch == 1 {
-		return nil, errors.New("checkpointNodeByHash fail on find round init checkpoint")
+	if block.Height%consensus.ActiveNetParams.BlocksOfEpoch == 0 {
+		return nil, errors.New("checkpointNodeByHash fail on previous round checkpoint")
 	}
 
 	parent, err := c.checkpointNodeByHash(block.PreviousBlockHash)
