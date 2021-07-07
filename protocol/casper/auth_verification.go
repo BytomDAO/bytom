@@ -23,7 +23,7 @@ func (c *Casper) AuthVerification(v *Verification) error {
 	defer c.mu.Unlock()
 
 	// root of tree is the last finalized checkpoint
-	if v.TargetHeight < c.tree.checkpoint.Height {
+	if v.TargetHeight < c.tree.Height {
 		// discard the verification message which height of target less than height of last finalized checkpoint
 		// is for simplify check the vote within the span of its other votes
 		return nil
@@ -44,12 +44,12 @@ func (c *Casper) AuthVerification(v *Verification) error {
 		return errPubKeyIsNotValidator
 	}
 
-	if targetNode.checkpoint.ContainsVerification(validators[v.PubKey].Order, &v.SourceHash) {
+	if targetNode.ContainsVerification(validators[v.PubKey].Order, &v.SourceHash) {
 		return nil
 	}
 
 	oldBestHash := c.bestChain()
-	if err := c.authVerification(v, targetNode.checkpoint, validators); err != nil {
+	if err := c.authVerification(v, targetNode.Checkpoint, validators); err != nil {
 		return err
 	}
 
@@ -121,8 +121,8 @@ func (c *Casper) setFinalized(checkpoint *state.Checkpoint) {
 	}
 
 	// update the checkpoint state in memory
-	newRoot.checkpoint.Status = state.Finalized
-	newRoot.checkpoint.Parent = nil
+	newRoot.Status = state.Finalized
+	newRoot.Parent = nil
 	c.tree = newRoot
 }
 

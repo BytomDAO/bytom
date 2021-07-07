@@ -31,15 +31,17 @@ type RollbackMsg struct {
 // Casper is BFT based proof of stack consensus algorithm, it provides safety and liveness in theory,
 // it's design mainly refers to https://github.com/ethereum/research/blob/master/papers/casper-basics/casper_basics.pdf
 type Casper struct {
-	mu         sync.RWMutex
-	tree       *treeNode
-	rollbackCh chan *RollbackMsg
-	newEpochCh chan bc.Hash
-	store      state.Store
+	mu    sync.RWMutex
+	store state.Store
+	tree  *treeNode
+
 	// block hash -> previous checkpoint hash
 	prevCheckpointCache *common.Cache
 	// block hash + pubKey -> verification
 	verificationCache *common.Cache
+
+	rollbackCh chan *RollbackMsg
+	newEpochCh chan bc.Hash
 }
 
 // NewCasper create a new instance of Casper
@@ -52,12 +54,12 @@ func NewCasper(store state.Store, checkpoints []*state.Checkpoint, rollbackCh ch
 	}
 
 	casper := &Casper{
-		tree:                makeTree(checkpoints[0], checkpoints[1:]),
-		rollbackCh:          rollbackCh,
-		newEpochCh:          make(chan bc.Hash),
 		store:               store,
+		tree:                makeTree(checkpoints[0], checkpoints[1:]),
 		prevCheckpointCache: common.NewCache(1024),
 		verificationCache:   common.NewCache(1024),
+		rollbackCh:          rollbackCh,
+		newEpochCh:          make(chan bc.Hash),
 	}
 	go casper.authVerificationLoop()
 	return casper
@@ -68,7 +70,7 @@ func (c *Casper) LastFinalized() (uint64, bc.Hash) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	root := c.tree.checkpoint
+	root := c.tree.Checkpoint
 	return root.Height, root.Hash
 }
 
@@ -76,8 +78,8 @@ func (c *Casper) LastFinalized() (uint64, bc.Hash) {
 func (c *Casper) LastJustified() (uint64, bc.Hash) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-
-	return lastJustified(c.tree)
+	node := c.tree.lastJustified()
+	return node.Height, node.Hash
 }
 
 // Validators return the validators by specified block hash
@@ -111,41 +113,8 @@ func (c *Casper) ParentCheckpointByPrevHash(prevBlockHash *bc.Hash) (*state.Chec
 
 func (c *Casper) bestChain() bc.Hash {
 	// root is init justified
-	root := c.tree.checkpoint
-	_, bestHash, _ := chainOfMaxJustifiedHeight(c.tree, root.Height)
-	return bestHash
-}
-
-func lastJustified(node *treeNode) (uint64, bc.Hash) {
-	lastJustifiedHeight, lastJustifiedHash := uint64(0), bc.Hash{}
-	if node.checkpoint.Status == state.Justified {
-		lastJustifiedHeight, lastJustifiedHash = node.checkpoint.Height, node.checkpoint.Hash
-	}
-
-	for _, child := range node.children {
-		if justifiedHeight, justifiedHash := lastJustified(child); justifiedHeight > lastJustifiedHeight {
-			lastJustifiedHeight, lastJustifiedHash = justifiedHeight, justifiedHash
-		}
-	}
-	return lastJustifiedHeight, lastJustifiedHash
-}
-
-// justifiedHeight is the max justified height of checkpoint from node to root
-func chainOfMaxJustifiedHeight(node *treeNode, justifiedHeight uint64) (uint64, bc.Hash, uint64) {
-	checkpoint := node.checkpoint
-	if checkpoint.Status == state.Justified {
-		justifiedHeight = checkpoint.Height
-	}
-
-	bestHeight, bestHash, maxJustifiedHeight := checkpoint.Height, checkpoint.Hash, justifiedHeight
-	for _, child := range node.children {
-		height, hash, justified := chainOfMaxJustifiedHeight(child, justifiedHeight)
-		if justified > maxJustifiedHeight || (justified == maxJustifiedHeight && height > bestHeight) ||
-			(justified == maxJustifiedHeight && height == bestHeight && hash.String() > bestHash.String()) {
-			bestHeight, bestHash, maxJustifiedHeight = height, hash, justified
-		}
-	}
-	return bestHeight, bestHash, maxJustifiedHeight
+	bestNode, _ := c.tree.bestNode(c.tree.Height)
+	return bestNode.Hash
 }
 
 func (c *Casper) parentCheckpointHash(blockHash *bc.Hash) (*bc.Hash, error) {
