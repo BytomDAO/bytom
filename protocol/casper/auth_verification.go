@@ -35,7 +35,7 @@ func (c *Casper) AuthVerification(v *Verification) error {
 		return nil
 	}
 
-	validators, err := c.Validators(&v.TargetHash)
+	validators, err := c.validators(&v.TargetHash)
 	if err != nil {
 		return err
 	}
@@ -137,7 +137,7 @@ func (c *Casper) tryRollback(oldBestHash bc.Hash) error {
 
 func (c *Casper) authVerificationLoop() {
 	for blockHash := range c.newEpochCh {
-		validators, err := c.Validators(&blockHash)
+		validators, err := c.validators(&blockHash)
 		if err != nil {
 			log.WithFields(log.Fields{"err": err, "module": logModule}).Error("get validators when auth verification")
 			continue
