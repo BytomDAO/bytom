@@ -84,7 +84,7 @@ func (c *Casper) LastJustified() (uint64, bc.Hash) {
 
 // Validators return the validators by specified block hash
 // e.g. if the block num of epoch is 100, and the block height corresponding to the block hash is 130, then will return the voting results of height in 0~100
-func (c *Casper) Validators(blockHash *bc.Hash) (map[string]*state.Validator, error) {
+func (c *Casper) validators(blockHash *bc.Hash) (map[string]*state.Validator, error) {
 	checkpoint, err := c.ParentCheckpoint(blockHash)
 	if err != nil {
 		return nil, err

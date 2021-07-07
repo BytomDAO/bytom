@@ -1,8 +1,6 @@
 package casper
 
 import (
-	"github.com/sirupsen/logrus"
-
 	"github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/errors"
@@ -37,7 +35,7 @@ func (c *Casper) ApplyBlock(block *types.Block) (*ApplyBlockReply, error) {
 		return nil, errors.Wrap(err, "apply block to checkpoint")
 	}
 
-	validators, err := c.Validators(&target.Hash)
+	validators, err := c.validators(&target.Hash)
 	if err != nil {
 		return nil, err
 	}
@@ -61,56 +59,35 @@ func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, 
 		return nil, err
 	}
 
-	checkpoint := node.Checkpoint
-	if mod := block.Height % consensus.ActiveNetParams.BlocksOfEpoch; mod == 1 {
-		parent := checkpoint
-		checkpoint = state.NewCheckpoint(parent)
-		node.addChild(&treeNode{Checkpoint: checkpoint})
+	if block.Height%consensus.ActiveNetParams.BlocksOfEpoch == 1 {
+		node = node.newChild()
 	}
-
-	return checkpoint, checkpoint.Increase(block)
+	return node.Checkpoint, node.Increase(block)
 }
 
-func (c *Casper) checkpointNodeByHash(blockHash bc.Hash) (*treeNode, error) {
-	node, err := c.tree.nodeByHash(blockHash)
-	if err != nil {
-		logrus.WithFields(logrus.Fields{"err": err, "module": logModule}).Error("fail find checkpoint, start to reorganize checkpoint")
-		return c.replayCheckpoint(blockHash)
+func (c *Casper) checkpointNodeByHash(hash bc.Hash) (*treeNode, error) {
+	if node, err := c.tree.nodeByHash(hash); err == nil {
+		return node, nil
 	}
 
-	return node, nil
-}
-
-func (c *Casper) replayCheckpoint(hash bc.Hash) (*treeNode, error) {
-	prevHash := hash
-	var attachBlocks []*types.Block
-	for {
-		prevBlock, err := c.store.GetBlock(&prevHash)
-		if err != nil {
-			return nil, err
-		}
-
-		if prevBlock.Height%consensus.ActiveNetParams.BlocksOfEpoch == 0 {
-			break
-		}
-
-		attachBlocks = append([]*types.Block{prevBlock}, attachBlocks...)
-		prevHash = prevBlock.PreviousBlockHash
-	}
-
-	parent, err := c.tree.nodeByHash(prevHash)
+	block, err := c.store.GetBlock(&hash)
 	if err != nil {
 		return nil, err
 	}
 
-	node := &treeNode{Checkpoint: state.NewCheckpoint(parent.Checkpoint)}
-	parent.addChild(node)
-	for _, attachBlock := range attachBlocks {
-		if err := node.Increase(attachBlock); err != nil {
-			return nil, err
-		}
+	if block.Height%consensus.ActiveNetParams.BlocksOfEpoch == 0 {
+		return nil, errors.New("checkpointNodeByHash fail on previous round checkpoint")
 	}
-	return node, nil
+
+	node, err := c.checkpointNodeByHash(block.PreviousBlockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	if block.Height%consensus.ActiveNetParams.BlocksOfEpoch == 1 {
+		node = node.newChild()
+	}
+	return node, node.Increase(block)
 }
 
 // applySupLinks copy the block's supLink to the checkpoint

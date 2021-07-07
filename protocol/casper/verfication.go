@@ -6,8 +6,9 @@ import (
 	"encoding/hex"
 	"errors"
 
+	"golang.org/x/crypto/sha3"
+
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/bytom/crypto/sha3pool"
 	"github.com/bytom/bytom/protocol/bc"
 )
 
@@ -38,12 +39,12 @@ func (v *Verification) Sign(xPrv chainkd.XPrv) error {
 
 // VerifySignature verify the signature of encode message of verification
 func (v *Verification) VerifySignature() error {
-	pubKey, err := hex.DecodeString(v.PubKey)
+	message, err := v.encodeMessage()
 	if err != nil {
 		return err
 	}
 
-	message, err := v.encodeMessage()
+	pubKey, err := hex.DecodeString(v.PubKey)
 	if err != nil {
 		return err
 	}
@@ -69,7 +70,6 @@ func (v *Verification) encodeMessage() ([]byte, error) {
 	}
 
 	uint64Buff := make([]byte, 8)
-
 	binary.LittleEndian.PutUint64(uint64Buff, v.SourceHeight)
 	if _, err := buff.Write(uint64Buff); err != nil {
 		return nil, err
@@ -80,21 +80,6 @@ func (v *Verification) encodeMessage() ([]byte, error) {
 		return nil, err
 	}
 
-	return sha3Hash(buff.Bytes())
-}
-
-func sha3Hash(message []byte) ([]byte, error) {
-	sha3 := sha3pool.Get256()
-	defer sha3pool.Put256(sha3)
-
-	if _, err := sha3.Write(message); err != nil {
-		return nil, err
-	}
-
-	hash := &bc.Hash{}
-	if _, err := hash.ReadFrom(sha3); err != nil {
-		return nil, err
-	}
-
-	return hash.Bytes(), nil
+	msg := sha3.Sum256(buff.Bytes())
+	return msg[:], nil
 }
