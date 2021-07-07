@@ -78,11 +78,8 @@ func (c *Casper) LastFinalized() (uint64, bc.Hash) {
 func (c *Casper) LastJustified() (uint64, bc.Hash) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	if node := c.tree.lastJustified(); node != nil {
-		return node.Height, node.Hash
-	}
-
-	return 0, bc.Hash{}
+	node := c.tree.lastJustified()
+	return node.Height, node.Hash
 }
 
 // Validators return the validators by specified block hash
@@ -116,7 +113,7 @@ func (c *Casper) ParentCheckpointByPrevHash(prevBlockHash *bc.Hash) (*state.Chec
 
 func (c *Casper) bestChain() bc.Hash {
 	// root is init justified
-	bestNode, _ := c.tree.bestNode(0)
+	bestNode, _ := c.tree.bestNode(c.tree.Height)
 	return bestNode.Hash
 }
 
