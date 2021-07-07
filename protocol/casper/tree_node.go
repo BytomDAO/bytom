@@ -26,7 +26,7 @@ func makeTree(root *state.Checkpoint, successors []*state.Checkpoint) *treeNode 
 		for _, successor := range parentToSuccessors[node.Hash] {
 			child := &treeNode{Checkpoint: successor}
 			successor.Parent = node.Checkpoint
-			node.addChild(child)
+			node.children = append(node.children, child)
 			nodes = append(nodes, child)
 		}
 		nodes = nodes[1:]
@@ -34,8 +34,10 @@ func makeTree(root *state.Checkpoint, successors []*state.Checkpoint) *treeNode 
 	return rootNode
 }
 
-func (t *treeNode) addChild(child *treeNode) {
+func (t *treeNode) newChild() *treeNode {
+	child := &treeNode{Checkpoint: state.NewCheckpoint(t.Checkpoint)}
 	t.children = append(t.children, child)
+	return child
 }
 
 func (t *treeNode) bestNode(justifiedHeight uint64) (*treeNode, uint64) {

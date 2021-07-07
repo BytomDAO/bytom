@@ -59,12 +59,10 @@ func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, 
 		return nil, err
 	}
 
-	checkpoint := node.Checkpoint
 	if block.Height%consensus.ActiveNetParams.BlocksOfEpoch == 1 {
-		checkpoint = state.NewCheckpoint(checkpoint)
-		node.addChild(&treeNode{Checkpoint: checkpoint})
+		node = node.newChild()
 	}
-	return checkpoint, checkpoint.Increase(block)
+	return node.Checkpoint, node.Increase(block)
 }
 
 func (c *Casper) checkpointNodeByHash(hash bc.Hash) (*treeNode, error) {
@@ -81,12 +79,15 @@ func (c *Casper) checkpointNodeByHash(hash bc.Hash) (*treeNode, error) {
 		return nil, errors.New("checkpointNodeByHash fail on previous round checkpoint")
 	}
 
-	parent, err := c.checkpointNodeByHash(block.PreviousBlockHash)
+	node, err := c.checkpointNodeByHash(block.PreviousBlockHash)
 	if err != nil {
 		return nil, err
 	}
 
-	return parent, parent.Increase(block)
+	if block.Height%consensus.ActiveNetParams.BlocksOfEpoch == 1 {
+		node = node.newChild()
+	}
+	return node, node.Increase(block)
 }
 
 // applySupLinks copy the block's supLink to the checkpoint
