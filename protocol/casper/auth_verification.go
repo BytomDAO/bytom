@@ -13,24 +13,23 @@ import (
 // the status of source checkpoint must justified, and an individual validator ν must not publish two distinct Verification
 // ⟨ν,s1,t1,h(s1),h(t1)⟩ and ⟨ν,s2,t2,h(s2),h(t2)⟩, such that either:
 // h(t1) = h(t2) OR h(s1) < h(s2) < h(t2) < h(t1)
-func (c *Casper) AuthVerification(v *Verification) error {
-	if err := v.vaild(); err != nil {
-		return err
-	}
-
+func (c *Casper) AuthVerification(msg *ValidCasperSignMsg) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	// root of tree is the last finalized checkpoint
-	if v.TargetHeight < c.tree.Height {
-		// discard the verification message which height of target less than height of last finalized checkpoint
-		// is for simplify check the vote within the span of its other votes
+	targetNode := c.tree.nodeByHash(msg.TargetHash)
+	if targetNode == nil {
+		c.verificationCache.Add(verificationCacheKey(msg.TargetHash, msg.PubKey), msg)
 		return nil
 	}
 
-	targetNode, err := c.tree.nodeByHash(v.TargetHash)
-	if err != nil {
-		c.verificationCache.Add(verificationCacheKey(v.TargetHash, v.PubKey), v)
+	sourceNode := c.tree.nodeByHash(msg.SourceHash)
+	if targetNode == nil {
 		return nil
+	}
+
+	v, err := newVerification(sourceNode.Checkpoint, targetNode.Checkpoint, msg)
+	if err != nil {
+		return err
 	}
 
 	validators := targetNode.Parent.EffectiveValidators()
@@ -50,7 +49,11 @@ func (c *Casper) AuthVerification(v *Verification) error {
 	return c.tryRollback(oldBestHash)
 }
 
-func (c *Casper) authVerification(v *Verification, target *state.Checkpoint, validators map[string]*state.Validator) error {
+func (c *Casper) authVerification(v *verification, target *state.Checkpoint, validators map[string]*state.Validator) error {
+	if err := v.verifySignature(); err != nil {
+		return err
+	}
+
 	validator := validators[v.PubKey]
 	if err := c.verifyNested(v, validator.Order); err != nil {
 		return err
@@ -61,7 +64,7 @@ func (c *Casper) authVerification(v *Verification, target *state.Checkpoint, val
 		return err
 	}
 
-	if err := c.msgQueue.Post(ValidCasperSignEvent{v}); err != nil {
+	if err := c.msgQueue.Post(v.toValidCasperSignMsg()); err != nil {
 		return err
 	}
 
@@ -72,7 +75,7 @@ func (c *Casper) authVerification(v *Verification, target *state.Checkpoint, val
 	return c.saveVerificationToHeader(v, validator.Order)
 }
 
-func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, validators map[string]*state.Validator, verifications ...*Verification) ([]*state.Checkpoint, error) {
+func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, validators map[string]*state.Validator, verifications ...*verification) ([]*state.Checkpoint, error) {
 	affectedCheckpoints := []*state.Checkpoint{target}
 	for _, v := range verifications {
 		source, err := c.store.GetCheckpoint(&v.SourceHash)
@@ -91,7 +94,7 @@ func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, validator
 	return affectedCheckpoints, nil
 }
 
-func (c *Casper) saveVerificationToHeader(v *Verification, validatorOrder int) error {
+func (c *Casper) saveVerificationToHeader(v *verification, validatorOrder int) error {
 	blockHeader, err := c.store.GetBlockHeader(&v.TargetHash)
 	if err != nil {
 		return err
@@ -112,9 +115,9 @@ func (c *Casper) setJustified(source, target *state.Checkpoint) {
 
 func (c *Casper) setFinalized(checkpoint *state.Checkpoint) {
 	checkpoint.Status = state.Finalized
-	newRoot, err := c.tree.nodeByHash(checkpoint.Hash)
-	if err != nil {
-		log.WithFields(log.Fields{"err": err, "module": logModule}).Error("source checkpoint before the last finalized checkpoint")
+	newRoot := c.tree.nodeByHash(checkpoint.Hash)
+	if newRoot == nil {
+		log.WithField("module", logModule).Warn("source checkpoint before the last finalized checkpoint")
 		return
 	}
 
@@ -143,15 +146,28 @@ func (c *Casper) authVerificationLoop() {
 
 		for _, validator := range validators {
 			key := verificationCacheKey(blockHash, validator.PubKey)
-			verification, ok := c.verificationCache.Get(key)
+			data, ok := c.verificationCache.Get(key)
 			if !ok {
 				continue
 			}
 
-			v := verification.(*Verification)
-			target, err := c.store.GetCheckpoint(&v.TargetHash)
+			msg := data.(*ValidCasperSignMsg)
+			source, err := c.store.GetCheckpoint(&msg.SourceHash)
+			if err != nil {
+				log.WithFields(log.Fields{"err": err, "module": logModule}).Error("get source checkpoint")
+				c.verificationCache.Remove(key)
+			}
+
+			target, err := c.store.GetCheckpoint(&msg.TargetHash)
 			if err != nil {
 				log.WithFields(log.Fields{"err": err, "module": logModule}).Error("get target checkpoint")
+				c.verificationCache.Remove(key)
+				continue
+			}
+
+			v, err := newVerification(source, target, msg)
+			if err != nil {
+				log.WithFields(log.Fields{"err": err, "module": logModule}).Error("authVerificationLoop fail on newVerification")
 				c.verificationCache.Remove(key)
 				continue
 			}
@@ -167,7 +183,7 @@ func (c *Casper) authVerificationLoop() {
 	}
 }
 
-func (c *Casper) verifyNested(v *Verification, validatorOrder int) error {
+func (c *Casper) verifyNested(v *verification, validatorOrder int) error {
 	if err := c.verifySameHeight(v, validatorOrder); err != nil {
 		return err
 	}
@@ -176,7 +192,7 @@ func (c *Casper) verifyNested(v *Verification, validatorOrder int) error {
 }
 
 // a validator must not publish two distinct votes for the same target height
-func (c *Casper) verifySameHeight(v *Verification, validatorOrder int) error {
+func (c *Casper) verifySameHeight(v *verification, validatorOrder int) error {
 	checkpoints, err := c.store.GetCheckpointsByHeight(v.TargetHeight)
 	if err != nil {
 		return err
@@ -193,7 +209,7 @@ func (c *Casper) verifySameHeight(v *Verification, validatorOrder int) error {
 }
 
 // a validator must not vote within the span of its other votes.
-func (c *Casper) verifySpanHeight(v *Verification, validatorOrder int) error {
+func (c *Casper) verifySpanHeight(v *verification, validatorOrder int) error {
 	if c.tree.findOnlyOne(func(checkpoint *state.Checkpoint) bool {
 		if checkpoint.Height == v.TargetHeight {
 			return false

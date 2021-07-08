@@ -95,7 +95,7 @@ func (c *mockChain) ProcessBlock(*types.Block) (bool, error) {
 	return false, nil
 }
 
-func (c *mockChain) ProcessBlockVerification(*casper.Verification) error {
+func (c *mockChain) ProcessBlockVerification(*casper.ValidCasperSignMsg) error {
 	return nil
 }
 
@@ -174,7 +174,7 @@ func TestBlockVerificationMsgBroadcastLoop(t *testing.T) {
 	defer mgr.Stop()
 	time.Sleep(10 * time.Millisecond)
 	for _, block := range blocks {
-		mgr.eventDispatcher.Post(casper.ValidCasperSignEvent{&casper.Verification{TargetHash: block.Hash(), Signature: []byte{0x1, 0x2}, PubKey: "011022"}})
+		mgr.eventDispatcher.Post(casper.ValidCasperSignMsg{TargetHash: block.Hash(), Signature: []byte{0x1, 0x2}, PubKey: "011022"})
 	}
 	time.Sleep(10 * time.Millisecond)
 	if msgCount != blockHeight+1 {
@@ -226,7 +226,7 @@ func TestProcessBlockVerificationMsg(t *testing.T) {
 	}
 
 	signature := []byte{0x01, 0x02}
-	msg := NewBlockVerificationMsg(100, 200, block.Hash(), block.Hash(), []byte{0x03, 0x04}, signature)
+	msg := NewBlockVerificationMsg(block.Hash(), block.Hash(), []byte{0x03, 0x04}, signature)
 
 	mgr.processMsg(peerID, 0, msg)
 

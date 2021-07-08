@@ -24,12 +24,10 @@ func TestDecodeMessage(t *testing.T) {
 	}{
 		{
 			msg: &BlockVerificationMsg{
-				SourceHeight: 100,
-				SourceHash:   bc.Hash{V0: 1, V1: 1, V2: 1, V3: 1},
-				TargetHeight: 200,
-				TargetHash:   bc.Hash{V0: 2, V1: 2, V2: 2, V3: 2},
-				Signature:    []byte{0x00},
-				PubKey:       []byte{0x01},
+				SourceHash: bc.Hash{V0: 1, V1: 1, V2: 1, V3: 1},
+				TargetHash: bc.Hash{V0: 2, V1: 2, V2: 2, V3: 2},
+				Signature:  []byte{0x00},
+				PubKey:     []byte{0x01},
 			},
 			msgType: blockSignatureByte,
 		},
@@ -57,14 +55,12 @@ func TestDecodeMessage(t *testing.T) {
 
 func TestBlockVerificationBroadcastMsg(t *testing.T) {
 	blockSignMsg := &BlockVerificationMsg{
-		SourceHeight: 100,
-		SourceHash:   bc.Hash{V0: 1, V1: 1, V2: 1, V3: 1},
-		TargetHeight: 200,
-		TargetHash:   bc.Hash{V0: 2, V1: 2, V2: 2, V3: 2},
-		Signature:    []byte{0x00},
-		PubKey:       []byte{0x01},
+		SourceHash: bc.Hash{V0: 1, V1: 1, V2: 1, V3: 1},
+		TargetHash: bc.Hash{V0: 2, V1: 2, V2: 2, V3: 2},
+		Signature:  []byte{0x00},
+		PubKey:     []byte{0x01},
 	}
-	verificationBroadcastMsg := NewBroadcastMsg(NewBlockVerificationMsg(blockSignMsg.SourceHeight, blockSignMsg.TargetHeight, blockSignMsg.SourceHash, blockSignMsg.TargetHash, blockSignMsg.PubKey, blockSignMsg.Signature), consensusChannel)
+	verificationBroadcastMsg := NewBroadcastMsg(NewBlockVerificationMsg(blockSignMsg.SourceHash, blockSignMsg.TargetHash, blockSignMsg.PubKey, blockSignMsg.Signature), consensusChannel)
 
 	binMsg := wire.BinaryBytes(verificationBroadcastMsg.GetMsg())
 	gotMsgType, gotMsg, err := decodeMessage(binMsg)
@@ -143,19 +139,17 @@ func TestBlockProposeMsg(t *testing.T) {
 
 func TestBlockVerificationMsg(t *testing.T) {
 	msg := &BlockVerificationMsg{
-		SourceHeight: 100,
-		SourceHash:   bc.Hash{V0: 1, V1: 1, V2: 1, V3: 1},
-		TargetHeight: 200,
-		TargetHash:   bc.Hash{V0: 2, V1: 2, V2: 2, V3: 2},
-		Signature:    []byte{0x00},
-		PubKey:       []byte{0x01},
+		SourceHash: bc.Hash{V0: 1, V1: 1, V2: 1, V3: 1},
+		TargetHash: bc.Hash{V0: 2, V1: 2, V2: 2, V3: 2},
+		Signature:  []byte{0x00},
+		PubKey:     []byte{0x01},
 	}
-	gotMsg := NewBlockVerificationMsg(msg.SourceHeight, msg.TargetHeight, msg.SourceHash, msg.TargetHash, msg.PubKey, msg.Signature)
+	gotMsg := NewBlockVerificationMsg(msg.SourceHash, msg.TargetHash, msg.PubKey, msg.Signature)
 
 	if !reflect.DeepEqual(gotMsg, msg) {
 		t.Fatalf("test block verification message err. got:%s\n want:%s", spew.Sdump(gotMsg), spew.Sdump(msg))
 	}
-	wantString := "{sourceHeight:100,targetHeight:200,sourceHash:0000000000000001000000000000000100000000000000010000000000000001,targetHash:0000000000000002000000000000000200000000000000020000000000000002,signature:00,pubkey:01}"
+	wantString := "{sourceHash:0000000000000001000000000000000100000000000000010000000000000001,targetHash:0000000000000002000000000000000200000000000000020000000000000002,signature:00,pubkey:01}"
 	if gotMsg.String() != wantString {
 		t.Fatalf("test block verification message err. got string:%s\n want string:%s", gotMsg.String(), wantString)
 	}
