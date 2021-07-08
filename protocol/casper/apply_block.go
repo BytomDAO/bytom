@@ -90,7 +90,7 @@ func (c *Casper) applySupLinks(target *state.Checkpoint, supLinks []*types.SupLi
 	for _, supLink := range supLinks {
 		var validVerifications []*Verification
 		for _, v := range supLinkToVerifications(supLink, validators, target.Hash, target.Height) {
-			if v.vaild() == nil && c.verifyDoubleSign(v, validators[v.PubKey].Order) == nil {
+			if v.vaild() == nil && c.verifySignRange(v, validators[v.PubKey].Order) == nil {
 				validVerifications = append(validVerifications, v)
 			}
 		}
@@ -152,7 +152,7 @@ func (c *Casper) myVerification(target *state.Checkpoint, validators map[string]
 			return nil, err
 		}
 
-		if err := c.verifyDoubleSign(v, validatorOrder); err != nil {
+		if err := c.verifySignRange(v, validatorOrder); err != nil {
 			return nil, nil
 		}
 

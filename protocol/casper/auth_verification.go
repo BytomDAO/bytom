@@ -52,7 +52,7 @@ func (c *Casper) AuthVerification(v *Verification) error {
 
 func (c *Casper) authVerification(v *Verification, target *state.Checkpoint, validators map[string]*state.Validator) error {
 	validator := validators[v.PubKey]
-	if err := c.verifyDoubleSign(v, validator.Order); err != nil {
+	if err := c.verifySignRange(v, validator.Order); err != nil {
 		return err
 	}
 
@@ -167,7 +167,7 @@ func (c *Casper) authVerificationLoop() {
 	}
 }
 
-func (c *Casper) verifyDoubleSign(v *Verification, validatorOrder int) error {
+func (c *Casper) verifySignRange(v *Verification, validatorOrder int) error {
 	if err := c.verifySameHeight(v, validatorOrder); err != nil {
 		return err
 	}
