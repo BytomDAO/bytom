@@ -15,6 +15,10 @@ import (
 
 var errVerifySignature = errors.New("signature of verification message is invalid")
 
+type VaildCasperSignEvent struct {
+	*Verification
+}
+
 // Verification represent a verification message for the block
 // source hash and target hash point to the checkpoint, and the source checkpoint is the target checkpoint's parent(not be directly)
 // the vector <sourceHash, targetHash, sourceHeight, targetHeight, pubKey> as the message of signature
