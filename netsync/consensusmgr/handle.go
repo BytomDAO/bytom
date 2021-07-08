@@ -129,9 +129,14 @@ func (m *Manager) blockProposeMsgBroadcastLoop() {
 }
 
 func (m *Manager) blockVerificationMsgBroadcastLoop() {
-	m.msgBroadcastLoop(event.BlockVerificationEvent{}, func(data interface{}) (ConsensusMessage, error) {
-		ev := data.(event.BlockVerificationEvent)
-		return NewBlockVerificationMsg(ev.SourceHeight, ev.TargetHeight, ev.SourceHash, ev.TargetHash, ev.PubKey, ev.Signature), nil
+	m.msgBroadcastLoop(casper.VaildCasperSignEvent{}, func(data interface{}) (ConsensusMessage, error) {
+		v := data.(casper.VaildCasperSignEvent)
+		pubkey, err := hex.DecodeString(v.PubKey)
+		if err != nil {
+			return nil, err
+		}
+
+		return NewBlockVerificationMsg(v.SourceHeight, v.TargetHeight, v.SourceHash, v.TargetHash, pubkey, v.Signature), nil
 	})
 }
 

@@ -9,17 +9,12 @@ import (
 	"github.com/bytom/bytom/protocol/state"
 )
 
-type ApplyBlockReply struct {
-	Verification *Verification
-	BestHash     bc.Hash
-}
-
 // ApplyBlock used to receive a new block from upper layer, it provides idempotence
 // and parse the vote and mortgage from the transactions, then save to the checkpoint
 // the tree of checkpoint will grow with the arrival of new blocks
 // it will return verification when an epoch is reached and the current node is the validator, otherwise return nil
 // the chain module must broadcast the verification
-func (c *Casper) ApplyBlock(block *types.Block) (*ApplyBlockReply, error) {
+func (c *Casper) ApplyBlock(block *types.Block) (bc.Hash, error) {
 	if block.Height%consensus.ActiveNetParams.BlocksOfEpoch == 1 {
 		c.newEpochCh <- block.PreviousBlockHash
 	}
@@ -27,30 +22,25 @@ func (c *Casper) ApplyBlock(block *types.Block) (*ApplyBlockReply, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if _, err := c.tree.nodeByHash(block.Hash()); err == nil {
-		return &ApplyBlockReply{BestHash: c.bestChain()}, nil
+		return c.bestChain(), nil
 	}
 
 	target, err := c.applyBlockToCheckpoint(block)
 	if err != nil {
-		return nil, errors.Wrap(err, "apply block to checkpoint")
+		return bc.Hash{}, errors.Wrap(err, "apply block to checkpoint")
 	}
 
-	validators, err := c.validators(&target.Hash)
-	if err != nil {
-		return nil, err
-	}
-
-	verification, err := c.applyMyVerification(target, block, validators)
-	if err != nil {
-		return nil, err
+	validators := target.Parent.EffectiveValidators()
+	if err := c.applyMyVerification(target, block, validators); err != nil {
+		return bc.Hash{}, err
 	}
 
 	affectedCheckpoints, err := c.applySupLinks(target, block.SupLinks, validators)
 	if err != nil {
-		return nil, err
+		return bc.Hash{}, err
 	}
 
-	return &ApplyBlockReply{Verification: verification, BestHash: c.bestChain()}, c.saveCheckpoints(affectedCheckpoints)
+	return c.bestChain(), c.saveCheckpoints(affectedCheckpoints)
 }
 
 func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, error) {
@@ -100,7 +90,7 @@ func (c *Casper) applySupLinks(target *state.Checkpoint, supLinks []*types.SupLi
 	for _, supLink := range supLinks {
 		var validVerifications []*Verification
 		for _, v := range supLinkToVerifications(supLink, validators, target.Hash, target.Height) {
-			if validate(v) == nil && c.verifyVerification(v, validators[v.PubKey].Order) == nil {
+			if v.vaild() == nil && c.verifyNested(v, validators[v.PubKey].Order) == nil {
 				validVerifications = append(validVerifications, v)
 			}
 		}
@@ -115,18 +105,22 @@ func (c *Casper) applySupLinks(target *state.Checkpoint, supLinks []*types.SupLi
 	return affectedCheckpoints, nil
 }
 
-func (c *Casper) applyMyVerification(target *state.Checkpoint, block *types.Block, validators map[string]*state.Validator) (*Verification, error) {
+func (c *Casper) applyMyVerification(target *state.Checkpoint, block *types.Block, validators map[string]*state.Validator) error {
 	v, err := c.myVerification(target, validators)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if v == nil {
-		return nil, nil
+		return nil
+	}
+
+	if err := c.msgQueue.Post(VaildCasperSignEvent{v}); err != nil {
+		return err
 	}
 
 	block.SupLinks.AddSupLink(v.SourceHeight, v.SourceHash, v.Signature, validators[v.PubKey].Order)
-	return v, c.store.SaveBlockHeader(&block.BlockHeader)
+	return c.store.SaveBlockHeader(&block.BlockHeader)
 }
 
 func (c *Casper) myVerification(target *state.Checkpoint, validators map[string]*state.Validator) (*Verification, error) {
@@ -158,7 +152,7 @@ func (c *Casper) myVerification(target *state.Checkpoint, validators map[string]
 			return nil, err
 		}
 
-		if err := c.verifyVerification(v, validatorOrder); err != nil {
+		if err := c.verifyNested(v, validatorOrder); err != nil {
 			return nil, nil
 		}
 

@@ -7,10 +7,8 @@ import (
 
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/errors"
-	"github.com/bytom/bytom/event"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
-	"github.com/bytom/bytom/protocol/casper"
 	"github.com/bytom/bytom/protocol/state"
 	"github.com/bytom/bytom/protocol/validation"
 )
@@ -104,15 +102,8 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		return err
 	}
 
-	reply, err := c.casper.ApplyBlock(block)
-	if err != nil {
+	if _, err := c.casper.ApplyBlock(block); err != nil {
 		return err
-	}
-
-	if reply.Verification != nil {
-		if err := c.broadcastVerification(reply.Verification); err != nil {
-			return err
-		}
 	}
 
 	contractView := state.NewContractViewpoint()
@@ -212,22 +203,6 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 	}
 
 	return nil
-}
-
-func (c *Chain) broadcastVerification(v *casper.Verification) error {
-	pubKey, err := hex.DecodeString(v.PubKey)
-	if err != nil {
-		return err
-	}
-
-	return c.eventDispatcher.Post(event.BlockVerificationEvent{
-		SourceHeight: v.SourceHeight,
-		SourceHash:   v.SourceHash,
-		TargetHeight: v.TargetHeight,
-		TargetHash:   v.TargetHash,
-		PubKey:       pubKey,
-		Signature:    v.Signature,
-	})
 }
 
 // SaveBlock will validate and save block into storage
@@ -366,7 +341,7 @@ func (c *Chain) applyForkChainToCasper(beginAttach *types.BlockHeader) error {
 		return err
 	}
 
-	var reply *casper.ApplyBlockReply
+	var bestHash bc.Hash
 	for _, node := range attachNodes {
 		hash := node.Hash()
 		block, err := c.store.GetBlock(&hash)
@@ -374,22 +349,16 @@ func (c *Chain) applyForkChainToCasper(beginAttach *types.BlockHeader) error {
 			return err
 		}
 
-		reply, err = c.casper.ApplyBlock(block)
+		bestHash, err = c.casper.ApplyBlock(block)
 		if err != nil {
 			return err
 		}
 
 		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": hash.String()}).Info("apply fork node")
-
-		if reply.Verification != nil {
-			if err := c.broadcastVerification(reply.Verification); err != nil {
-				return err
-			}
-		}
 	}
 
-	if reply.BestHash != c.bestBlockHeader.Hash() {
-		return c.rollback(reply.BestHash)
+	if bestHash != c.bestBlockHeader.Hash() {
+		return c.rollback(bestHash)
 	}
 
 	return nil

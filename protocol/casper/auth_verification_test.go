@@ -7,6 +7,7 @@ import (
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/event"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
@@ -56,7 +57,7 @@ var (
 )
 
 func TestRollback(t *testing.T) {
-	casper := NewCasper(&mockStore2{}, checkpoints, make(chan *RollbackMsg))
+	casper := NewCasper(&mockStore2{}, event.NewDispatcher(), checkpoints, make(chan *RollbackMsg))
 	casper.prevCheckpointCache.Add(checkpoints[1].Hash, &checkpoints[0].Hash)
 	go func() {
 		rollbackMsg := <-casper.rollbackCh

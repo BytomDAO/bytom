@@ -5,7 +5,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/state"
 )
@@ -15,13 +14,12 @@ import (
 // ⟨ν,s1,t1,h(s1),h(t1)⟩ and ⟨ν,s2,t2,h(s2),h(t2)⟩, such that either:
 // h(t1) = h(t2) OR h(s1) < h(s2) < h(t2) < h(t1)
 func (c *Casper) AuthVerification(v *Verification) error {
-	if err := validate(v); err != nil {
+	if err := v.vaild(); err != nil {
 		return err
 	}
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
-
 	// root of tree is the last finalized checkpoint
 	if v.TargetHeight < c.tree.Height {
 		// discard the verification message which height of target less than height of last finalized checkpoint
@@ -35,11 +33,7 @@ func (c *Casper) AuthVerification(v *Verification) error {
 		return nil
 	}
 
-	validators, err := c.validators(&v.TargetHash)
-	if err != nil {
-		return err
-	}
-
+	validators := targetNode.Parent.EffectiveValidators()
 	if _, ok := validators[v.PubKey]; !ok {
 		return errPubKeyIsNotValidator
 	}
@@ -58,12 +52,16 @@ func (c *Casper) AuthVerification(v *Verification) error {
 
 func (c *Casper) authVerification(v *Verification, target *state.Checkpoint, validators map[string]*state.Validator) error {
 	validator := validators[v.PubKey]
-	if err := c.verifyVerification(v, validator.Order); err != nil {
+	if err := c.verifyNested(v, validator.Order); err != nil {
 		return err
 	}
 
 	checkpoints, err := c.addVerificationToCheckpoint(target, validators, v)
 	if err != nil {
+		return err
+	}
+
+	if err := c.msgQueue.Post(VaildCasperSignEvent{v}); err != nil {
 		return err
 	}
 
@@ -169,7 +167,7 @@ func (c *Casper) authVerificationLoop() {
 	}
 }
 
-func (c *Casper) verifyVerification(v *Verification, validatorOrder int) error {
+func (c *Casper) verifyNested(v *Verification, validatorOrder int) error {
 	if err := c.verifySameHeight(v, validatorOrder); err != nil {
 		return err
 	}
@@ -214,19 +212,6 @@ func (c *Casper) verifySpanHeight(v *Verification, validatorOrder int) error {
 		return errSpanHeightInVerification
 	}
 	return nil
-}
-
-func validate(v *Verification) error {
-	blocksOfEpoch := consensus.ActiveNetParams.BlocksOfEpoch
-	if v.SourceHeight%blocksOfEpoch != 0 || v.TargetHeight%blocksOfEpoch != 0 {
-		return errVoteToGrowingCheckpoint
-	}
-
-	if v.SourceHeight == v.TargetHeight {
-		return errVoteToSameCheckpoint
-	}
-
-	return v.VerifySignature()
 }
 
 func verificationCacheKey(blockHash bc.Hash, pubKey string) string {

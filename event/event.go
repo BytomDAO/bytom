@@ -9,7 +9,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 )
 
@@ -26,15 +25,6 @@ var (
 )
 
 type NewProposedBlockEvent struct{ Block types.Block }
-
-type BlockVerificationEvent struct {
-	SourceHeight uint64
-	SourceHash   bc.Hash
-	TargetHeight uint64
-	TargetHash   bc.Hash
-	PubKey       []byte
-	Signature    []byte
-}
 
 // TypeMuxEvent is a time-tagged notification pushed to subscribers.
 type TypeMuxEvent struct {
