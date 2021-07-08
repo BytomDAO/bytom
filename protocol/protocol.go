@@ -1,7 +1,6 @@
 package protocol
 
 import (
-	"encoding/hex"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -65,7 +64,7 @@ func NewChainWithOrphanManage(store state.Store, txPool *TxPool, manage *OrphanM
 		return nil, err
 	}
 
-	casper, err := newCasper(store, storeStatus, c.processRollbackCh)
+	casper, err := newCasper(store, eventDispatcher, storeStatus, c.processRollbackCh)
 	if err != nil {
 		return nil, err
 	}
@@ -103,13 +102,13 @@ func (c *Chain) initChainStatus() error {
 	return c.store.SaveChainStatus(genesisBlockHeader, []*types.BlockHeader{genesisBlockHeader}, utxoView, contractView, 0, &checkpoint.Hash)
 }
 
-func newCasper(store state.Store, storeStatus *state.BlockStoreState, rollbackCh chan *casper.RollbackMsg) (*casper.Casper, error) {
+func newCasper(store state.Store, e *event.Dispatcher, storeStatus *state.BlockStoreState, rollbackCh chan *casper.RollbackMsg) (*casper.Casper, error) {
 	checkpoints, err := store.CheckpointsFromNode(storeStatus.FinalizedHeight, storeStatus.FinalizedHash)
 	if err != nil {
 		return nil, err
 	}
 
-	return casper.NewCasper(store, checkpoints, rollbackCh), nil
+	return casper.NewCasper(store, e, checkpoints, rollbackCh), nil
 }
 
 // LastJustifiedHeader return the last justified block header of the block chain
@@ -126,19 +125,7 @@ func (c *Chain) LastFinalizedHeader() (*types.BlockHeader, error) {
 
 // ProcessBlockVerification process block verification
 func (c *Chain) ProcessBlockVerification(v *casper.Verification) error {
-	if err := c.casper.AuthVerification(v); err != nil {
-		return err
-	}
-
-	pubKey, _ := hex.DecodeString(v.PubKey)
-	return c.eventDispatcher.Post(event.BlockVerificationEvent{
-		SourceHeight: v.SourceHeight,
-		SourceHash:   v.SourceHash,
-		TargetHeight: v.TargetHeight,
-		TargetHash:   v.TargetHash,
-		PubKey:       pubKey,
-		Signature:    v.Signature,
-	})
+	return c.casper.AuthVerification(v)
 }
 
 // BestBlockHeight returns the current height of the blockchain.

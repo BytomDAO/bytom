@@ -8,6 +8,7 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
+	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/protocol/bc"
 )
@@ -37,8 +38,21 @@ func (v *Verification) Sign(xPrv chainkd.XPrv) error {
 	return nil
 }
 
-// VerifySignature verify the signature of encode message of verification
-func (v *Verification) VerifySignature() error {
+func (v *Verification) vaild() error {
+	blocksOfEpoch := consensus.ActiveNetParams.BlocksOfEpoch
+	if v.SourceHeight%blocksOfEpoch != 0 || v.TargetHeight%blocksOfEpoch != 0 {
+		return errVoteToGrowingCheckpoint
+	}
+
+	if v.SourceHeight >= v.TargetHeight {
+		return errVoteToSameCheckpoint
+	}
+
+	return v.verifySignature()
+}
+
+// verifySignature verify the signature of encode message of verification
+func (v *Verification) verifySignature() error {
 	message, err := v.encodeMessage()
 	if err != nil {
 		return err
