@@ -61,7 +61,7 @@ func (c *Casper) authVerification(v *Verification, target *state.Checkpoint, val
 		return err
 	}
 
-	if err := c.msgQueue.Post(VaildCasperSignEvent{v}); err != nil {
+	if err := c.msgQueue.Post(ValidCasperSignEvent{v}); err != nil {
 		return err
 	}
 

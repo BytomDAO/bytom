@@ -53,7 +53,7 @@ type Casper struct {
 // argument checkpoints load the checkpoints from leveldb
 // the first element of checkpoints must genesis checkpoint or the last finalized checkpoint in order to reduce memory space
 // the others must be successors of first one
-func NewCasper(store state.Store, queue msgQueue, checkpoints []*state.Checkpoint, rollbackCh chan *RollbackMsg) *Casper {
+func NewCasper(store state.Store, queue msgQueue, checkpoints []*state.Checkpoint) *Casper {
 	if checkpoints[0].Height != 0 && checkpoints[0].Status != state.Finalized {
 		log.WithFields(log.Fields{"module": logModule}).Panic("first element of checkpoints must genesis or in finalized status")
 	}
@@ -64,8 +64,8 @@ func NewCasper(store state.Store, queue msgQueue, checkpoints []*state.Checkpoin
 		tree:                makeTree(checkpoints[0], checkpoints[1:]),
 		prevCheckpointCache: common.NewCache(1024),
 		verificationCache:   common.NewCache(1024),
-		rollbackCh:          rollbackCh,
-		newEpochCh:          make(chan bc.Hash),
+		rollbackCh:          make(chan *RollbackMsg, 64),
+		newEpochCh:          make(chan bc.Hash, 64),
 	}
 	go casper.authVerificationLoop()
 	return casper
@@ -86,6 +86,10 @@ func (c *Casper) LastJustified() (uint64, bc.Hash) {
 	defer c.mu.RUnlock()
 	node := c.tree.lastJustified()
 	return node.Height, node.Hash
+}
+
+func (c *Casper) RollbackCh() <-chan *RollbackMsg {
+	return c.rollbackCh
 }
 
 // Validators return the validators by specified block hash

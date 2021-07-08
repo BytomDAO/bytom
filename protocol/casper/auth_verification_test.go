@@ -57,7 +57,7 @@ var (
 )
 
 func TestRollback(t *testing.T) {
-	casper := NewCasper(&mockStore2{}, event.NewDispatcher(), checkpoints, make(chan *RollbackMsg))
+	casper := NewCasper(&mockStore2{}, event.NewDispatcher(), checkpoints)
 	casper.prevCheckpointCache.Add(checkpoints[1].Hash, &checkpoints[0].Hash)
 	go func() {
 		rollbackMsg := <-casper.rollbackCh

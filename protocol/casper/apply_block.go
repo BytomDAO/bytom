@@ -115,7 +115,7 @@ func (c *Casper) applyMyVerification(target *state.Checkpoint, block *types.Bloc
 		return nil
 	}
 
-	if err := c.msgQueue.Post(VaildCasperSignEvent{v}); err != nil {
+	if err := c.msgQueue.Post(ValidCasperSignEvent{v}); err != nil {
 		return err
 	}
 

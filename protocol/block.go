@@ -300,9 +300,8 @@ func (c *Chain) blockProcessor() {
 		case msg := <-c.processBlockCh:
 			isOrphan, err := c.processBlock(msg.block)
 			msg.reply <- processBlockResponse{isOrphan: isOrphan, err: err}
-		case msg := <-c.processRollbackCh:
-			err := c.rollback(msg.BestHash)
-			msg.Reply <- err
+		case msg := <-c.casper.RollbackCh():
+			msg.Reply <- c.rollback(msg.BestHash)
 		}
 	}
 }

@@ -174,7 +174,7 @@ func TestBlockVerificationMsgBroadcastLoop(t *testing.T) {
 	defer mgr.Stop()
 	time.Sleep(10 * time.Millisecond)
 	for _, block := range blocks {
-		mgr.eventDispatcher.Post(casper.VaildCasperSignEvent{&casper.Verification{TargetHash: block.Hash(), Signature: []byte{0x1, 0x2}, PubKey: "011022"}})
+		mgr.eventDispatcher.Post(casper.ValidCasperSignEvent{&casper.Verification{TargetHash: block.Hash(), Signature: []byte{0x1, 0x2}, PubKey: "011022"}})
 	}
 	time.Sleep(10 * time.Millisecond)
 	if msgCount != blockHeight+1 {
