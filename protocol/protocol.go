@@ -16,19 +16,17 @@ import (
 )
 
 const (
-	maxProcessBlockChSize  = 1024
-	maxProcessRollbackSize = 1024
+	maxProcessBlockChSize = 1024
 )
 
 // Chain provides functions for working with the Bytom block chain.
 type Chain struct {
-	orphanManage      *OrphanManage
-	txPool            *TxPool
-	store             state.Store
-	casper            *casper.Casper
-	processBlockCh    chan *processBlockMsg
-	processRollbackCh chan *casper.RollbackMsg
-	eventDispatcher   *event.Dispatcher
+	orphanManage    *OrphanManage
+	txPool          *TxPool
+	store           state.Store
+	casper          *casper.Casper
+	processBlockCh  chan *processBlockMsg
+	eventDispatcher *event.Dispatcher
 
 	cond            sync.Cond
 	bestBlockHeader *types.BlockHeader // the last block on current main chain
@@ -41,12 +39,11 @@ func NewChain(store state.Store, txPool *TxPool, eventDispatcher *event.Dispatch
 
 func NewChainWithOrphanManage(store state.Store, txPool *TxPool, manage *OrphanManage, eventDispatcher *event.Dispatcher) (*Chain, error) {
 	c := &Chain{
-		orphanManage:      manage,
-		eventDispatcher:   eventDispatcher,
-		txPool:            txPool,
-		store:             store,
-		processRollbackCh: make(chan *casper.RollbackMsg, maxProcessRollbackSize),
-		processBlockCh:    make(chan *processBlockMsg, maxProcessBlockChSize),
+		orphanManage:    manage,
+		eventDispatcher: eventDispatcher,
+		txPool:          txPool,
+		store:           store,
+		processBlockCh:  make(chan *processBlockMsg, maxProcessBlockChSize),
 	}
 	c.cond.L = new(sync.Mutex)
 
@@ -64,7 +61,7 @@ func NewChainWithOrphanManage(store state.Store, txPool *TxPool, manage *OrphanM
 		return nil, err
 	}
 
-	casper, err := newCasper(store, eventDispatcher, storeStatus, c.processRollbackCh)
+	casper, err := newCasper(store, eventDispatcher, storeStatus)
 	if err != nil {
 		return nil, err
 	}
@@ -102,13 +99,13 @@ func (c *Chain) initChainStatus() error {
 	return c.store.SaveChainStatus(genesisBlockHeader, []*types.BlockHeader{genesisBlockHeader}, utxoView, contractView, 0, &checkpoint.Hash)
 }
 
-func newCasper(store state.Store, e *event.Dispatcher, storeStatus *state.BlockStoreState, rollbackCh chan *casper.RollbackMsg) (*casper.Casper, error) {
+func newCasper(store state.Store, e *event.Dispatcher, storeStatus *state.BlockStoreState) (*casper.Casper, error) {
 	checkpoints, err := store.CheckpointsFromNode(storeStatus.FinalizedHeight, storeStatus.FinalizedHash)
 	if err != nil {
 		return nil, err
 	}
 
-	return casper.NewCasper(store, e, checkpoints, rollbackCh), nil
+	return casper.NewCasper(store, e, checkpoints), nil
 }
 
 // LastJustifiedHeader return the last justified block header of the block chain

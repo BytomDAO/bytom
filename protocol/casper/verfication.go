@@ -15,7 +15,7 @@ import (
 
 var errVerifySignature = errors.New("signature of verification message is invalid")
 
-type VaildCasperSignEvent struct {
+type ValidCasperSignEvent struct {
 	*Verification
 }
 
