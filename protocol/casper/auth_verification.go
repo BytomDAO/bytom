@@ -47,10 +47,6 @@ func (c *Casper) AuthVerification(v *Verification) error {
 		return err
 	}
 
-	if err := c.events.Post(v); err != nil {
-		return err
-	}
-
 	return c.tryRollback(oldBestHash)
 }
 
@@ -62,6 +58,10 @@ func (c *Casper) authVerification(v *Verification, target *state.Checkpoint, val
 
 	checkpoints, err := c.addVerificationToCheckpoint(target, validators, v)
 	if err != nil {
+		return err
+	}
+
+	if err := c.events.Post(v); err != nil {
 		return err
 	}
 
