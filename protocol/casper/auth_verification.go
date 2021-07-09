@@ -5,6 +5,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/state"
 )
@@ -151,37 +152,38 @@ func (c *Casper) authVerificationLoop() {
 				continue
 			}
 
-			msg := data.(*ValidCasperSignMsg)
-			source, err := c.store.GetCheckpoint(&msg.SourceHash)
-			if err != nil {
-				log.WithFields(log.Fields{"err": err, "module": logModule}).Error("get source checkpoint")
-				c.verificationCache.Remove(key)
-				continue
+			if err := c.authCachedMsg(data.(*ValidCasperSignMsg), key); err != nil {
+				log.WithFields(log.Fields{"err": err, "module": logModule}).Error("auth cached message")
 			}
-
-			target, err := c.store.GetCheckpoint(&msg.TargetHash)
-			if err != nil {
-				log.WithFields(log.Fields{"err": err, "module": logModule}).Error("get target checkpoint")
-				c.verificationCache.Remove(key)
-				continue
-			}
-
-			v, err := convertVerification(source, target, msg)
-			if err != nil {
-				log.WithFields(log.Fields{"err": err, "module": logModule}).Error("authVerificationLoop fail on newVerification")
-				c.verificationCache.Remove(key)
-				continue
-			}
-
-			c.mu.Lock()
-			if err := c.authVerification(v, target); err != nil {
-				log.WithFields(log.Fields{"err": err, "module": logModule}).Error("auth verification in cache")
-			}
-			c.mu.Unlock()
-
-			c.verificationCache.Remove(key)
 		}
 	}
+}
+
+func (c *Casper) authCachedMsg(msg *ValidCasperSignMsg, msgKey string) error {
+	defer c.verificationCache.Remove(msgKey)
+
+	source, err := c.store.GetCheckpoint(&msg.SourceHash)
+	if err != nil {
+		return errors.Wrap(err, "get source checkpoint")
+	}
+
+	target, err := c.store.GetCheckpoint(&msg.TargetHash)
+	if err != nil {
+		return errors.Wrap(err, "get target checkpoint")
+	}
+
+	v, err := convertVerification(source, target, msg)
+	if err != nil {
+		return errors.Wrap(err, "authVerificationLoop fail on newVerification")
+	}
+
+	c.mu.Lock()
+	if err := c.authVerification(v, target); err != nil {
+		return errors.Wrap(err, "auth verification in cache")
+	}
+	c.mu.Unlock()
+
+	return nil
 }
 
 func (c *Casper) verifyNested(v *verification) error {
