@@ -90,7 +90,7 @@ func (c *Casper) applySupLinks(target *state.Checkpoint, supLinks []*types.SupLi
 	for _, supLink := range supLinks {
 		var validVerifications []*verification
 		for _, v := range supLinkToVerifications(supLink, validators, target.Hash, target.Height) {
-			if v.verifySignature() == nil && c.verifyNested(v, validators[v.PubKey].Order) == nil {
+			if v.valid() == nil && c.verifyNested(v) == nil {
 				validVerifications = append(validVerifications, v)
 			}
 		}
@@ -119,7 +119,7 @@ func (c *Casper) applyMyVerification(target *state.Checkpoint, block *types.Bloc
 		return err
 	}
 
-	block.SupLinks.AddSupLink(v.SourceHeight, v.SourceHash, v.Signature, validators[v.PubKey].Order)
+	block.SupLinks.AddSupLink(v.SourceHeight, v.SourceHash, v.Signature, v.order)
 	return c.store.SaveBlockHeader(&block.BlockHeader)
 }
 
@@ -139,7 +139,7 @@ func (c *Casper) myVerification(target *state.Checkpoint, validators map[string]
 	}
 
 	if source := lastJustifiedCheckpoint(target); source != nil {
-		v, err := newVerification(source, target, &ValidCasperSignMsg{PubKey: pubKey})
+		v, err := convertVerification(source, target, &ValidCasperSignMsg{PubKey: pubKey})
 		if err != nil {
 			return nil, err
 		}
@@ -149,7 +149,7 @@ func (c *Casper) myVerification(target *state.Checkpoint, validators map[string]
 			return nil, err
 		}
 
-		if err := c.verifyNested(v, validatorOrder); err != nil {
+		if err := c.verifyNested(v); err != nil {
 			return nil, nil
 		}
 

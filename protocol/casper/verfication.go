@@ -7,6 +7,7 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
+	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/state"
@@ -31,15 +32,13 @@ type verification struct {
 	TargetHeight uint64
 	Signature    []byte
 	PubKey       string
+	order        int
 }
 
-func newVerification(source, targe *state.Checkpoint, msg *ValidCasperSignMsg) (*verification, error) {
-	if source.Status == state.Growing || targe.Status == state.Growing {
-		return nil, errVoteToGrowingCheckpoint
-	}
-
-	if source.Height >= targe.Height {
-		return nil, errVoteToSameCheckpoint
+func convertVerification(source, targe *state.Checkpoint, msg *ValidCasperSignMsg) (*verification, error) {
+	validators := targe.Parent.EffectiveValidators()
+	if _, ok := validators[msg.PubKey]; !ok {
+		return nil, errPubKeyIsNotValidator
 	}
 
 	return &verification{
@@ -49,6 +48,7 @@ func newVerification(source, targe *state.Checkpoint, msg *ValidCasperSignMsg) (
 		TargetHeight: targe.Height,
 		Signature:    msg.Signature,
 		PubKey:       msg.PubKey,
+		order:        validators[msg.PubKey].Order,
 	}, nil
 }
 
@@ -70,6 +70,19 @@ func (v *verification) toValidCasperSignMsg() ValidCasperSignMsg {
 		Signature:  v.Signature,
 		PubKey:     v.PubKey,
 	}
+}
+
+func (v *verification) valid() error {
+	blocksOfEpoch := consensus.ActiveNetParams.BlocksOfEpoch
+	if v.SourceHeight%blocksOfEpoch != 0 || v.TargetHeight%blocksOfEpoch != 0 {
+		return errVoteToGrowingCheckpoint
+	}
+
+	if v.SourceHeight >= v.TargetHeight {
+		return errVoteToSameCheckpoint
+	}
+
+	return v.verifySignature()
 }
 
 // verifySignature verify the signature of encode message of verification

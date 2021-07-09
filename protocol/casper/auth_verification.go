@@ -22,12 +22,12 @@ func (c *Casper) AuthVerification(msg *ValidCasperSignMsg) error {
 		return nil
 	}
 
-	sourceNode := c.tree.nodeByHash(msg.SourceHash)
-	if targetNode == nil {
-		return nil
+	source, err := c.store.GetCheckpoint(&msg.SourceHash)
+	if err != nil {
+		return err
 	}
 
-	v, err := newVerification(sourceNode.Checkpoint, targetNode.Checkpoint, msg)
+	v, err := convertVerification(source, targetNode.Checkpoint, msg)
 	if err != nil {
 		return err
 	}
@@ -50,12 +50,11 @@ func (c *Casper) AuthVerification(msg *ValidCasperSignMsg) error {
 }
 
 func (c *Casper) authVerification(v *verification, target *state.Checkpoint, validators map[string]*state.Validator) error {
-	if err := v.verifySignature(); err != nil {
+	if err := v.valid(); err != nil {
 		return err
 	}
 
-	validator := validators[v.PubKey]
-	if err := c.verifyNested(v, validator.Order); err != nil {
+	if err := c.verifyNested(v); err != nil {
 		return err
 	}
 
@@ -72,7 +71,7 @@ func (c *Casper) authVerification(v *verification, target *state.Checkpoint, val
 		return err
 	}
 
-	return c.saveVerificationToHeader(v, validator.Order)
+	return c.saveVerificationToHeader(v)
 }
 
 func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, validators map[string]*state.Validator, verifications ...*verification) ([]*state.Checkpoint, error) {
@@ -83,7 +82,7 @@ func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, validator
 			return nil, err
 		}
 
-		supLink := target.AddVerification(v.SourceHash, v.SourceHeight, validators[v.PubKey].Order, v.Signature)
+		supLink := target.AddVerification(v.SourceHash, v.SourceHeight, v.order, v.Signature)
 		if target.Status != state.Unjustified || !supLink.IsMajority(len(validators)) || source.Status == state.Finalized {
 			continue
 		}
@@ -94,13 +93,13 @@ func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, validator
 	return affectedCheckpoints, nil
 }
 
-func (c *Casper) saveVerificationToHeader(v *verification, validatorOrder int) error {
+func (c *Casper) saveVerificationToHeader(v *verification) error {
 	blockHeader, err := c.store.GetBlockHeader(&v.TargetHash)
 	if err != nil {
 		return err
 	}
 
-	blockHeader.SupLinks.AddSupLink(v.SourceHeight, v.SourceHash, v.Signature, validatorOrder)
+	blockHeader.SupLinks.AddSupLink(v.SourceHeight, v.SourceHash, v.Signature, v.order)
 	return c.store.SaveBlockHeader(blockHeader)
 }
 
@@ -165,7 +164,7 @@ func (c *Casper) authVerificationLoop() {
 				continue
 			}
 
-			v, err := newVerification(source, target, msg)
+			v, err := convertVerification(source, target, msg)
 			if err != nil {
 				log.WithFields(log.Fields{"err": err, "module": logModule}).Error("authVerificationLoop fail on newVerification")
 				c.verificationCache.Remove(key)
@@ -183,16 +182,16 @@ func (c *Casper) authVerificationLoop() {
 	}
 }
 
-func (c *Casper) verifyNested(v *verification, validatorOrder int) error {
-	if err := c.verifySameHeight(v, validatorOrder); err != nil {
+func (c *Casper) verifyNested(v *verification) error {
+	if err := c.verifySameHeight(v); err != nil {
 		return err
 	}
 
-	return c.verifySpanHeight(v, validatorOrder)
+	return c.verifySpanHeight(v)
 }
 
 // a validator must not publish two distinct votes for the same target height
-func (c *Casper) verifySameHeight(v *verification, validatorOrder int) error {
+func (c *Casper) verifySameHeight(v *verification) error {
 	checkpoints, err := c.store.GetCheckpointsByHeight(v.TargetHeight)
 	if err != nil {
 		return err
@@ -200,7 +199,7 @@ func (c *Casper) verifySameHeight(v *verification, validatorOrder int) error {
 
 	for _, checkpoint := range checkpoints {
 		for _, supLink := range checkpoint.SupLinks {
-			if len(supLink.Signatures[validatorOrder]) != 0 && checkpoint.Hash != v.TargetHash {
+			if len(supLink.Signatures[v.order]) != 0 && checkpoint.Hash != v.TargetHash {
 				return errSameHeightInVerification
 			}
 		}
@@ -209,14 +208,14 @@ func (c *Casper) verifySameHeight(v *verification, validatorOrder int) error {
 }
 
 // a validator must not vote within the span of its other votes.
-func (c *Casper) verifySpanHeight(v *verification, validatorOrder int) error {
+func (c *Casper) verifySpanHeight(v *verification) error {
 	if c.tree.findOnlyOne(func(checkpoint *state.Checkpoint) bool {
 		if checkpoint.Height == v.TargetHeight {
 			return false
 		}
 
 		for _, supLink := range checkpoint.SupLinks {
-			if len(supLink.Signatures[validatorOrder]) != 0 {
+			if len(supLink.Signatures[v.order]) != 0 {
 				if (checkpoint.Height < v.TargetHeight && supLink.SourceHeight > v.SourceHeight) ||
 					(checkpoint.Height > v.TargetHeight && supLink.SourceHeight < v.SourceHeight) {
 					return true
