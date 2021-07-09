@@ -1,6 +1,8 @@
 package casper
 
 import (
+	log "github.com/sirupsen/logrus"
+
 	"github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/errors"
@@ -30,12 +32,11 @@ func (c *Casper) ApplyBlock(block *types.Block) (bc.Hash, error) {
 		return bc.Hash{}, errors.Wrap(err, "apply block to checkpoint")
 	}
 
-	validators := target.Parent.EffectiveValidators()
-	if err := c.applyMyVerification(target, block, validators); err != nil {
+	if err := c.applyMyVerification(target, block); err != nil {
 		return bc.Hash{}, err
 	}
 
-	affectedCheckpoints, err := c.applySupLinks(target, block.SupLinks, validators)
+	affectedCheckpoints, err := c.applySupLinks(target, block.SupLinks)
 	if err != nil {
 		return bc.Hash{}, err
 	}
@@ -81,7 +82,8 @@ func (c *Casper) checkpointNodeByHash(hash bc.Hash) (*treeNode, error) {
 }
 
 // applySupLinks copy the block's supLink to the checkpoint
-func (c *Casper) applySupLinks(target *state.Checkpoint, supLinks []*types.SupLink, validators map[string]*state.Validator) ([]*state.Checkpoint, error) {
+func (c *Casper) applySupLinks(target *state.Checkpoint, supLinks []*types.SupLink) ([]*state.Checkpoint, error) {
+	validators := target.Parent.EffectiveValidators()
 	affectedCheckpoints := []*state.Checkpoint{target}
 	if target.Height%consensus.ActiveNetParams.BlocksOfEpoch != 0 {
 		return affectedCheckpoints, nil
@@ -95,7 +97,7 @@ func (c *Casper) applySupLinks(target *state.Checkpoint, supLinks []*types.SupLi
 			}
 		}
 
-		checkpoints, err := c.addVerificationToCheckpoint(target, validators, validVerifications...)
+		checkpoints, err := c.addVerificationToCheckpoint(target, validVerifications...)
 		if err != nil {
 			return nil, err
 		}
@@ -105,12 +107,8 @@ func (c *Casper) applySupLinks(target *state.Checkpoint, supLinks []*types.SupLi
 	return affectedCheckpoints, nil
 }
 
-func (c *Casper) applyMyVerification(target *state.Checkpoint, block *types.Block, validators map[string]*state.Validator) error {
-	v, err := c.myVerification(target, validators)
-	if err != nil {
-		return err
-	}
-
+func (c *Casper) applyMyVerification(target *state.Checkpoint, block *types.Block) error {
+	v := c.myVerification(target)
 	if v == nil {
 		return nil
 	}
@@ -123,39 +121,39 @@ func (c *Casper) applyMyVerification(target *state.Checkpoint, block *types.Bloc
 	return c.store.SaveBlockHeader(&block.BlockHeader)
 }
 
-func (c *Casper) myVerification(target *state.Checkpoint, validators map[string]*state.Validator) (*verification, error) {
-	if target.Height%consensus.ActiveNetParams.BlocksOfEpoch != 0 {
-		return nil, nil
+func (c *Casper) myVerification(target *state.Checkpoint) *verification {
+	if target.Status == state.Growing {
+		return nil
 	}
 
-	pubKey := config.CommonConfig.PrivateKey().XPub().String()
-	if _, ok := validators[pubKey]; !ok {
-		return nil, nil
+	source := lastJustifiedCheckpoint(target)
+	if source == nil {
+		log.WithField("module", logModule).Warn("myVerification fail on find last justified")
+		return nil
 	}
 
-	validatorOrder := validators[pubKey].Order
-	if target.ContainsVerification(validatorOrder, nil) {
-		return nil, nil
+	prvKey := config.CommonConfig.PrivateKey()
+	v, err := convertVerification(source, target, &ValidCasperSignMsg{PubKey: prvKey.XPub().String()})
+	if err != nil {
+		return nil
 	}
 
-	if source := lastJustifiedCheckpoint(target); source != nil {
-		v, err := convertVerification(source, target, &ValidCasperSignMsg{PubKey: pubKey})
-		if err != nil {
-			return nil, err
-		}
-
-		prvKey := config.CommonConfig.PrivateKey()
-		if err := v.Sign(*prvKey); err != nil {
-			return nil, err
-		}
-
-		if err := c.verifyNested(v); err != nil {
-			return nil, nil
-		}
-
-		return v, nil
+	if target.ContainsVerification(v.order, nil) {
+		log.WithField("module", logModule).Warn("myVerification fail on find same height sign")
+		return nil
 	}
-	return nil, nil
+
+	if err := c.verifyNested(v); err != nil {
+		log.WithField("module", logModule).Warn("myVerification fail on find nest sign")
+		return nil
+	}
+
+	if err := v.Sign(*prvKey); err != nil {
+		log.WithField("module", logModule).Error("myVerification fail on sign msg")
+		return nil
+	}
+
+	return v
 }
 
 func (c *Casper) saveCheckpoints(checkpoints []*state.Checkpoint) error {
