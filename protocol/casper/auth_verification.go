@@ -153,7 +153,7 @@ func (c *Casper) authVerificationLoop() {
 			}
 
 			if err := c.authCachedMsg(data.(*ValidCasperSignMsg), key); err != nil {
-				log.WithFields(log.Fields{"err": err, "module": logModule})
+				log.WithFields(log.Fields{"err": err, "module": logModule}).Error("auth cached message")
 			}
 		}
 	}
