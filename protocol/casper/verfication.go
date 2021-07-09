@@ -64,6 +64,7 @@ func supLinkToVerifications(source, target *state.Checkpoint, supLink *types.Sup
 				TargetHeight: target.Height,
 				Signature:    signature,
 				PubKey:       validator.PubKey,
+				order:        validator.Order,
 			})
 		}
 	}

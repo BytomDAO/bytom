@@ -83,13 +83,13 @@ func (c *Casper) checkpointNodeByHash(hash bc.Hash) (*treeNode, error) {
 
 // applySupLinks copy the block's supLink to the checkpoint
 func (c *Casper) applySupLinks(target *state.Checkpoint, supLinks []*types.SupLink) ([]*state.Checkpoint, error) {
+	affectedCheckpoints := []*state.Checkpoint{target}
 	if target.Status == state.Growing {
 		return nil, nil
 	}
 
-	affectedCheckpoints := []*state.Checkpoint{target}
 	for _, supLink := range supLinks {
-		validVerifications, err := c.newVerificationsFromSupLink(target, supLink)
+		validVerifications, err := c.validVerificationsFromSupLink(target, supLink)
 		if err != nil {
 			return nil, err
 		}
@@ -176,15 +176,15 @@ func lastJustifiedCheckpoint(branch *state.Checkpoint) *state.Checkpoint {
 	return nil
 }
 
-func (c *Casper) newVerificationsFromSupLink(target *state.Checkpoint, supLink *types.SupLink) ([]*verification, error) {
+func (c *Casper) validVerificationsFromSupLink(target *state.Checkpoint, supLink *types.SupLink) ([]*verification, error) {
 	source, err := c.store.GetCheckpoint(&supLink.SourceHash)
 	if err != nil {
 		return nil, err
 	}
 
 	var result []*verification
-	for i, v := range supLinkToVerifications(source, target, supLink) {
-		if !target.ContainsVerification(i, &source.Hash) && c.verifyVerification(v) == nil {
+	for _, v := range supLinkToVerifications(source, target, supLink) {
+		if c.verifyVerification(v) == nil {
 			result = append(result, v)
 		}
 	}
