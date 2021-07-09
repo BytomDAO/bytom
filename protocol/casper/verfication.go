@@ -2,7 +2,6 @@ package casper
 
 import (
 	"bytes"
-	"encoding/binary"
 	"encoding/hex"
 	"errors"
 
@@ -11,28 +10,50 @@ import (
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/state"
 )
 
 var errVerifySignature = errors.New("signature of verification message is invalid")
 
-type ValidCasperSignEvent struct {
-	*Verification
+type ValidCasperSignMsg struct {
+	SourceHash bc.Hash
+	TargetHash bc.Hash
+	Signature  []byte
+	PubKey     string
 }
 
-// Verification represent a verification message for the block
+// verification represent a verification message for the block
 // source hash and target hash point to the checkpoint, and the source checkpoint is the target checkpoint's parent(not be directly)
 // the vector <sourceHash, targetHash, sourceHeight, targetHeight, pubKey> as the message of signature
-type Verification struct {
+type verification struct {
 	SourceHash   bc.Hash
 	TargetHash   bc.Hash
 	SourceHeight uint64
 	TargetHeight uint64
 	Signature    []byte
 	PubKey       string
+	order        int
+}
+
+func convertVerification(source, targe *state.Checkpoint, msg *ValidCasperSignMsg) (*verification, error) {
+	validators := targe.Parent.EffectiveValidators()
+	if _, ok := validators[msg.PubKey]; !ok {
+		return nil, errPubKeyIsNotValidator
+	}
+
+	return &verification{
+		SourceHash:   source.Hash,
+		TargetHash:   targe.Hash,
+		SourceHeight: source.Height,
+		TargetHeight: targe.Height,
+		Signature:    msg.Signature,
+		PubKey:       msg.PubKey,
+		order:        validators[msg.PubKey].Order,
+	}, nil
 }
 
 // Sign used to sign the verification by specified xPrv
-func (v *Verification) Sign(xPrv chainkd.XPrv) error {
+func (v *verification) Sign(xPrv chainkd.XPrv) error {
 	message, err := v.encodeMessage()
 	if err != nil {
 		return err
@@ -42,7 +63,16 @@ func (v *Verification) Sign(xPrv chainkd.XPrv) error {
 	return nil
 }
 
-func (v *Verification) vaild() error {
+func (v *verification) toValidCasperSignMsg() ValidCasperSignMsg {
+	return ValidCasperSignMsg{
+		SourceHash: v.SourceHash,
+		TargetHash: v.TargetHash,
+		Signature:  v.Signature,
+		PubKey:     v.PubKey,
+	}
+}
+
+func (v *verification) valid() error {
 	blocksOfEpoch := consensus.ActiveNetParams.BlocksOfEpoch
 	if v.SourceHeight%blocksOfEpoch != 0 || v.TargetHeight%blocksOfEpoch != 0 {
 		return errVoteToGrowingCheckpoint
@@ -56,7 +86,7 @@ func (v *Verification) vaild() error {
 }
 
 // verifySignature verify the signature of encode message of verification
-func (v *Verification) verifySignature() error {
+func (v *verification) verifySignature() error {
 	message, err := v.encodeMessage()
 	if err != nil {
 		return err
@@ -77,24 +107,13 @@ func (v *Verification) verifySignature() error {
 }
 
 // encodeMessage encode the verification for the validators to sign or verify
-func (v *Verification) encodeMessage() ([]byte, error) {
+func (v *verification) encodeMessage() ([]byte, error) {
 	buff := new(bytes.Buffer)
 	if _, err := v.SourceHash.WriteTo(buff); err != nil {
 		return nil, err
 	}
 
 	if _, err := v.TargetHash.WriteTo(buff); err != nil {
-		return nil, err
-	}
-
-	uint64Buff := make([]byte, 8)
-	binary.LittleEndian.PutUint64(uint64Buff, v.SourceHeight)
-	if _, err := buff.Write(uint64Buff); err != nil {
-		return nil, err
-	}
-
-	binary.LittleEndian.PutUint64(uint64Buff, v.TargetHeight)
-	if _, err := buff.Write(uint64Buff); err != nil {
 		return nil, err
 	}
 

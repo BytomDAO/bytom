@@ -121,7 +121,7 @@ func (c *Chain) LastFinalizedHeader() (*types.BlockHeader, error) {
 }
 
 // ProcessBlockVerification process block verification
-func (c *Chain) ProcessBlockVerification(v *casper.Verification) error {
+func (c *Chain) ProcessBlockVerification(v *casper.ValidCasperSignMsg) error {
 	return c.casper.AuthVerification(v)
 }
 

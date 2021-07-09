@@ -73,7 +73,7 @@ func TestRollback(t *testing.T) {
 
 	xPrv := chainkd.XPrv{}
 	copy(xPrv[:], prvKey)
-	v := &Verification{
+	v := &verification{
 		SourceHash:   checkpoints[0].Hash,
 		TargetHash:   checkpoints[1].Hash,
 		SourceHeight: checkpoints[0].Height,
@@ -84,7 +84,12 @@ func TestRollback(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := casper.AuthVerification(v); err != nil {
+	if err := casper.AuthVerification(&ValidCasperSignMsg{
+		SourceHash: v.SourceHash,
+		TargetHash: v.TargetHash,
+		PubKey:     v.PubKey,
+		Signature:  v.Signature,
+	}); err != nil {
 		t.Fatal(err)
 	}
 

@@ -25,7 +25,7 @@ type Chain interface {
 	BestBlockHeight() uint64
 	GetHeaderByHash(*bc.Hash) (*types.BlockHeader, error)
 	ProcessBlock(*types.Block) (bool, error)
-	ProcessBlockVerification(*casper.Verification) error
+	ProcessBlockVerification(*casper.ValidCasperSignMsg) error
 }
 
 type Peers interface {
@@ -109,13 +109,11 @@ func (m *Manager) handleBlockProposeMsg(peerID string, msg *BlockProposeMsg) {
 
 func (m *Manager) handleBlockVerificationMsg(peerID string, msg *BlockVerificationMsg) {
 	m.peers.MarkBlockVerification(peerID, msg.Signature)
-	if err := m.chain.ProcessBlockVerification(&casper.Verification{
-		SourceHash:   msg.SourceHash,
-		TargetHash:   msg.TargetHash,
-		SourceHeight: msg.SourceHeight,
-		TargetHeight: msg.TargetHeight,
-		Signature:    msg.Signature,
-		PubKey:       hex.EncodeToString(msg.PubKey),
+	if err := m.chain.ProcessBlockVerification(&casper.ValidCasperSignMsg{
+		SourceHash: msg.SourceHash,
+		TargetHash: msg.TargetHash,
+		Signature:  msg.Signature,
+		PubKey:     hex.EncodeToString(msg.PubKey),
 	}); err != nil {
 		m.peers.ProcessIllegal(peerID, security.LevelMsgIllegal, err.Error())
 	}
@@ -129,14 +127,14 @@ func (m *Manager) blockProposeMsgBroadcastLoop() {
 }
 
 func (m *Manager) blockVerificationMsgBroadcastLoop() {
-	m.msgBroadcastLoop(casper.ValidCasperSignEvent{}, func(data interface{}) (ConsensusMessage, error) {
-		v := data.(casper.ValidCasperSignEvent)
-		pubkey, err := hex.DecodeString(v.PubKey)
+	m.msgBroadcastLoop(casper.ValidCasperSignMsg{}, func(data interface{}) (ConsensusMessage, error) {
+		v := data.(casper.ValidCasperSignMsg)
+		pubKey, err := hex.DecodeString(v.PubKey)
 		if err != nil {
 			return nil, err
 		}
 
-		return NewBlockVerificationMsg(v.SourceHeight, v.TargetHeight, v.SourceHash, v.TargetHash, pubkey, v.Signature), nil
+		return NewBlockVerificationMsg(v.SourceHash, v.TargetHash, pubKey, v.Signature), nil
 	})
 }
 

@@ -21,7 +21,7 @@ func (c *Casper) ApplyBlock(block *types.Block) (bc.Hash, error) {
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if _, err := c.tree.nodeByHash(block.Hash()); err == nil {
+	if node := c.tree.nodeByHash(block.Hash()); node != nil {
 		return c.bestChain(), nil
 	}
 
@@ -56,7 +56,7 @@ func (c *Casper) applyBlockToCheckpoint(block *types.Block) (*state.Checkpoint, 
 }
 
 func (c *Casper) checkpointNodeByHash(hash bc.Hash) (*treeNode, error) {
-	if node, err := c.tree.nodeByHash(hash); err == nil {
+	if node := c.tree.nodeByHash(hash); node != nil {
 		return node, nil
 	}
 
@@ -88,9 +88,9 @@ func (c *Casper) applySupLinks(target *state.Checkpoint, supLinks []*types.SupLi
 	}
 
 	for _, supLink := range supLinks {
-		var validVerifications []*Verification
+		var validVerifications []*verification
 		for _, v := range supLinkToVerifications(supLink, validators, target.Hash, target.Height) {
-			if v.vaild() == nil && c.verifyNested(v, validators[v.PubKey].Order) == nil {
+			if v.valid() == nil && c.verifyNested(v) == nil {
 				validVerifications = append(validVerifications, v)
 			}
 		}
@@ -115,15 +115,15 @@ func (c *Casper) applyMyVerification(target *state.Checkpoint, block *types.Bloc
 		return nil
 	}
 
-	if err := c.msgQueue.Post(ValidCasperSignEvent{v}); err != nil {
+	if err := c.msgQueue.Post(v.toValidCasperSignMsg()); err != nil {
 		return err
 	}
 
-	block.SupLinks.AddSupLink(v.SourceHeight, v.SourceHash, v.Signature, validators[v.PubKey].Order)
+	block.SupLinks.AddSupLink(v.SourceHeight, v.SourceHash, v.Signature, v.order)
 	return c.store.SaveBlockHeader(&block.BlockHeader)
 }
 
-func (c *Casper) myVerification(target *state.Checkpoint, validators map[string]*state.Validator) (*Verification, error) {
+func (c *Casper) myVerification(target *state.Checkpoint, validators map[string]*state.Validator) (*verification, error) {
 	if target.Height%consensus.ActiveNetParams.BlocksOfEpoch != 0 {
 		return nil, nil
 	}
@@ -138,13 +138,10 @@ func (c *Casper) myVerification(target *state.Checkpoint, validators map[string]
 		return nil, nil
 	}
 
-	if source := c.lastJustifiedCheckpoint(target); source != nil {
-		v := &Verification{
-			SourceHash:   source.Hash,
-			TargetHash:   target.Hash,
-			SourceHeight: source.Height,
-			TargetHeight: target.Height,
-			PubKey:       pubKey,
+	if source := lastJustifiedCheckpoint(target); source != nil {
+		v, err := convertVerification(source, target, &ValidCasperSignMsg{PubKey: pubKey})
+		if err != nil {
+			return nil, err
 		}
 
 		prvKey := config.CommonConfig.PrivateKey()
@@ -152,27 +149,13 @@ func (c *Casper) myVerification(target *state.Checkpoint, validators map[string]
 			return nil, err
 		}
 
-		if err := c.verifyNested(v, validatorOrder); err != nil {
+		if err := c.verifyNested(v); err != nil {
 			return nil, nil
 		}
 
 		return v, nil
 	}
 	return nil, nil
-}
-
-func (c *Casper) lastJustifiedCheckpoint(branch *state.Checkpoint) *state.Checkpoint {
-	parent := branch.Parent
-	for parent != nil {
-		switch parent.Status {
-		case state.Finalized:
-			return nil
-		case state.Justified:
-			return parent
-		}
-		parent = parent.Parent
-	}
-	return nil
 }
 
 func (c *Casper) saveCheckpoints(checkpoints []*state.Checkpoint) error {
@@ -189,20 +172,29 @@ func (c *Casper) saveCheckpoints(checkpoints []*state.Checkpoint) error {
 	return c.store.SaveCheckpoints(result)
 }
 
-func supLinkToVerifications(supLink *types.SupLink, validators map[string]*state.Validator, targetHash bc.Hash, targetHeight uint64) []*Verification {
+func lastJustifiedCheckpoint(branch *state.Checkpoint) *state.Checkpoint {
+	for parent := branch.Parent; parent != nil; parent = parent.Parent {
+		if parent.Status == state.Justified {
+			return parent
+		}
+	}
+	return nil
+}
+
+func supLinkToVerifications(supLink *types.SupLink, validators map[string]*state.Validator, targetHash bc.Hash, targetHeight uint64) []*verification {
 	validatorList := make([]*state.Validator, len(validators))
 	for _, validator := range validators {
 		validatorList[validator.Order] = validator
 	}
 
-	var result []*Verification
+	var result []*verification
 	for i := 0; i < len(validators); i++ {
 		signature := supLink.Signatures[i]
 		if len(signature) == 0 {
 			continue
 		}
 
-		result = append(result, &Verification{
+		result = append(result, &verification{
 			SourceHash:   supLink.SourceHash,
 			TargetHash:   targetHash,
 			SourceHeight: supLink.SourceHeight,

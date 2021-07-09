@@ -45,29 +45,25 @@ func decodeMessage(bz []byte) (msgType byte, msg ConsensusMessage, err error) {
 
 // BlockVerificationMsg block verification message transferred between nodes.
 type BlockVerificationMsg struct {
-	SourceHeight uint64
-	SourceHash   bc.Hash
-	TargetHeight uint64
-	TargetHash   bc.Hash
-	PubKey       []byte
-	Signature    []byte
+	SourceHash bc.Hash
+	TargetHash bc.Hash
+	PubKey     []byte
+	Signature  []byte
 }
 
 // NewBlockVerificationMsg create new block verification msg.
-func NewBlockVerificationMsg(sourceHeight, targetHeight uint64, sourceHash, targetHash bc.Hash, pubKey, signature []byte) ConsensusMessage {
+func NewBlockVerificationMsg(sourceHash, targetHash bc.Hash, pubKey, signature []byte) ConsensusMessage {
 	return &BlockVerificationMsg{
-		SourceHeight: sourceHeight,
-		SourceHash:   sourceHash,
-		TargetHeight: targetHeight,
-		TargetHash:   targetHash,
-		PubKey:       pubKey,
-		Signature:    signature,
+		SourceHash: sourceHash,
+		TargetHash: targetHash,
+		PubKey:     pubKey,
+		Signature:  signature,
 	}
 }
 
 func (b *BlockVerificationMsg) String() string {
-	return fmt.Sprintf("{sourceHeight:%d,targetHeight:%d,sourceHash:%s,targetHash:%s,signature:%s,pubkey:%s}",
-		b.SourceHeight, b.TargetHeight, b.SourceHash.String(), b.TargetHash.String(), hex.EncodeToString(b.Signature), hex.EncodeToString(b.PubKey[:]))
+	return fmt.Sprintf("{sourceHash:%s,targetHash:%s,signature:%s,pubkey:%s}",
+		b.SourceHash.String(), b.TargetHash.String(), hex.EncodeToString(b.Signature), hex.EncodeToString(b.PubKey[:]))
 }
 
 // BroadcastMarkSendRecord mark send message record to prevent messages from being sent repeatedly.

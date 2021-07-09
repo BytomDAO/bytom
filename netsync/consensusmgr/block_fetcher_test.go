@@ -46,7 +46,7 @@ func (c *chain) ProcessBlock(block *types.Block) (bool, error) {
 	return false, nil
 }
 
-func (c *chain) ProcessBlockVerification(*casper.Verification) error {
+func (c *chain) ProcessBlockVerification(*casper.ValidCasperSignMsg) error {
 	return nil
 }
 
