@@ -155,6 +155,7 @@ func (c *Casper) authVerificationLoop() {
 			if err != nil {
 				log.WithFields(log.Fields{"err": err, "module": logModule}).Error("get source checkpoint")
 				c.verificationCache.Remove(key)
+				continue
 			}
 
 			target, err := c.store.GetCheckpoint(&msg.TargetHash)
