@@ -116,7 +116,7 @@ func (c *Casper) setFinalized(checkpoint *state.Checkpoint) {
 	checkpoint.Status = state.Finalized
 	newRoot := c.tree.nodeByHash(checkpoint.Hash)
 	if newRoot == nil {
-		log.WithField("module", logModule).Warn("source checkpoint before the last finalized checkpoint")
+		log.WithFields(log.Fields{"module": logModule, "hash": checkpoint.Hash}).Warn("source checkpoint before the last finalized checkpoint")
 		return
 	}
 
