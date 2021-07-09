@@ -32,12 +32,7 @@ func (c *Casper) AuthVerification(msg *ValidCasperSignMsg) error {
 		return err
 	}
 
-	validators := targetNode.Parent.EffectiveValidators()
-	if _, ok := validators[v.PubKey]; !ok {
-		return errPubKeyIsNotValidator
-	}
-
-	if targetNode.ContainsVerification(validators[v.PubKey].Order, &v.SourceHash) {
+	if targetNode.ContainsVerification(v.order, &v.SourceHash) {
 		return nil
 	}
 
@@ -50,11 +45,7 @@ func (c *Casper) AuthVerification(msg *ValidCasperSignMsg) error {
 }
 
 func (c *Casper) authVerification(v *verification, target *state.Checkpoint) error {
-	if err := v.valid(); err != nil {
-		return err
-	}
-
-	if err := c.verifyNested(v); err != nil {
+	if err := c.verifyVerification(v); err != nil {
 		return err
 	}
 
@@ -184,7 +175,11 @@ func (c *Casper) authVerificationLoop() {
 	}
 }
 
-func (c *Casper) verifyNested(v *verification) error {
+func (c *Casper) verifyVerification(v *verification) error {
+	if err := v.valid(); err != nil {
+		return err
+	}
+
 	if err := c.verifySameHeight(v); err != nil {
 		return err
 	}
