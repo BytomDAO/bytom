@@ -42,14 +42,14 @@ func (c *Casper) AuthVerification(msg *ValidCasperSignMsg) error {
 	}
 
 	oldBestHash := c.bestChain()
-	if err := c.authVerification(v, targetNode.Checkpoint, validators); err != nil {
+	if err := c.authVerification(v, targetNode.Checkpoint); err != nil {
 		return err
 	}
 
 	return c.tryRollback(oldBestHash)
 }
 
-func (c *Casper) authVerification(v *verification, target *state.Checkpoint, validators map[string]*state.Validator) error {
+func (c *Casper) authVerification(v *verification, target *state.Checkpoint) error {
 	if err := v.valid(); err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func (c *Casper) authVerification(v *verification, target *state.Checkpoint, val
 		return err
 	}
 
-	checkpoints, err := c.addVerificationToCheckpoint(target, validators, v)
+	checkpoints, err := c.addVerificationToCheckpoint(target, v)
 	if err != nil {
 		return err
 	}
@@ -74,7 +74,8 @@ func (c *Casper) authVerification(v *verification, target *state.Checkpoint, val
 	return c.saveVerificationToHeader(v)
 }
 
-func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, validators map[string]*state.Validator, verifications ...*verification) ([]*state.Checkpoint, error) {
+func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, verifications ...*verification) ([]*state.Checkpoint, error) {
+	validatorSize := len(target.Parent.EffectiveValidators())
 	affectedCheckpoints := []*state.Checkpoint{target}
 	for _, v := range verifications {
 		source, err := c.store.GetCheckpoint(&v.SourceHash)
@@ -83,7 +84,7 @@ func (c *Casper) addVerificationToCheckpoint(target *state.Checkpoint, validator
 		}
 
 		supLink := target.AddVerification(v.SourceHash, v.SourceHeight, v.order, v.Signature)
-		if target.Status != state.Unjustified || !supLink.IsMajority(len(validators)) || source.Status == state.Finalized {
+		if target.Status != state.Unjustified || !supLink.IsMajority(validatorSize) || source.Status == state.Finalized {
 			continue
 		}
 
@@ -173,7 +174,7 @@ func (c *Casper) authVerificationLoop() {
 			}
 
 			c.mu.Lock()
-			if err := c.authVerification(v, target, validators); err != nil {
+			if err := c.authVerification(v, target); err != nil {
 				log.WithFields(log.Fields{"err": err, "module": logModule}).Error("auth verification in cache")
 			}
 			c.mu.Unlock()
