@@ -10,6 +10,7 @@ import (
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
 )
 
@@ -35,21 +36,39 @@ type verification struct {
 	order        int
 }
 
-func convertVerification(source, targe *state.Checkpoint, msg *ValidCasperSignMsg) (*verification, error) {
-	validators := targe.Parent.EffectiveValidators()
+func convertVerification(source, target *state.Checkpoint, msg *ValidCasperSignMsg) (*verification, error) {
+	validators := target.Parent.EffectiveValidators()
 	if _, ok := validators[msg.PubKey]; !ok {
 		return nil, errPubKeyIsNotValidator
 	}
 
 	return &verification{
 		SourceHash:   source.Hash,
-		TargetHash:   targe.Hash,
+		TargetHash:   target.Hash,
 		SourceHeight: source.Height,
-		TargetHeight: targe.Height,
+		TargetHeight: target.Height,
 		Signature:    msg.Signature,
 		PubKey:       msg.PubKey,
 		order:        validators[msg.PubKey].Order,
 	}, nil
+}
+
+func supLinkToVerifications(source, target *state.Checkpoint, supLink *types.SupLink) []*verification {
+	var result []*verification
+	for _, validator := range target.Parent.EffectiveValidators() {
+		if signature := supLink.Signatures[validator.Order]; len(signature) != 0 {
+			result = append(result, &verification{
+				SourceHash:   source.Hash,
+				TargetHash:   target.Hash,
+				SourceHeight: source.Height,
+				TargetHeight: target.Height,
+				Signature:    signature,
+				PubKey:       validator.PubKey,
+				order:        validator.Order,
+			})
+		}
+	}
+	return result
 }
 
 // Sign used to sign the verification by specified xPrv
