@@ -169,12 +169,8 @@ func (c *Casper) authCachedMsg(msg *ValidCasperSignMsg, msgKey string) error {
 	}
 
 	c.mu.Lock()
-	if err := c.authVerification(v, target); err != nil {
-		return errors.Wrap(err, "auth verification in cache")
-	}
-	c.mu.Unlock()
-
-	return nil
+	defer c.mu.Unlock()
+	return c.authVerification(v, target)
 }
 
 func (c *Casper) verifyVerification(v *verification) error {

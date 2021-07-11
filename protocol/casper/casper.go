@@ -147,23 +147,23 @@ func (c *Casper) parentCheckpointHash(blockHash *bc.Hash) (*bc.Hash, error) {
 }
 
 func (c *Casper) parentCheckpointHashByPrevHash(prevBlockHash *bc.Hash) (*bc.Hash, error) {
-	prevHash := prevBlockHash
-	for {
-		prevBlock, err := c.store.GetBlockHeader(prevHash)
+	for iterHash := prevBlockHash; ; {
+		block, err := c.store.GetBlockHeader(iterHash)
 		if err != nil {
 			return nil, err
 		}
 
-		if prevBlock.Height%consensus.ActiveNetParams.BlocksOfEpoch == 0 {
-			c.prevCheckpointCache.Add(*prevBlockHash, prevHash)
-			return prevHash, nil
+		if mod := block.Height % consensus.ActiveNetParams.BlocksOfEpoch; mod == 0 {
+			return iterHash, nil
+		} else if mod == 1 {
+			return &block.PreviousBlockHash, nil
 		}
 
-		if data, ok := c.prevCheckpointCache.Get(*prevHash); ok {
+		if data, ok := c.prevCheckpointCache.Get(*iterHash); ok {
 			c.prevCheckpointCache.Add(*prevBlockHash, data)
 			return data.(*bc.Hash), nil
 		}
 
-		prevHash = &prevBlock.PreviousBlockHash
+		iterHash = &block.PreviousBlockHash
 	}
 }
