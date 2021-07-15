@@ -314,7 +314,7 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 		return true, nil
 	}
 
-	if c.BlockExist(&blockHash) {
+	if c.BlockExist(&blockHash) && c.bestBlockHeader.Height >= block.Height {
 		log.WithFields(log.Fields{"module": logModule, "hash": blockHash.String(), "height": block.Height}).Info("block has been processed")
 		return c.orphanManage.BlockExist(&blockHash), nil
 	}
