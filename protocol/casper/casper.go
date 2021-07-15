@@ -121,6 +121,12 @@ func (c *Casper) ParentCheckpointByPrevHash(prevBlockHash *bc.Hash) (*state.Chec
 	return c.store.GetCheckpoint(hash)
 }
 
+func (c *Casper) BestChain() bc.Hash {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.bestChain()
+}
+
 func (c *Casper) bestChain() bc.Hash {
 	// root is init justified
 	bestNode, _ := c.tree.bestNode(c.tree.Height)
