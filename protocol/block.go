@@ -309,7 +309,12 @@ func (c *Chain) blockProcessor() {
 // ProcessBlock is the entry for handle block insert
 func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	blockHash := block.Hash()
-	if c.BlockExist(&blockHash) && c.bestBlockHeader.Height >= block.Height {
+	if finalizedHeight, _ := c.casper.LastFinalized(); finalizedHeight >= block.Height {
+		log.WithFields(log.Fields{"module": logModule, "hash": blockHash.String(), "height": block.Height}).Info("block is lower than finalized")
+		return true, nil
+	}
+
+	if c.BlockExist(&blockHash) {
 		log.WithFields(log.Fields{"module": logModule, "hash": blockHash.String(), "height": block.Height}).Info("block has been processed")
 		return c.orphanManage.BlockExist(&blockHash), nil
 	}
@@ -356,11 +361,7 @@ func (c *Chain) applyForkChainToCasper(beginAttach *types.BlockHeader) error {
 		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": hash.String()}).Info("apply fork node")
 	}
 
-	if bestHash != c.bestBlockHeader.Hash() {
-		return c.rollback(bestHash)
-	}
-
-	return nil
+	return c.rollback(bestHash)
 }
 
 func (c *Chain) rollback(bestHash bc.Hash) error {
