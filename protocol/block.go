@@ -250,7 +250,7 @@ func (c *Chain) blockProcessor() {
 			isOrphan, err := c.processBlock(msg.block)
 			msg.reply <- processBlockResponse{isOrphan: isOrphan, err: err}
 		case msg := <-c.casper.RollbackCh():
-			msg.Reply <- c.rollback(msg.BestHash)
+			msg.Reply <- c.tryReorganize(msg.BestHash)
 		}
 	}
 }
@@ -274,10 +274,10 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 
 	c.saveSubBlock(block)
 	bestHash := c.casper.BestChain()
-	return false, c.rollback(bestHash)
+	return false, c.tryReorganize(bestHash)
 }
 
-func (c *Chain) rollback(bestHash bc.Hash) error {
+func (c *Chain) tryReorganize(bestHash bc.Hash) error {
 	if c.bestBlockHeader.Hash() == bestHash {
 		return nil
 	}
