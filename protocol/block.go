@@ -98,6 +98,7 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 	if err := c.store.GetTransactionsUtxo(utxoView, bcBlock.Transactions); err != nil {
 		return err
 	}
+
 	if err := utxoView.ApplyBlock(bcBlock); err != nil {
 		return err
 	}
@@ -108,7 +109,6 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 
 	contractView := state.NewContractViewpoint()
 	contractView.ApplyBlock(block)
-
 	if err := c.setState(&block.BlockHeader, []*types.BlockHeader{&block.BlockHeader}, utxoView, contractView); err != nil {
 		return err
 	}
@@ -181,7 +181,7 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 		log.WithFields(log.Fields{"module": logModule, "height": attachNode.Height, "hash": hash.String()}).Debug("attach from mainchain")
 	}
 
-	if err := c.setState(blockHeader, []*types.BlockHeader{blockHeader}, utxoView, contractView); err != nil {
+	if err := c.setState(blockHeader, attachNodes, utxoView, contractView); err != nil {
 		return err
 	}
 
@@ -356,11 +356,7 @@ func (c *Chain) applyForkChainToCasper(beginAttach *types.BlockHeader) error {
 		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": hash.String()}).Info("apply fork node")
 	}
 
-	if bestHash != c.bestBlockHeader.Hash() {
-		return c.rollback(bestHash)
-	}
-
-	return nil
+	return c.rollback(bestHash)
 }
 
 func (c *Chain) rollback(bestHash bc.Hash) error {
