@@ -338,15 +338,6 @@ func (s *Store) saveCheckpoints(batch dbm.Batch, checkpoints []*state.Checkpoint
 			return err
 		}
 
-		if checkpoint.Height%consensus.ActiveNetParams.BlocksOfEpoch != 1 {
-			header, err := s.GetBlockHeader(&checkpoint.Hash)
-			if err != nil {
-				return err
-			}
-
-			batch.Delete(calcCheckpointKey(header.Height-1, &header.PreviousBlockHash))
-		}
-
 		batch.Set(calcCheckpointKey(checkpoint.Height, &checkpoint.Hash), data)
 		log.WithFields(log.Fields{
 			"module":   logModule,
