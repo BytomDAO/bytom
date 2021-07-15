@@ -294,7 +294,6 @@ func (a *API) buildHandler() {
 	m.Handle("/set-mining", jsonHandler(a.setMining))
 
 	m.Handle("/verify-message", jsonHandler(a.verifyMessage))
-	m.Handle("/compile", jsonHandler(a.compileEquity))
 
 	m.Handle("/gas-rate", jsonHandler(a.gasRate))
 	m.Handle("/net-info", jsonHandler(a.getNetInfo))
