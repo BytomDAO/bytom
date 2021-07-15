@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
@@ -25,7 +26,7 @@ var (
 	errVersionRegression     = errors.New("version regression")
 )
 
-func checkBlockTime(b *bc.Block, parent *types.BlockHeader) error {
+func checkBlockTime(b, parent *types.BlockHeader) error {
 	now := uint64(time.Now().UnixNano() / 1e6)
 	if b.Timestamp < (parent.Timestamp + consensus.ActiveNetParams.BlockTimeInterval) {
 		return errBadTimestamp
@@ -104,35 +105,52 @@ func checkoutRewardCoinbase(tx *bc.Tx, checkpoint *state.Checkpoint) error {
 }
 
 // ValidateBlockHeader check the block's header
-func ValidateBlockHeader(b *bc.Block, parent *types.BlockHeader) error {
+func ValidateBlockHeader(b, parent *types.BlockHeader, checkpoint *state.Checkpoint) error {
 	if b.Version != 1 {
 		return errors.WithDetailf(errVersionRegression, "previous block verson %d, current block version %d", parent.Version, b.Version)
 	}
+
 	if b.Height != parent.Height+1 {
 		return errors.WithDetailf(errMisorderedBlockHeight, "previous block height %d, current block height %d", parent.Height, b.Height)
 	}
 
-	hash := parent.Hash()
-	if hash != *b.PreviousBlockId {
-		return errors.WithDetailf(errMismatchedBlock, "previous block ID %x, current block wants %x", parent.Hash().Bytes(), b.PreviousBlockId.Bytes())
+	if parentHash := parent.Hash(); parentHash != b.PreviousBlockHash {
+		return errors.WithDetailf(errMismatchedBlock, "previous block ID %x, current block wants %x", parentHash.Bytes(), b.PreviousBlockHash)
 	}
 
 	if err := checkBlockTime(b, parent); err != nil {
 		return err
 	}
+
+	return verifyBlockSignature(b, checkpoint)
+}
+
+func verifyBlockSignature(blockHeader *types.BlockHeader, checkpoint *state.Checkpoint) error {
+	validator := checkpoint.GetValidator(blockHeader.Timestamp)
+	xPub := chainkd.XPub{}
+	pubKey, err := hex.DecodeString(validator.PubKey)
+	if err != nil {
+		return err
+	}
+
+	copy(xPub[:], pubKey)
+	if ok := xPub.Verify(blockHeader.Hash().Bytes(), blockHeader.BlockWitness); !ok {
+		return errors.New("fail to verify block header signature")
+	}
+
 	return nil
 }
 
 // ValidateBlock validates a block and the transactions within.
-func ValidateBlock(b *bc.Block, parent *types.BlockHeader, checkpoint *state.Checkpoint, converter ProgramConverterFunc) error {
+func ValidateBlock(b *types.Block, parent *types.BlockHeader, checkpoint *state.Checkpoint, converter ProgramConverterFunc) error {
 	startTime := time.Now()
-	if err := ValidateBlockHeader(b, parent); err != nil {
+	if err := ValidateBlockHeader(&b.BlockHeader, parent, checkpoint); err != nil {
 		return err
 	}
 
+	bcBlock := types.MapBlock(b)
 	blockGasSum := uint64(0)
-
-	validateResults := ValidateTxs(b.Transactions, b, converter)
+	validateResults := ValidateTxs(bcBlock.Transactions, bcBlock, converter)
 	for i, validateResult := range validateResults {
 		if validateResult.err != nil {
 			return errors.Wrapf(validateResult.err, "validate of transaction %d of %d", i, len(b.Transactions))
@@ -143,22 +161,22 @@ func ValidateBlock(b *bc.Block, parent *types.BlockHeader, checkpoint *state.Che
 		}
 	}
 
-	if err := checkCoinbaseAmount(b, checkpoint); err != nil {
+	if err := checkCoinbaseAmount(bcBlock, checkpoint); err != nil {
 		return err
 	}
 
-	txMerkleRoot, err := types.TxMerkleRoot(b.Transactions)
+	txMerkleRoot, err := types.TxMerkleRoot(bcBlock.Transactions)
 	if err != nil {
 		return errors.Wrap(err, "computing transaction id merkle root")
 	}
-	if txMerkleRoot != *b.TransactionsRoot {
+	if txMerkleRoot != b.TransactionsMerkleRoot {
 		return errors.WithDetailf(errMismatchedMerkleRoot, "transaction id merkle root")
 	}
 
 	log.WithFields(log.Fields{
 		"module":   logModule,
 		"height":   b.Height,
-		"hash":     b.ID.String(),
+		"hash":     bcBlock.ID.String(),
 		"duration": time.Since(startTime),
 	}).Debug("finish validate block")
 	return nil

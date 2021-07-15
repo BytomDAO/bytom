@@ -1,11 +1,8 @@
 package protocol
 
 import (
-	"encoding/hex"
-
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
@@ -127,7 +124,6 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 
 	utxoView := state.NewUtxoViewpoint()
 	contractView := state.NewContractViewpoint()
-
 	txsToRestore := map[bc.Hash]*types.Tx{}
 	for _, detachNode := range detachNodes {
 		hash := detachNode.Hash()
@@ -146,7 +142,7 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 		}
 
 		contractView.DetachBlock(b)
-		for _, tx := range b.Transactions {
+		for _, tx := range b.Transactions[1:] {
 			txsToRestore[tx.ID] = tx
 		}
 		log.WithFields(log.Fields{"module": logModule, "height": detachNode.Height, "hash": hash.String()}).Debug("detach from mainchain")
@@ -170,7 +166,7 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 		}
 
 		contractView.ApplyBlock(b)
-		for _, tx := range b.Transactions {
+		for _, tx := range b.Transactions[1:] {
 			if _, ok := txsToRestore[tx.ID]; !ok {
 				txsToRemove[tx.ID] = tx
 			} else {
@@ -207,11 +203,6 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 
 // SaveBlock will validate and save block into storage
 func (c *Chain) saveBlock(block *types.Block) error {
-	if err := c.verifyBlockSignature(&block.BlockHeader); err != nil {
-		return err
-	}
-
-	bcBlock := types.MapBlock(block)
 	parent, err := c.store.GetBlockHeader(&block.PreviousBlockHash)
 	if err != nil {
 		return err
@@ -222,7 +213,7 @@ func (c *Chain) saveBlock(block *types.Block) error {
 		return err
 	}
 
-	if err := validation.ValidateBlock(bcBlock, parent, checkpoint, c.ProgramConverter); err != nil {
+	if err := validation.ValidateBlock(block, parent, checkpoint, c.ProgramConverter); err != nil {
 		return errors.Sub(ErrBadBlock, err)
 	}
 
@@ -230,7 +221,8 @@ func (c *Chain) saveBlock(block *types.Block) error {
 		return err
 	}
 
-	c.orphanManage.Delete(&bcBlock.ID)
+	blockHash := block.Hash()
+	c.orphanManage.Delete(&blockHash)
 	return nil
 }
 
@@ -258,22 +250,6 @@ func (c *Chain) saveSubBlock(block *types.Block) *types.Block {
 		}
 	}
 	return bestBlock
-}
-
-func (c *Chain) verifyBlockSignature(blockHeader *types.BlockHeader) error {
-	validator, err := c.GetValidator(&blockHeader.PreviousBlockHash, blockHeader.Timestamp)
-	if err != nil {
-		return err
-	}
-
-	xPub := chainkd.XPub{}
-	pubKey, _ := hex.DecodeString(validator.PubKey)
-	copy(xPub[:], pubKey)
-	if ok := xPub.Verify(blockHeader.Hash().Bytes(), blockHeader.BlockWitness); !ok {
-		return errors.New("fail to verify block header signature")
-	}
-
-	return nil
 }
 
 type processBlockResponse struct {

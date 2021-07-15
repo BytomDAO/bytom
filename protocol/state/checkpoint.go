@@ -99,6 +99,20 @@ func (c *Checkpoint) ContainsVerification(validatorOrder int, sourceHash *bc.Has
 	return false
 }
 
+func (c *Checkpoint) GetValidator(timeStamp uint64) *Validator {
+	validators := c.EffectiveValidators()
+	startTimestamp := c.Timestamp + consensus.ActiveNetParams.BlockTimeInterval
+	order := getValidatorOrder(startTimestamp, timeStamp, uint64(len(validators)))
+	for _, validator := range validators {
+		if validator.Order == int(order) {
+			return validator
+		}
+	}
+
+	// this should never happen
+	return nil
+}
+
 // Increase will increase the height of checkpoint
 func (c *Checkpoint) Increase(block *types.Block) error {
 	if block.PreviousBlockHash != c.Hash {
@@ -187,6 +201,15 @@ func (c *Checkpoint) applyVotes(block *types.Block) {
 			}
 		}
 	}
+}
+
+func getValidatorOrder(startTimestamp, blockTimestamp, numOfValidators uint64) uint64 {
+	// One round of product block time for all consensus nodes
+	roundBlockTime := numOfValidators * consensus.ActiveNetParams.BlockTimeInterval
+	// The start time of the last round of product block
+	lastRoundStartTime := startTimestamp + (blockTimestamp-startTimestamp)/roundBlockTime*roundBlockTime
+	// Order of blocker
+	return (blockTimestamp - lastRoundStartTime) / consensus.ActiveNetParams.BlockTimeInterval
 }
 
 func federationValidators() map[string]*Validator {

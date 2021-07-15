@@ -6,8 +6,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/config"
-	"github.com/bytom/bytom/consensus"
-	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/event"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
@@ -157,24 +155,7 @@ func (c *Chain) GetValidator(prevHash *bc.Hash, timeStamp uint64) (*state.Valida
 		return nil, err
 	}
 
-	validators := parentCheckpoint.EffectiveValidators()
-	startTimestamp := parentCheckpoint.Timestamp + consensus.ActiveNetParams.BlockTimeInterval
-	order := getValidatorOrder(startTimestamp, timeStamp, uint64(len(validators)))
-	for _, validator := range validators {
-		if validator.Order == int(order) {
-			return validator, nil
-		}
-	}
-	return nil, errors.New("get blocker failure")
-}
-
-func getValidatorOrder(startTimestamp, blockTimestamp, numOfValidators uint64) uint64 {
-	// One round of product block time for all consensus nodes
-	roundBlockTime := numOfValidators * consensus.ActiveNetParams.BlockTimeInterval
-	// The start time of the last round of product block
-	lastRoundStartTime := startTimestamp + (blockTimestamp-startTimestamp)/roundBlockTime*roundBlockTime
-	// Order of blocker
-	return (blockTimestamp - lastRoundStartTime) / consensus.ActiveNetParams.BlockTimeInterval
+	return parentCheckpoint.GetValidator(timeStamp), nil
 }
 
 // BestBlockHeader returns the chain tail block
