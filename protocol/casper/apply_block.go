@@ -115,7 +115,7 @@ func (c *Casper) applyMyVerification(target *state.Checkpoint, block *types.Bloc
 	}
 
 	block.SupLinks.AddSupLink(v.SourceHeight, v.SourceHash, v.Signature, v.order)
-	return c.store.SaveBlockHeader(&block.BlockHeader)
+	return nil
 }
 
 func (c *Casper) myVerification(target *state.Checkpoint) *verification {
