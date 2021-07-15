@@ -158,11 +158,12 @@ func (c *Casper) authCachedMsg(msg *ValidCasperSignMsg, msgKey string) error {
 		return errors.Wrap(err, "get source checkpoint")
 	}
 
-	target, err := c.store.GetCheckpoint(&msg.TargetHash)
-	if err != nil {
-		return errors.Wrap(err, "get target checkpoint")
+	targetNode := c.tree.nodeByHash(msg.TargetHash)
+	if targetNode == nil {
+		return errors.New("get target checkpoint")
 	}
 
+	target := targetNode.Checkpoint
 	v, err := convertVerification(source, target, msg)
 	if err != nil {
 		return errors.Wrap(err, "authVerificationLoop fail on newVerification")
