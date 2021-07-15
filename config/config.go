@@ -26,7 +26,6 @@ type Config struct {
 	Wallet     *WalletConfig     `mapstructure:"wallet"`
 	Auth       *RPCAuthConfig    `mapstructure:"auth"`
 	Web        *WebConfig        `mapstructure:"web"`
-	Simd       *SimdConfig       `mapstructure:"simd"`
 	Websocket  *WebsocketConfig  `mapstructure:"ws"`
 	Federation *FederationConfig `mapstructure:"federation"`
 }
@@ -39,7 +38,6 @@ func DefaultConfig() *Config {
 		Wallet:     DefaultWalletConfig(),
 		Auth:       DefaultRPCAuthConfig(),
 		Web:        DefaultWebConfig(),
-		Simd:       DefaultSimdConfig(),
 		Websocket:  DefaultWebsocketConfig(),
 		Federation: DefaultFederationConfig(),
 	}
@@ -207,10 +205,6 @@ type WebConfig struct {
 	Closed bool `mapstructure:"closed"`
 }
 
-type SimdConfig struct {
-	Enable bool `mapstructure:"enable"`
-}
-
 type WebsocketConfig struct {
 	MaxNumWebsockets     int `mapstructure:"max_num_websockets"`
 	MaxNumConcurrentReqs int `mapstructure:"max_num_concurrent_reqs"`
@@ -243,13 +237,6 @@ func DefaultWalletConfig() *WalletConfig {
 		Rescan:   false,
 		TxIndex:  false,
 		MaxTxFee: uint64(1000000000),
-	}
-}
-
-// Default configurable web parameters.
-func DefaultSimdConfig() *SimdConfig {
-	return &SimdConfig{
-		Enable: false,
 	}
 }
 
