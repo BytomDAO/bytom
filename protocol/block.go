@@ -220,6 +220,8 @@ func (c *Chain) saveSubBlock(block *types.Block) {
 			log.WithFields(log.Fields{"module": logModule, "hash": prevOrphan.String(), "height": orphanBlock.Height}).Warning("saveSubBlock fail to save block")
 			continue
 		}
+
+		c.saveSubBlock(orphanBlock)
 	}
 }
 
