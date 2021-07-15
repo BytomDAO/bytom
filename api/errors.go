@@ -52,8 +52,6 @@ var respErrFormatter = map[error]httperror.Info{
 	signers.ErrDupeXPub:  {400, "BTM203", "Root XPubs cannot contain the same key more than once"},
 
 	// Contract error namespace (3xx)
-	ErrCompileContract:             {400, "BTM300", "Compile contract failed"},
-	ErrInstContract:                {400, "BTM301", "Instantiate contract failed"},
 	contract.ErrContractDuplicated: {400, "BTM302", "Contract is duplicated"},
 	contract.ErrContractNotFound:   {400, "BTM303", "Contract not found"},
 
