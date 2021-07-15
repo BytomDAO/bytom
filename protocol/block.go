@@ -124,7 +124,6 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 
 	utxoView := state.NewUtxoViewpoint()
 	contractView := state.NewContractViewpoint()
-
 	txsToRestore := map[bc.Hash]*types.Tx{}
 	for _, detachNode := range detachNodes {
 		hash := detachNode.Hash()
@@ -143,7 +142,7 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 		}
 
 		contractView.DetachBlock(b)
-		for _, tx := range b.Transactions {
+		for _, tx := range b.Transactions[1:] {
 			txsToRestore[tx.ID] = tx
 		}
 		log.WithFields(log.Fields{"module": logModule, "height": detachNode.Height, "hash": hash.String()}).Debug("detach from mainchain")
@@ -167,7 +166,7 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 		}
 
 		contractView.ApplyBlock(b)
-		for _, tx := range b.Transactions {
+		for _, tx := range b.Transactions[1:] {
 			if _, ok := txsToRestore[tx.ID]; !ok {
 				txsToRemove[tx.ID] = tx
 			} else {
