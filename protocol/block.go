@@ -89,33 +89,6 @@ func (c *Chain) calcReorganizeChain(beginAttach *types.BlockHeader, beginDetach 
 	return attachBlockHeaders, detachBlockHeaders, nil
 }
 
-func (c *Chain) connectBlock(block *types.Block) (err error) {
-	bcBlock := types.MapBlock(block)
-	utxoView := state.NewUtxoViewpoint()
-	if err := c.store.GetTransactionsUtxo(utxoView, bcBlock.Transactions); err != nil {
-		return err
-	}
-
-	if err := utxoView.ApplyBlock(bcBlock); err != nil {
-		return err
-	}
-
-	if _, err := c.casper.ApplyBlock(block); err != nil {
-		return err
-	}
-
-	contractView := state.NewContractViewpoint()
-	contractView.ApplyBlock(block)
-	if err := c.setState(&block.BlockHeader, []*types.BlockHeader{&block.BlockHeader}, utxoView, contractView); err != nil {
-		return err
-	}
-
-	for _, tx := range block.Transactions {
-		c.txPool.RemoveTransaction(&tx.Tx.ID)
-	}
-	return nil
-}
-
 func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 	attachNodes, detachNodes, err := c.calcReorganizeChain(blockHeader, c.bestBlockHeader)
 	if err != nil {
@@ -217,6 +190,10 @@ func (c *Chain) saveBlock(block *types.Block) error {
 		return errors.Sub(ErrBadBlock, err)
 	}
 
+	if _, err := c.casper.ApplyBlock(block); err != nil {
+		return err
+	}
+
 	if err := c.store.SaveBlock(block); err != nil {
 		return err
 	}
@@ -226,14 +203,13 @@ func (c *Chain) saveBlock(block *types.Block) error {
 	return nil
 }
 
-func (c *Chain) saveSubBlock(block *types.Block) *types.Block {
+func (c *Chain) saveSubBlock(block *types.Block) {
 	blockHash := block.Hash()
 	prevOrphans, ok := c.orphanManage.GetPrevOrphans(&blockHash)
 	if !ok {
-		return block
+		return
 	}
 
-	bestBlock := block
 	for _, prevOrphan := range prevOrphans {
 		orphanBlock, ok := c.orphanManage.Get(prevOrphan)
 		if !ok {
@@ -244,12 +220,7 @@ func (c *Chain) saveSubBlock(block *types.Block) *types.Block {
 			log.WithFields(log.Fields{"module": logModule, "hash": prevOrphan.String(), "height": orphanBlock.Height}).Warning("saveSubBlock fail to save block")
 			continue
 		}
-
-		if subBestBlock := c.saveSubBlock(orphanBlock); subBestBlock.Height > bestBlock.Height {
-			bestBlock = subBestBlock
-		}
 	}
-	return bestBlock
 }
 
 type processBlockResponse struct {
@@ -299,40 +270,9 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 		return false, err
 	}
 
-	bestBlock := c.saveSubBlock(block)
-	bestBlockHeader := &bestBlock.BlockHeader
-
-	if bestBlockHeader.PreviousBlockHash == c.bestBlockHeader.Hash() {
-		log.WithFields(log.Fields{"module": logModule}).Debug("append block to the end of mainchain")
-		return false, c.connectBlock(bestBlock)
-	}
-
-	return false, c.applyForkChainToCasper(bestBlockHeader)
-}
-
-func (c *Chain) applyForkChainToCasper(beginAttach *types.BlockHeader) error {
-	attachNodes, _, err := c.calcReorganizeChain(beginAttach, c.bestBlockHeader)
-	if err != nil {
-		return err
-	}
-
-	var bestHash bc.Hash
-	for _, node := range attachNodes {
-		hash := node.Hash()
-		block, err := c.store.GetBlock(&hash)
-		if err != nil {
-			return err
-		}
-
-		bestHash, err = c.casper.ApplyBlock(block)
-		if err != nil {
-			return err
-		}
-
-		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": hash.String()}).Info("apply fork node")
-	}
-
-	return c.rollback(bestHash)
+	c.saveSubBlock(block)
+	bestHash := c.casper.BestChain()
+	return false, c.rollback(bestHash)
 }
 
 func (c *Chain) rollback(bestHash bc.Hash) error {
