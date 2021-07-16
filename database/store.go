@@ -8,7 +8,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/common"
 
-	"github.com/bytom/bytom/consensus"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/errors"
@@ -336,15 +335,6 @@ func (s *Store) saveCheckpoints(batch dbm.Batch, checkpoints []*state.Checkpoint
 		data, err := json.Marshal(checkpoint)
 		if err != nil {
 			return err
-		}
-
-		if checkpoint.Height%consensus.ActiveNetParams.BlocksOfEpoch != 1 {
-			header, err := s.GetBlockHeader(&checkpoint.Hash)
-			if err != nil {
-				return err
-			}
-
-			batch.Delete(calcCheckpointKey(header.Height-1, &header.PreviousBlockHash))
 		}
 
 		batch.Set(calcCheckpointKey(checkpoint.Height, &checkpoint.Hash), data)
