@@ -70,7 +70,7 @@ func (g *GasState) setGas(BTMValue int64, txSize int64) error {
 	return nil
 }
 
-func (g *GasState) setGasValid() error {
+func (g *GasState) chargeStorageGas() error {
 	var ok bool
 	if g.GasLeft, ok = checked.SubInt64(g.GasLeft, g.StorageGas); !ok || g.GasLeft < 0 {
 		return errors.Wrap(ErrGasCalculate, "setGasValid calc gasLeft")
@@ -95,7 +95,7 @@ func (g *GasState) updateUsage(gasLeft int64) error {
 		return errors.Wrap(ErrGasCalculate, "updateUsage calc gas diff")
 	}
 
-	if g.GasUsed > consensus.DefaultGasCredit || g.StorageGas > g.GasLeft {
+	if g.StorageGas > g.GasLeft {
 		return ErrOverGasCredit
 	}
 	return nil
@@ -197,7 +197,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			}
 		}
 
-		if err := vs.gasStatus.setGasValid(); err != nil {
+		if err := vs.gasStatus.chargeStorageGas(); err != nil {
 			return err
 		}
 
