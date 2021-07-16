@@ -9,7 +9,6 @@ import (
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/errors"
-	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
 )
@@ -38,69 +37,44 @@ func checkBlockTime(b, parent *types.BlockHeader) error {
 	return nil
 }
 
-func checkCoinbaseAmount(b *bc.Block, checkpoint *state.Checkpoint) error {
+func checkCoinbaseAmount(b *types.Block, checkpoint *state.Checkpoint) error {
 	if len(b.Transactions) == 0 {
 		return errors.Wrap(ErrWrongCoinbaseTransaction, "block is empty")
 	}
 
 	tx := b.Transactions[0]
-	if len(tx.TxHeader.ResultIds) == 0 {
-		return errors.Wrap(ErrWrongCoinbaseTransaction, "tx header resultIds is empty")
+	for _, output := range tx.Outputs {
+		if output.OutputType() != types.OriginalOutputType || *output.AssetId != *consensus.BTMAssetID {
+			return errors.Wrap(ErrWrongCoinbaseTransaction, "dismatch output type or asset")
+		}
 	}
 
-	if b.Height%consensus.ActiveNetParams.BlocksOfEpoch != 1 || b.Height == 1 {
-		output, err := tx.OriginalOutput(*tx.TxHeader.ResultIds[0])
-		if err != nil {
-			return err
+	if b.Height%consensus.ActiveNetParams.BlocksOfEpoch != 1 {
+		if len(tx.Outputs) != 1 || tx.Outputs[0].Amount != 0 {
+			return errors.Wrap(ErrWrongCoinbaseTransaction, "dismatch output number or amount")
 		}
-
-		if output.Source.Value.Amount != 0 {
-			return errors.Wrap(ErrWrongCoinbaseTransaction, "dismatch output amount")
-		}
-
-		if len(tx.TxHeader.ResultIds) != 1 {
-			return errors.Wrap(ErrWrongCoinbaseTransaction, "have more than 1 output")
-		}
-
 		return nil
 	}
 
 	return checkoutRewardCoinbase(tx, checkpoint)
 }
 
-func checkoutRewardCoinbase(tx *bc.Tx, checkpoint *state.Checkpoint) error {
-	resultIdLen := len(tx.TxHeader.ResultIds)
-	if resultIdLen != len(checkpoint.Rewards) && resultIdLen != len(checkpoint.Rewards)+1 {
-		return errors.Wrap(ErrWrongCoinbaseTransaction)
-	}
-
-	var startIndex int
-	if resultIdLen == len(checkpoint.Rewards)+1 {
-		output, err := tx.OriginalOutput(*tx.TxHeader.ResultIds[0])
-		if err != nil {
-			return err
-		}
-
-		if output.Source.Value.Amount != 0 {
+func checkoutRewardCoinbase(tx *types.Tx, checkpoint *state.Checkpoint) error {
+	matchOutputNum := 0
+	for _, output := range tx.Outputs {
+		rewardAmount, ok := checkpoint.Rewards[hex.EncodeToString(output.ControlProgram)]
+		if rewardAmount != output.Amount {
 			return errors.Wrap(ErrWrongCoinbaseTransaction, "dismatch output amount")
 		}
 
-		startIndex = 1
-	}
-
-	rewards := checkpoint.Rewards
-	for i := startIndex; i < resultIdLen; i++ {
-		output := tx.TxHeader.ResultIds[i]
-		out, err := tx.OriginalOutput(*output)
-		if err != nil {
-			return err
-		}
-
-		if rewards[hex.EncodeToString(out.ControlProgram.Code)] != out.Source.Value.Amount {
-			return errors.Wrap(ErrWrongCoinbaseTransaction)
+		if ok {
+			matchOutputNum++
 		}
 	}
 
+	if matchOutputNum != len(checkpoint.Rewards) && matchOutputNum != len(checkpoint.Rewards)+1 {
+		return errors.Wrap(ErrWrongCoinbaseTransaction, "dismatch output num")
+	}
 	return nil
 }
 
@@ -161,7 +135,7 @@ func ValidateBlock(b *types.Block, parent *types.BlockHeader, checkpoint *state.
 		}
 	}
 
-	if err := checkCoinbaseAmount(bcBlock, checkpoint); err != nil {
+	if err := checkCoinbaseAmount(b, checkpoint); err != nil {
 		return err
 	}
 

@@ -109,7 +109,7 @@ func TestCheckCoinbaseAmount(t *testing.T) {
 					types.NewTx(types.TxData{
 						Inputs: []*types.TxInput{types.NewCoinbaseInput(nil)},
 						Outputs: []*types.TxOutput{
-							types.NewOriginalTxOutput(*consensus.BTMAssetID, 0, []byte("controlProgram"), nil),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 0, []byte("controlProgramX1"), nil),
 							types.NewOriginalTxOutput(*consensus.BTMAssetID, 5000, []byte("controlProgram"), nil),
 						},
 					}),
@@ -171,7 +171,7 @@ func TestCheckCoinbaseAmount(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		if err := checkCoinbaseAmount(types.MapBlock(c.block), c.checkpoint); rootErr(err) != c.err {
+		if err := checkCoinbaseAmount(c.block, c.checkpoint); rootErr(err) != c.err {
 			t.Errorf("case %d got error %v, want %v", i, err, c.err)
 		}
 	}
