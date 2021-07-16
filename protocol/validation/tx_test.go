@@ -151,7 +151,7 @@ func TestGasStatus(t *testing.T) {
 				StorageGas: 1000,
 			},
 			f: func(input *GasState) error {
-				return input.setGasValid()
+				return input.chargeStorageGas()
 			},
 			err: nil,
 		},
@@ -167,7 +167,7 @@ func TestGasStatus(t *testing.T) {
 				StorageGas: 1000,
 			},
 			f: func(input *GasState) error {
-				return input.setGasValid()
+				return input.chargeStorageGas()
 			},
 			err: ErrGasCalculate,
 		},
@@ -183,7 +183,7 @@ func TestGasStatus(t *testing.T) {
 				StorageGas: 1000,
 			},
 			f: func(input *GasState) error {
-				return input.setGasValid()
+				return input.chargeStorageGas()
 			},
 			err: ErrGasCalculate,
 		},
@@ -199,7 +199,7 @@ func TestGasStatus(t *testing.T) {
 				StorageGas: 1000,
 			},
 			f: func(input *GasState) error {
-				return input.setGasValid()
+				return input.chargeStorageGas()
 			},
 			err: ErrGasCalculate,
 		},

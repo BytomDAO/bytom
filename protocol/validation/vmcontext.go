@@ -123,6 +123,9 @@ func (ec *entryContext) checkOutput(index uint64, amount uint64, assetID []byte,
 		case *bc.OriginalOutput:
 			return check(e.ControlProgram, e.Source.Value, e.StateData), nil
 
+		case *bc.VoteOutput:
+			return check(e.ControlProgram, e.Source.Value, e.StateData), nil
+
 		case *bc.Retirement:
 			var prog bc.Program
 			if expansion {
@@ -180,6 +183,20 @@ func (ec *entryContext) checkOutput(index uint64, amount uint64, assetID []byte,
 			return false, errors.Wrapf(vm.ErrBadValue, "index %d >= 1", index)
 		}
 		return checkEntry(d)
+
+	case *bc.VetoInput:
+		d, ok := ec.entries[*e.WitnessDestination.Ref]
+		if !ok {
+			return false, errors.Wrapf(bc.ErrMissingEntry, "entry for vetoInput destination %x not found", e.WitnessDestination.Ref.Bytes())
+		}
+		if m, ok := d.(*bc.Mux); ok {
+			return checkMux(m)
+		}
+		if index != 0 {
+			return false, errors.Wrapf(vm.ErrBadValue, "index %d >= 1", index)
+		}
+		return checkEntry(d)
+
 	}
 
 	return false, vm.ErrContext
