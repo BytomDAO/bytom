@@ -13,7 +13,7 @@ import (
 	"github.com/bytom/bytom/protocol/state"
 )
 
-const logModule = "leveldb"
+const logModule = "validation"
 
 var (
 	errBadTimestamp          = errors.New("block timestamp is not in the valid range")
@@ -60,20 +60,23 @@ func checkCoinbaseAmount(b *types.Block, checkpoint *state.Checkpoint) error {
 }
 
 func checkoutRewardCoinbase(tx *types.Tx, checkpoint *state.Checkpoint) error {
-	matchOutputNum := 0
-	for _, output := range tx.Outputs {
-		rewardAmount, ok := checkpoint.Rewards[hex.EncodeToString(output.ControlProgram)]
-		if rewardAmount != output.Amount {
-			return errors.Wrap(ErrWrongCoinbaseTransaction, "dismatch output amount")
+	outputMap := map[string]uint64{}
+	for i, output := range tx.Outputs {
+		if i == 0 && output.Amount == 0 {
+			continue
 		}
 
-		if ok {
-			matchOutputNum++
-		}
+		outputMap[hex.EncodeToString(output.ControlProgram)] += output.Amount
 	}
 
-	if matchOutputNum != len(checkpoint.Rewards) && matchOutputNum != len(checkpoint.Rewards)+1 {
-		return errors.Wrap(ErrWrongCoinbaseTransaction, "dismatch output num")
+	if len(outputMap) != len(checkpoint.Rewards) {
+		return errors.Wrap(ErrWrongCoinbaseTransaction, "dismatch output number")
+	}
+
+	for cp, amount := range checkpoint.Rewards {
+		if outputMap[cp] != amount {
+			return errors.Wrap(ErrWrongCoinbaseTransaction, "dismatch output amount")
+		}
 	}
 	return nil
 }
