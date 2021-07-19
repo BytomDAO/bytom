@@ -53,6 +53,9 @@ func init() {
 	runNodeCmd.Flags().Int("ws.max_num_websockets", config.Websocket.MaxNumWebsockets, "Max number of websocket connections")
 	runNodeCmd.Flags().Int("ws.max_num_concurrent_reqs", config.Websocket.MaxNumConcurrentReqs, "Max number of concurrent websocket requests that may be processed concurrently")
 
+	// contractView flags
+	runNodeCmd.Flags().Bool("contractview.enable", config.ContractView.Enable, "enable contractView")
+
 	RootCmd.AddCommand(runNodeCmd)
 }
 

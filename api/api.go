@@ -14,6 +14,7 @@ import (
 	"github.com/bytom/bytom/accesstoken"
 	"github.com/bytom/bytom/blockchain/txfeed"
 	cfg "github.com/bytom/bytom/config"
+	"github.com/bytom/bytom/contract"
 	"github.com/bytom/bytom/dashboard/dashboard"
 	"github.com/bytom/bytom/dashboard/equity"
 	"github.com/bytom/bytom/errors"
@@ -116,6 +117,7 @@ type API struct {
 	txFeedTracker   *txfeed.Tracker
 	notificationMgr *websocket.WSNotificationManager
 	eventDispatcher *event.Dispatcher
+	ContractView    *contract.ContractView
 }
 
 func (a *API) initServer(config *cfg.Config) {
@@ -306,6 +308,16 @@ func (a *API) buildHandler() {
 	m.Handle("/get-vote-result", jsonHandler(a.getVoteResult))
 
 	m.HandleFunc("/websocket-subscribe", a.websocketHandler)
+
+	if a.ContractView != nil {
+		m.Handle("/create-contract-view", jsonHandler(a.createContractView))
+		m.Handle("/delete-contract-view", jsonHandler(a.deleteContractView))
+		m.Handle("/get-contract-utxos", jsonHandler(a.getContractUtxos))
+		m.Handle("/list-contract-utxos", jsonHandler(a.listContractUtxos))
+		m.Handle("/build-contract-tx", jsonHandler(a.buildContractTx))
+	} else {
+		log.Warn("Please enable contract view")
+	}
 
 	handler := walletHandler(m, walletEnable)
 	handler = webAssetsHandler(handler)

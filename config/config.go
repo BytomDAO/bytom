@@ -22,24 +22,26 @@ type Config struct {
 	// Top level options use an anonymous struct
 	BaseConfig `mapstructure:",squash"`
 	// Options for services
-	P2P        *P2PConfig        `mapstructure:"p2p"`
-	Wallet     *WalletConfig     `mapstructure:"wallet"`
-	Auth       *RPCAuthConfig    `mapstructure:"auth"`
-	Web        *WebConfig        `mapstructure:"web"`
-	Websocket  *WebsocketConfig  `mapstructure:"ws"`
-	Federation *FederationConfig `mapstructure:"federation"`
+	P2P          *P2PConfig          `mapstructure:"p2p"`
+	Wallet       *WalletConfig       `mapstructure:"wallet"`
+	Auth         *RPCAuthConfig      `mapstructure:"auth"`
+	Web          *WebConfig          `mapstructure:"web"`
+	Websocket    *WebsocketConfig    `mapstructure:"ws"`
+	Federation   *FederationConfig   `mapstructure:"federation"`
+	ContractView *ContractViewConfig `mapstructure:"contractview"`
 }
 
 // Default configurable parameters.
 func DefaultConfig() *Config {
 	return &Config{
-		BaseConfig: DefaultBaseConfig(),
-		P2P:        DefaultP2PConfig(),
-		Wallet:     DefaultWalletConfig(),
-		Auth:       DefaultRPCAuthConfig(),
-		Web:        DefaultWebConfig(),
-		Websocket:  DefaultWebsocketConfig(),
-		Federation: DefaultFederationConfig(),
+		BaseConfig:   DefaultBaseConfig(),
+		P2P:          DefaultP2PConfig(),
+		Wallet:       DefaultWalletConfig(),
+		Auth:         DefaultRPCAuthConfig(),
+		Web:          DefaultWebConfig(),
+		Websocket:    DefaultWebsocketConfig(),
+		Federation:   DefaultFederationConfig(),
+		ContractView: DefaultContractViewConfig(),
 	}
 }
 
@@ -216,6 +218,10 @@ type FederationConfig struct {
 	Quorum           int            `json:"quorum"`
 }
 
+type ContractViewConfig struct {
+	Enable bool `mapstructure:"enable"`
+}
+
 // Default configurable rpc's auth parameters.
 func DefaultRPCAuthConfig() *RPCAuthConfig {
 	return &RPCAuthConfig{
@@ -257,6 +263,13 @@ func DefaultFederationConfig() *FederationConfig {
 			xpub("98e6ab8c654bb31e0c432a2c9ff13a6e3419dcb8a1df94f2839f41d79e94b6ca7a68f60b793d947195f761187b37275fbeb345041d5ea3039c5d328b63e3d489"),
 		},
 		Quorum: 2,
+	}
+}
+
+// Default configurable contract view parameters.
+func DefaultContractViewConfig() *ContractViewConfig {
+	return &ContractViewConfig{
+		Enable: false,
 	}
 }
 
