@@ -472,7 +472,7 @@ func createStoreItems(mainChainIndexes []int, attachBlocks []*attachBlock, extra
 			val: block,
 		})
 		items = append(items, &storeItem{
-			key: database.CalcBlockHeaderIndexKey(block.Height, &blockHash),
+			key: database.CalcBlockHeaderKey(&blockHash),
 			val: block.BlockHeader,
 		})
 		if _, ok := mainChainIndexMap[i]; !ok {
