@@ -1,18 +1,16 @@
 package database
 
 import (
+	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/state"
 	"github.com/golang/protobuf/proto"
-	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
-const UtxoPreFix = "UT:"
-
 func CalcUtxoKey(hash *bc.Hash) []byte {
-	return []byte(UtxoPreFix + hash.String())
+	return append(UtxoKeyPrefix, hash.Bytes()...)
 }
 
 func getTransactionsUtxo(db dbm.DB, view *state.UtxoViewpoint, txs []*bc.Tx) error {
