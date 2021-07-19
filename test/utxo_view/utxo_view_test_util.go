@@ -9,12 +9,6 @@ import (
 	"github.com/bytom/bytom/testutil"
 )
 
-const utxoPreFix = "UT:"
-
-func calcUtxoKey(hash *bc.Hash) []byte {
-	return []byte(utxoPreFix + hash.String())
-}
-
 type tx struct {
 	Tx *types.Tx
 }
