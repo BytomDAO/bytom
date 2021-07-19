@@ -218,10 +218,10 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 		result := make(map[string]*storage.UtxoEntry)
 
 		for k, v := range c.want {
-			want[string(calcUtxoKey(&k))] = v
+			want[string(database.CalcUtxoKey(&k))] = v
 		}
 
-		iter := testDB.IteratorPrefix([]byte(utxoPreFix))
+		iter := testDB.IteratorPrefix([]byte(database.UtxoKeyPrefix))
 		defer iter.Release()
 
 		for iter.Next() {
