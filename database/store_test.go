@@ -75,6 +75,9 @@ func TestSaveBlock(t *testing.T) {
 
 	gotBlock.Transactions[0].Tx.SerializedSize = 0
 	gotBlock.Transactions[0].SerializedSize = 0
+	gotBlock.Transactions[1].Tx.SerializedSize = 0
+	gotBlock.Transactions[1].SerializedSize = 0
+
 	if !testutil.DeepEqual(block, gotBlock) {
 		t.Errorf("got block:%v, expect block:%v", gotBlock, block)
 	}
