@@ -51,14 +51,6 @@ func CalcBlockTransactionsKey(hash *bc.Hash) []byte {
 	return append(blockTransactionsKey, hash.Bytes()...)
 }
 
-// CalcBlockHeaderIndexKey make up BlockHeaderIndexKey with prefix + hash
-func CalcBlockHeaderIndexKey(height uint64, hash *bc.Hash) []byte {
-	buf := [8]byte{}
-	binary.BigEndian.PutUint64(buf[:], height)
-	key := append(BlockHeaderIndexPrefix, buf[:]...)
-	return append(key, hash.Bytes()...)
-}
-
 // GetBlockHeader return the block header by given hash
 func GetBlockHeader(db dbm.DB, hash *bc.Hash) (*types.BlockHeader, error) {
 	binaryBlockHeader := db.Get(CalcBlockHeaderKey(hash))
