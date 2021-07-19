@@ -19,8 +19,6 @@ import (
 const logModule = "leveldb"
 
 var (
-	// CheckpointPrefix represent the namespace of checkpoints in db
-	CheckpointPrefix = []byte("CP:")
 	// BlockStoreKey block store key
 	BlockStoreKey = []byte("blockStore")
 )
@@ -244,7 +242,7 @@ func (s *Store) SaveChainStatus(blockHeader *types.BlockHeader, mainBlockHeaders
 func calcCheckpointKey(height uint64, hash *bc.Hash) []byte {
 	buf := make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, height)
-	key := append(CheckpointPrefix, buf...)
+	key := append(checkpointKeyPrefix, buf...)
 	if hash != nil {
 		key = append(key, hash.Bytes()...)
 	}
@@ -277,7 +275,7 @@ func (s *Store) GetCheckpointsByHeight(height uint64) ([]*state.Checkpoint, erro
 // CheckpointsFromNode return all checkpoints from specified block height and hash
 func (s *Store) CheckpointsFromNode(height uint64, hash *bc.Hash) ([]*state.Checkpoint, error) {
 	startKey := calcCheckpointKey(height, hash)
-	iter := s.db.IteratorPrefixWithStart(CheckpointPrefix, startKey, false)
+	iter := s.db.IteratorPrefixWithStart(checkpointKeyPrefix, startKey, false)
 
 	firstCheckpoint := &state.Checkpoint{}
 	if err := json.Unmarshal(iter.Value(), firstCheckpoint); err != nil {
@@ -317,16 +315,6 @@ func (s *Store) loadCheckpointsFromIter(iter dbm.Iterator) ([]*state.Checkpoint,
 // SaveCheckpoints bulk save multiple checkpoint
 func (s *Store) SaveCheckpoints(checkpoints []*state.Checkpoint) error {
 	batch := s.db.NewBatch()
-
-	if err := s.saveCheckpoints(batch, checkpoints); err != nil {
-		return err
-	}
-
-	batch.Write()
-	return nil
-}
-
-func (s *Store) saveCheckpoints(batch dbm.Batch, checkpoints []*state.Checkpoint) error {
 	for _, checkpoint := range checkpoints {
 		startTime := time.Now()
 		data, err := json.Marshal(checkpoint)
@@ -343,5 +331,7 @@ func (s *Store) saveCheckpoints(batch dbm.Batch, checkpoints []*state.Checkpoint
 			"duration": time.Since(startTime),
 		}).Info("checkpoint saved on disk")
 	}
+
+	batch.Write()
 	return nil
 }

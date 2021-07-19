@@ -13,11 +13,12 @@ import (
 const (
 	colon = byte(0x3a)
 
-	blockStore byte = iota
-	blockHashes
+	blockHashes byte = iota + 1
 	blockHeader
 	blockTransactions
 	mainChainIndex
+	checkpoint
+	utxo
 )
 
 var (
@@ -26,6 +27,8 @@ var (
 	blockHeaderKeyPrefix    = []byte{blockHeader, colon}
 	blockTransactionsKey    = []byte{blockTransactions, colon}
 	mainChainIndexKeyPrefix = []byte{mainChainIndex, colon}
+	checkpointKeyPrefix     = []byte{checkpoint, colon}
+	UtxoKeyPrefix           = []byte{utxo, colon}
 )
 
 func calcMainChainIndexPrefix(height uint64) []byte {
