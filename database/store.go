@@ -23,8 +23,6 @@ var (
 	CheckpointPrefix = []byte("CP:")
 	// BlockStoreKey block store key
 	BlockStoreKey = []byte("blockStore")
-	// BlockHeaderIndexPrefix  block header index with height
-	BlockHeaderIndexPrefix = []byte("BH:")
 )
 
 func loadBlockStoreStateJSON(db dbm.DB) *state.BlockStoreState {
@@ -146,7 +144,6 @@ func (s *Store) SaveBlock(block *types.Block) error {
 	batch.Set(CalcBlockHashesKey(block.Height), binaryBlockHashes)
 	batch.Set(CalcBlockHeaderKey(&blockHash), binaryBlockHeader)
 	batch.Set(CalcBlockTransactionsKey(&blockHash), binaryBlockTxs)
-	batch.Set(CalcBlockHeaderIndexKey(block.Height, &blockHash), binaryBlockHeader)
 	batch.Write()
 
 	s.cache.removeBlockHashes(block.Height)
