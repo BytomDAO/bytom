@@ -110,7 +110,7 @@ var MainNetParams = Params{
 	DNSSeeds:        []string{"www.mainnetseed.bytom.io"},
 	CasperConfig: CasperConfig{
 		BlockTimeInterval:      6000,
-		MaxTimeOffsetMs:        24000,
+		MaxTimeOffsetMs:        2400,
 		BlocksOfEpoch:          100,
 		MinValidatorVoteNum:    1e14,
 		VotePendingBlockNumber: 181440,
