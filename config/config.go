@@ -250,6 +250,7 @@ func DefaultWebsocketConfig() *WebsocketConfig {
 // Default configurable federation parameters.
 func DefaultFederationConfig() *FederationConfig {
 	return &FederationConfig{
+		FederationScript: "001496b42f069ed67d19663cc46c575f191ec022eee2",
 		Xpubs: []chainkd.XPub{
 			xpub("2e171e9aed46633f3560cf4d207c4edb92e5ad6b6f63daee44aa0ed4c58f76fd4d0081f225d2b119ac398749dbc7aa113603bc7710693c54852d33b6b082daab"),
 			xpub("896285b552bfe0647c0effaee41e5ce98a77981396455259792300cfbc0988bfb1a723488cedf0e73c3220e273fb6843abfbee025d7401b67bf81641b208dfc1"),
