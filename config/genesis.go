@@ -8,9 +8,17 @@ import (
 	"github.com/bytom/bytom/protocol/bc/types"
 )
 
+func toBCTxs(txs []*types.Tx) []*bc.Tx {
+	var bcTxs []*bc.Tx
+	for _, tx := range txs {
+		bcTxs = append(bcTxs, tx.Tx)
+	}
+	return bcTxs
+}
+
 func mainNetGenesisBlock() *types.Block {
-	tx := GenesisTx()
-	merkleRoot, err := types.TxMerkleRoot([]*bc.Tx{tx.Tx})
+	txs := GenesisTxs()
+	merkleRoot, err := types.TxMerkleRoot(toBCTxs(txs))
 	if err != nil {
 		log.Panicf("fail on calc genesis tx merkel root")
 	}
@@ -24,14 +32,14 @@ func mainNetGenesisBlock() *types.Block {
 				TransactionsMerkleRoot: merkleRoot,
 			},
 		},
-		Transactions: []*types.Tx{tx},
+		Transactions: txs,
 	}
 	return block
 }
 
 func testNetGenesisBlock() *types.Block {
-	tx := GenesisTx()
-	merkleRoot, err := types.TxMerkleRoot([]*bc.Tx{tx.Tx})
+	txs := GenesisTxs()
+	merkleRoot, err := types.TxMerkleRoot(toBCTxs(txs))
 	if err != nil {
 		log.Panicf("fail on calc genesis tx merkel root")
 	}
@@ -45,14 +53,14 @@ func testNetGenesisBlock() *types.Block {
 				TransactionsMerkleRoot: merkleRoot,
 			},
 		},
-		Transactions: []*types.Tx{tx},
+		Transactions: txs,
 	}
 	return block
 }
 
 func soloNetGenesisBlock() *types.Block {
-	tx := GenesisTx()
-	merkleRoot, err := types.TxMerkleRoot([]*bc.Tx{tx.Tx})
+	txs := GenesisTxs()
+	merkleRoot, err := types.TxMerkleRoot(toBCTxs(txs))
 	if err != nil {
 		log.Panicf("fail on calc genesis tx merkel root")
 	}
@@ -66,7 +74,7 @@ func soloNetGenesisBlock() *types.Block {
 				TransactionsMerkleRoot: merkleRoot,
 			},
 		},
-		Transactions: []*types.Tx{tx},
+		Transactions: txs,
 	}
 	return block
 }
