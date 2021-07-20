@@ -10,11 +10,10 @@ import (
 // consensus variables
 const (
 	// Max gas that one block contains
-	MaxBlockGas      = uint64(10000000)
-	VMGasRate        = int64(200)
-	StorageGasRate   = int64(1)
-	MaxGasAmount     = int64(200000)
-	DefaultGasCredit = int64(30000)
+	MaxBlockGas    = uint64(10000000)
+	VMGasRate      = int64(200)
+	StorageGasRate = int64(1)
+	MaxGasAmount   = int64(300000)
 
 	// These configs need add to casper config in elegant way
 	MaxNumOfValidators = int(10)
@@ -23,7 +22,7 @@ const (
 	BlockReward        = uint64(570776255)
 
 	// config parameter for coinbase reward
-	CoinbasePendingBlockNumber = uint64(100)
+	CoinbasePendingBlockNumber = uint64(10)
 	MinVoteOutputAmount        = uint64(100000000)
 
 	PayToWitnessPubKeyHashDataSize = 20
@@ -111,7 +110,7 @@ var MainNetParams = Params{
 	DNSSeeds:        []string{"www.mainnetseed.bytom.io"},
 	CasperConfig: CasperConfig{
 		BlockTimeInterval:      6000,
-		MaxTimeOffsetMs:        24000,
+		MaxTimeOffsetMs:        2400,
 		BlocksOfEpoch:          100,
 		MinValidatorVoteNum:    1e14,
 		VotePendingBlockNumber: 181440,

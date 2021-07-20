@@ -61,12 +61,12 @@ func TestGasStatus(t *testing.T) {
 		},
 		{
 			input: &GasState{
-				GasLeft:  consensus.DefaultGasCredit,
+				GasLeft:  30000,
 				GasUsed:  0,
 				BTMValue: 0,
 			},
 			output: &GasState{
-				GasLeft:  200000,
+				GasLeft:  300000,
 				GasUsed:  0,
 				BTMValue: 80000000000,
 			},
@@ -77,12 +77,12 @@ func TestGasStatus(t *testing.T) {
 		},
 		{
 			input: &GasState{
-				GasLeft:  consensus.DefaultGasCredit,
+				GasLeft:  30000,
 				GasUsed:  0,
 				BTMValue: 0,
 			},
 			output: &GasState{
-				GasLeft:  200000,
+				GasLeft:  300000,
 				GasUsed:  0,
 				BTMValue: math.MaxInt64,
 			},
