@@ -1,7 +1,6 @@
 package database
 
 import (
-	"github.com/bytom/bytom/protocol/state"
 	"strconv"
 
 	"github.com/golang/groupcache/singleflight"
@@ -9,6 +8,7 @@ import (
 	"github.com/bytom/bytom/common"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/protocol/state"
 )
 
 const (
