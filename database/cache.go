@@ -1,6 +1,7 @@
 package database
 
 import (
+	"encoding/hex"
 	"strconv"
 
 	"github.com/golang/groupcache/singleflight"
@@ -154,7 +155,8 @@ func (c *cache) removeMainChainHash(height uint64) {
 }
 
 func (c *cache) lookupCheckPoint(key []byte) (*state.Checkpoint, error) {
-	if data, ok := c.lruCheckPoints.Get(key); ok {
+	keyStr := hex.EncodeToString(key)
+	if data, ok := c.lruCheckPoints.Get(keyStr); ok {
 		return data.(*state.Checkpoint), nil
 	}
 
@@ -164,7 +166,7 @@ func (c *cache) lookupCheckPoint(key []byte) (*state.Checkpoint, error) {
 			return nil, err
 		}
 
-		c.lruCheckPoints.Add(key, checkPoint)
+		c.lruCheckPoints.Add(keyStr, checkPoint)
 		return checkPoint, nil
 	})
 	if err != nil {
@@ -175,5 +177,5 @@ func (c *cache) lookupCheckPoint(key []byte) (*state.Checkpoint, error) {
 }
 
 func (c *cache) removeCheckPoint(key []byte) {
-	c.lruCheckPoints.Remove(key)
+	c.lruCheckPoints.Remove(hex.EncodeToString(key))
 }
