@@ -164,7 +164,7 @@ func (c *cache) lookupCheckPoint(key []byte) (*state.Checkpoint, error) {
 			return nil, err
 		}
 
-		c.lruBlockHeaders.Add(key, checkPoint)
+		c.lruCheckPoints.Add(key, checkPoint)
 		return checkPoint, nil
 	})
 	if err != nil {
@@ -172,4 +172,8 @@ func (c *cache) lookupCheckPoint(key []byte) (*state.Checkpoint, error) {
 	}
 
 	return checkpoint.(*state.Checkpoint), nil
+}
+
+func (c *cache) removeCheckPoint(key []byte) {
+	c.lruCheckPoints.Remove(key)
 }

@@ -103,7 +103,9 @@ func (s *Store) SaveCheckpoints(checkpoints []*state.Checkpoint) error {
 			return err
 		}
 
-		batch.Set(calcCheckpointKey(checkpoint.Height, &checkpoint.Hash), data)
+		key := calcCheckpointKey(checkpoint.Height, &checkpoint.Hash)
+		batch.Set(key, data)
+		s.cache.removeCheckPoint(key)
 		log.WithFields(log.Fields{
 			"module":   logModule,
 			"height":   checkpoint.Height,
