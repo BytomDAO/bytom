@@ -118,28 +118,11 @@ func (a *API) getBlock(ins BlockReq) Response {
 
 // GetRawBlockResp is resp struct for getRawBlock API
 type GetRawBlockResp struct {
-	RawBlock *types.Block `json:"raw_block"`
+	RawBlock  *types.Block `json:"raw_block"`
+	Validator string       `json:"validator"`
 }
 
 func (a *API) getRawBlock(ins BlockReq) Response {
-	block, err := a.getBlockHelper(ins)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	resp := GetRawBlockResp{
-		RawBlock: block,
-	}
-	return NewSuccessResponse(resp)
-}
-
-// GetBlockHeaderResp is resp struct for getBlockHeader API
-type GetBlockHeaderResp struct {
-	BlockHeader *types.BlockHeader `json:"block_header"`
-	Validator   string             `json:"validator"`
-}
-
-func (a *API) getBlockHeader(ins BlockReq) Response {
 	block, err := a.getBlockHelper(ins)
 	if err != nil {
 		return NewErrorResponse(err)
@@ -155,9 +138,28 @@ func (a *API) getBlockHeader(ins BlockReq) Response {
 		validatorPubKey = validator.PubKey
 	}
 
+	resp := GetRawBlockResp{
+		RawBlock:  block,
+		Validator: validatorPubKey,
+	}
+	return NewSuccessResponse(resp)
+}
+
+// GetBlockHeaderResp is resp struct for getBlockHeader API
+type GetBlockHeaderResp struct {
+	BlockHeader *types.BlockHeader `json:"block_header"`
+	Reward uint64 `json:"reward"`
+}
+
+func (a *API) getBlockHeader(ins BlockReq) Response {
+	block, err := a.getBlockHelper(ins)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
 	resp := &GetBlockHeaderResp{
 		BlockHeader: &block.BlockHeader,
-		Validator:   validatorPubKey,
+		Reward:      block.Transactions[0].Outputs[0].Amount,
 	}
 	return NewSuccessResponse(resp)
 }
