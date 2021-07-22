@@ -148,7 +148,7 @@ func (a *API) getRawBlock(ins BlockReq) Response {
 // GetBlockHeaderResp is resp struct for getBlockHeader API
 type GetBlockHeaderResp struct {
 	BlockHeader *types.BlockHeader `json:"block_header"`
-	Reward uint64 `json:"reward"`
+	Reward      uint64             `json:"reward"`
 }
 
 func (a *API) getBlockHeader(ins BlockReq) Response {
