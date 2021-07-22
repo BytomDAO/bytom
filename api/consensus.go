@@ -11,7 +11,7 @@ type VoteInfo struct {
 
 func (a *API) getVoteResult(req struct {
 	BlockHash   json.HexBytes `json:"block_hash"`
-	BlockHeight uint64             `json:"block_height"`
+	BlockHeight uint64        `json:"block_height"`
 }) Response {
 	blockHash := hexBytesToHash(req.BlockHash)
 	if len(req.BlockHash) != 32 {
@@ -37,4 +37,3 @@ func (a *API) getVoteResult(req struct {
 	}
 	return NewSuccessResponse(voteInfos)
 }
-
