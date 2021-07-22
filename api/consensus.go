@@ -30,26 +30,3 @@ func (a *API) getVoteResult(req BlockReq) Response {
 	}
 	return NewSuccessResponse(voteInfos)
 }
-
-type ValidatorInfo struct {
-	PubKey string `json:"pub_key"`
-}
-
-func (a *API) getValidatorResult(req BlockReq) Response {
-	block, err := a.getBlockHelper(req)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	var validatorPubKey string
-	if block.Height > 0 {
-		validator, err := a.chain.GetValidator(&block.PreviousBlockHash, block.Timestamp)
-		if err != nil {
-			return NewErrorResponse(err)
-		}
-
-		validatorPubKey = validator.PubKey
-	}
-
-	return NewSuccessResponse(&ValidatorInfo{PubKey: validatorPubKey})
-}

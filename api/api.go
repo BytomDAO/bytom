@@ -304,7 +304,6 @@ func (a *API) buildHandler() {
 
 	m.Handle("/get-merkle-proof", jsonHandler(a.getMerkleProof))
 	m.Handle("/get-vote-result", jsonHandler(a.getVoteResult))
-	m.Handle("/get-block-validator", jsonHandler(a.getValidatorResult))
 
 	m.HandleFunc("/websocket-subscribe", a.websocketHandler)
 
