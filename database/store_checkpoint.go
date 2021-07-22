@@ -95,6 +95,8 @@ func (s *Store) loadCheckpointsFromIter(iter dbm.Iterator) ([]*state.Checkpoint,
 
 // SaveCheckpoints bulk save multiple checkpoint
 func (s *Store) SaveCheckpoints(checkpoints []*state.Checkpoint) error {
+	var keys [][]byte
+
 	batch := s.db.NewBatch()
 	for _, checkpoint := range checkpoints {
 		startTime := time.Now()
@@ -105,7 +107,7 @@ func (s *Store) SaveCheckpoints(checkpoints []*state.Checkpoint) error {
 
 		key := calcCheckpointKey(checkpoint.Height, &checkpoint.Hash)
 		batch.Set(key, data)
-		s.cache.removeCheckPoint(key)
+		keys = append(keys, key)
 		log.WithFields(log.Fields{
 			"module":   logModule,
 			"height":   checkpoint.Height,
@@ -116,5 +118,10 @@ func (s *Store) SaveCheckpoints(checkpoints []*state.Checkpoint) error {
 	}
 
 	batch.Write()
+
+	for _, key := range keys {
+		s.cache.removeCheckPoint(key)
+	}
+
 	return nil
 }
