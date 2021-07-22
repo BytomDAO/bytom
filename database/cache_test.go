@@ -41,7 +41,7 @@ func TestBlockCache(t *testing.T) {
 		return blockIndexHashes[height][0], nil
 	}
 
-	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillBlockHashesFn, fillMainChainHashFn)
+	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillBlockHashesFn, fillMainChainHashFn, nil)
 
 	for i := 0; i < maxCachedBlockHeaders+10; i++ {
 		block := newBlock(uint64(i))
