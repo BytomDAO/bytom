@@ -1,18 +1,11 @@
 package api
 
-import (
-	"github.com/bytom/bytom/encoding/json"
-)
-
 type VoteInfo struct {
 	Vote    string `json:"vote"`
 	VoteNum uint64 `json:"vote_number"`
 }
 
-func (a *API) getVoteResult(req struct {
-	BlockHash   json.HexBytes `json:"block_hash"`
-	BlockHeight uint64             `json:"block_height"`
-}) Response {
+func (a *API) getVoteResult(req BlockReq) Response {
 	blockHash := hexBytesToHash(req.BlockHash)
 	if len(req.BlockHash) != 32 {
 		blockHeader, err := a.chain.GetHeaderByHeight(req.BlockHeight)
@@ -37,4 +30,3 @@ func (a *API) getVoteResult(req struct {
 	}
 	return NewSuccessResponse(voteInfos)
 }
-
