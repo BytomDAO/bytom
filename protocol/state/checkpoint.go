@@ -1,17 +1,14 @@
 package state
 
 import (
+	"encoding/hex"
 	"sort"
 
 	"github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
-)
-
-const (
-	// BlocksOfEpoch represent the block num in one epoch
-	BlocksOfEpoch   = 100
-	minMortgage     = 1000000
+	"github.com/bytom/bytom/protocol/bc/types"
 )
 
 // CheckpointStatus represent current status of checkpoint
@@ -31,24 +28,7 @@ const (
 	Finalized
 )
 
-// SupLink is an ordered pair of checkpoints (a, b), also written a → b,
-// such that at least 2/3 of validators have published votes with source a and target b.
-type SupLink struct {
-	SourceHeight uint64
-	SourceHash   bc.Hash
-	Signatures   [consensus.MaxNumOfValidators]string
-}
-
-// IsMajority if at least 2/3 of validators have published votes with sup link
-func (s *SupLink) IsMajority(numOfValidators int) bool {
-	numOfSignatures := 0
-	for _, signature := range s.Signatures {
-		if signature != "" {
-			numOfSignatures++
-		}
-	}
-	return numOfSignatures > numOfValidators*2/3
-}
+var errIncreaseCheckpoint = errors.New("invalid block for increase checkpoint")
 
 // Checkpoint represent the block/hash under consideration for finality for a given epoch.
 // This block is the last block of the previous epoch. Rather than dealing with every block,
@@ -58,25 +38,48 @@ type Checkpoint struct {
 	Height     uint64
 	Hash       bc.Hash
 	ParentHash bc.Hash
-	// only save in the memory, not be persisted
-	Parent    *Checkpoint `json:"-"`
-	Timestamp uint64
-	SupLinks  []*SupLink  `json:"-"`
-	Status    CheckpointStatus
+	Timestamp  uint64
+	Status     CheckpointStatus
 
-	Votes      map[string]uint64 // putKey -> num of vote
-	Guaranties map[string]uint64 // pubKey -> num of guaranty
+	Rewards map[string]uint64 // controlProgram -> num of reward
+	Votes   map[string]uint64 // pubKey -> num of vote
+
+	// only save in the memory, not be persisted
+	Parent   *Checkpoint      `json:"-"`
+	SupLinks []*types.SupLink `json:"-"`
+}
+
+// NewCheckpoint create a new checkpoint instance
+func NewCheckpoint(parent *Checkpoint) *Checkpoint {
+	checkpoint := &Checkpoint{
+		Height:     parent.Height,
+		Hash:       parent.Hash,
+		Timestamp:  parent.Timestamp,
+		ParentHash: parent.Hash,
+		Parent:     parent,
+		Status:     Growing,
+		Rewards:    make(map[string]uint64),
+		Votes:      make(map[string]uint64),
+	}
+
+	for pubKey, num := range parent.Votes {
+		if num != 0 {
+			checkpoint.Votes[pubKey] = num
+		}
+	}
+	return checkpoint
 }
 
 // AddVerification add a valid verification to checkpoint's supLink
-func (c *Checkpoint) AddVerification(sourceHash bc.Hash, sourceHeight uint64, validatorOrder int, signature string) *SupLink {
+func (c *Checkpoint) AddVerification(sourceHash bc.Hash, sourceHeight uint64, validatorOrder int, signature []byte) *types.SupLink {
 	for _, supLink := range c.SupLinks {
 		if supLink.SourceHash == sourceHash {
 			supLink.Signatures[validatorOrder] = signature
 			return supLink
 		}
 	}
-	supLink := &SupLink{
+
+	supLink := &types.SupLink{
 		SourceHeight: sourceHeight,
 		SourceHash:   sourceHash,
 	}
@@ -89,46 +92,60 @@ func (c *Checkpoint) AddVerification(sourceHash bc.Hash, sourceHeight uint64, va
 // sourceHash not as filter if is nil,
 func (c *Checkpoint) ContainsVerification(validatorOrder int, sourceHash *bc.Hash) bool {
 	for _, supLink := range c.SupLinks {
-		if (sourceHash == nil || supLink.SourceHash == *sourceHash) && supLink.Signatures[validatorOrder] != "" {
+		if (sourceHash == nil || supLink.SourceHash == *sourceHash) && len(supLink.Signatures[validatorOrder]) != 0 {
 			return true
 		}
 	}
 	return false
 }
 
-// Validator represent the participants of the PoS network
-// Responsible for block generation and verification
-type Validator struct {
-	PubKey   string
-	Order    int
-	Vote     uint64
-	Guaranty uint64
-}
-
-// Validators return next epoch of validators, if the status of checkpoint is growing, return empty
-func (c *Checkpoint) Validators() map[string]*Validator {
-	var validators []*Validator
-	if c.Status == Growing {
-		return nil
-	}
-
-	for pubKey, mortgageNum := range c.Guaranties {
-		if mortgageNum >= minMortgage {
-			validators = append(validators, &Validator{
-				PubKey:   pubKey,
-				Vote:     c.Votes[pubKey],
-				Guaranty: mortgageNum,
-			})
+func (c *Checkpoint) GetValidator(timeStamp uint64) *Validator {
+	validators := c.EffectiveValidators()
+	startTimestamp := c.Timestamp + consensus.ActiveNetParams.BlockTimeInterval
+	order := getValidatorOrder(startTimestamp, timeStamp, uint64(len(validators)))
+	for _, validator := range validators {
+		if validator.Order == int(order) {
+			return validator
 		}
 	}
 
+	// this should never happen
+	return nil
+}
+
+// Increase will increase the height of checkpoint
+func (c *Checkpoint) Increase(block *types.Block) error {
+	if block.PreviousBlockHash != c.Hash {
+		return errIncreaseCheckpoint
+	}
+
+	if block.Height%consensus.ActiveNetParams.BlocksOfEpoch == 0 {
+		c.Status = Unjustified
+	}
+
+	c.Hash = block.Hash()
+	c.Height = block.Height
+	c.Timestamp = block.Timestamp
+	c.applyVotes(block)
+	c.applyValidatorReward(block)
+	c.applyFederationReward()
+	return nil
+}
+
+// Validator represent the participants of the PoS network
+// Responsible for block generation and verification
+type Validator struct {
+	PubKey  string
+	Order   int
+	VoteNum uint64
+}
+
+// EffectiveValidators return next epoch of effective validators, if the status of checkpoint is growing, return empty
+func (c *Checkpoint) EffectiveValidators() map[string]*Validator {
+	validators := c.AllValidators()
 	if len(validators) == 0 {
 		return federationValidators()
 	}
-
-	sort.Slice(validators, func(i, j int) bool {
-		return validators[i].Guaranty+validators[i].Vote > validators[j].Guaranty+validators[j].Vote
-	})
 
 	result := make(map[string]*Validator)
 	for i := 0; i < len(validators) && i < consensus.MaxNumOfValidators; i++ {
@@ -137,6 +154,62 @@ func (c *Checkpoint) Validators() map[string]*Validator {
 		result[validator.PubKey] = validator
 	}
 	return result
+}
+
+// AllValidators return all validators has vote num
+func (c *Checkpoint) AllValidators() []*Validator {
+	if c.Status == Growing {
+		return nil
+	}
+
+	var validators []*Validator
+	for pubKey, voteNum := range c.Votes {
+		if voteNum >= consensus.ActiveNetParams.MinValidatorVoteNum {
+			validators = append(validators, &Validator{
+				PubKey:  pubKey,
+				VoteNum: c.Votes[pubKey],
+			})
+		}
+	}
+
+	sort.Slice(validators, func(i, j int) bool {
+		numI, numJ := validators[i].VoteNum, validators[j].VoteNum
+		if numI != numJ {
+			return numI > numJ
+		}
+		return validators[i].PubKey > validators[j].PubKey
+	})
+	return validators
+}
+
+func (c *Checkpoint) applyVotes(block *types.Block) {
+	for _, tx := range block.Transactions {
+		for _, input := range tx.Inputs {
+			if vetoInput, ok := input.TypedInput.(*types.VetoInput); ok {
+				pubKey := hex.EncodeToString(vetoInput.Vote)
+				if c.Votes[pubKey] > vetoInput.Amount {
+					c.Votes[pubKey] -= vetoInput.Amount
+				} else {
+					delete(c.Votes, pubKey)
+				}
+			}
+		}
+
+		for _, output := range tx.Outputs {
+			if voteOutput, ok := output.TypedOutput.(*types.VoteOutput); ok {
+				c.Votes[hex.EncodeToString(voteOutput.Vote)] += output.Amount
+			}
+		}
+	}
+}
+
+func getValidatorOrder(startTimestamp, blockTimestamp, numOfValidators uint64) uint64 {
+	// One round of product block time for all consensus nodes
+	roundBlockTime := numOfValidators * consensus.ActiveNetParams.BlockTimeInterval
+	// The start time of the last round of product block
+	lastRoundStartTime := startTimestamp + (blockTimestamp-startTimestamp)/roundBlockTime*roundBlockTime
+	// Order of blocker
+	return (blockTimestamp - lastRoundStartTime) / consensus.ActiveNetParams.BlockTimeInterval
 }
 
 func federationValidators() map[string]*Validator {

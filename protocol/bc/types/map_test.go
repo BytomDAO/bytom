@@ -59,11 +59,11 @@ func TestMapSpendTx(t *testing.T) {
 					t.Errorf("tx.InputIDs[%d]'s asset amount is not equal after map'", i)
 				}
 			case *bc.Spend:
-				spendOut, err := tx.Output(*newInput.SpentOutputId)
+				spendOut, err := tx.OriginalOutput(*newInput.SpentOutputId)
 				if err != nil {
 					t.Fatal(err)
 				}
-				if *spendOut.Source.Value != oldIn.AssetAmount() {
+				if *spendOut.Source.Value.AssetId != oldIn.AssetID() || spendOut.Source.Value.Amount != oldIn.Amount() {
 					t.Errorf("tx.InputIDs[%d]'s asset amount is not equal after map'", i)
 				}
 			default:
@@ -76,7 +76,7 @@ func TestMapSpendTx(t *testing.T) {
 			if !ok {
 				t.Errorf("entryMap contains nothing for header.ResultIds[%d] (%x)", i, tx.ResultIds[i].Bytes())
 			}
-			newOut, ok := resultEntry.(*bc.Output)
+			newOut, ok := resultEntry.(*bc.OriginalOutput)
 			if !ok {
 				t.Errorf("header.ResultIds[%d] has type %T, expected *Output", i, resultEntry)
 			}
@@ -90,8 +90,8 @@ func TestMapSpendTx(t *testing.T) {
 			if !bytes.Equal(newOut.ControlProgram.Code, oldOut.ControlProgram) {
 				t.Errorf("header.ResultIds[%d].(*output).ControlProgram.Code is %x, expected %x", i, newOut.ControlProgram.Code, oldOut.ControlProgram)
 			}
-			if !reflect.DeepEqual(newOut.StateData.StateData, oldOut.StateData) {
-				t.Errorf("header.ResultIds[%d].(*output).StateData.StateData is %x, expected %x", i, newOut.StateData.StateData, oldOut.StateData)
+			if !reflect.DeepEqual(newOut.StateData, oldOut.StateData) {
+				t.Errorf("header.ResultIds[%d].(*output).StateData.StateData is %x, expected %x", i, newOut.StateData, oldOut.StateData)
 			}
 
 		}
@@ -118,9 +118,6 @@ func TestMapCoinbaseTx(t *testing.T) {
 	if len(tx.SpentOutputIDs) != 0 {
 		t.Errorf("coinbase tx doesn't spend any utxo")
 	}
-	if len(tx.GasInputIDs) != 1 {
-		t.Errorf("coinbase tx should have 1 gas input")
-	}
 	if len(tx.ResultIds) != 1 {
 		t.Errorf("expect to  only have one output")
 	}
@@ -129,7 +126,7 @@ func TestMapCoinbaseTx(t *testing.T) {
 	if !ok {
 		t.Errorf("entryMap contains nothing for output")
 	}
-	newOut, ok := outEntry.(*bc.Output)
+	newOut, ok := outEntry.(*bc.OriginalOutput)
 	if !ok {
 		t.Errorf("header.ResultIds[0] has type %T, expected *Output", outEntry)
 	}

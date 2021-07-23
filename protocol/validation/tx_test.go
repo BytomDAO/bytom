@@ -61,12 +61,12 @@ func TestGasStatus(t *testing.T) {
 		},
 		{
 			input: &GasState{
-				GasLeft:  consensus.DefaultGasCredit,
+				GasLeft:  30000,
 				GasUsed:  0,
 				BTMValue: 0,
 			},
 			output: &GasState{
-				GasLeft:  200000,
+				GasLeft:  300000,
 				GasUsed:  0,
 				BTMValue: 80000000000,
 			},
@@ -77,12 +77,12 @@ func TestGasStatus(t *testing.T) {
 		},
 		{
 			input: &GasState{
-				GasLeft:  consensus.DefaultGasCredit,
+				GasLeft:  30000,
 				GasUsed:  0,
 				BTMValue: 0,
 			},
 			output: &GasState{
-				GasLeft:  200000,
+				GasLeft:  300000,
 				GasUsed:  0,
 				BTMValue: math.MaxInt64,
 			},
@@ -151,7 +151,7 @@ func TestGasStatus(t *testing.T) {
 				StorageGas: 1000,
 			},
 			f: func(input *GasState) error {
-				return input.setGasValid()
+				return input.chargeStorageGas()
 			},
 			err: nil,
 		},
@@ -167,7 +167,7 @@ func TestGasStatus(t *testing.T) {
 				StorageGas: 1000,
 			},
 			f: func(input *GasState) error {
-				return input.setGasValid()
+				return input.chargeStorageGas()
 			},
 			err: ErrGasCalculate,
 		},
@@ -183,7 +183,7 @@ func TestGasStatus(t *testing.T) {
 				StorageGas: 1000,
 			},
 			f: func(input *GasState) error {
-				return input.setGasValid()
+				return input.chargeStorageGas()
 			},
 			err: ErrGasCalculate,
 		},
@@ -199,7 +199,7 @@ func TestGasStatus(t *testing.T) {
 				StorageGas: 1000,
 			},
 			f: func(input *GasState) error {
-				return input.setGasValid()
+				return input.chargeStorageGas()
 			},
 			err: ErrGasCalculate,
 		},
@@ -224,8 +224,8 @@ func TestOverflow(t *testing.T) {
 		txInputs := make([]*types.TxInput, 0, len(inputs))
 		txOutputs := make([]*types.TxOutput, 0, len(outputs))
 
-		for _, amount := range inputs {
-			txInput := types.NewSpendInput(nil, *sourceID, *consensus.BTMAssetID, amount, 0, ctrlProgram, nil)
+		for i, amount := range inputs {
+			txInput := types.NewSpendInput(nil, *sourceID, *consensus.BTMAssetID, amount, uint64(i), ctrlProgram, nil)
 			txInputs = append(txInputs, txInput)
 		}
 
@@ -333,7 +333,7 @@ func TestTxValidation(t *testing.T) {
 			Position: uint64(len(tx.ResultIds)),
 		}
 		prog := &bc.Program{txOutput.VMVersion, txOutput.ControlProgram}
-		output := bc.NewOutput(src, prog, nil, uint64(len(tx.ResultIds)))
+		output := bc.NewOriginalOutput(src, prog, nil, uint64(len(tx.ResultIds)))
 		outputID := bc.EntryID(output)
 		tx.Entries[outputID] = output
 
@@ -392,10 +392,10 @@ func TestTxValidation(t *testing.T) {
 			desc: "underflowing mux destination amounts",
 			f: func() {
 				mux.WitnessDestinations[0].Value.Amount = math.MaxInt64
-				out := tx.Entries[*mux.WitnessDestinations[0].Ref].(*bc.Output)
+				out := tx.Entries[*mux.WitnessDestinations[0].Ref].(*bc.OriginalOutput)
 				out.Source.Value.Amount = math.MaxInt64
 				mux.WitnessDestinations[1].Value.Amount = math.MaxInt64
-				out = tx.Entries[*mux.WitnessDestinations[1].Ref].(*bc.Output)
+				out = tx.Entries[*mux.WitnessDestinations[1].Ref].(*bc.OriginalOutput)
 				out.Source.Value.Amount = math.MaxInt64
 			},
 			err: ErrOverflow,
@@ -412,7 +412,7 @@ func TestTxValidation(t *testing.T) {
 		{
 			desc: "mismatched output source / mux dest position",
 			f: func() {
-				tx.Entries[*tx.ResultIds[0]].(*bc.Output).Source.Position = 1
+				tx.Entries[*tx.ResultIds[0]].(*bc.OriginalOutput).Source.Position = 1
 			},
 			err: ErrMismatchedPosition,
 		},
@@ -433,7 +433,7 @@ func TestTxValidation(t *testing.T) {
 				fixture2 := sample(t, fixture)
 				tx2 := types.NewTx(*fixture2.tx).Tx
 				out2ID := tx2.ResultIds[0]
-				out2 := tx2.Entries[*out2ID].(*bc.Output)
+				out2 := tx2.Entries[*out2ID].(*bc.OriginalOutput)
 				tx.Entries[*out2ID] = out2
 				mux.WitnessDestinations[0].Ref = out2ID
 			},
@@ -465,7 +465,7 @@ func TestTxValidation(t *testing.T) {
 			desc: "mismatched mux dest value / output source value",
 			f: func() {
 				outID := tx.ResultIds[0]
-				out := tx.Entries[*outID].(*bc.Output)
+				out := tx.Entries[*outID].(*bc.OriginalOutput)
 				mux.WitnessDestinations[0].Value = &bc.AssetAmount{
 					AssetId: out.Source.Value.AssetId,
 					Amount:  out.Source.Value.Amount + 1,
@@ -508,7 +508,7 @@ func TestTxValidation(t *testing.T) {
 			desc: "mismatched spent source/witness value",
 			f: func() {
 				spend := txSpend(t, tx, 1)
-				spentOutput := tx.Entries[*spend.SpentOutputId].(*bc.Output)
+				spentOutput := tx.Entries[*spend.SpentOutputId].(*bc.OriginalOutput)
 				spentOutput.Source.Value = &bc.AssetAmount{
 					AssetId: spend.WitnessDestination.Value.AssetId,
 					Amount:  spend.WitnessDestination.Value.Amount + 1,
@@ -524,21 +524,11 @@ func TestTxValidation(t *testing.T) {
 			err: ErrOverGasCredit,
 		},
 		{
-			desc: "can't find gas spend input in entries",
-			f: func() {
-				spendID := mux.Sources[len(mux.Sources)-1].Ref
-				delete(tx.Entries, *spendID)
-				mux.Sources = mux.Sources[:len(mux.Sources)-1]
-			},
-			err: bc.ErrMissingEntry,
-		},
-		{
 			desc: "no gas spend input",
 			f: func() {
 				spendID := mux.Sources[len(mux.Sources)-1].Ref
 				delete(tx.Entries, *spendID)
 				mux.Sources = mux.Sources[:len(mux.Sources)-1]
-				tx.GasInputIDs = nil
 				vs.gasStatus.GasLeft = 0
 			},
 			err: vm.ErrRunLimitExceeded,
@@ -549,7 +539,6 @@ func TestTxValidation(t *testing.T) {
 				spendID := mux.Sources[len(mux.Sources)-1].Ref
 				delete(tx.Entries, *spendID)
 				mux.Sources = mux.Sources[:len(mux.Sources)-1]
-				tx.GasInputIDs = nil
 			},
 			err: nil,
 		},
@@ -617,7 +606,7 @@ func TestTxValidation(t *testing.T) {
 			desc: "normal retirement output",
 			f: func() {
 				outputID := tx.ResultIds[0]
-				output := tx.Entries[*outputID].(*bc.Output)
+				output := tx.Entries[*outputID].(*bc.OriginalOutput)
 				retirement := bc.NewRetirement(output.Source, output.Ordinal)
 				retirementID := bc.EntryID(retirement)
 				tx.Entries[retirementID] = retirement
@@ -631,8 +620,8 @@ func TestTxValidation(t *testing.T) {
 			desc: "ordinal doesn't matter for prevouts",
 			f: func() {
 				spend := txSpend(t, tx, 1)
-				prevout := tx.Entries[*spend.SpentOutputId].(*bc.Output)
-				newPrevout := bc.NewOutput(prevout.Source, prevout.ControlProgram, prevout.StateData, 10)
+				prevout := tx.Entries[*spend.SpentOutputId].(*bc.OriginalOutput)
+				newPrevout := bc.NewOriginalOutput(prevout.Source, prevout.ControlProgram, prevout.StateData, 10)
 				hash := bc.EntryID(newPrevout)
 				spend.SpentOutputId = &hash
 			},
@@ -823,7 +812,7 @@ func TestCoinbase(t *testing.T) {
 	}
 }
 
-func TestRuleAA(t *testing.T) {
+func TestDoubleSpend(t *testing.T) {
 	testData := "07010004016201609bc47dda88eee18c7433340c16e054cabee4318a8d638e873be19e979df81dc7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0e3f9f5c80e0101160014f233267911e94dc74df706fe3b697273e212d5450063024088b5e730136407312980d3b1446004a8c552111721a4ba48044365cf7f7785542f2d7799f73d7cba1be2301fdfb91ad6ea99559b1857a25336eaefd90675870f207642ba797fd89d1f98a8559b4ca74123697dd4dee882955acd0da9010a80d64e0161015fe334d4fe18398f0232d2aca7050388ce4ee5ae82c8148d7f0cea748438b65135ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ace684200101160014f233267911e94dc74df706fe3b697273e212d545006302404a17a5995b8163ee448719b462a5694b22a35522dd9883333fd462cc3d0aabf049445c5cbb911a40e1906a5bea99b23b1a79e215eeb1a818d8b1dd27e06f3004207642ba797fd89d1f98a8559b4ca74123697dd4dee882955acd0da9010a80d64e016201609bc47dda88eee18c7433340c16e054cabee4318a8d638e873be19e979df81dc7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0e3f9f5c80e0101160014f233267911e94dc74df706fe3b697273e212d5450063024088b5e730136407312980d3b1446004a8c552111721a4ba48044365cf7f7785542f2d7799f73d7cba1be2301fdfb91ad6ea99559b1857a25336eaefd90675870f207642ba797fd89d1f98a8559b4ca74123697dd4dee882955acd0da9010a80d64e0161015fe334d4fe18398f0232d2aca7050388ce4ee5ae82c8148d7f0cea748438b65135ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ace684200101160014f233267911e94dc74df706fe3b697273e212d545006302409278702c74eb3ae7666f9da4841443a4b001d6c7d7de631faf9f26eb464f6cdd741dcd4c2f3a1eb47cbc345f56a16902380b8f74b7a559f9bec854bd0e955b0c207642ba797fd89d1f98a8559b4ca74123697dd4dee882955acd0da9010a80d64e0201003fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa08ba3fae80e01160014aac0345165045e612b3d7363f39a372bead80ce7000001003fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe08fe0fae80e01160014aac0345165045e612b3d7363f39a372bead80ce70000"
 	/*
 		07  // serflags
@@ -931,18 +920,10 @@ func TestRuleAA(t *testing.T) {
 		{
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
-					Height: ruleAA - 1,
+					Height: 5000,
 				},
 			},
-			err: ErrMismatchedPosition,
-		},
-		{
-			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					Height: ruleAA,
-				},
-			},
-			err: ErrEmptyInputIDs,
+			err: ErrInputDoubleSend,
 		},
 	}
 
@@ -1001,53 +982,6 @@ func TestTimeRange(t *testing.T) {
 		tx.TimeRange = c.timeRange
 		if _, err := ValidateTx(tx, block, converter); (err != nil) != c.err {
 			t.Errorf("#%d got error %t, want %t", i, !c.err, c.err)
-		}
-	}
-}
-
-func TestStandardTx(t *testing.T) {
-	fixture := sample(t, nil)
-	tx := types.NewTx(*fixture.tx).Tx
-
-	cases := []struct {
-		desc string
-		f    func()
-		err  error
-	}{
-		{
-			desc: "normal standard tx",
-			err:  nil,
-		},
-		{
-			desc: "not standard tx in spend input",
-			f: func() {
-				inputID := tx.GasInputIDs[0]
-				spend := tx.Entries[inputID].(*bc.Spend)
-				spentOutput, err := tx.Output(*spend.SpentOutputId)
-				if err != nil {
-					t.Fatal(err)
-				}
-				spentOutput.ControlProgram = &bc.Program{Code: []byte{0}}
-			},
-			err: ErrNotStandardTx,
-		},
-		{
-			desc: "not standard tx in output",
-			f: func() {
-				outputID := tx.ResultIds[0]
-				output := tx.Entries[*outputID].(*bc.Output)
-				output.ControlProgram = &bc.Program{Code: []byte{0}}
-			},
-			err: ErrNotStandardTx,
-		},
-	}
-
-	for i, c := range cases {
-		if c.f != nil {
-			c.f()
-		}
-		if err := checkStandardTx(tx, 0); err != c.err {
-			t.Errorf("case #%d (%s) got error %t, want %t", i, c.desc, err, c.err)
 		}
 	}
 }
@@ -1265,7 +1199,7 @@ func txSpend(t *testing.T, tx *bc.Tx, index int) *bc.Spend {
 func getMuxID(tx *bc.Tx) *bc.Hash {
 	out := tx.Entries[*tx.ResultIds[0]]
 	switch result := out.(type) {
-	case *bc.Output:
+	case *bc.OriginalOutput:
 		return result.Source.Ref
 	case *bc.Retirement:
 		return result.Source.Ref

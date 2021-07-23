@@ -2,7 +2,7 @@ package bc
 
 import "io"
 
-func (VoteOutput) typ() string { return "voteoutput1" }
+func (VoteOutput) typ() string { return "voteOutput1" }
 func (o *VoteOutput) writeForHash(w io.Writer) {
 	mustWriteForHash(w, o.Source)
 	mustWriteForHash(w, o.ControlProgram)
@@ -11,7 +11,7 @@ func (o *VoteOutput) writeForHash(w io.Writer) {
 }
 
 // NewCrossChainOutput creates a new CrossChainOutput.
-func NewVoteOutput(source *ValueSource, controlProgram *Program, stateData *StateData, ordinal uint64, vote []byte) *VoteOutput {
+func NewVoteOutput(source *ValueSource, controlProgram *Program, stateData [][]byte, ordinal uint64, vote []byte) *VoteOutput {
 	return &VoteOutput{
 		Source:         source,
 		ControlProgram: controlProgram,

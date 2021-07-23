@@ -15,13 +15,13 @@ func TestConvertProgram(t *testing.T) {
 		{
 			desc:    "multi sign 2-1",
 			program: "0020e402787b2bf9749f8fcdcc132a44e86bacf36780ec5df2189a11020d590533ee",
-			script:  "76aa20e402787b2bf9749f8fcdcc132a44e86bacf36780ec5df2189a11020d590533ee8808ffffffffffffffff7c00c0",
+			script:  "76aa20e402787b2bf9749f8fcdcc132a44e86bacf36780ec5df2189a11020d590533ee88007c00c0",
 			fun:     ConvertP2SHProgram,
 		},
 		{
 			desc:    "multi sign 5-3",
 			program: "00200824e931fb806bd77fdcd291aad3bd0a4493443a4120062bd659e64a3e0bac66",
-			script:  "76aa200824e931fb806bd77fdcd291aad3bd0a4493443a4120062bd659e64a3e0bac668808ffffffffffffffff7c00c0",
+			script:  "76aa200824e931fb806bd77fdcd291aad3bd0a4493443a4120062bd659e64a3e0bac6688007c00c0",
 			fun:     ConvertP2SHProgram,
 		},
 		{

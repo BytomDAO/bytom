@@ -33,33 +33,6 @@ type TypedOutput interface {
 	writeTo(io.Writer) error
 }
 
-func (to *TxOutput) readFrom(r *blockchain.Reader) (err error) {
-	if to.AssetVersion, err = blockchain.ReadVarint63(r); err != nil {
-		return errors.Wrap(err, "reading asset version")
-	}
-
-	typedOutput, err := parseTypedOutput(r)
-	if err != nil {
-		return errors.Wrap(err, "parse typedOutput")
-	}
-
-	to.TypedOutput = typedOutput
-
-	if to.CommitmentSuffix, err = blockchain.ReadExtensibleString(r, func(reader *blockchain.Reader) error {
-		if err := to.TypedOutput.readFrom(reader); err != nil {
-			return err
-		}
-
-		return to.OutputCommitment.readFrom(reader, to.AssetVersion)
-	}); err != nil {
-		return errors.Wrap(err, "reading output commitment")
-	}
-
-	// read and ignore the (empty) output witness
-	_, err = blockchain.ReadVarstr31(r)
-	return errors.Wrap(err, "reading output witness")
-}
-
 var outputTypeMap = map[uint8]func() TypedOutput{
 	OriginalOutputType: func() TypedOutput { return &originalTxOutput{} },
 	VoteOutputType:     func() TypedOutput { return &VoteOutput{} },
@@ -77,6 +50,31 @@ func parseTypedOutput(r *blockchain.Reader) (TypedOutput, error) {
 	}
 
 	return newOutFun(), nil
+}
+
+func (to *TxOutput) readFrom(r *blockchain.Reader) (err error) {
+	if to.AssetVersion, err = blockchain.ReadVarint63(r); err != nil {
+		return errors.Wrap(err, "reading asset version")
+	}
+
+	to.TypedOutput, err = parseTypedOutput(r)
+	if err != nil {
+		return errors.Wrap(err, "parse typedOutput")
+	}
+
+	if to.CommitmentSuffix, err = blockchain.ReadExtensibleString(r, func(reader *blockchain.Reader) error {
+		if err := to.TypedOutput.readFrom(reader); err != nil {
+			return err
+		}
+
+		return to.OutputCommitment.readFrom(reader, to.AssetVersion)
+	}); err != nil {
+		return errors.Wrap(err, "reading output commitment")
+	}
+
+	// read and ignore the (empty) output witness
+	_, err = blockchain.ReadVarstr31(r)
+	return errors.Wrap(err, "reading output witness")
 }
 
 func (to *TxOutput) writeTo(w io.Writer) error {
@@ -117,8 +115,7 @@ func ComputeOutputID(sc *SpendCommitment) (h bc.Hash, err error) {
 		Value:    &sc.AssetAmount,
 		Position: sc.SourcePosition,
 	}
-	o := bc.NewOutput(src, &bc.Program{VmVersion: sc.VMVersion, Code: sc.ControlProgram}, &bc.StateData{StateData: sc.StateData}, 0)
 
-	h = bc.EntryID(o)
-	return h, nil
+	o := bc.NewOriginalOutput(src, &bc.Program{VmVersion: sc.VMVersion, Code: sc.ControlProgram}, sc.StateData, 0)
+	return bc.EntryID(o), nil
 }

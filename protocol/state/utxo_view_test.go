@@ -11,27 +11,30 @@ import (
 )
 
 var defaultEntry = map[bc.Hash]bc.Entry{
-	bc.Hash{V0: 0}: &bc.Output{
+	bc.Hash{V0: 0}: &bc.OriginalOutput{
 		Source: &bc.ValueSource{
 			Value: &bc.AssetAmount{
 				AssetId: &bc.AssetID{V0: 0},
+				Amount:  1,
 			},
 		},
 	},
 }
 
 var gasOnlyTxEntry = map[bc.Hash]bc.Entry{
-	bc.Hash{V1: 0}: &bc.Output{
+	bc.Hash{V1: 0}: &bc.OriginalOutput{
 		Source: &bc.ValueSource{
 			Value: &bc.AssetAmount{
 				AssetId: consensus.BTMAssetID,
+				Amount:  1,
 			},
 		},
 	},
-	bc.Hash{V1: 1}: &bc.Output{
+	bc.Hash{V1: 1}: &bc.OriginalOutput{
 		Source: &bc.ValueSource{
 			Value: &bc.AssetAmount{
 				AssetId: &bc.AssetID{V0: 999},
+				Amount:  1,
 			},
 		},
 	},
@@ -60,7 +63,7 @@ func TestApplyBlock(t *testing.T) {
 			},
 			inputView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, false),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, false),
 				},
 			},
 			fetchView: NewUtxoViewpoint(),
@@ -96,7 +99,7 @@ func TestApplyBlock(t *testing.T) {
 			},
 			inputView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, true),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, true),
 				},
 			},
 			err: true,
@@ -118,12 +121,12 @@ func TestApplyBlock(t *testing.T) {
 			},
 			inputView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, false),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, false),
 				},
 			},
 			fetchView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, true),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, true),
 				},
 			},
 			err: false,
@@ -131,7 +134,7 @@ func TestApplyBlock(t *testing.T) {
 		{
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
-					Height:            101,
+					Height: 101,
 				},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
@@ -147,12 +150,12 @@ func TestApplyBlock(t *testing.T) {
 			},
 			inputView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(true, 0, false),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.CoinbaseUTXOType, 0, false),
 				},
 			},
 			fetchView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(true, 0, true),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.CoinbaseUTXOType, 0, true),
 				},
 			},
 			err: false,
@@ -160,7 +163,7 @@ func TestApplyBlock(t *testing.T) {
 		{
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
-					Height:            0,
+					Height: 0,
 				},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
@@ -176,12 +179,12 @@ func TestApplyBlock(t *testing.T) {
 			},
 			inputView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(true, 0, false),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.CoinbaseUTXOType, 0, false),
 				},
 			},
 			fetchView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(true, 0, true),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.CoinbaseUTXOType, 0, true),
 				},
 			},
 			err: true,
@@ -205,7 +208,7 @@ func TestApplyBlock(t *testing.T) {
 			inputView: NewUtxoViewpoint(),
 			fetchView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(true, 0, false),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.CoinbaseUTXOType, 0, false),
 				},
 			},
 			err: false,
@@ -229,17 +232,17 @@ func TestApplyBlock(t *testing.T) {
 			},
 			inputView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V1: 0}: storage.NewUtxoEntry(false, 0, false),
-					bc.Hash{V1: 1}: storage.NewUtxoEntry(false, 0, false),
+					bc.Hash{V1: 0}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, false),
+					bc.Hash{V1: 1}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, false),
 				},
 			},
 			fetchView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V1: 0}: storage.NewUtxoEntry(false, 0, true),
-					bc.Hash{V1: 1}: storage.NewUtxoEntry(false, 0, true),
+					bc.Hash{V1: 0}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, true),
+					bc.Hash{V1: 1}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, true),
 				},
 			},
-			err:       false,
+			err: false,
 		},
 		{
 			// apply gas only tx, non-btm asset spent output will not be store
@@ -261,11 +264,11 @@ func TestApplyBlock(t *testing.T) {
 			inputView: NewUtxoViewpoint(),
 			fetchView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V1: 0}: storage.NewUtxoEntry(true, 0, false),
-					bc.Hash{V1: 1}: storage.NewUtxoEntry(true, 0, false),
+					bc.Hash{V1: 0}: storage.NewUtxoEntry(storage.CoinbaseUTXOType, 0, false),
+					bc.Hash{V1: 1}: storage.NewUtxoEntry(storage.CoinbaseUTXOType, 0, false),
 				},
 			},
-			err:       false,
+			err: false,
 		},
 	}
 
@@ -308,7 +311,7 @@ func TestDetachBlock(t *testing.T) {
 			inputView: NewUtxoViewpoint(),
 			fetchView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, false),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, false),
 				},
 			},
 			err: false,
@@ -331,7 +334,7 @@ func TestDetachBlock(t *testing.T) {
 			inputView: NewUtxoViewpoint(),
 			fetchView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, true),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, true),
 				},
 			},
 			err: false,
@@ -353,7 +356,7 @@ func TestDetachBlock(t *testing.T) {
 			},
 			inputView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, false),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, false),
 				},
 			},
 			err: true,
@@ -375,12 +378,12 @@ func TestDetachBlock(t *testing.T) {
 			},
 			inputView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, true),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, true),
 				},
 			},
 			fetchView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, false),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, false),
 				},
 			},
 			err: false,

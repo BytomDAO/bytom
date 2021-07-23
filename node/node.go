@@ -1,7 +1,6 @@
 package node
 
 import (
-	"context"
 	"errors"
 	"net"
 	"net/http"
@@ -20,7 +19,6 @@ import (
 	"github.com/bytom/bytom/api"
 	"github.com/bytom/bytom/asset"
 	"github.com/bytom/bytom/blockchain/pseudohsm"
-	"github.com/bytom/bytom/blockchain/txfeed"
 	cfg "github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/contract"
@@ -55,7 +53,6 @@ type Node struct {
 	chain           *protocol.Chain
 	blockProposer   *blockproposer.BlockProposer
 	miningEnable    bool
-	txfeed          *txfeed.Tracker
 }
 
 // NewNode create bytom node
@@ -85,15 +82,6 @@ func NewNode(config *cfg.Config) *Node {
 	var accounts *account.Manager
 	var assets *asset.Registry
 	var wallet *w.Wallet
-	var txFeed *txfeed.Tracker
-
-	txFeedDB := dbm.NewDB("txfeeds", config.DBBackend, config.DBDir())
-	txFeed = txfeed.NewTracker(txFeedDB, chain)
-
-	if err = txFeed.Prepare(context.Background()); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("start txfeed")
-		return nil
-	}
 
 	hsm, err := pseudohsm.New(config.KeysDir())
 	if err != nil {
@@ -144,8 +132,6 @@ func NewNode(config *cfg.Config) *Node {
 		wallet:          wallet,
 		chain:           chain,
 		miningEnable:    config.Mining,
-		txfeed:          txFeed,
-
 		notificationMgr: notificationMgr,
 	}
 
@@ -205,7 +191,7 @@ func launchWebBrowser(port string) {
 }
 
 func (n *Node) initAndstartAPIServer() {
-	n.api = api.NewAPI(n.syncManager, n.wallet, n.blockProposer, n.txfeed, n.chain, n.config, n.accessTokens, n.eventDispatcher, n.notificationMgr)
+	n.api = api.NewAPI(n.syncManager, n.wallet, n.blockProposer, n.chain, n.config, n.accessTokens, n.eventDispatcher, n.notificationMgr)
 
 	listenAddr := env.String("LISTEN", n.config.ApiAddress)
 	env.Parse()

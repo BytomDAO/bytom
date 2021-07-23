@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"strings"
 
-	"math/rand"
 	"testing"
 	"time"
 
@@ -347,7 +346,7 @@ func TestMerkleRootRealTx(t *testing.T) {
 			"00",
 		}, ""),
 	}
-	wantMerkleRoot := "25b984047650029965ba604e4bbd534bca448ddedced5df40e25cd245d4e70f1"
+	wantMerkleRoot := "a23ae3e435a7bdfb52cb92b58be6e658982fd883283caf9547f9df50d65881df"
 
 	var txs []*bc.Tx
 	for _, rawTx := range rawTxs {
@@ -680,19 +679,4 @@ func mockTransactions(txCount int) ([]*Tx, []*bc.Tx) {
 		bcTxs = append(bcTxs, tx.Tx)
 	}
 	return txs, bcTxs
-}
-
-func mockStatuses(statusCount int) []*bc.TxVerifyResult {
-	var statuses []*bc.TxVerifyResult
-	for i := 0; i < statusCount; i++ {
-		status := &bc.TxVerifyResult{}
-		fail := rand.Intn(2)
-		if fail == 0 {
-			status.StatusFail = true
-		} else {
-			status.StatusFail = false
-		}
-		statuses = append(statuses, status)
-	}
-	return statuses
 }

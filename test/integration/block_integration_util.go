@@ -37,7 +37,6 @@ type processBlockTestCase struct {
 	desc             string
 	initStore        []storeEntry
 	wantStore        []storeEntry
-	wantBlockIndex   *state.BlockIndex
 	initOrphanManage *protocol.OrphanManage
 	wantOrphanManage *protocol.OrphanManage
 	wantIsOrphan     bool
@@ -91,13 +90,6 @@ func (p *processBlockTestCase) Run() error {
 		}
 	}
 
-	if p.wantBlockIndex != nil {
-		blockIndex := chain.GetBlockIndex()
-		if !blockIndex.Equals(p.wantBlockIndex) {
-			return fmt.Errorf("#case(%s) want block index:%v, got block index:%v", p.desc, *p.wantBlockIndex, *blockIndex)
-		}
-	}
-
 	if p.wantOrphanManage != nil {
 		if !orphanManage.Equals(p.wantOrphanManage) {
 			return fmt.Errorf("#case(%s) want orphan manage:%v, got orphan manage:%v", p.desc, *p.wantOrphanManage, *orphanManage)
@@ -106,7 +98,7 @@ func (p *processBlockTestCase) Run() error {
 	return nil
 }
 
-func initStore(c *processBlockTestCase) (protocol.Store, dbm.DB, error) {
+func initStore(c *processBlockTestCase) (state.Store, dbm.DB, error) {
 	testDB := dbm.NewDB("testdb", "leveldb", dbDir)
 	batch := testDB.NewBatch()
 	for _, entry := range c.initStore {
@@ -136,7 +128,7 @@ type storeEntry struct {
 func serialItem(item *storeItem) ([]storeEntry, error) {
 	var storeEntrys []storeEntry
 	switch item.val.(type) {
-	case *protocol.BlockStoreState:
+	case *state.BlockStoreState:
 		bytes, err := json.Marshal(item.val)
 		if err != nil {
 			return nil, err

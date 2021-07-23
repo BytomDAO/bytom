@@ -14,10 +14,6 @@ message Program {
   bytes  code       = 2;
 }
 
-message StateData {
-  repeated bytes  state_data       = 1;
-}
-
 // This message type duplicates Hash, above. One alternative is to
 // embed a Hash inside an AssetID. But it's useful for AssetID to be
 // plain old data (without pointers). Another alternative is use Hash
@@ -67,15 +63,6 @@ message TxHeader {
   repeated Hash result_ids      = 4;
 }
 
-message TxVerifyResult {
-  bool status_fail = 1;
-}
-
-message TransactionStatus {
-  uint64                  version        = 1;
-  repeated TxVerifyResult verify_status  = 2;
-}
-
 message Mux {
   repeated ValueSource      sources              = 1; // issuances, spends, and muxes
   Program                   program              = 2;
@@ -88,11 +75,11 @@ message Coinbase {
   bytes            arbitrary           = 2;
 }
 
-message Output {
+message OriginalOutput {
   ValueSource source          = 1;
   Program     control_program = 2;
   uint64      ordinal         = 3;
-  StateData   state_data      = 4;
+  repeated bytes  state_data  = 4;
 }
 
 message VoteOutput {
@@ -100,7 +87,7 @@ message VoteOutput {
   Program     control_program = 2;
   uint64      ordinal         = 3;
   bytes       vote            = 4;
-  StateData   state_data      = 5;
+  repeated bytes  state_data  = 5;
 }
 
 message VetoInput {

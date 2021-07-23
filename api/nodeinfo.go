@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 
+	"github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/netsync/peers"
 	"github.com/bytom/bytom/p2p"
@@ -18,25 +19,35 @@ type VersionInfo struct {
 
 // NetInfo indicate net information
 type NetInfo struct {
-	Listening    bool         `json:"listening"`
-	Syncing      bool         `json:"syncing"`
-	Mining       bool         `json:"mining"`
-	PeerCount    int          `json:"peer_count"`
-	CurrentBlock uint64       `json:"current_block"`
-	HighestBlock uint64       `json:"highest_block"`
-	NetWorkID    string       `json:"network_id"`
-	Version      *VersionInfo `json:"version_info"`
+	Listening      bool         `json:"listening"`
+	Syncing        bool         `json:"syncing"`
+	Mining         bool         `json:"mining"`
+	NodeXPub       string       `json:"node_xpub"`
+	PeerCount      int          `json:"peer_count"`
+	CurrentBlock   uint64       `json:"current_block"`
+	HighestBlock   uint64       `json:"highest_block"`
+	FinalizedBlock uint64       `json:"finalized_block"`
+	NetWorkID      string       `json:"network_id"`
+	Version        *VersionInfo `json:"version_info"`
 }
 
 // GetNodeInfo return net information
-func (a *API) GetNodeInfo() *NetInfo {
+func (a *API) GetNodeInfo() (*NetInfo, error) {
+	nodeXPub := config.CommonConfig.PrivateKey().XPub()
+	finalizedBlockHeader, err := a.chain.LastFinalizedHeader()
+	if err != nil {
+		return nil, err
+	}
+
 	info := &NetInfo{
-		Listening:    a.sync.IsListening(),
-		Syncing:      !a.sync.IsCaughtUp(),
-		Mining:       a.blockProposer.IsProposing(),
-		PeerCount:    a.sync.PeerCount(),
-		CurrentBlock: a.chain.BestBlockHeight(),
-		NetWorkID:    a.sync.GetNetwork(),
+		Listening:      a.sync.IsListening(),
+		Syncing:        !a.sync.IsCaughtUp(),
+		Mining:         a.blockProposer.IsProposing(),
+		NodeXPub:       nodeXPub.String(),
+		PeerCount:      a.sync.PeerCount(),
+		CurrentBlock:   a.chain.BestBlockHeight(),
+		FinalizedBlock: finalizedBlockHeader.Height,
+		NetWorkID:      a.sync.GetNetwork(),
 		Version: &VersionInfo{
 			Version: version.Version,
 			Update:  version.Status.VersionStatus(),
@@ -49,7 +60,7 @@ func (a *API) GetNodeInfo() *NetInfo {
 	if info.CurrentBlock > info.HighestBlock {
 		info.HighestBlock = info.CurrentBlock
 	}
-	return info
+	return info, nil
 }
 
 // return the currently connected peers with net address
@@ -89,7 +100,12 @@ func (a *API) connectPeerByIpAndPort(ip string, port uint16) (*peers.PeerInfo, e
 
 // getNetInfo return network information
 func (a *API) getNetInfo() Response {
-	return NewSuccessResponse(a.GetNodeInfo())
+	nodeInfo, err := a.GetNodeInfo()
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	return NewSuccessResponse(nodeInfo)
 }
 
 // isMining return is in mining or not

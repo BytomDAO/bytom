@@ -198,14 +198,10 @@ func (kc *keyCache) scan() ([]XPub, error) {
 	for _, fi := range files {
 		path := filepath.Join(kc.keydir, fi.Name())
 		if skipKeyFile(fi) {
-			//log.Printf("ignoring file %v", path)
-			//fmt.Printf("ignoring file %v", path)
 			continue
 		}
 		fd, err := os.Open(path)
 		if err != nil {
-			//log.Printf(err)
-			fmt.Printf("err")
 			continue
 		}
 		buf.Reset(fd)

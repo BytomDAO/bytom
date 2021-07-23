@@ -10,9 +10,9 @@ import (
 	"github.com/bytom/bytom/netsync/peers"
 	"github.com/bytom/bytom/p2p"
 	"github.com/bytom/bytom/p2p/security"
-	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/protocol/casper"
 )
 
 // Switch is the interface for p2p switch.
@@ -25,7 +25,7 @@ type Chain interface {
 	BestBlockHeight() uint64
 	GetHeaderByHash(*bc.Hash) (*types.BlockHeader, error)
 	ProcessBlock(*types.Block) (bool, error)
-	ProcessBlockVerification(*protocol.Verification) error
+	ProcessBlockVerification(*casper.ValidCasperSignMsg) error
 }
 
 type Peers interface {
@@ -109,13 +109,11 @@ func (m *Manager) handleBlockProposeMsg(peerID string, msg *BlockProposeMsg) {
 
 func (m *Manager) handleBlockVerificationMsg(peerID string, msg *BlockVerificationMsg) {
 	m.peers.MarkBlockVerification(peerID, msg.Signature)
-	if err := m.chain.ProcessBlockVerification(&protocol.Verification{
-		SourceHash:   msg.SourceHash,
-		TargetHash:   msg.TargetHash,
-		SourceHeight: msg.SourceHeight,
-		TargetHeight: msg.TargetHeight,
-		Signature:    hex.EncodeToString(msg.Signature),
-		PubKey:       hex.EncodeToString(msg.PubKey),
+	if err := m.chain.ProcessBlockVerification(&casper.ValidCasperSignMsg{
+		SourceHash: msg.SourceHash,
+		TargetHash: msg.TargetHash,
+		Signature:  msg.Signature,
+		PubKey:     hex.EncodeToString(msg.PubKey),
 	}); err != nil {
 		m.peers.ProcessIllegal(peerID, security.LevelMsgIllegal, err.Error())
 	}
@@ -129,9 +127,14 @@ func (m *Manager) blockProposeMsgBroadcastLoop() {
 }
 
 func (m *Manager) blockVerificationMsgBroadcastLoop() {
-	m.msgBroadcastLoop(event.BlockVerificationEvent{}, func(data interface{}) (ConsensusMessage, error) {
-		ev := data.(event.BlockVerificationEvent)
-		return NewBlockVerificationMsg(ev.SourceHeight, ev.TargetHeight, ev.SourceHash, ev.TargetHash, ev.PubKey, ev.Signature), nil
+	m.msgBroadcastLoop(casper.ValidCasperSignMsg{}, func(data interface{}) (ConsensusMessage, error) {
+		v := data.(casper.ValidCasperSignMsg)
+		pubKey, err := hex.DecodeString(v.PubKey)
+		if err != nil {
+			return nil, err
+		}
+
+		return NewBlockVerificationMsg(v.SourceHash, v.TargetHash, pubKey, v.Signature), nil
 	})
 }
 

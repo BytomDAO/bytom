@@ -104,7 +104,7 @@ func buildMerkleTree(rawDatas []merkleNode) *merkleTreeNode {
 	}
 }
 
-func (node *merkleTreeNode) getMerkleTreeProof(merkleHashSet set.Interface) ([]*bc.Hash, []uint8) {
+func (node *merkleTreeNode) getMerkleTreeProof(merkleHashSet *set.Set) ([]*bc.Hash, []uint8) {
 	var hashes []*bc.Hash
 	var flags []uint8
 
@@ -155,7 +155,7 @@ func getMerkleTreeProof(rawDatas []merkleNode, relatedRawDatas []merkleNode) ([]
 	if merkleTree == nil {
 		return []*bc.Hash{}, []uint8{}
 	}
-	merkleHashSet := set.New(set.ThreadSafe)
+	merkleHashSet := set.New()
 	for _, data := range relatedRawDatas {
 		merkleHash := leafMerkleHash(data)
 		merkleHashSet.Add(merkleHash.String())

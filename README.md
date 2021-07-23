@@ -111,7 +111,6 @@ Flags:
       --p2p.seeds string                 Comma delimited host:port seed nodes
       --p2p.skip_upnp                    Skip UPNP configuration
       --prof_laddr string                Use http to profile bytomd programs
-      --simd.enable                      Enable SIMD mechan for tensority
       --vault_mode                       Run in the offline enviroment
       --wallet.disable                   Disable wallet
       --wallet.rescan                    Rescan wallet
@@ -131,22 +130,6 @@ Given the `bytomd` node is running, the general workflow is as follows:
 - create key, then you can create account and asset.
 - send transaction, i.e., build, sign and submit transaction.
 - query all kinds of information, let's say, avaliable key, account, key, balances, transactions, etc.
-
-__simd feature:__
-
-You could enable the _simd_ feature to speed up the _PoW_ verification (e.g., during mining and block verification) by simply:
-```
-bytomd node --simd.enable
-```
-
-To enable this feature you will need to compile from the source code by yourself, and `make bytomd-simd`. 
-
-What is more,
-
-+ if you are using _Mac_, please make sure _llvm_ is installed by `brew install llvm`.
-+ if you are using _Windows_, please make sure _mingw-w64_ is installed and set up the _PATH_ environment variable accordingly.
-
-For more details about using `bytomcli` command please refer to [API Reference](https://github.com/Bytom/bytom/wiki/API-Reference)
 
 ### Dashboard
 

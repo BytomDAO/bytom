@@ -44,6 +44,7 @@ type GetBlockResp struct {
 	Size                   uint64     `json:"size"`
 	Version                uint64     `json:"version"`
 	Height                 uint64     `json:"height"`
+	Validator              string     `json:"validator"`
 	PreviousBlockHash      *bc.Hash   `json:"previous_block_hash"`
 	Timestamp              uint64     `json:"timestamp"`
 	TransactionsMerkleRoot *bc.Hash   `json:"transaction_merkle_root"`
@@ -63,11 +64,22 @@ func (a *API) getBlock(ins BlockReq) Response {
 		return NewErrorResponse(err)
 	}
 
+	var validatorPubKey string
+	if block.Height > 0 {
+		validator, err := a.chain.GetValidator(&block.PreviousBlockHash, block.Timestamp)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+
+		validatorPubKey = validator.PubKey
+	}
+
 	resp := &GetBlockResp{
 		Hash:                   &blockHash,
 		Size:                   uint64(len(rawBlock)),
 		Version:                block.Version,
 		Height:                 block.Height,
+		Validator:              validatorPubKey,
 		PreviousBlockHash:      &block.PreviousBlockHash,
 		Timestamp:              block.Timestamp,
 		TransactionsMerkleRoot: &block.TransactionsMerkleRoot,
@@ -85,7 +97,7 @@ func (a *API) getBlock(ins BlockReq) Response {
 		}
 
 		resOutID := orig.ResultIds[0]
-		resOut, ok := orig.Entries[*resOutID].(*bc.Output)
+		resOut, ok := orig.Entries[*resOutID].(*bc.OriginalOutput)
 		if ok {
 			tx.MuxID = *resOut.Source.Ref
 		} else {
@@ -106,7 +118,8 @@ func (a *API) getBlock(ins BlockReq) Response {
 
 // GetRawBlockResp is resp struct for getRawBlock API
 type GetRawBlockResp struct {
-	RawBlock *types.Block `json:"raw_block"`
+	RawBlock  *types.Block `json:"raw_block"`
+	Validator string       `json:"validator"`
 }
 
 func (a *API) getRawBlock(ins BlockReq) Response {
@@ -115,8 +128,19 @@ func (a *API) getRawBlock(ins BlockReq) Response {
 		return NewErrorResponse(err)
 	}
 
+	var validatorPubKey string
+	if block.Height > 0 {
+		validator, err := a.chain.GetValidator(&block.PreviousBlockHash, block.Timestamp)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+
+		validatorPubKey = validator.PubKey
+	}
+
 	resp := GetRawBlockResp{
-		RawBlock: block,
+		RawBlock:  block,
+		Validator: validatorPubKey,
 	}
 	return NewSuccessResponse(resp)
 }
@@ -198,7 +222,7 @@ func (a *API) getMerkleProof(ins MerkleBlockReq) Response {
 }
 
 func getMatchedTx(txs []*types.Tx, filterTxIDs []chainjson.HexBytes) []*types.Tx {
-	txIDSet := set.New(set.ThreadSafe)
+	txIDSet := set.New()
 	for _, txID := range filterTxIDs {
 		hash := hexBytesToHash(txID)
 		txIDSet.Add(hash.String())

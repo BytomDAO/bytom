@@ -1,17 +1,18 @@
 package p2p
 
 import (
+	"encoding/hex"
 	"fmt"
 	"net"
 	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
 
 	cfg "github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/event"
 	"github.com/bytom/bytom/p2p/connection"
@@ -68,7 +69,7 @@ type Switch struct {
 	peers        *PeerSet
 	dialing      *cmn.CMap
 	nodeInfo     *NodeInfo             // our node info
-	nodePrivKey  crypto.PrivKeyEd25519 // our node privkey
+	nodePrivKey  chainkd.XPrv // our node privkey
 	discv        discv
 	lanDiscv     lanDiscv
 	security     Security
@@ -82,14 +83,11 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 	var discv *dht.Network
 	var lanDiscv *mdns.LANDiscover
 
-	bytes := config.PrivateKey().Bytes()
-	var newKey [64]byte
-	copy(newKey[:], bytes)
-	privKey := crypto.PrivKeyEd25519(newKey)
+	xPrv := config.PrivateKey()
 	if !config.VaultMode {
 		// Create listener
 		l, listenAddr = GetListener(config.P2P)
-		discv, err = dht.NewDiscover(config, bytes, l.ExternalAddress().Port)
+		discv, err = dht.NewDiscover(config, *xPrv, l.ExternalAddress().Port)
 		if err != nil {
 			return nil, err
 		}
@@ -98,11 +96,11 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 		}
 	}
 
-	return newSwitch(config, discv, lanDiscv, l, privKey, listenAddr)
+	return newSwitch(config, discv, lanDiscv, l, *xPrv, listenAddr)
 }
 
 // newSwitch creates a new Switch with the given config.
-func newSwitch(config *cfg.Config, discv discv, lanDiscv lanDiscv, l Listener, priv crypto.PrivKeyEd25519, listenAddr string) (*Switch, error) {
+func newSwitch(config *cfg.Config, discv discv, lanDiscv lanDiscv, l Listener, priv chainkd.XPrv, listenAddr string) (*Switch, error) {
 	sw := &Switch{
 		Config:       config,
 		peerConfig:   DefaultPeerConfig(config.P2P),
@@ -114,7 +112,7 @@ func newSwitch(config *cfg.Config, discv discv, lanDiscv lanDiscv, l Listener, p
 		nodePrivKey:  priv,
 		discv:        discv,
 		lanDiscv:     lanDiscv,
-		nodeInfo:     NewNodeInfo(config, priv.PubKey().Unwrap().(crypto.PubKeyEd25519), listenAddr),
+		nodeInfo:     NewNodeInfo(config, priv.XPub().PublicKey(), listenAddr),
 		security:     security.NewSecurity(config),
 	}
 
@@ -186,7 +184,7 @@ func (sw *Switch) AddPeer(pc *peerConn, isLAN bool) error {
 	}
 
 	peer := newPeer(pc, peerNodeInfo, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError, isLAN)
-	if err := sw.security.DoFilter(peer.RemoteAddrHost(), peer.PubKey().String()); err != nil {
+	if err := sw.security.DoFilter(peer.RemoteAddrHost(), hex.EncodeToString(peer.PubKey())); err != nil {
 		return err
 	}
 

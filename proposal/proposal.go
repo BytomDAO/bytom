@@ -1,6 +1,7 @@
 package proposal
 
 import (
+	"encoding/hex"
 	"sort"
 	"strconv"
 	"time"
@@ -77,12 +78,11 @@ func newBlockBuilder(chain *protocol.Chain, validator *state.Validator, accountM
 
 func (b *blockBuilder) build() (*types.Block, error) {
 	b.block.Transactions = []*types.Tx{nil}
-	feeAmount, err := b.applyTransactionFromPool()
-	if err != nil {
+	if err := b.applyTransactionFromPool(); err != nil {
 		return nil, err
 	}
 
-	if err := b.applyCoinbaseTransaction(feeAmount); err != nil {
+	if err := b.applyCoinbaseTransaction(); err != nil {
 		return nil, err
 	}
 
@@ -95,8 +95,8 @@ func (b *blockBuilder) build() (*types.Block, error) {
 	return b.block, nil
 }
 
-func (b *blockBuilder) applyCoinbaseTransaction(feeAmount uint64) error {
-	coinbaseTx, err := b.createCoinbaseTx(feeAmount)
+func (b *blockBuilder) applyCoinbaseTransaction() error {
+	coinbaseTx, err := b.createCoinbaseTx()
 	if err != nil {
 		return errors.Wrap(err, "fail on create coinbase tx")
 	}
@@ -111,7 +111,7 @@ func (b *blockBuilder) applyCoinbaseTransaction(feeAmount uint64) error {
 	return nil
 }
 
-func (b *blockBuilder) applyTransactionFromPool() (uint64, error) {
+func (b *blockBuilder) applyTransactionFromPool() error {
 	txDescList := b.chain.GetTxPool().GetTransactions()
 	sort.Sort(byTime(txDescList))
 	return b.applyTransactions(txDescList, timeoutWarn)
@@ -134,7 +134,7 @@ func (b *blockBuilder) calculateBlockCommitment() (err error) {
 // createCoinbaseTx returns a coinbase transaction paying an appropriate subsidy
 // based on the passed block height to the provided address.  When the address
 // is nil, the coinbase transaction will instead be redeemable by anyone.
-func (b *blockBuilder) createCoinbaseTx(feeAmount uint64) (tx *types.Tx, err error) {
+func (b *blockBuilder) createCoinbaseTx() (tx *types.Tx, err error) {
 	arbitrary := append([]byte{0x00}, []byte(strconv.FormatUint(b.block.Height, 10))...)
 	var script []byte
 	if b.accountManager == nil {
@@ -156,11 +156,32 @@ func (b *blockBuilder) createCoinbaseTx(feeAmount uint64) (tx *types.Tx, err err
 		return nil, err
 	}
 
-	coinbaseAmount := consensus.BlockSubsidy(b.block.Height)
-	if err = builder.AddOutput(types.NewOriginalTxOutput(*consensus.BTMAssetID, coinbaseAmount + feeAmount, script, [][]byte{})); err != nil {
+	checkpoint, err := b.getPrevCheckpoint()
+	if err != nil {
 		return nil, err
 	}
-	//TODO: calculate reward to proposer
+
+	if err = builder.AddOutput(types.NewOriginalTxOutput(*consensus.BTMAssetID, 0, script, [][]byte{})); err != nil {
+		return nil, err
+	}
+
+	if b.block.Height%consensus.ActiveNetParams.BlocksOfEpoch == 1 && b.block.Height != 1 {
+		for controlProgram, amount := range checkpoint.Rewards {
+			if controlProgram == hex.EncodeToString(script) {
+				builder.Outputs()[0].Amount = amount
+				continue
+			}
+
+			controlProgramBytes, err := hex.DecodeString(controlProgram)
+			if err != nil {
+				return nil, err
+			}
+
+			if err := builder.AddOutput(types.NewOriginalTxOutput(*consensus.BTMAssetID, amount, controlProgramBytes, [][]byte{})); err != nil {
+				return nil, err
+			}
+		}
+	}
 
 	_, txData, err := builder.Build()
 	if err != nil {
@@ -180,11 +201,10 @@ func (b *blockBuilder) createCoinbaseTx(feeAmount uint64) (tx *types.Tx, err err
 	return tx, nil
 }
 
-func (b *blockBuilder) applyTransactions(txs []*protocol.TxDesc, timeoutStatus uint8) (uint64, error) {
-	var feeAmount uint64
-	batchTxs := []*types.Tx{}
+func (b *blockBuilder) applyTransactions(txs []*protocol.TxDesc, timeoutStatus uint8) error {
+	batchTxs := []*protocol.TxDesc{}
 	for i := 0; i < len(txs); i++ {
-		if batchTxs = append(batchTxs, txs[i].Tx); len(batchTxs) < batchApplyNum && i != len(txs)-1 {
+		if batchTxs = append(batchTxs, txs[i]); len(batchTxs) < batchApplyNum && i != len(txs)-1 {
 			continue
 		}
 
@@ -201,12 +221,11 @@ func (b *blockBuilder) applyTransactions(txs []*protocol.TxDesc, timeoutStatus u
 
 		b.gasLeft = gasLeft
 		batchTxs = batchTxs[:0]
-		feeAmount += txs[i].Fee
 		if b.getTimeoutStatus() >= timeoutStatus || len(b.block.Transactions) > softMaxTxNum {
 			break
 		}
 	}
-	return feeAmount, nil
+	return nil
 }
 
 type validateTxResult struct {
@@ -214,24 +233,25 @@ type validateTxResult struct {
 	err error
 }
 
-func (b *blockBuilder) preValidateTxs(txs []*types.Tx, chain *protocol.Chain, view *state.UtxoViewpoint, gasLeft int64) ([]*validateTxResult, int64) {
+func (b *blockBuilder) preValidateTxs(txs []*protocol.TxDesc, chain *protocol.Chain, view *state.UtxoViewpoint, gasLeft int64) ([]*validateTxResult, int64) {
 	var results []*validateTxResult
 	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: chain.BestBlockHeight() + 1}}
 	bcTxs := make([]*bc.Tx, len(txs))
 	for i, tx := range txs {
-		bcTxs[i] = tx.Tx
+		bcTxs[i] = tx.Tx.Tx
 	}
 
 	validateResults := validation.ValidateTxs(bcTxs, bcBlock, b.chain.ProgramConverter)
 	for i := 0; i < len(validateResults) && gasLeft > 0; i++ {
+		tx := txs[i].Tx
 		gasStatus := validateResults[i].GetGasState()
 		if err := validateResults[i].GetError(); err != nil {
-			results = append(results, &validateTxResult{tx: txs[i], err: err})
+			results = append(results, &validateTxResult{tx: tx, err: err})
 			continue
 		}
 
 		if err := chain.GetTransactionsUtxo(view, []*bc.Tx{bcTxs[i]}); err != nil {
-			results = append(results, &validateTxResult{tx: txs[i], err: err})
+			results = append(results, &validateTxResult{tx: tx, err: err})
 			continue
 		}
 
@@ -240,11 +260,11 @@ func (b *blockBuilder) preValidateTxs(txs []*types.Tx, chain *protocol.Chain, vi
 		}
 
 		if err := view.ApplyTransaction(bcBlock, bcTxs[i]); err != nil {
-			results = append(results, &validateTxResult{tx: txs[i], err: err})
+			results = append(results, &validateTxResult{tx: tx, err: err})
 			continue
 		}
 
-		results = append(results, &validateTxResult{tx: txs[i], err: validateResults[i].GetError()})
+		results = append(results, &validateTxResult{tx: tx, err: validateResults[i].GetError()})
 		gasLeft -= gasStatus.GasUsed
 	}
 	return results, gasLeft
@@ -264,4 +284,12 @@ func (b *blockBuilder) getTimeoutStatus() uint8 {
 	}
 
 	return b.timeoutStatus
+}
+
+func (b *blockBuilder) prevBlockHash() *bc.Hash {
+	return &b.block.PreviousBlockHash
+}
+
+func (b *blockBuilder) getPrevCheckpoint() (*state.Checkpoint, error) {
+	return b.chain.PrevCheckpointByPrevHash(b.prevBlockHash())
 }

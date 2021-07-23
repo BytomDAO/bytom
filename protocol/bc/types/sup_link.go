@@ -65,6 +65,17 @@ type SupLink struct {
 	Signatures   [consensus.MaxNumOfValidators][]byte
 }
 
+// IsMajority if at least 2/3 of validators have published votes with sup link
+func (s *SupLink) IsMajority(numOfValidators int) bool {
+	numOfSignatures := 0
+	for _, signature := range s.Signatures {
+		if len(signature) >= 0 {
+			numOfSignatures++
+		}
+	}
+	return numOfSignatures > numOfValidators*2/3
+}
+
 func (s *SupLink) readFrom(r *blockchain.Reader) (err error) {
 	if s.SourceHeight, err = blockchain.ReadVarint63(r); err != nil {
 		return err

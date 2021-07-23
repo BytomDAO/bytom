@@ -33,6 +33,7 @@ func (b *Block) marshalText(serflags uint8) ([]byte, error) {
 	if err := b.writeTo(ew, serflags); err != nil {
 		return nil, err
 	}
+
 	if err := ew.Err(); err != nil {
 		return nil, err
 	}

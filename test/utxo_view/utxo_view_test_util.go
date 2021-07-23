@@ -6,15 +6,8 @@ import (
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
-	"github.com/bytom/bytom/protocol/state"
 	"github.com/bytom/bytom/testutil"
 )
-
-const utxoPreFix = "UT:"
-
-func calcUtxoKey(hash *bc.Hash) []byte {
-	return []byte(utxoPreFix + hash.String())
-}
 
 type tx struct {
 	Tx *types.Tx
@@ -27,12 +20,12 @@ func newTx(t *types.Tx) *tx {
 }
 
 func (t *tx) getSourceID(outIndex int) *bc.Hash {
-	output := t.Tx.Entries[*t.Tx.OutputID(outIndex)].(*bc.Output)
+	output := t.Tx.Entries[*t.Tx.OutputID(outIndex)].(*bc.OriginalOutput)
 	return output.Source.Ref
 }
 
 func (t *tx) getAmount(outIndex int) uint64 {
-	output := t.Tx.Entries[*t.Tx.OutputID(outIndex)].(*bc.Output)
+	output := t.Tx.Entries[*t.Tx.OutputID(outIndex)].(*bc.OriginalOutput)
 	return output.Source.Value.Amount
 }
 
@@ -47,22 +40,6 @@ func (t *tx) getSpentOutputID(index int) bc.Hash {
 
 func (t *tx) OutputHash(outIndex int) *bc.Hash {
 	return t.Tx.ResultIds[outIndex]
-}
-
-func blockNode(header *bc.BlockHeader) *state.BlockNode {
-	h := types.BlockHeader{
-		Version:           header.Version,
-		Height:            header.Height,
-		PreviousBlockHash: *header.PreviousBlockId,
-		Timestamp:         header.Timestamp,
-	}
-	return &state.BlockNode{
-		Parent:    nil,
-		Hash:      h.Hash(),
-		Version:   h.Version,
-		Height:    h.Height,
-		Timestamp: h.Timestamp,
-	}
 }
 
 func mustDecodeHex(str string) []byte {

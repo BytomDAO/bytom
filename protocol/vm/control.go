@@ -5,14 +5,15 @@ import (
 )
 
 func opVerify(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
+
 	p, err := vm.pop(true)
 	if err != nil {
 		return err
 	}
+
 	if AsBool(p) {
 		return nil
 	}
@@ -20,36 +21,46 @@ func opVerify(vm *virtualMachine) error {
 }
 
 func opFail(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
+
 	return ErrReturn
 }
 
 func opCheckPredicate(vm *virtualMachine) error {
-	err := vm.applyCost(256)
-	if err != nil {
+	if err := vm.applyCost(256); err != nil {
 		return err
 	}
+
 	vm.deferCost(-256 + 64) // get most of that cost back at the end
-	limit, err := vm.popInt64(true)
+	limitBigInt, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
+
+	limit, err := bigIntInt64(limitBigInt)
+	if err != nil {
+		return err
+	}
+
 	predicate, err := vm.pop(true)
 	if err != nil {
 		return err
 	}
-	n, err := vm.popInt64(true)
+
+	nBigInt, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	if limit < 0 {
-		return ErrBadValue
+
+	n, err := bigIntInt64(nBigInt)
+	if err != nil {
+		return err
 	}
+
 	l := int64(len(vm.dataStack))
-	if n < 0 {
+	if n == 0 {
 		n = l
 	}
 	if n > l {
@@ -58,8 +69,8 @@ func opCheckPredicate(vm *virtualMachine) error {
 	if limit == 0 {
 		limit = vm.runLimit
 	}
-	err = vm.applyCost(limit)
-	if err != nil {
+
+	if err = vm.applyCost(limit); err != nil {
 		return err
 	}
 
@@ -82,24 +93,25 @@ func opCheckPredicate(vm *virtualMachine) error {
 }
 
 func opJump(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
+
 	address := binary.LittleEndian.Uint32(vm.data)
 	vm.nextPC = address
 	return nil
 }
 
 func opJumpIf(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
+
 	p, err := vm.pop(true)
 	if err != nil {
 		return err
 	}
+
 	if AsBool(p) {
 		address := binary.LittleEndian.Uint32(vm.data)
 		vm.nextPC = address

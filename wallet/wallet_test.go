@@ -387,6 +387,6 @@ func mockSingleBlock(tx *types.Tx) *types.Block {
 			Version: 1,
 			Height:  1,
 		},
-		Transactions: []*types.Tx{config.GenesisTx(), tx},
+		Transactions: append(config.GenesisTxs(), tx),
 	}
 }

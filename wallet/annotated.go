@@ -195,13 +195,14 @@ func (w *Wallet) BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInp
 		}
 	case *bc.Issuance:
 		in.Type = "issue"
-		in.IssuanceProgram = orig.IssuanceProgram()
+		in.IssuanceProgram = orig.ControlProgram()
 		arguments := orig.Arguments()
 		for _, arg := range arguments {
 			in.WitnessArguments = append(in.WitnessArguments, arg)
 		}
-		if assetDefinition := orig.AssetDefinition(); isValidJSON(assetDefinition) {
-			assetDefinition := json.RawMessage(assetDefinition)
+
+		if ii, ok := orig.TypedInput.(*types.IssuanceInput); ok && isValidJSON(ii.AssetDefinition) {
+			assetDefinition := json.RawMessage(ii.AssetDefinition)
 			in.AssetDefinition = &assetDefinition
 		}
 	case *bc.Coinbase:
@@ -278,7 +279,7 @@ func (w *Wallet) BuildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOut
 	case orig.OutputType() == types.OriginalOutputType:
 		out.Type = "control"
 		if e, ok := tx.Entries[*outid]; ok {
-			if output, ok := e.(*bc.Output); ok {
+			if output, ok := e.(*bc.OriginalOutput); ok {
 				out.StateData = stateDataStrings(output.StateData)
 			}
 		}
@@ -297,9 +298,9 @@ func (w *Wallet) BuildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOut
 	return out
 }
 
-func stateDataStrings(stateData *bc.StateData) []string {
-	ss := make([]string, 0, len(stateData.StateData))
-	for _, bytes := range stateData.StateData {
+func stateDataStrings(stateData [][]byte) []string {
+	ss := make([]string, 0, len(stateData))
+	for _, bytes := range stateData {
 		ss = append(ss, hex.EncodeToString(bytes))
 	}
 	return ss

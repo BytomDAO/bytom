@@ -26,7 +26,6 @@ type Config struct {
 	Wallet     *WalletConfig     `mapstructure:"wallet"`
 	Auth       *RPCAuthConfig    `mapstructure:"auth"`
 	Web        *WebConfig        `mapstructure:"web"`
-	Simd       *SimdConfig       `mapstructure:"simd"`
 	Websocket  *WebsocketConfig  `mapstructure:"ws"`
 	Federation *FederationConfig `mapstructure:"federation"`
 }
@@ -39,7 +38,6 @@ func DefaultConfig() *Config {
 		Wallet:     DefaultWalletConfig(),
 		Auth:       DefaultRPCAuthConfig(),
 		Web:        DefaultWebConfig(),
-		Simd:       DefaultSimdConfig(),
 		Websocket:  DefaultWebsocketConfig(),
 		Federation: DefaultFederationConfig(),
 	}
@@ -207,18 +205,15 @@ type WebConfig struct {
 	Closed bool `mapstructure:"closed"`
 }
 
-type SimdConfig struct {
-	Enable bool `mapstructure:"enable"`
-}
-
 type WebsocketConfig struct {
 	MaxNumWebsockets     int `mapstructure:"max_num_websockets"`
 	MaxNumConcurrentReqs int `mapstructure:"max_num_concurrent_reqs"`
 }
 
 type FederationConfig struct {
-	Xpubs  []chainkd.XPub `json:"xpubs"`
-	Quorum int            `json:"quorum"`
+	FederationScript string         `json:"federation_script"`
+	Xpubs            []chainkd.XPub `json:"xpubs"`
+	Quorum           int            `json:"quorum"`
 }
 
 // Default configurable rpc's auth parameters.
@@ -245,13 +240,6 @@ func DefaultWalletConfig() *WalletConfig {
 	}
 }
 
-// Default configurable web parameters.
-func DefaultSimdConfig() *SimdConfig {
-	return &SimdConfig{
-		Enable: false,
-	}
-}
-
 func DefaultWebsocketConfig() *WebsocketConfig {
 	return &WebsocketConfig{
 		MaxNumWebsockets:     25,
@@ -263,10 +251,10 @@ func DefaultWebsocketConfig() *WebsocketConfig {
 func DefaultFederationConfig() *FederationConfig {
 	return &FederationConfig{
 		Xpubs: []chainkd.XPub{
-			xpub("580daf48fa8962100047cb1391da890bb7f2c849fdbc9b368cb4394a4c7cbb0977e2e7ebbf055dc0ef90af6a0d2af01ce7ec56b735d016aab597815ec48552e5"),
-			xpub("f3f6bcf61b65fa9d1566455a5688ca8b395efdc22e654963134b5e5cb0a45d8be522d21abc384a73177a7b9d64eba915fcfe2862d86a508a3c46dc410bdd72ad"),
-			xpub("53559612f2b7bcada18948b7de39d63947a0e2bd7336d07db1350c54ba5743996b84bf9d18ff7a2457e1a5c70ce5013e4a3b62666ddb03294c53051d5f5c70c0"),
-			xpub("7c88cc58adfc71818b08308d43c29de22460b0ea6895449cbec6e458d7dc09e0aea243fa5075ee6621da0d805bd047f6bb207329c5bd2ca3253b172fb323b512"),
+			xpub("c6dd2a72e8e598bbdb0f8314eaf1eb662341976ad26a834f1d346058adb5228e28287ee830224a7a3ff6864a7d6c6d359cf63d6a64c381dfc437a99f35098d8d"),
+			xpub("920a17359fd2c4442af90d110aaac3f260f4e8868d8490508e0f2fec94dad3abd3f1b08358a61db8f545208f0e74b82d537f22181289e09e949114cd8755583d"),
+			xpub("9a065ae1f84d8062cc91a7e9a710d332a618fd974fdf56dd4b543c8216fba9fb050e23abef910b98f084e83128c35a260d673258ab068423345b88e995a66dd5"),
+			xpub("bf7906d2981dc8d80081d39e569ae7c2728664f5a1e718b7683b8cbf21ace99349fbc17ec3478c36aba52c6faefbd6e8975d7d2c048af2374f1587c8a9a3a3d3"),
 		},
 		Quorum: 2,
 	}

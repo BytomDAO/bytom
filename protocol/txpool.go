@@ -67,7 +67,7 @@ type orphanTx struct {
 type TxPool struct {
 	lastUpdated     int64
 	mtx             sync.RWMutex
-	store           Store
+	store           state.Store
 	pool            map[bc.Hash]*TxDesc
 	utxo            map[bc.Hash]*types.Tx
 	orphans         map[bc.Hash]*orphanTx
@@ -77,7 +77,7 @@ type TxPool struct {
 }
 
 // NewTxPool init a new TxPool
-func NewTxPool(store Store, dispatcher *event.Dispatcher) *TxPool {
+func NewTxPool(store state.Store, dispatcher *event.Dispatcher) *TxPool {
 	tp := &TxPool{
 		lastUpdated:     time.Now().Unix(),
 		store:           store,
@@ -286,7 +286,7 @@ func (tp *TxPool) addTransaction(txD *TxDesc) error {
 	txD.Added = time.Now()
 	tp.pool[tx.ID] = txD
 	for _, id := range tx.ResultIds {
-		_, err := tx.Output(*id)
+		_, err := tx.OriginalOutput(*id)
 		if err != nil {
 			// error due to it's a retirement, utxo doesn't care this output type so skip it
 			continue

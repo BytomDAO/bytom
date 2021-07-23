@@ -12,7 +12,6 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 
 	"github.com/bytom/bytom/accesstoken"
-	"github.com/bytom/bytom/blockchain/txfeed"
 	cfg "github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/dashboard/dashboard"
 	"github.com/bytom/bytom/dashboard/equity"
@@ -113,7 +112,6 @@ type API struct {
 	server          *http.Server
 	handler         http.Handler
 	blockProposer   *blockproposer.BlockProposer
-	txFeedTracker   *txfeed.Tracker
 	notificationMgr *websocket.WSNotificationManager
 	eventDispatcher *event.Dispatcher
 }
@@ -180,14 +178,13 @@ type NetSync interface {
 }
 
 // NewAPI create and initialize the API
-func NewAPI(sync NetSync, wallet *wallet.Wallet, blockProposer *blockproposer.BlockProposer, txfeeds *txfeed.Tracker, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, dispatcher *event.Dispatcher, notificationMgr *websocket.WSNotificationManager) *API {
+func NewAPI(sync NetSync, wallet *wallet.Wallet, blockProposer *blockproposer.BlockProposer, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, dispatcher *event.Dispatcher, notificationMgr *websocket.WSNotificationManager) *API {
 	api := &API{
 		sync:            sync,
 		wallet:          wallet,
 		chain:           chain,
 		accessTokens:    token,
 		blockProposer:   blockProposer,
-		txFeedTracker:   txfeeds,
 		eventDispatcher: dispatcher,
 		notificationMgr: notificationMgr,
 	}
@@ -243,6 +240,7 @@ func (a *API) buildHandler() {
 
 		m.Handle("/list-balances", jsonHandler(a.listBalances))
 		m.Handle("/list-unspent-outputs", jsonHandler(a.listUnspentOutputs))
+		m.Handle("/list-account-votes", jsonHandler(a.listAccountVotes))
 
 		m.Handle("/decode-program", jsonHandler(a.decodeProgram))
 
@@ -268,12 +266,6 @@ func (a *API) buildHandler() {
 	m.Handle("/get-contract", jsonHandler(a.getContract))
 	m.Handle("/list-contracts", jsonHandler(a.listContracts))
 
-	m.Handle("/create-transaction-feed", jsonHandler(a.createTxFeed))
-	m.Handle("/get-transaction-feed", jsonHandler(a.getTxFeed))
-	m.Handle("/update-transaction-feed", jsonHandler(a.updateTxFeed))
-	m.Handle("/delete-transaction-feed", jsonHandler(a.deleteTxFeed))
-	m.Handle("/list-transaction-feeds", jsonHandler(a.listTxFeeds))
-
 	m.Handle("/submit-transaction", jsonHandler(a.submit))
 	m.Handle("/submit-transactions", jsonHandler(a.submitTxs))
 	m.Handle("/estimate-transaction-gas", jsonHandler(a.estimateTxGas))
@@ -293,7 +285,6 @@ func (a *API) buildHandler() {
 	m.Handle("/set-mining", jsonHandler(a.setMining))
 
 	m.Handle("/verify-message", jsonHandler(a.verifyMessage))
-	m.Handle("/compile", jsonHandler(a.compileEquity))
 
 	m.Handle("/gas-rate", jsonHandler(a.gasRate))
 	m.Handle("/net-info", jsonHandler(a.getNetInfo))
@@ -303,6 +294,7 @@ func (a *API) buildHandler() {
 	m.Handle("/connect-peer", jsonHandler(a.connectPeer))
 
 	m.Handle("/get-merkle-proof", jsonHandler(a.getMerkleProof))
+	m.Handle("/get-vote-result", jsonHandler(a.getVoteResult))
 
 	m.HandleFunc("/websocket-subscribe", a.websocketHandler)
 

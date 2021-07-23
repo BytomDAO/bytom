@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bytom/bytom/testcontrol"
 	"github.com/bytom/bytom/consensus"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/errors"
@@ -16,6 +15,7 @@ import (
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/test/mock"
+	"github.com/bytom/bytom/testcontrol"
 	"github.com/bytom/bytom/testutil"
 )
 
@@ -356,7 +356,7 @@ func TestCreateFetchBlocksTasks(t *testing.T) {
 		for _, syncPeer := range c.peers {
 			peers.AddPeer(syncPeer.peer)
 			peers.SetStatus(syncPeer.peer.id, syncPeer.bestHeight, nil)
-			peers.SetIrreversibleStatus(syncPeer.peer.id, syncPeer.irreversibleHeight, nil)
+			peers.SetJustifiedStatus(syncPeer.peer.id, syncPeer.irreversibleHeight, nil)
 		}
 		mockChain := mock.NewChain()
 		fs := newFastSync(mockChain, &mockFetcher{baseChain: baseChain, peerStatus: peerStatus, testType: c.testType}, nil, peers)

@@ -13,18 +13,29 @@ import (
 const (
 	colon = byte(0x3a)
 
-	blockStore byte = iota
-	blockHashes
+	blockHashes byte = iota + 1
 	blockHeader
-	blockTransactons
+	blockTransactions
+	mainChainIndex
+	checkpoint
+	utxo
 )
 
 var (
 	// BlockHashesKeyPrefix key Prefix
-	BlockHashesKeyPrefix = []byte{blockHashes, colon}
-	blockHeaderKeyPrefix = []byte{blockHeader, colon}
-	blockTransactionsKey = []byte{blockTransactons, colon}
+	BlockHashesKeyPrefix    = []byte{blockHashes, colon}
+	blockHeaderKeyPrefix    = []byte{blockHeader, colon}
+	blockTransactionsKey    = []byte{blockTransactions, colon}
+	mainChainIndexKeyPrefix = []byte{mainChainIndex, colon}
+	checkpointKeyPrefix     = []byte{checkpoint, colon}
+	UtxoKeyPrefix           = []byte{utxo, colon}
 )
+
+func calcMainChainIndexPrefix(height uint64) []byte {
+	buf := [8]byte{}
+	binary.BigEndian.PutUint64(buf[:], height)
+	return append(mainChainIndexKeyPrefix, buf[:]...)
+}
 
 // CalcBlockHeaderKey make up header key with prefix + hash
 func CalcBlockHeaderKey(hash *bc.Hash) []byte {
@@ -41,14 +52,6 @@ func CalcBlockHashesKey(height uint64) []byte {
 // CalcBlockTransactionsKey make up txs key with prefix + hash
 func CalcBlockTransactionsKey(hash *bc.Hash) []byte {
 	return append(blockTransactionsKey, hash.Bytes()...)
-}
-
-// CalcBlockHeaderIndexKey make up BlockHeaderIndexKey with prefix + hash
-func CalcBlockHeaderIndexKey(height uint64, hash *bc.Hash) []byte {
-	buf := [8]byte{}
-	binary.BigEndian.PutUint64(buf[:], height)
-	key := append(BlockHeaderIndexPrefix, buf[:]...)
-	return append(key, hash.Bytes()...)
 }
 
 // GetBlockHeader return the block header by given hash
@@ -91,4 +94,19 @@ func GetBlockHashesByHeight(db dbm.DB, height uint64) ([]*bc.Hash, error) {
 		return nil, err
 	}
 	return hashes, nil
+}
+
+// GetMainChainHash return BlockHash by given height
+func GetMainChainHash(db dbm.DB, height uint64) (*bc.Hash, error) {
+	binaryHash := db.Get(calcMainChainIndexPrefix(height))
+	if binaryHash == nil {
+		return nil, fmt.Errorf("There are no BlockHash with given height %d", height)
+	}
+
+	hash := &bc.Hash{}
+	if err := hash.UnmarshalText(binaryHash); err != nil {
+		return nil, err
+	}
+
+	return hash, nil
 }

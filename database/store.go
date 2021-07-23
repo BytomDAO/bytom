@@ -1,19 +1,15 @@
 package database
 
 import (
-	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/common"
 
-	"github.com/bytom/bytom/consensus"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/errors"
-	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
@@ -22,20 +18,16 @@ import (
 const logModule = "leveldb"
 
 var (
-	// CheckpointPrefix represent the namespace of checkpoints in db
-	CheckpointPrefix = []byte("CP:")
 	// BlockStoreKey block store key
 	BlockStoreKey = []byte("blockStore")
-	// BlockHeaderIndexPrefix  block header index with height
-	BlockHeaderIndexPrefix = []byte("BH:")
 )
 
-func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
+func loadBlockStoreStateJSON(db dbm.DB) *state.BlockStoreState {
 	bytes := db.Get(BlockStoreKey)
 	if bytes == nil {
 		return nil
 	}
-	bsj := &protocol.BlockStoreState{}
+	bsj := &state.BlockStoreState{}
 	if err := json.Unmarshal(bytes, bsj); err != nil {
 		common.PanicCrisis(common.Fmt("Could not unmarshal bytes: %X", bytes))
 	}
@@ -64,7 +56,15 @@ func NewStore(db dbm.DB) *Store {
 		return GetBlockHashesByHeight(db, height)
 	}
 
-	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillBlockHashesFn)
+	fillMainChainHashFn := func(height uint64) (*bc.Hash, error) {
+		return GetMainChainHash(db, height)
+	}
+
+	fillCheckPointFn := func(key []byte) (*state.Checkpoint, error) {
+		return getCheckpointFromDB(db, key)
+	}
+
+	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillBlockHashesFn, fillMainChainHashFn, fillCheckPointFn)
 	return &Store{
 		db:    db,
 		cache: cache,
@@ -109,6 +109,11 @@ func (s *Store) GetBlockHashesByHeight(height uint64) ([]*bc.Hash, error) {
 	return s.cache.lookupBlockHashesByHeight(height)
 }
 
+// GetMainChainHash return the block hash by the specified height
+func (s *Store) GetMainChainHash(height uint64) (*bc.Hash, error) {
+	return s.cache.lookupMainChainHash(height)
+}
+
 // SaveBlock persists a new block in the protocol.
 func (s *Store) SaveBlock(block *types.Block) error {
 	startTime := time.Now()
@@ -140,7 +145,6 @@ func (s *Store) SaveBlock(block *types.Block) error {
 	batch.Set(CalcBlockHashesKey(block.Height), binaryBlockHashes)
 	batch.Set(CalcBlockHeaderKey(&blockHash), binaryBlockHeader)
 	batch.Set(CalcBlockTransactionsKey(&blockHash), binaryBlockTxs)
-	batch.Set(CalcBlockHeaderIndexKey(block.Height, &blockHash), binaryBlockHeader)
 	batch.Write()
 
 	s.cache.removeBlockHashes(block.Height)
@@ -182,56 +186,12 @@ func (s *Store) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) err
 }
 
 // GetStoreStatus return the BlockStoreStateJSON
-func (s *Store) GetStoreStatus() *protocol.BlockStoreState {
+func (s *Store) GetStoreStatus() *state.BlockStoreState {
 	return loadBlockStoreStateJSON(s.db)
 }
 
-// LoadBlockIndex loadblockIndex by bestHeight
-func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error) {
-	startTime := time.Now()
-	blockIndex := state.NewBlockIndex()
-	bhIter := s.db.IteratorPrefix(BlockHeaderIndexPrefix)
-	defer bhIter.Release()
-
-	var lastNode *state.BlockNode
-	for bhIter.Next() {
-		bh := &types.BlockHeader{}
-		if err := bh.UnmarshalText(bhIter.Value()); err != nil {
-			return nil, err
-		}
-
-		// If a block with a height greater than the best height of state is added to the index,
-		// It may cause a bug that the new block cant not be process properly.
-		if bh.Height > stateBestHeight {
-			break
-		}
-
-		var parent *state.BlockNode
-		if lastNode == nil || lastNode.Hash == bh.PreviousBlockHash {
-			parent = lastNode
-		} else {
-			parent = blockIndex.GetNode(&bh.PreviousBlockHash)
-		}
-
-		node, err := state.NewBlockNode(bh, parent)
-		if err != nil {
-			return nil, err
-		}
-
-		blockIndex.AddNode(node)
-		lastNode = node
-	}
-
-	log.WithFields(log.Fields{
-		"module":   logModule,
-		"height":   stateBestHeight,
-		"duration": time.Since(startTime),
-	}).Debug("initialize load history block index from database")
-	return blockIndex, nil
-}
-
 // SaveChainStatus save the core's newest status && delete old status
-func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint, contractView *state.ContractViewpoint, checkpoints []*state.Checkpoint, finalizedHeight uint64, finalizedHash *bc.Hash) error {
+func (s *Store) SaveChainStatus(blockHeader *types.BlockHeader, mainBlockHeaders []*types.BlockHeader, view *state.UtxoViewpoint, contractView *state.ContractViewpoint, finalizedHeight uint64, finalizedHash *bc.Hash) error {
 	batch := s.db.NewBatch()
 	if err := saveUtxoView(batch, view); err != nil {
 		return err
@@ -245,137 +205,39 @@ func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint
 		return err
 	}
 
-	if err := s.saveCheckpoints(batch, checkpoints); err != nil {
-		return err
-	}
-
-	bytes, err := json.Marshal(protocol.BlockStoreState{Height: node.Height, Hash: &node.Hash, FinalizedHeight: finalizedHeight, FinalizedHash: finalizedHash})
+	blockHeaderHash := blockHeader.Hash()
+	bytes, err := json.Marshal(
+		state.BlockStoreState{
+			Height:          blockHeader.Height,
+			Hash:            &blockHeaderHash,
+			FinalizedHeight: finalizedHeight,
+			FinalizedHash:   finalizedHash,
+		})
 	if err != nil {
 		return err
 	}
 
 	batch.Set(BlockStoreKey, bytes)
-	batch.Write()
-	return nil
-}
 
-func calcCheckpointKey(height uint64, hash *bc.Hash) []byte {
-	buf := make([]byte, 8)
-	binary.BigEndian.PutUint64(buf, height)
-	key := append(CheckpointPrefix, buf...)
-	if hash != nil {
-		key = append(key, hash.Bytes()...)
-	}
-	return key
-}
-
-func (s *Store) GetCheckpoint(hash *bc.Hash) (*state.Checkpoint, error) {
-	header, err := s.GetBlockHeader(hash)
-	if err != nil {
-		return nil, err
-	}
-
-	data := s.db.Get(calcCheckpointKey(header.Height, hash))
-	checkpoint := &state.Checkpoint{}
-	if err := json.Unmarshal(data, checkpoint); err != nil {
-		return nil, err
-	}
-
-	setSupLinkToCheckpoint(checkpoint, header.SupLinks)
-	return checkpoint, nil
-}
-
-// GetCheckpointsByHeight return all checkpoints of specified block height
-func (s *Store) GetCheckpointsByHeight(height uint64) ([]*state.Checkpoint, error) {
-	iter := s.db.IteratorPrefix(calcCheckpointKey(height, nil))
-	defer iter.Release()
-	return s.loadCheckpointsFromIter(iter)
-}
-
-// CheckpointsFromNode return all checkpoints from specified block height and hash
-func (s *Store) CheckpointsFromNode(height uint64, hash *bc.Hash) ([]*state.Checkpoint, error) {
-	startKey := calcCheckpointKey(height, hash)
-	iter := s.db.IteratorPrefixWithStart(CheckpointPrefix, startKey, false)
-
-	firstCheckpoint := &state.Checkpoint{}
-	if err := json.Unmarshal(iter.Value(), firstCheckpoint); err != nil {
-		return nil, err
-	}
-
-	checkpoints := []*state.Checkpoint{firstCheckpoint}
-	subs, err := s.loadCheckpointsFromIter(iter)
-	if err != nil {
-		return nil, err
-	}
-
-	checkpoints = append(checkpoints, subs...)
-	return checkpoints, nil
-}
-
-func (s *Store) loadCheckpointsFromIter(iter dbm.Iterator) ([]*state.Checkpoint, error) {
-	var checkpoints []*state.Checkpoint
-	defer iter.Release()
-	for iter.Next() {
-		checkpoint := &state.Checkpoint{}
-		if err := json.Unmarshal(iter.Value(), checkpoint); err != nil {
-			return nil, err
-		}
-
-		header, err := s.GetBlockHeader(&checkpoint.Hash)
+	var clearCacheFuncs []func()
+	// save main chain blockHeaders
+	for _, blockHeader := range mainBlockHeaders {
+		bh := blockHeader
+		blockHash := bh.Hash()
+		binaryBlockHash, err := blockHash.MarshalText()
 		if err != nil {
-			return nil, err
+			return errors.Wrap(err, "Marshal block hash")
 		}
 
-		setSupLinkToCheckpoint(checkpoint, header.SupLinks)
-		checkpoints = append(checkpoints, checkpoint)
-	}
-	return checkpoints, nil
-}
-
-// SaveCheckpoints bulk save multiple checkpoint
-func (s *Store) SaveCheckpoints(checkpoints []*state.Checkpoint) error {
-	batch := s.db.NewBatch()
-
-	if err := s.saveCheckpoints(batch, checkpoints); err != nil {
-		return err
-	}
-
-	batch.Write()
-	return nil
-}
-
-func (s *Store) saveCheckpoints(batch dbm.Batch, checkpoints []*state.Checkpoint) error {
-	for _, checkpoint := range checkpoints {
-		data, err := json.Marshal(checkpoint)
-		if err != nil {
-			return err
-		}
-
-		if checkpoint.Height % state.BlocksOfEpoch != 1 {
-			header, err := s.GetBlockHeader(&checkpoint.Hash)
-			if err != nil {
-				return err
-			}
-
-			batch.Delete(calcCheckpointKey(header.Height-1, &header.PreviousBlockHash))
-		}
-
-		batch.Set(calcCheckpointKey(checkpoint.Height, &checkpoint.Hash), data)
-	}
-	return nil
-}
-
-func setSupLinkToCheckpoint(c *state.Checkpoint, supLinks types.SupLinks) {
-	for _, supLink := range supLinks {
-		var signatures [consensus.MaxNumOfValidators]string
-		for i, signature := range supLink.Signatures {
-			signatures[i] = hex.EncodeToString(signature)
-		}
-
-		c.SupLinks = append(c.SupLinks, &state.SupLink{
-			SourceHeight: supLink.SourceHeight,
-			SourceHash:   supLink.SourceHash,
-			Signatures:   signatures,
+		batch.Set(calcMainChainIndexPrefix(bh.Height), binaryBlockHash)
+		clearCacheFuncs = append(clearCacheFuncs, func() {
+			s.cache.removeMainChainHash(bh.Height)
 		})
 	}
+	batch.Write()
+	for _, clearCacheFunc := range clearCacheFuncs {
+		clearCacheFunc()
+	}
+
+	return nil
 }

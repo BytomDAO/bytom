@@ -274,7 +274,7 @@ func txFee(tx *types.Tx) uint64 {
 // CreateSpendInput create SpendInput which spent the output from tx
 func CreateSpendInput(tx *types.Tx, outputIndex uint64) (*types.SpendInput, error) {
 	outputID := tx.ResultIds[outputIndex]
-	output, ok := tx.Entries[*outputID].(*bc.Output)
+	output, ok := tx.Entries[*outputID].(*bc.OriginalOutput)
 	if !ok {
 		return nil, fmt.Errorf("retirement can't be spent")
 	}
@@ -357,7 +357,7 @@ func SignInstructionFor(input *types.SpendInput, db dbm.DB, signer *signers.Sign
 
 // CreateCoinbaseTx create coinbase tx at block height
 func CreateCoinbaseTx(controlProgram []byte, height, txsFee uint64) (*types.Tx, error) {
-	coinbaseValue := consensus.BlockSubsidy(height) + txsFee
+	coinbaseValue := txsFee
 	builder := txbuilder.NewBuilder(time.Now())
 	if err := builder.AddInput(types.NewCoinbaseInput([]byte(fmt.Sprint(height))), &txbuilder.SigningInstruction{}); err != nil {
 		return nil, err

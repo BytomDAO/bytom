@@ -12,7 +12,7 @@ import (
 )
 
 // NewTxVMContext generates the vm.Context for BVM
-func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, stateData *bc.StateData, args [][]byte) *vm.Context {
+func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, stateData [][]byte, args [][]byte) *vm.Context {
 	var (
 		tx          = vs.tx
 		blockHeight = vs.block.BlockHeader.GetHeight()
@@ -33,7 +33,7 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, state
 		destPos = &e.WitnessDestination.Position
 
 	case *bc.Spend:
-		spentOutput := tx.Entries[*e.SpentOutputId].(*bc.Output)
+		spentOutput := tx.Entries[*e.SpentOutputId].(*bc.OriginalOutput)
 		a1 := spentOutput.Source.Value.AssetId.Bytes()
 		assetID = &a1
 		amount = &spentOutput.Source.Value.Amount
@@ -67,7 +67,7 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, state
 	result := &vm.Context{
 		VMVersion: prog.VmVersion,
 		Code:      convertProgram(prog.Code, vs.converter),
-		StateData: stateData.StateData,
+		StateData: stateData,
 		Arguments: args,
 
 		EntryID: entryID.Bytes(),
@@ -111,16 +111,19 @@ type entryContext struct {
 
 func (ec *entryContext) checkOutput(index uint64, amount uint64, assetID []byte, vmVersion uint64, code []byte, state [][]byte, expansion bool) (bool, error) {
 	checkEntry := func(e bc.Entry) (bool, error) {
-		check := func(prog *bc.Program, value *bc.AssetAmount, stateData *bc.StateData) bool {
+		check := func(prog *bc.Program, value *bc.AssetAmount, stateData [][]byte) bool {
 			return (prog.VmVersion == vmVersion &&
 				bytes.Equal(prog.Code, code) &&
 				bytes.Equal(value.AssetId.Bytes(), assetID) &&
 				value.Amount == amount &&
-				bytesEqual(stateData.StateData, state))
+				bytesEqual(stateData, state))
 		}
 
 		switch e := e.(type) {
-		case *bc.Output:
+		case *bc.OriginalOutput:
+			return check(e.ControlProgram, e.Source.Value, e.StateData), nil
+
+		case *bc.VoteOutput:
 			return check(e.ControlProgram, e.Source.Value, e.StateData), nil
 
 		case *bc.Retirement:
@@ -133,7 +136,7 @@ func (ec *entryContext) checkOutput(index uint64, amount uint64, assetID []byte,
 				// (The spec always requires prog.VmVersion to be zero.)
 				prog.Code = code
 			}
-			return check(&prog, e.Source.Value, &bc.StateData{}), nil
+			return check(&prog, e.Source.Value, [][]byte{}), nil
 		}
 
 		return false, vm.ErrContext
@@ -180,6 +183,20 @@ func (ec *entryContext) checkOutput(index uint64, amount uint64, assetID []byte,
 			return false, errors.Wrapf(vm.ErrBadValue, "index %d >= 1", index)
 		}
 		return checkEntry(d)
+
+	case *bc.VetoInput:
+		d, ok := ec.entries[*e.WitnessDestination.Ref]
+		if !ok {
+			return false, errors.Wrapf(bc.ErrMissingEntry, "entry for vetoInput destination %x not found", e.WitnessDestination.Ref.Bytes())
+		}
+		if m, ok := d.(*bc.Mux); ok {
+			return checkMux(m)
+		}
+		if index != 0 {
+			return false, errors.Wrapf(vm.ErrBadValue, "index %d >= 1", index)
+		}
+		return checkEntry(d)
+
 	}
 
 	return false, vm.ErrContext
