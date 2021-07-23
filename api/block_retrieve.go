@@ -118,7 +118,8 @@ func (a *API) getBlock(ins BlockReq) Response {
 
 // GetRawBlockResp is resp struct for getRawBlock API
 type GetRawBlockResp struct {
-	RawBlock *types.Block `json:"raw_block"`
+	RawBlock  *types.Block `json:"raw_block"`
+	Validator string       `json:"validator"`
 }
 
 func (a *API) getRawBlock(ins BlockReq) Response {
@@ -127,8 +128,19 @@ func (a *API) getRawBlock(ins BlockReq) Response {
 		return NewErrorResponse(err)
 	}
 
+	var validatorPubKey string
+	if block.Height > 0 {
+		validator, err := a.chain.GetValidator(&block.PreviousBlockHash, block.Timestamp)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+
+		validatorPubKey = validator.PubKey
+	}
+
 	resp := GetRawBlockResp{
-		RawBlock: block,
+		RawBlock:  block,
+		Validator: validatorPubKey,
 	}
 	return NewSuccessResponse(resp)
 }

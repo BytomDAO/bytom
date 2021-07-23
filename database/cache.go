@@ -1,6 +1,7 @@
 package database
 
 import (
+	"encoding/hex"
 	"strconv"
 
 	"github.com/golang/groupcache/singleflight"
@@ -8,6 +9,7 @@ import (
 	"github.com/bytom/bytom/common"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/protocol/state"
 )
 
 const (
@@ -15,24 +17,28 @@ const (
 	maxCachedBlockTransactions = 1024
 	maxCachedBlockHashes       = 8192
 	maxCachedMainChainHashes   = 8192
+	maxCheckPoints             = 8192
 )
 
 type fillBlockHeaderFn func(hash *bc.Hash) (*types.BlockHeader, error)
 type fillBlockTransactionsFn func(hash *bc.Hash) ([]*types.Tx, error)
 type fillBlockHashesFn func(height uint64) ([]*bc.Hash, error)
 type fillMainChainHashFn func(height uint64) (*bc.Hash, error)
+type fillCheckPointFn func(key []byte) (*state.Checkpoint, error)
 
-func newCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransactionsFn, fillBlockHashes fillBlockHashesFn, fillMainChainHash fillMainChainHashFn) cache {
+func newCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransactionsFn, fillBlockHashes fillBlockHashesFn, fillMainChainHash fillMainChainHashFn, fillCheckPoint fillCheckPointFn) cache {
 	return cache{
 		lruBlockHeaders:    common.NewCache(maxCachedBlockHeaders),
 		lruBlockTxs:        common.NewCache(maxCachedBlockTransactions),
 		lruBlockHashes:     common.NewCache(maxCachedBlockHashes),
 		lruMainChainHashes: common.NewCache(maxCachedMainChainHashes),
+		lruCheckPoints:     common.NewCache(maxCheckPoints),
 
 		fillBlockHeaderFn:      fillBlockHeader,
 		fillBlockTransactionFn: fillBlockTxs,
 		fillBlockHashesFn:      fillBlockHashes,
 		fillMainChainHashFn:    fillMainChainHash,
+		fillCheckPointFn:       fillCheckPoint,
 	}
 }
 
@@ -41,11 +47,13 @@ type cache struct {
 	lruBlockTxs        *common.Cache
 	lruBlockHashes     *common.Cache
 	lruMainChainHashes *common.Cache
+	lruCheckPoints     *common.Cache
 
 	fillBlockHashesFn      func(uint64) ([]*bc.Hash, error)
 	fillBlockTransactionFn func(hash *bc.Hash) ([]*types.Tx, error)
 	fillBlockHeaderFn      func(hash *bc.Hash) (*types.BlockHeader, error)
 	fillMainChainHashFn    func(uint64) (*bc.Hash, error)
+	fillCheckPointFn       func(key []byte) (*state.Checkpoint, error)
 
 	sf singleflight.Group
 }
@@ -144,4 +152,30 @@ func (c *cache) lookupMainChainHash(height uint64) (*bc.Hash, error) {
 
 func (c *cache) removeMainChainHash(height uint64) {
 	c.lruMainChainHashes.Remove(height)
+}
+
+func (c *cache) lookupCheckPoint(key []byte) (*state.Checkpoint, error) {
+	keyStr := hex.EncodeToString(key)
+	if data, ok := c.lruCheckPoints.Get(keyStr); ok {
+		return data.(*state.Checkpoint), nil
+	}
+
+	checkpoint, err := c.sf.Do("CheckPoint:"+string(key), func() (interface{}, error) {
+		checkPoint, err := c.fillCheckPointFn(key)
+		if err != nil {
+			return nil, err
+		}
+
+		c.lruCheckPoints.Add(keyStr, checkPoint)
+		return checkPoint, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return checkpoint.(*state.Checkpoint), nil
+}
+
+func (c *cache) removeCheckPoint(key []byte) {
+	c.lruCheckPoints.Remove(hex.EncodeToString(key))
 }
