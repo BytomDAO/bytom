@@ -399,45 +399,9 @@ func (a *vetoAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) er
 	}
 
 	if res.change > 0 {
-		acp, err := a.accounts.CreateAddress(a.AccountID, true)
-		if err != nil {
-			return errors.Wrap(err, "creating control program")
-		}
-
-		// Don't insert the control program until callbacks are executed.
-		a.accounts.insertControlProgramDelayed(b, acp)
-		if err = b.AddOutput(types.NewVoteOutput(*a.AssetId, res.change, acp.ControlProgram, a.Vote, nil)); err != nil {
-			return errors.Wrap(err, "adding change voteOutput")
+		if err = b.AddOutput(types.NewOriginalTxOutput(*a.AssetId, res.change, res.utxos[0].ControlProgram, nil)); err != nil {
+			return errors.Wrap(err, "adding change output")
 		}
 	}
 	return nil
-}
-
-// insertControlProgramDelayed takes a template builder and an account
-// control program that hasn't been inserted to the database yet. It
-// registers callbacks on the TemplateBuilder so that all of the template's
-// account control programs are batch inserted if building the rest of
-// the template is successful.
-func (m *Manager) insertControlProgramDelayed(b *txbuilder.TemplateBuilder, acp *CtrlProgram) {
-	m.delayedACPsMu.Lock()
-	m.delayedACPs[b] = append(m.delayedACPs[b], acp)
-	m.delayedACPsMu.Unlock()
-
-	b.OnRollback(func() {
-		m.delayedACPsMu.Lock()
-		delete(m.delayedACPs, b)
-		m.delayedACPsMu.Unlock()
-	})
-	b.OnBuild(func() error {
-		m.delayedACPsMu.Lock()
-		acps := m.delayedACPs[b]
-		delete(m.delayedACPs, b)
-		m.delayedACPsMu.Unlock()
-
-		// Insert all of the account control programs at once.
-		if len(acps) == 0 {
-			return nil
-		}
-		return m.SaveControlPrograms(acps...)
-	})
 }

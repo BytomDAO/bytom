@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bytom/bytom/errors"
 	dbm "github.com/bytom/bytom/database/leveldb"
+	"github.com/bytom/bytom/errors"
 )
 
 func TestCreate(t *testing.T) {
@@ -76,37 +76,6 @@ func TestCheck(t *testing.T) {
 
 	if err := cs.Check("x", "badsecret"); err != ErrInvalidToken {
 		t.Fatal("invalid token check passed")
-	}
-}
-
-func TestDelete(t *testing.T) {
-	ctx := context.Background()
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer os.RemoveAll("temp")
-	cs := NewStore(testDB)
-
-	const id = "Y"
-	mustCreateToken(ctx, t, cs, id, "client")
-
-	err := cs.Delete(id)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	value := cs.DB.Get([]byte(id))
-	if len(value) > 0 {
-		t.Fatal("delete fail")
-	}
-}
-
-func TestDeleteWithInvalidId(t *testing.T) {
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer os.RemoveAll("temp")
-	cs := NewStore(testDB)
-
-	err := cs.Delete("@")
-	if errors.Root(err) != ErrBadID {
-		t.Errorf("Deletion with invalid id success, while it should not")
 	}
 }
 
