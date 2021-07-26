@@ -26,8 +26,6 @@ import (
 )
 
 const (
-	maxAccountCache = 1000
-
 	// HardenedKeyStart bip32 hierarchical deterministic wallets
 	// keys with index ≥ 0x80000000 are hardened keys
 	HardenedKeyStart = 0x80000000
