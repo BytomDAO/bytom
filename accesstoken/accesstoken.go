@@ -97,7 +97,7 @@ func (cs *CredentialStore) Check(id string, secret string) error {
 		return err
 	}
 
-	if strings.Split(token.Token, ":")[1] != secret {
+	if splitStrings := strings.Split(token.Token, ":"); len(splitStrings) != 2 || splitStrings[1] != secret {
 		return ErrInvalidToken
 	}
 
