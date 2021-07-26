@@ -8,11 +8,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/golang/groupcache/lru"
+	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/blockchain/signers"
-	"github.com/bytom/bytom/blockchain/txbuilder"
 	"github.com/bytom/bytom/common"
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/consensus/segwit"
@@ -107,13 +106,6 @@ type Manager struct {
 	chain      *protocol.Chain
 	utxoKeeper *utxoKeeper
 
-	cacheMu    sync.Mutex
-	cache      *lru.Cache
-	aliasCache *lru.Cache
-
-	delayedACPsMu sync.Mutex
-	delayedACPs   map[*txbuilder.TemplateBuilder][]*CtrlProgram
-
 	addressMu sync.Mutex
 	accountMu sync.Mutex
 }
@@ -121,12 +113,9 @@ type Manager struct {
 // NewManager creates a new account manager
 func NewManager(walletDB dbm.DB, chain *protocol.Chain) *Manager {
 	return &Manager{
-		db:          walletDB,
-		chain:       chain,
-		utxoKeeper:  newUtxoKeeper(chain.BestBlockHeight, walletDB),
-		cache:       lru.New(maxAccountCache),
-		aliasCache:  lru.New(maxAccountCache),
-		delayedACPs: make(map[*txbuilder.TemplateBuilder][]*CtrlProgram),
+		db:         walletDB,
+		chain:      chain,
+		utxoKeeper: newUtxoKeeper(chain.BestBlockHeight, walletDB),
 	}
 }
 
@@ -146,7 +135,7 @@ func CreateAccount(xpubs []chainkd.XPub, quorum int, alias string, acctIndex uin
 		return nil, errors.Wrap(err)
 	}
 
-	id := signers.IDGenerate()
+	id := uuid.New().String()
 	return &Account{Signer: signer, ID: id, Alias: strings.ToLower(strings.TrimSpace(alias))}, nil
 }
 
@@ -230,10 +219,6 @@ func (m *Manager) UpdateAccountAlias(accountID string, newAlias string) (err err
 	if existed := m.db.Get(aliasKey(normalizedAlias)); existed != nil {
 		return ErrDuplicateAlias
 	}
-
-	m.cacheMu.Lock()
-	m.aliasCache.Remove(oldAlias)
-	m.cacheMu.Unlock()
 
 	account.Alias = normalizedAlias
 	rawAccount, err := json.Marshal(account)
@@ -351,13 +336,10 @@ func (m *Manager) DeleteAccount(accountID string) (err error) {
 	if err := m.deleteAccountControlPrograms(accountID); err != nil {
 		return err
 	}
+
 	if err := m.deleteAccountUtxos(accountID); err != nil {
 		return err
 	}
-
-	m.cacheMu.Lock()
-	m.aliasCache.Remove(account.Alias)
-	m.cacheMu.Unlock()
 
 	storeBatch := m.db.NewBatch()
 	storeBatch.Delete(aliasKey(account.Alias))
@@ -368,48 +350,24 @@ func (m *Manager) DeleteAccount(accountID string) (err error) {
 
 // FindByAlias retrieves an account's Signer record by its alias
 func (m *Manager) FindByAlias(alias string) (*Account, error) {
-	m.cacheMu.Lock()
-	cachedID, ok := m.aliasCache.Get(alias)
-	m.cacheMu.Unlock()
-	if ok {
-		return m.FindByID(cachedID.(string))
-	}
-
 	rawID := m.db.Get(aliasKey(alias))
 	if rawID == nil {
 		return nil, ErrFindAccount
 	}
 
 	accountID := string(rawID)
-	m.cacheMu.Lock()
-	m.aliasCache.Add(alias, accountID)
-	m.cacheMu.Unlock()
 	return m.FindByID(accountID)
 }
 
 // FindByID returns an account's Signer record by its ID.
 func (m *Manager) FindByID(id string) (*Account, error) {
-	m.cacheMu.Lock()
-	cachedAccount, ok := m.cache.Get(id)
-	m.cacheMu.Unlock()
-	if ok {
-		return cachedAccount.(*Account), nil
-	}
-
 	rawAccount := m.db.Get(Key(id))
 	if rawAccount == nil {
 		return nil, ErrFindAccount
 	}
 
 	account := &Account{}
-	if err := json.Unmarshal(rawAccount, account); err != nil {
-		return nil, err
-	}
-
-	m.cacheMu.Lock()
-	m.cache.Add(id, account)
-	m.cacheMu.Unlock()
-	return account, nil
+	return account, json.Unmarshal(rawAccount, account)
 }
 
 // GetAccountByProgram return Account by given CtrlProgram
