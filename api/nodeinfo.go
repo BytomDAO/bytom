@@ -2,13 +2,13 @@ package api
 
 import (
 	"context"
-	"github.com/bytom/bytom/config"
-	"github.com/bytom/bytom/version"
 	"net"
 
+	"github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/netsync/peers"
 	"github.com/bytom/bytom/p2p"
+	"github.com/bytom/bytom/version"
 )
 
 type VersionInfo struct {
