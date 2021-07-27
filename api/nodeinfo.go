@@ -40,7 +40,7 @@ func (a *API) GetNodeInfo() (*NetInfo, error) {
 		return nil, err
 	}
 
-	justified, err := a.chain.LastJustifiedHeader()
+	justifiedBlockHeader, err := a.chain.LastJustifiedHeader()
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func (a *API) GetNodeInfo() (*NetInfo, error) {
 		PeerCount:      a.sync.PeerCount(),
 		CurrentBlock:   a.chain.BestBlockHeight(),
 		FinalizedBlock: finalizedBlockHeader.Height,
-		JustifiedBlock: justified.Height,
+		JustifiedBlock: justifiedBlockHeader.Height,
 		NetWorkID:      a.sync.GetNetwork(),
 		Version: &VersionInfo{
 			Version: version.Version,
