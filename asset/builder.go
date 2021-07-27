@@ -46,8 +46,7 @@ func (a *issueAction) Build(ctx context.Context, builder *txbuilder.TemplateBuil
 	}
 
 	var nonce [8]byte
-	_, err = rand.Read(nonce[:])
-	if err != nil {
+	if _, err = rand.Read(nonce[:]); err != nil {
 		return err
 	}
 

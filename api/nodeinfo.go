@@ -90,7 +90,7 @@ func (a *API) connectPeerByIpAndPort(ip string, port uint16) (*peers.PeerInfo, e
 
 // isMining return is in mining or not
 func (a *API) isMining() Response {
-	IsMining := map[string]bool{"is_mining": a.IsMining()}
+	IsMining := map[string]bool{"is_mining": a.blockProposer.IsProposing()}
 	return NewSuccessResponse(IsMining)
 }
 
