@@ -19,24 +19,35 @@ type VersionInfo struct {
 
 // NetInfo indicate net information
 type NetInfo struct {
-	Listening bool         `json:"listening"`
-	Syncing   bool         `json:"syncing"`
-	Mining    bool         `json:"mining"`
-	NodeXPub  string       `json:"node_xpub"`
-	PeerCount int          `json:"peer_count"`
-	NetWorkID string       `json:"network_id"`
-	Version   *VersionInfo `json:"version_info"`
+	Listening    bool         `json:"listening"`
+	Syncing      bool         `json:"syncing"`
+	Mining       bool         `json:"mining"`
+	NodeXPub     string       `json:"node_xpub"`
+	PeerCount    int          `json:"peer_count"`
+	CurrentBlock uint64       `json:"current_block"`
+	HighestBlock uint64       `json:"highest_block"`
+	NetWorkID    string       `json:"network_id"`
+	Version      *VersionInfo `json:"version_info"`
 }
 
 // getNetInfo return network information
 func (a *API) getNetInfo() Response {
+	highestBlockHeight := a.chain.BestBlockHeight()
+	if bestPeer := a.sync.BestPeer(); bestPeer != nil {
+		if bestPeer.Height > highestBlockHeight {
+			highestBlockHeight = bestPeer.Height
+		}
+	}
+
 	return NewSuccessResponse(&NetInfo{
-		Listening: a.sync.IsListening(),
-		Syncing:   !a.sync.IsCaughtUp(),
-		Mining:    a.blockProposer.IsProposing(),
-		NodeXPub:  config.CommonConfig.PrivateKey().XPub().String(),
-		PeerCount: a.sync.PeerCount(),
-		NetWorkID: a.sync.GetNetwork(),
+		Listening:    a.sync.IsListening(),
+		Syncing:      !a.sync.IsCaughtUp(),
+		Mining:       a.blockProposer.IsProposing(),
+		NodeXPub:     config.CommonConfig.PrivateKey().XPub().String(),
+		PeerCount:    a.sync.PeerCount(),
+		CurrentBlock: a.chain.BestBlockHeight(),
+		HighestBlock: highestBlockHeight,
+		NetWorkID:    a.sync.GetNetwork(),
 		Version: &VersionInfo{
 			Version: version.Version,
 			Update:  version.Status.VersionStatus(),
