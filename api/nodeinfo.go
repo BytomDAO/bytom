@@ -27,6 +27,7 @@ type NetInfo struct {
 	CurrentBlock   uint64       `json:"current_block"`
 	HighestBlock   uint64       `json:"highest_block"`
 	FinalizedBlock uint64       `json:"finalized_block"`
+	JustifiedBlock uint64       `json:"justified_block"`
 	NetWorkID      string       `json:"network_id"`
 	Version        *VersionInfo `json:"version_info"`
 }
@@ -39,6 +40,11 @@ func (a *API) GetNodeInfo() (*NetInfo, error) {
 		return nil, err
 	}
 
+	justified, err := a.chain.LastJustifiedHeader()
+	if err != nil {
+		return nil, err
+	}
+
 	info := &NetInfo{
 		Listening:      a.sync.IsListening(),
 		Syncing:        !a.sync.IsCaughtUp(),
@@ -47,6 +53,7 @@ func (a *API) GetNodeInfo() (*NetInfo, error) {
 		PeerCount:      a.sync.PeerCount(),
 		CurrentBlock:   a.chain.BestBlockHeight(),
 		FinalizedBlock: finalizedBlockHeader.Height,
+		JustifiedBlock: justified.Height,
 		NetWorkID:      a.sync.GetNetwork(),
 		Version: &VersionInfo{
 			Version: version.Version,
