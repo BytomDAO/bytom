@@ -8,11 +8,12 @@ import (
 	"github.com/bytom/bytom/protocol/vm"
 )
 
-// BCRP bytom contract register protocol
-const BCRP = "bcrp"
-
-// Version bcrp version
-const Version = 1
+const (
+	// BCRP bytom contract register protocol
+	BCRP = "bcrp"
+	// Version bcrp version
+	Version = 1
+)
 
 // IsBCRPScript checks if a control program is bytom contract register protocol
 // BCRP script format: OP_FAIL + OP_DATA_4 + "bcrp" + OP_DATA_1 + "1" + {{dynamic_op}} + contract

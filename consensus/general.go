@@ -105,9 +105,9 @@ var NetParams = map[string]Params{
 // MainNetParams is the config for production
 var MainNetParams = Params{
 	Name:            "main",
-	Bech32HRPSegwit: "bm",
+	Bech32HRPSegwit: "bn",
 	DefaultPort:     "46657",
-	DNSSeeds:        []string{"www.mainnetseed.bytom.io"},
+	DNSSeeds:        []string{},
 	CasperConfig: CasperConfig{
 		BlockTimeInterval:      6000,
 		MaxTimeOffsetMs:        2400,
@@ -122,7 +122,7 @@ var TestNetParams = Params{
 	Name:            "test",
 	Bech32HRPSegwit: "tm",
 	DefaultPort:     "46656",
-	DNSSeeds:        []string{"www.testnetseed.bytom.io"},
+	DNSSeeds:        []string{},
 	CasperConfig: CasperConfig{
 		BlockTimeInterval:      6000,
 		MaxTimeOffsetMs:        24000,

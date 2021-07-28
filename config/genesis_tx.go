@@ -68,7 +68,7 @@ func GenesisTxs() []*types.Tx {
 	firstTxData := types.TxData{
 		Version: 1,
 		Inputs:  []*types.TxInput{types.NewCoinbaseInput([]byte("Information is power. -- Jan/11/2013. Computing is power. -- Apr/24/2018."))},
-		Outputs: []*types.TxOutput{types.NewOriginalTxOutput(*consensus.BTMAssetID, 167959666678580395, contract, nil)},
+		Outputs: []*types.TxOutput{types.NewOriginalTxOutput(*consensus.BTMAssetID, consensus.InitBTMSupply, contract, nil)},
 	}
 	txs = append(txs, types.NewTx(firstTxData))
 
