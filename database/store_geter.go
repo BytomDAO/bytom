@@ -19,6 +19,7 @@ const (
 	mainChainIndex
 	checkpoint
 	utxo
+	contract
 )
 
 var (
@@ -29,6 +30,7 @@ var (
 	mainChainIndexKeyPrefix = []byte{mainChainIndex, colon}
 	checkpointKeyPrefix     = []byte{checkpoint, colon}
 	UtxoKeyPrefix           = []byte{utxo, colon}
+	ContractPrefix          = []byte{contract, colon}
 )
 
 func calcMainChainIndexPrefix(height uint64) []byte {

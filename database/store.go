@@ -5,7 +5,6 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tendermint/tmlibs/common"
 
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/database/storage"
@@ -29,7 +28,7 @@ func loadBlockStoreStateJSON(db dbm.DB) *state.BlockStoreState {
 	}
 	bsj := &state.BlockStoreState{}
 	if err := json.Unmarshal(bytes, bsj); err != nil {
-		common.PanicCrisis(common.Fmt("Could not unmarshal bytes: %X", bytes))
+		log.WithField("err", err).Panic("Could not unmarshal blockStoreState")
 	}
 	return bsj
 }

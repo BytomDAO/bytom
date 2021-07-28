@@ -8,9 +8,6 @@ import (
 	"github.com/bytom/bytom/protocol/state"
 )
 
-// ContractPrefix contract prefix
-var ContractPrefix = []byte("C:")
-
 // CalcContractKey calculate contract key
 func CalcContractKey(hash [32]byte) []byte {
 	return append(ContractPrefix, hash[:]...)
