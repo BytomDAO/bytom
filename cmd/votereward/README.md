@@ -12,7 +12,7 @@
 
 ```json
 {
-  "node_ip": "http://127.0.0.1:9889", // node API address, replace with self node  API address
+  "node_ip": "http://127.0.0.1:9888", // node API address, replace with self node  API address
   "chain_id": "mainnet", //Node network type
   "mysql": { // Mysql connection information
     "connection": {
