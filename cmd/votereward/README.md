@@ -1,7 +1,7 @@
 ## database
 
 - Create a MySQL database locally or with server installation
-- Import table structure to MySQL database, table structure path:  vapor/toolbar/vote_reward/database/dump_reward.sql
+- Import table structure to MySQL database, table structure path:  bytom/toolbar/vote_reward/database/dump_reward.sql
 
 
 

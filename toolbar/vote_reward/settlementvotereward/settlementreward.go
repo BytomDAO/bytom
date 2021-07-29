@@ -16,7 +16,6 @@ import (
 
 var (
 	errNotFoundReward = errors.New("No reward found")
-	errNotStandbyNode = errors.New("No Standby Node")
 	errNotRewardTx    = errors.New("No reward transaction")
 )
 
@@ -67,10 +66,6 @@ func (s *SettlementReward) Settlement() error {
 	for height := s.startHeight + consensus.ActiveNetParams.BlocksOfEpoch; height <= s.endHeight; height += consensus.ActiveNetParams.BlocksOfEpoch {
 		totalReward, err := s.getCoinbaseReward(height + 1)
 		if err == errNotFoundReward {
-			totalReward, err = s.getStandbyNodeReward(height - consensus.ActiveNetParams.BlocksOfEpoch)
-		}
-
-		if err == errNotStandbyNode {
 			continue
 		}
 
@@ -103,29 +98,6 @@ func (s *SettlementReward) Settlement() error {
 	// send transactions
 	_, err = s.node.BatchSendBTM(s.rewardCfg.AccountID, s.rewardCfg.Password, s.rewards, data)
 	return err
-}
-
-func (s *SettlementReward) getStandbyNodeReward(height uint64) (uint64, error) {
-	voteInfos, err := s.node.GetVoteByHeight(height)
-	if err != nil {
-		return 0, errors.Wrapf(err, "get alternative node reward")
-	}
-
-	xpubVoteNum := uint64(0)
-	for _, voteInfo := range voteInfos {
-		if s.rewardCfg.XPub == voteInfo.Vote {
-			xpubVoteNum = voteInfo.VoteNum
-		}
-	}
-
-	if xpubVoteNum == 0 {
-		return 0, errNotStandbyNode
-	}
-
-	amount := big.NewInt(0).SetUint64(consensus.BlockReward * consensus.ActiveNetParams.BlocksOfEpoch / uint64(consensus.MaxNumOfValidators))
-	rewardRatio := big.NewInt(0).SetUint64(s.rewardCfg.RewardRatio)
-	amount.Mul(amount, rewardRatio).Div(amount, big.NewInt(100))
-	return amount.Uint64(), nil
 }
 
 func (s *SettlementReward) getCoinbaseReward(height uint64) (uint64, error) {

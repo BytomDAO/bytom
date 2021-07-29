@@ -113,18 +113,6 @@ func (n *Node) buildTx(actions []interface{}) (*txbuilder.Template, error) {
 	return result, n.request(url, payload, result)
 }
 
-func (n *Node) BuildChainTxs(actions []interface{}) ([]*txbuilder.Template, error) {
-	url := "/build-chain-transactions"
-
-	payload, err := json.Marshal(&buildTxReq{Actions: actions})
-	if err != nil {
-		return nil, errors.Wrap(err, "Marshal spend request")
-	}
-
-	result := []*txbuilder.Template{}
-	return result, n.request(url, payload, &result)
-}
-
 type signTxReq struct {
 	Tx       *txbuilder.Template `json:"transaction"`
 	Password string              `json:"password"`
@@ -154,35 +142,6 @@ func (n *Node) signTx(tpl *txbuilder.Template, password string) (*txbuilder.Temp
 	return resp.Tx, nil
 }
 
-type signTxsReq struct {
-	Txs      []*txbuilder.Template `json:"transactions"`
-	Password string                `json:"password"`
-}
-
-type signTxsResp struct {
-	Txs          []*txbuilder.Template `json:"transaction"`
-	SignComplete bool                  `json:"sign_complete"`
-}
-
-func (n *Node) SignTxs(tpls []*txbuilder.Template, password string) ([]*txbuilder.Template, error) {
-	url := "/sign-transactions"
-	payload, err := json.Marshal(&signTxsReq{Txs: tpls, Password: password})
-	if err != nil {
-		return nil, errors.Wrap(err, "json marshal")
-	}
-
-	resp := &signTxsResp{}
-	if err := n.request(url, payload, resp); err != nil {
-		return nil, err
-	}
-
-	if !resp.SignComplete {
-		return nil, errors.New("sign fail")
-	}
-
-	return resp.Txs, nil
-}
-
 type submitTxReq struct {
 	Tx *types.Tx `json:"raw_transaction"`
 }
@@ -200,23 +159,4 @@ func (n *Node) SubmitTx(tx *types.Tx) (string, error) {
 
 	res := &submitTxResp{}
 	return res.TxID, n.request(url, payload, res)
-}
-
-type submitTxsReq struct {
-	Txs []*types.Tx `json:"raw_transactions"`
-}
-
-type submitTxsResp struct {
-	TxsID []string `json:"tx_id"`
-}
-
-func (n *Node) SubmitTxs(txs []*types.Tx) ([]string, error) {
-	url := "/submit-transactions"
-	payload, err := json.Marshal(submitTxsReq{Txs: txs})
-	if err != nil {
-		return []string{}, errors.Wrap(err, "json marshal")
-	}
-
-	res := &submitTxsResp{}
-	return res.TxsID, n.request(url, payload, res)
 }
