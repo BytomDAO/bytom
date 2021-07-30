@@ -18,6 +18,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/fortytw2/leaktest v1.3.0 // indirect
 	github.com/go-kit/kit v0.10.0 // indirect
+	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da
 	github.com/golang/protobuf v1.4.3
 	github.com/golang/snappy v0.0.3 // indirect
@@ -26,6 +27,7 @@ require (
 	github.com/grandcat/zeroconf v0.0.0-20190424104450-85eadb44205c
 	github.com/hashicorp/go-version v1.3.0
 	github.com/holiman/uint256 v1.1.1
+	github.com/jinzhu/gorm v1.9.16
 	github.com/johngb/langreg v0.0.0-20150123211413-5c6abc6d19d2
 	github.com/jonboulle/clockwork v0.2.2 // indirect
 	github.com/kr/secureheader v0.2.0
