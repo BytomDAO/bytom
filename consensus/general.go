@@ -2,6 +2,7 @@ package consensus
 
 import (
 	"encoding/binary"
+	"fmt"
 	"strings"
 
 	"github.com/bytom/bytom/protocol/bc"
@@ -143,4 +144,13 @@ var SoloNetParams = Params{
 		MinValidatorVoteNum:    1e8,
 		VotePendingBlockNumber: 10,
 	},
+}
+
+// InitActiveNetParams load the config by chain ID
+func InitActiveNetParams(chainID string) error {
+	var exist bool
+	if ActiveNetParams, exist = NetParams[chainID]; !exist {
+		return fmt.Errorf("chain_id[%v] don't exist", chainID)
+	}
+	return nil
 }
