@@ -31,14 +31,14 @@ func (n *Node) getRawBlock(req *getRawBlockReq) (*types.Block, error) {
 	return resp.RawBlock, n.request(url, payload, resp)
 }
 
-// bytomNetInfoResp is the response of bytom net info
-type bytomNetInfoResp struct {
-	FinalizedBlock uint64 `json:"finalized_block"`
+// bytomChainStatusResp is the response of bytom chain status
+type bytomChainStatusResp struct {
+	FinalizedHeight uint64 `json:"finalized_height"`
 }
 
-// GetIrreversibleHeight return the irreversible block height of connected node
-func (n *Node) GetIrreversibleHeight() (uint64, error) {
-	url := "/net-info"
-	res := &bytomNetInfoResp{}
-	return res.FinalizedBlock, n.request(url, nil, res)
+// GetFinalizedHeight return the finalized block height of connected node
+func (n *Node) GetFinalizedHeight() (uint64, error) {
+	url := "/chain-status"
+	res := &bytomChainStatusResp{}
+	return res.FinalizedHeight, n.request(url, nil, res)
 }

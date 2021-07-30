@@ -28,13 +28,13 @@ func NewChainKeeper(db *gorm.DB, cfg *config.Config, targetHeight uint64) (*Chai
 		targetHeight: targetHeight,
 	}
 
-	irreversibleHeight, err := keeper.node.GetIrreversibleHeight()
+	finalizedHeight, err := keeper.node.GetFinalizedHeight()
 	if err != nil {
-		return nil, errors.Wrap(err, "fail on get irreversible height")
+		return nil, errors.Wrap(err, "fail on get finalized height")
 	}
 
-	if targetHeight > irreversibleHeight {
-		return nil, errors.New("reward end height is more than irreversible height")
+	if targetHeight > finalizedHeight {
+		return nil, errors.New("reward end height is more than finalized height")
 	}
 
 	chainStatus := &orm.ChainStatus{}
