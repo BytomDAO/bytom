@@ -1,6 +1,8 @@
 package casper
 
 import (
+	"fmt"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/config"
@@ -180,6 +182,10 @@ func (c *Casper) validVerificationsFromSupLink(target *state.Checkpoint, supLink
 	source, err := c.store.GetCheckpoint(&supLink.SourceHash)
 	if err != nil {
 		return nil, err
+	}
+
+	if source.Height != supLink.SourceHeight {
+		return nil, fmt.Errorf("suplink has incorrect source height")
 	}
 
 	var result []*verification
