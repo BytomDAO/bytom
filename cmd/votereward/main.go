@@ -56,12 +56,12 @@ func runReward(cmd *cobra.Command, args []string) error {
 
 	db.LogMode(true)
 
-	sync, err := synchron.NewChainKeeper(db, config, rewardEndHeight)
+	keeper, err := synchron.NewChainKeeper(db, config, rewardEndHeight)
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "error": err}).Fatal("Failded to initialize NewChainKeeper.")
 	}
 
-	if err := sync.SyncBlock(); err != nil {
+	if err := keeper.SyncBlock(); err != nil {
 		log.WithFields(log.Fields{"module": logModule, "error": err}).Fatal("Failded to sync block.")
 	}
 

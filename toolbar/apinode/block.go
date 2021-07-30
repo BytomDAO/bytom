@@ -30,3 +30,15 @@ func (n *Node) getRawBlock(req *getRawBlockReq) (*types.Block, error) {
 	resp := &api.GetRawBlockResp{}
 	return resp.RawBlock, n.request(url, payload, resp)
 }
+
+// bytomNetInfoResp is the response of bytom net info
+type bytomNetInfoResp struct {
+	FinalizedBlock uint64 `json:"finalized_block"`
+}
+
+// GetIrreversibleHeight return the irreversible block height of connected node
+func (n *Node) GetIrreversibleHeight() (uint64, error) {
+	url := "/net-info"
+	res := &bytomNetInfoResp{}
+	return res.FinalizedBlock, n.request(url, nil, res)
+}

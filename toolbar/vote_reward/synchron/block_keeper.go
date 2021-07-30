@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 
 	"github.com/jinzhu/gorm"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc/types"
@@ -27,6 +26,15 @@ func NewChainKeeper(db *gorm.DB, cfg *config.Config, targetHeight uint64) (*Chai
 		db:           db,
 		node:         apinode.NewNode(cfg.NodeIP),
 		targetHeight: targetHeight,
+	}
+
+	irreversibleHeight, err := keeper.node.GetIrreversibleHeight()
+	if err != nil {
+		return nil, errors.Wrap(err, "fail on get irreversible height")
+	}
+
+	if targetHeight > irreversibleHeight {
+		return nil, errors.New("reward end height is more than irreversible height")
 	}
 
 	chainStatus := &orm.ChainStatus{}
@@ -72,24 +80,7 @@ func (c *ChainKeeper) syncChainStatus(db *gorm.DB, chainStatus *orm.ChainStatus)
 		return err
 	}
 
-	// Normal case, the previous hash of next block equals to the hash of current block,
-	// just sync to database directly.
-	if nextBlock.PreviousBlockHash.String() == chainStatus.BlockHash {
-		return c.AttachBlock(db, chainStatus, nextBlock)
-	}
-
-	log.WithField("block height", chainStatus.BlockHeight).Debug("the prev hash of remote is not equals the hash of current best block, must rollback")
-	currentBlock, err := c.node.GetBlockByHash(chainStatus.BlockHash)
-	if err != nil {
-		return err
-	}
-
-	preBlock, err := c.node.GetBlockByHash(currentBlock.PreviousBlockHash.String())
-	if err != nil {
-		return err
-	}
-
-	return c.DetachBlock(db, chainStatus, preBlock)
+	return c.AttachBlock(db, chainStatus, nextBlock)
 }
 
 func (c *ChainKeeper) AttachBlock(db *gorm.DB, chainStatus *orm.ChainStatus, block *types.Block) error {
@@ -130,18 +121,6 @@ func (c *ChainKeeper) AttachBlock(db *gorm.DB, chainStatus *orm.ChainStatus, blo
 				return err
 			}
 		}
-	}
-
-	return c.updateChainStatus(db, chainStatus, block)
-}
-
-func (c *ChainKeeper) DetachBlock(db *gorm.DB, chainStatus *orm.ChainStatus, block *types.Block) error {
-	if err := db.Where(&orm.Utxo{VoteHeight: chainStatus.BlockHeight}).Delete(&orm.Utxo{}).Error; err != nil {
-		return err
-	}
-
-	if err := db.Model(&orm.Utxo{}).Where(&orm.Utxo{VetoHeight: chainStatus.BlockHeight}).Update("veto_height", 0).Error; err != nil {
-		return err
 	}
 
 	return c.updateChainStatus(db, chainStatus, block)
