@@ -14,7 +14,7 @@ func op1Add(vm *virtualMachine) error {
 		return err
 	}
 
-	num := uint256.NewInt().SetUint64(1)
+	num := uint256.NewInt(1)
 	if num.Add(n, num); num.Sign() < 0 {
 		return ErrRange
 	}
@@ -32,7 +32,7 @@ func op1Sub(vm *virtualMachine) error {
 		return err
 	}
 
-	num := uint256.NewInt().SetUint64(1)
+	num := uint256.NewInt(1)
 	if num.Sub(n, num); num.Sign() < 0 {
 		return ErrRange
 	}
@@ -50,7 +50,7 @@ func op2Mul(vm *virtualMachine) error {
 		return err
 	}
 
-	num := uint256.NewInt().SetUint64(2)
+	num := uint256.NewInt(2)
 	if num.Mul(n, num); num.Sign() < 0 {
 		return ErrRange
 	}
@@ -82,7 +82,7 @@ func opNot(vm *virtualMachine) error {
 		return err
 	}
 
-	return vm.pushBool(n.Cmp(uint256.NewInt()) == 0, true)
+	return vm.pushBool(n.Cmp(uint256.NewInt(0)) == 0, true)
 }
 
 func op0NotEqual(vm *virtualMachine) error {
@@ -95,7 +95,7 @@ func op0NotEqual(vm *virtualMachine) error {
 		return err
 	}
 
-	return vm.pushBool(n.Cmp(uint256.NewInt()) != 0, true)
+	return vm.pushBool(n.Cmp(uint256.NewInt(0)) != 0, true)
 }
 
 func opAdd(vm *virtualMachine) error {
@@ -157,7 +157,7 @@ func opMul(vm *virtualMachine) error {
 		return err
 	}
 
-	if overflow := x.MulOverflow(x, y); overflow || x.Sign() < 0 {
+	if _, overflow := x.MulOverflow(x, y); overflow || x.Sign() < 0 {
 		return ErrRange
 	}
 
