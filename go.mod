@@ -26,7 +26,7 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/grandcat/zeroconf v0.0.0-20190424104450-85eadb44205c
 	github.com/hashicorp/go-version v1.3.0
-	github.com/holiman/uint256 v1.1.1
+	github.com/holiman/uint256 v1.2.0
 	github.com/jinzhu/gorm v1.9.16
 	github.com/johngb/langreg v0.0.0-20150123211413-5c6abc6d19d2
 	github.com/jonboulle/clockwork v0.2.2 // indirect

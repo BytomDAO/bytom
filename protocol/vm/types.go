@@ -26,7 +26,7 @@ func AsBool(bytes []byte) bool {
 
 // Uint64Bytes convert uint64 to bytes in vm
 func Uint64Bytes(n uint64) []byte {
-	return BigIntBytes(uint256.NewInt().SetUint64(n))
+	return BigIntBytes(uint256.NewInt(n))
 }
 
 // BigIntBytes conv big int to little endian bytes, uint256 is version 1.1.1
@@ -40,7 +40,7 @@ func AsBigInt(b []byte) (*uint256.Int, error) {
 		return nil, ErrBadValue
 	}
 
-	res := uint256.NewInt().SetBytes(reverse(b))
+	res := uint256.NewInt(0).SetBytes(reverse(b))
 	if res.Sign() < 0 {
 		return nil, ErrRange
 	}
