@@ -24,8 +24,8 @@ func TestAddresses(t *testing.T) {
 		// Segwit address tests.
 		{
 			name:    "segwit mainnet p2wpkh v0",
-			addr:    "BM1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7K23GYYF",
-			encoded: "bm1qw508d6qejxtdg4y5r3zarvary0c5xw7k23gyyf",
+			addr:    "BN1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KCG05Q0",
+			encoded: "bn1qw508d6qejxtdg4y5r3zarvary0c5xw7kcg05q0",
 			valid:   true,
 			result: tstAddressWitnessPubKeyHash(
 				0,
@@ -43,8 +43,8 @@ func TestAddresses(t *testing.T) {
 		},
 		{
 			name:    "segwit mainnet p2wsh v0",
-			addr:    "bm1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qk5egtg",
-			encoded: "bm1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qk5egtg",
+			addr:    "bn1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q4ej274",
+			encoded: "bn1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q4ej274",
 			valid:   true,
 			result: tstAddressWitnessScriptHash(
 				0,
@@ -132,19 +132,19 @@ func TestAddresses(t *testing.T) {
 		// Unsupported witness versions (version 0 only supported at this point)
 		{
 			name:  "segwit mainnet witness v1",
-			addr:  "bm1pw508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7k7grplx",
+			addr:  "bn1pw508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7k7grplx",
 			valid: false,
 			net:   &consensus.MainNetParams,
 		},
 		{
 			name:  "segwit mainnet witness v16",
-			addr:  "BM1SW50QA3JX3S",
+			addr:  "BN1SW50QA3JX3S",
 			valid: false,
 			net:   &consensus.MainNetParams,
 		},
 		{
 			name:  "segwit mainnet witness v2",
-			addr:  "bm1zw508d6qejxtdg4y5r3zarvaryvg6kdaj",
+			addr:  "bn1zw508d6qejxtdg4y5r3zarvaryvg6kdaj",
 			valid: false,
 			net:   &consensus.MainNetParams,
 		},
@@ -157,31 +157,31 @@ func TestAddresses(t *testing.T) {
 		},
 		{
 			name:  "segwit invalid checksum",
-			addr:  "bm1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t5",
+			addr:  "bn1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t5",
 			valid: false,
 			net:   &consensus.MainNetParams,
 		},
 		{
 			name:  "segwit invalid witness version",
-			addr:  "BM13W508D6QEJXTDG4Y5R3ZARVARY0C5XW7KN40WF2",
+			addr:  "BN13W508D6QEJXTDG4Y5R3ZARVARY0C5XW7KN40WF2",
 			valid: false,
 			net:   &consensus.MainNetParams,
 		},
 		{
 			name:  "segwit invalid program length",
-			addr:  "bm1rw5uspcuh",
+			addr:  "bn1rw5uspcuh",
 			valid: false,
 			net:   &consensus.MainNetParams,
 		},
 		{
 			name:  "segwit invalid program length",
-			addr:  "bm10w508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7kw5rljs90",
+			addr:  "bn10w508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7kw5rljs90",
 			valid: false,
 			net:   &consensus.MainNetParams,
 		},
 		{
 			name:  "segwit invalid program length for witness version 0 (per BIP141)",
-			addr:  "BM1QR508D6QEJXTDG4Y5R3ZARVARYV98GJ9P",
+			addr:  "BN1QR508D6QEJXTDG4Y5R3ZARVARYV98GJ9P",
 			valid: false,
 			net:   &consensus.MainNetParams,
 		},

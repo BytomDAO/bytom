@@ -2,6 +2,7 @@ package consensus
 
 import (
 	"encoding/binary"
+	"fmt"
 	"strings"
 
 	"github.com/bytom/bytom/protocol/bc"
@@ -17,7 +18,7 @@ const (
 
 	// These configs need add to casper config in elegant way
 	MaxNumOfValidators = int(10)
-	InitBTMSupply      = 15.66 * 1e16
+	InitBTMSupply      = 167959666678580396
 	RewardThreshold    = 0.5
 	BlockReward        = uint64(570776255)
 
@@ -105,9 +106,9 @@ var NetParams = map[string]Params{
 // MainNetParams is the config for production
 var MainNetParams = Params{
 	Name:            "main",
-	Bech32HRPSegwit: "bm",
+	Bech32HRPSegwit: "bn",
 	DefaultPort:     "46657",
-	DNSSeeds:        []string{"www.mainnetseed.bytom.io"},
+	DNSSeeds:        []string{},
 	CasperConfig: CasperConfig{
 		BlockTimeInterval:      6000,
 		MaxTimeOffsetMs:        2400,
@@ -122,7 +123,7 @@ var TestNetParams = Params{
 	Name:            "test",
 	Bech32HRPSegwit: "tm",
 	DefaultPort:     "46656",
-	DNSSeeds:        []string{"www.testnetseed.bytom.io"},
+	DNSSeeds:        []string{},
 	CasperConfig: CasperConfig{
 		BlockTimeInterval:      6000,
 		MaxTimeOffsetMs:        24000,
@@ -143,4 +144,13 @@ var SoloNetParams = Params{
 		MinValidatorVoteNum:    1e8,
 		VotePendingBlockNumber: 10,
 	},
+}
+
+// InitActiveNetParams load the config by chain ID
+func InitActiveNetParams(chainID string) error {
+	var exist bool
+	if ActiveNetParams, exist = NetParams[chainID]; !exist {
+		return fmt.Errorf("chain_id[%v] don't exist", chainID)
+	}
+	return nil
 }

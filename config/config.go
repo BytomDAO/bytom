@@ -180,7 +180,7 @@ func DefaultP2PConfig() *P2PConfig {
 		ListenAddress:    "tcp://0.0.0.0:46656",
 		SkipUPNP:         false,
 		LANDiscover:      true,
-		MaxNumPeers:      50,
+		MaxNumPeers:      20,
 		HandshakeTimeout: 30,
 		DialTimeout:      3,
 		ProxyAddress:     "",

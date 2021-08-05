@@ -43,7 +43,7 @@ type BlockProposer struct {
 func (b *BlockProposer) generateBlocks() {
 	xpub := config.CommonConfig.PrivateKey().XPub()
 	xpubStr := hex.EncodeToString(xpub[:])
-	ticker := time.NewTicker(time.Duration(consensus.ActiveNetParams.BlockTimeInterval) * time.Millisecond)
+	ticker := time.NewTicker(time.Duration(consensus.ActiveNetParams.BlockTimeInterval) * time.Millisecond / 4)
 	defer ticker.Stop()
 
 	for {

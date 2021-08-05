@@ -23,7 +23,7 @@ import (
 const (
 	logModule     = "proposal"
 	batchApplyNum = 16
-	softMaxTxNum  = 128
+	softMaxTxNum  = 1024
 
 	timeoutOk = iota + 1
 	timeoutWarn

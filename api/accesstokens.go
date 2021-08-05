@@ -30,10 +30,7 @@ func (a *API) listAccessTokens(ctx context.Context) Response {
 func (a *API) deleteAccessToken(ctx context.Context, x struct {
 	ID string `json:"id"`
 }) Response {
-	//TODO Add delete permission verify.
-	if err := a.accessTokens.Delete(x.ID); err != nil {
-		return NewErrorResponse(err)
-	}
+	a.accessTokens.Delete(x.ID)
 	return NewSuccessResponse(nil)
 }
 

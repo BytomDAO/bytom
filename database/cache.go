@@ -13,11 +13,11 @@ import (
 )
 
 const (
-	maxCachedBlockHeaders      = 4096
+	maxCachedBlockHeaders      = 2048
 	maxCachedBlockTransactions = 1024
-	maxCachedBlockHashes       = 8192
-	maxCachedMainChainHashes   = 8192
-	maxCheckPoints             = 8192
+	maxCachedBlockHashes       = 1024
+	maxCachedMainChainHashes   = 1024
+	maxCheckPoints             = 256
 )
 
 type fillBlockHeaderFn func(hash *bc.Hash) (*types.BlockHeader, error)
