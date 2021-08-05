@@ -22,7 +22,7 @@ func (c *Checkpoint) pledgeRate() float64 {
 		totalVotes += vote
 	}
 
-	totalSupply := c.Height*consensus.BlockReward + consensus.InitBTMSupply
+	totalSupply := c.Height*consensus.BlockReward/2 + consensus.InitBTMSupply
 	return float64(totalVotes) / float64(totalSupply)
 }
 
