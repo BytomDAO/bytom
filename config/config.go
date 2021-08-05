@@ -211,9 +211,7 @@ type WebsocketConfig struct {
 }
 
 type FederationConfig struct {
-	FederationScript string         `json:"federation_script"`
-	Xpubs            []chainkd.XPub `json:"xpubs"`
-	Quorum           int            `json:"quorum"`
+	Xpubs []chainkd.XPub `json:"xpubs"`
 }
 
 // Default configurable rpc's auth parameters.
@@ -256,7 +254,6 @@ func DefaultFederationConfig() *FederationConfig {
 			xpub("9a065ae1f84d8062cc91a7e9a710d332a618fd974fdf56dd4b543c8216fba9fb050e23abef910b98f084e83128c35a260d673258ab068423345b88e995a66dd5"),
 			xpub("bf7906d2981dc8d80081d39e569ae7c2728664f5a1e718b7683b8cbf21ace99349fbc17ec3478c36aba52c6faefbd6e8975d7d2c048af2374f1587c8a9a3a3d3"),
 		},
-		Quorum: 2,
 	}
 }
 

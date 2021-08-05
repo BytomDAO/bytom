@@ -128,7 +128,6 @@ func (c *Checkpoint) Increase(block *types.Block) error {
 	c.Timestamp = block.Timestamp
 	c.applyVotes(block)
 	c.applyValidatorReward(block)
-	c.applyFederationReward()
 	return nil
 }
 

@@ -3,7 +3,6 @@ package state
 import (
 	"encoding/hex"
 
-	"github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/protocol/bc/types"
 )
@@ -14,10 +13,6 @@ func (c *Checkpoint) validatorReward() uint64 {
 	}
 
 	return consensus.BlockReward
-}
-
-func (c *Checkpoint) federationReward() uint64 {
-	return consensus.BlockReward - c.validatorReward()
 }
 
 // pledgeRate validator's pledge rate
@@ -39,12 +34,4 @@ func (c *Checkpoint) applyValidatorReward(block *types.Block) {
 	}
 
 	c.Rewards[validatorScript] += c.validatorReward()
-}
-
-// applyFederationReward  federation gain the reward in an epoch
-func (c *Checkpoint) applyFederationReward() {
-	if federationReward := c.federationReward(); federationReward != 0 {
-		federationScript := config.CommonConfig.Federation.FederationScript
-		c.Rewards[federationScript] += federationReward
-	}
 }
