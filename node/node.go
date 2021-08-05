@@ -149,11 +149,6 @@ func initNodeConfig(config *cfg.Config) error {
 		log.WithField("err", err).Fatalln("InitLogFile failed")
 	}
 
-	if err := cfg.LoadFederationFile(config.FederationFile(), config); err != nil {
-		log.WithField("err", err).Info("Failed to load federated information")
-		return err
-	}
-
 	initActiveNetParams(config)
 	initCommonConfig(config)
 	return nil
