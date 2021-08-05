@@ -48,7 +48,11 @@ install:
 target:
 	mkdir -p $@
 
-binary: target/$(BYTOMD_BINARY32) target/$(BYTOMD_BINARY64) target/$(BYTOMCLI_BINARY32) target/$(BYTOMCLI_BINARY64)
+binary32: target/$(BYTOMD_BINARY32) target/$(BYTOMD_BINARY64) target/$(BYTOMCLI_BINARY32) target/$(BYTOMCLI_BINARY64)
+
+binary64: target/$(BYTOMD_BINARY64)  target/$(BYTOMCLI_BINARY64)
+
+binary: binary32 binary64
 
 ifeq ($(GOOS),windows)
 release: binary
@@ -62,6 +66,11 @@ release: binary
 	cd target && md5sum  $(BYTOMD_BINARY64).exe $(BYTOMCLI_BINARY64).exe >$(BYTOM_RELEASE64).md5
 	cd target && zip $(BYTOM_RELEASE64).zip  $(BYTOMD_BINARY64).exe $(BYTOMCLI_BINARY64).exe $(BYTOM_RELEASE64).md5
 	cd target && rm -f  $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64)  $(BYTOMD_BINARY64).exe $(BYTOMCLI_BINARY64).exe $(BYTOM_RELEASE64).md5
+else ifeq ($(GOOS),darwin)
+release: binary64
+	cd target && md5sum  $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) >$(BYTOM_RELEASE64).md5
+	cd target && tar -czf $(BYTOM_RELEASE64).tgz  $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) $(BYTOM_RELEASE64).md5
+	cd target && rm -f  $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) $(BYTOM_RELEASE64).md5
 else
 release: binary
 	cd target && md5sum  $(BYTOMD_BINARY32) $(BYTOMCLI_BINARY32) >$(BYTOM_RELEASE32).md5
