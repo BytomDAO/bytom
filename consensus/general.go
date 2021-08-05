@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/protocol/bc"
 )
 
@@ -18,7 +21,7 @@ const (
 
 	// These configs need add to casper config in elegant way
 	MaxNumOfValidators = int(10)
-	InitBTMSupply      = 167959666678580396
+	InitBTMSupply      = 167959666678580397
 	RewardThreshold    = 0.5
 	BlockReward        = uint64(570776255)
 
@@ -51,6 +54,8 @@ type CasperConfig struct {
 
 	// VotePendingBlockNumber is the locked block number of vote utxo
 	VotePendingBlockNumber uint64
+
+	FederationXpubs []chainkd.XPub
 }
 
 // BTMAssetID is BTM's asset id, the soul asset of Bytom
@@ -115,6 +120,12 @@ var MainNetParams = Params{
 		BlocksOfEpoch:          100,
 		MinValidatorVoteNum:    1e14,
 		VotePendingBlockNumber: 181440,
+		FederationXpubs: []chainkd.XPub{
+			xpub("c6dd2a72e8e598bbdb0f8314eaf1eb662341976ad26a834f1d346058adb5228e28287ee830224a7a3ff6864a7d6c6d359cf63d6a64c381dfc437a99f35098d8d"),
+			xpub("920a17359fd2c4442af90d110aaac3f260f4e8868d8490508e0f2fec94dad3abd3f1b08358a61db8f545208f0e74b82d537f22181289e09e949114cd8755583d"),
+			xpub("9a065ae1f84d8062cc91a7e9a710d332a618fd974fdf56dd4b543c8216fba9fb050e23abef910b98f084e83128c35a260d673258ab068423345b88e995a66dd5"),
+			xpub("bf7906d2981dc8d80081d39e569ae7c2728664f5a1e718b7683b8cbf21ace99349fbc17ec3478c36aba52c6faefbd6e8975d7d2c048af2374f1587c8a9a3a3d3"),
+		},
 	},
 }
 
@@ -130,6 +141,12 @@ var TestNetParams = Params{
 		BlocksOfEpoch:          100,
 		MinValidatorVoteNum:    1e8,
 		VotePendingBlockNumber: 10,
+		FederationXpubs: []chainkd.XPub{
+			xpub("c6dd2a72e8e598bbdb0f8314eaf1eb662341976ad26a834f1d346058adb5228e28287ee830224a7a3ff6864a7d6c6d359cf63d6a64c381dfc437a99f35098d8d"),
+			xpub("920a17359fd2c4442af90d110aaac3f260f4e8868d8490508e0f2fec94dad3abd3f1b08358a61db8f545208f0e74b82d537f22181289e09e949114cd8755583d"),
+			xpub("9a065ae1f84d8062cc91a7e9a710d332a618fd974fdf56dd4b543c8216fba9fb050e23abef910b98f084e83128c35a260d673258ab068423345b88e995a66dd5"),
+			xpub("bf7906d2981dc8d80081d39e569ae7c2728664f5a1e718b7683b8cbf21ace99349fbc17ec3478c36aba52c6faefbd6e8975d7d2c048af2374f1587c8a9a3a3d3"),
+		},
 	},
 }
 
@@ -143,6 +160,7 @@ var SoloNetParams = Params{
 		BlocksOfEpoch:          100,
 		MinValidatorVoteNum:    1e8,
 		VotePendingBlockNumber: 10,
+		FederationXpubs:        []chainkd.XPub{},
 	},
 }
 
@@ -153,4 +171,11 @@ func InitActiveNetParams(chainID string) error {
 		return fmt.Errorf("chain_id[%v] don't exist", chainID)
 	}
 	return nil
+}
+
+func xpub(str string) (xpub chainkd.XPub) {
+	if err := xpub.UnmarshalText([]byte(str)); err != nil {
+		log.Panicf("Fail converts a string to xpub")
+	}
+	return xpub
 }
