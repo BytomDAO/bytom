@@ -70,7 +70,7 @@ func opAmount(vm *virtualMachine) error {
 		return ErrContext
 	}
 
-	return vm.pushBigInt(uint256.NewInt().SetUint64(*vm.context.Amount), true)
+	return vm.pushBigInt(uint256.NewInt(*vm.context.Amount), true)
 }
 
 func opProgram(vm *virtualMachine) error {
@@ -90,7 +90,7 @@ func opIndex(vm *virtualMachine) error {
 		return ErrContext
 	}
 
-	return vm.pushBigInt(uint256.NewInt().SetUint64(*vm.context.DestPos), true)
+	return vm.pushBigInt(uint256.NewInt(*vm.context.DestPos), true)
 }
 
 func opEntryID(vm *virtualMachine) error {
@@ -120,5 +120,5 @@ func opBlockHeight(vm *virtualMachine) error {
 		return ErrContext
 	}
 
-	return vm.pushBigInt(uint256.NewInt().SetUint64(*vm.context.BlockHeight), true)
+	return vm.pushBigInt(uint256.NewInt(*vm.context.BlockHeight), true)
 }

@@ -147,7 +147,7 @@ func opDepth(vm *virtualMachine) error {
 		return err
 	}
 
-	return vm.pushBigInt(uint256.NewInt().SetUint64(uint64(len(vm.dataStack))), false)
+	return vm.pushBigInt(uint256.NewInt(uint64(len(vm.dataStack))), false)
 }
 
 func opDrop(vm *virtualMachine) error {
