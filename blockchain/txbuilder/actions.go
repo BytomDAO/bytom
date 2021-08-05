@@ -164,7 +164,7 @@ func (a *registerAction) Build(ctx context.Context, b *TemplateBuilder) error {
 		return MissingFieldsError(missing...)
 	}
 
-	if a.AssetId != consensus.BTMAssetID {
+	if a.AssetId.String() != consensus.BTMAssetID.String() {
 		return errors.New("register contract action asset must be BTM")
 	}
 
