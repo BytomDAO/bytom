@@ -58,7 +58,7 @@ func (b *BlockProposer) generateBlocks() {
 
 		now := uint64(time.Now().UnixNano() / 1e6)
 		base := bestBlockHeader.Timestamp
-		if now > bestBlockHeader.Timestamp+consensus.ActiveNetParams.BlockTimeInterval+consensus.ActiveNetParams.BlockTimeInterval/10 {
+		if now > bestBlockHeader.Timestamp+consensus.ActiveNetParams.BlockTimeInterval {
 			base = now - consensus.ActiveNetParams.BlockTimeInterval
 		}
 		minTimeToNextBlock := consensus.ActiveNetParams.BlockTimeInterval - base%consensus.ActiveNetParams.BlockTimeInterval
