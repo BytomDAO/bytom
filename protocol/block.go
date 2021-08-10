@@ -1,6 +1,8 @@
 package protocol
 
 import (
+	"os"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/errors"
@@ -284,5 +286,12 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 		log.WithFields(log.Fields{"module": logModule}).Debug("start to reorganize chain")
 		return false, c.reorganizeChain(bestNode)
 	}
+
+	const endHeight = 704356
+	if block.Height >= endHeight {
+		log.Printf("block height<%d>  arrive <%d> \n", block.Height, endHeight)
+		os.Exit(1)
+	}
+
 	return false, nil
 }
