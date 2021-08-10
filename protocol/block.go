@@ -287,7 +287,7 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 		return false, c.reorganizeChain(bestNode)
 	}
 
-	const endHeight = 704356
+	const endHeight = 704344
 	if block.Height >= endHeight {
 		log.Printf("block height<%d>  arrive <%d> \n", block.Height, endHeight)
 		os.Exit(1)

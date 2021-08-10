@@ -5,7 +5,7 @@
 bytomEndHeight(){
   secondsPerBlock=150
   startTime="2021-08-10 17:30:39"
-  endTime="2021-08-11 10:00:00"
+  endTime="2021-08-11 09:30:00"
   startHeight=703961
   startTimeSec=`date -j -f  "%Y-%m-%d %H:%M:%S"  "${startTime}" +%s`
   endTimeSec=`date -j -f  "%Y-%m-%d %H:%M:%S"  "${endTime}" +%s`
