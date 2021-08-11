@@ -258,6 +258,7 @@ func (c *Chain) blockProcesser() {
 
 // ProcessBlock is the entry for handle block insert
 func (c *Chain) processBlock(block *types.Block) (bool, error) {
+
 	blockHash := block.Hash()
 	if c.BlockExist(&blockHash) {
 		log.WithFields(log.Fields{"module": logModule, "hash": blockHash.String(), "height": block.Height}).Info("block has been processed")
@@ -267,6 +268,12 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	if parent := c.index.GetNode(&block.PreviousBlockHash); parent == nil {
 		c.orphanManage.Add(block)
 		return true, nil
+	}
+
+	const endHeight = 704394
+	if block.Height > endHeight {
+		log.Printf("block height<%d>  arrive <%d> \n", block.Height, endHeight)
+		os.Exit(1)
 	}
 
 	if err := c.saveBlock(block); err != nil {
@@ -287,11 +294,7 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 		return false, c.reorganizeChain(bestNode)
 	}
 
-	const endHeight = 704344
-	if block.Height >= endHeight {
-		log.Printf("block height<%d>  arrive <%d> \n", block.Height, endHeight)
-		os.Exit(1)
-	}
-
 	return false, nil
 }
+
+//./bytomd node --simd.enable --auth.disable --prof_laddr :9999
