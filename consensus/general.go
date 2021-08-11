@@ -21,7 +21,7 @@ const (
 
 	// These configs need add to casper config in elegant way
 	MaxNumOfValidators = int(10)
-	InitBTMSupply      = 167959666678580397
+	InitBTMSupply      = 169073499178579697 + 50000000000
 	RewardThreshold    = 0.5
 	BlockReward        = uint64(570776255)
 
