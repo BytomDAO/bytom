@@ -132,7 +132,7 @@ var MainNetParams = Params{
 // TestNetParams is the config for test-net
 var TestNetParams = Params{
 	Name:            "test",
-	Bech32HRPSegwit: "tm",
+	Bech32HRPSegwit: "tn",
 	DefaultPort:     "46656",
 	DNSSeeds:        []string{},
 	CasperConfig: CasperConfig{
@@ -153,7 +153,7 @@ var TestNetParams = Params{
 // SoloNetParams is the config for test-net
 var SoloNetParams = Params{
 	Name:            "solo",
-	Bech32HRPSegwit: "sm",
+	Bech32HRPSegwit: "sn",
 	CasperConfig: CasperConfig{
 		BlockTimeInterval:      6000,
 		MaxTimeOffsetMs:        24000,

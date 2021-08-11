@@ -66,8 +66,8 @@ func TestAddresses(t *testing.T) {
 		},
 		{
 			name:    "segwit testnet p2wpkh v0",
-			addr:    "tm1qw508d6qejxtdg4y5r3zarvary0c5xw7kw8fqyc",
-			encoded: "tm1qw508d6qejxtdg4y5r3zarvary0c5xw7kw8fqyc",
+			addr:    "tn1qw508d6qejxtdg4y5r3zarvary0c5xw7ku7wsq7",
+			encoded: "tn1qw508d6qejxtdg4y5r3zarvary0c5xw7ku7wsq7",
 			valid:   true,
 			result: tstAddressWitnessPubKeyHash(
 				0,
@@ -85,8 +85,8 @@ func TestAddresses(t *testing.T) {
 		},
 		{
 			name:    "segwit testnet p2wsh v0",
-			addr:    "tm1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qqq379v",
-			encoded: "tm1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qqq379v",
+			addr:    "tn1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qrd6us3",
+			encoded: "tn1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qrd6us3",
 			valid:   true,
 			result: tstAddressWitnessScriptHash(
 				0,
@@ -108,8 +108,8 @@ func TestAddresses(t *testing.T) {
 		},
 		{
 			name:    "segwit testnet p2wsh witness v0",
-			addr:    "tm1qqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsesvkesyk",
-			encoded: "tm1qqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsesvkesyk",
+			addr:    "tn1qqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvses0mjj3t",
+			encoded: "tn1qqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvses0mjj3t",
 			valid:   true,
 			result: tstAddressWitnessScriptHash(
 				0,
@@ -187,19 +187,19 @@ func TestAddresses(t *testing.T) {
 		},
 		{
 			name:  "segwit mixed case",
-			addr:  "tm1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sL5k7",
+			addr:  "tn1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sL5k7",
 			valid: false,
 			net:   &consensus.TestNetParams,
 		},
 		{
 			name:  "segwit zero padding of more than 4 bits",
-			addr:  "tm1pw508d6qejxtdg4y5r3zarqfsj6c3",
+			addr:  "tn1pw508d6qejxtdg4y5r3zarqfsj6c3",
 			valid: false,
 			net:   &consensus.TestNetParams,
 		},
 		{
 			name:  "segwit non-zero padding in 8-to-5 conversion",
-			addr:  "tm1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3pjxtptv",
+			addr:  "tn1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3pjxtptv",
 			valid: false,
 			net:   &consensus.TestNetParams,
 		},
