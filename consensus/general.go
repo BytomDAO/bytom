@@ -119,7 +119,7 @@ var MainNetParams = Params{
 		MaxTimeOffsetMs:        2400,
 		BlocksOfEpoch:          100,
 		MinValidatorVoteNum:    1e14,
-		VotePendingBlockNumber: 181440,
+		VotePendingBlockNumber: 14400,
 		FederationXpubs: []chainkd.XPub{
 			xpub("c6dd2a72e8e598bbdb0f8314eaf1eb662341976ad26a834f1d346058adb5228e28287ee830224a7a3ff6864a7d6c6d359cf63d6a64c381dfc437a99f35098d8d"),
 			xpub("920a17359fd2c4442af90d110aaac3f260f4e8868d8490508e0f2fec94dad3abd3f1b08358a61db8f545208f0e74b82d537f22181289e09e949114cd8755583d"),
