@@ -62,7 +62,7 @@ func (r *RetireAction) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (n *Node) BatchSendBTM(accountID, password string, outputs map[string]uint64, memo []byte) (string, error) {
+func (n *Node) BatchSendBTM(accountID, password string, outputs map[string]uint64, memo []byte) error {
 	totalBTM := uint64(10000000)
 	actions := []interface{}{}
 	if len(memo) > 0 {
@@ -85,47 +85,53 @@ func (n *Node) BatchSendBTM(accountID, password string, outputs map[string]uint6
 		AssetAmount: &bc.AssetAmount{AssetId: consensus.BTMAssetID, Amount: totalBTM},
 	})
 
-	tpl, err := n.buildTx(actions)
+	tpls, err := n.buildTx(actions)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	tpl, err = n.signTx(tpl, password)
+	tpls, err = n.signTx(tpls, password)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	return n.SubmitTx(tpl.Transaction)
+	for _, tpl := range tpls {
+		if _, err := n.SubmitTx(tpl.Transaction); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 type buildTxReq struct {
 	Actions []interface{} `json:"actions"`
 }
 
-func (n *Node) buildTx(actions []interface{}) (*txbuilder.Template, error) {
-	url := "/build-transaction"
+func (n *Node) buildTx(actions []interface{}) ([]*txbuilder.Template, error) {
+	url := "/build-chain-transactions"
 	payload, err := json.Marshal(&buildTxReq{Actions: actions})
 	if err != nil {
 		return nil, errors.Wrap(err, "Marshal spend request")
 	}
 
-	result := &txbuilder.Template{}
-	return result, n.request(url, payload, result)
+	result := []*txbuilder.Template{}
+	return result, n.request(url, payload, &result)
 }
 
 type signTxReq struct {
-	Tx       *txbuilder.Template `json:"transaction"`
-	Password string              `json:"password"`
+	Txs      []*txbuilder.Template `json:"transactions"`
+	Password string                `json:"password"`
 }
 
 type signTxResp struct {
-	Tx           *txbuilder.Template `json:"transaction"`
-	SignComplete bool                `json:"sign_complete"`
+	Txs          []*txbuilder.Template `json:"transaction"`
+	SignComplete bool                  `json:"sign_complete"`
 }
 
-func (n *Node) signTx(tpl *txbuilder.Template, password string) (*txbuilder.Template, error) {
-	url := "/sign-transaction"
-	payload, err := json.Marshal(&signTxReq{Tx: tpl, Password: password})
+func (n *Node) signTx(tpls []*txbuilder.Template, password string) ([]*txbuilder.Template, error) {
+	url := "/sign-transactions"
+	payload, err := json.Marshal(&signTxReq{Txs: tpls, Password: password})
 	if err != nil {
 		return nil, errors.Wrap(err, "json marshal")
 	}
@@ -139,7 +145,7 @@ func (n *Node) signTx(tpl *txbuilder.Template, password string) (*txbuilder.Temp
 		return nil, errors.New("sign fail")
 	}
 
-	return resp.Tx, nil
+	return resp.Txs, nil
 }
 
 type submitTxReq struct {
