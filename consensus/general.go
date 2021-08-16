@@ -21,7 +21,7 @@ const (
 
 	// These configs need add to casper config in elegant way
 	MaxNumOfValidators = int(10)
-	InitBTMSupply      = 169073499178579697 + 50000000000
+	InitBTMSupply      = 169073499178579697 + 60000000000
 	RewardThreshold    = 0.5
 	BlockReward        = uint64(570776255)
 
@@ -116,15 +116,15 @@ var MainNetParams = Params{
 	DNSSeeds:        []string{},
 	CasperConfig: CasperConfig{
 		BlockTimeInterval:      6000,
-		MaxTimeOffsetMs:        2400,
+		MaxTimeOffsetMs:        3000,
 		BlocksOfEpoch:          100,
 		MinValidatorVoteNum:    1e14,
 		VotePendingBlockNumber: 14400,
 		FederationXpubs: []chainkd.XPub{
-			xpub("c6dd2a72e8e598bbdb0f8314eaf1eb662341976ad26a834f1d346058adb5228e28287ee830224a7a3ff6864a7d6c6d359cf63d6a64c381dfc437a99f35098d8d"),
-			xpub("920a17359fd2c4442af90d110aaac3f260f4e8868d8490508e0f2fec94dad3abd3f1b08358a61db8f545208f0e74b82d537f22181289e09e949114cd8755583d"),
-			xpub("9a065ae1f84d8062cc91a7e9a710d332a618fd974fdf56dd4b543c8216fba9fb050e23abef910b98f084e83128c35a260d673258ab068423345b88e995a66dd5"),
-			xpub("bf7906d2981dc8d80081d39e569ae7c2728664f5a1e718b7683b8cbf21ace99349fbc17ec3478c36aba52c6faefbd6e8975d7d2c048af2374f1587c8a9a3a3d3"),
+			xpub("364344fd6e612d10b51745c336c7bf096520265725b1d149b65d12cda6248aa4c98ad68891a503d9eebbf2b7c52188bfd653c2b046f55486ff84e2e3c98ef864"),
+			xpub("6e49c57d8bb5ab091d644241e3deedefa1c47bd46ef044ff4b3719f31736afe6caf015ff1f7b2af6c80ff6df87ae2d4bb18f7273f0646ca6df5879707ab756de"),
+			xpub("72740630523dddba86213938431938be2b8d1ccac1280b59069cf0b683b0ba3fe7d489e107bbd0f83c9e0b4c841e73aea414796d5078824cf7eb40be09f8db95"),
+			xpub("c001cfe8543a8c0ee984ba11da5e26f2aa95ffffd278b9823e77714f18fc4a650e01146449e00a9546a22153566907a6be6e9d1dfe0d72a40fcd0c4131570caa"),
 		},
 	},
 }
@@ -137,7 +137,7 @@ var TestNetParams = Params{
 	DNSSeeds:        []string{},
 	CasperConfig: CasperConfig{
 		BlockTimeInterval:      6000,
-		MaxTimeOffsetMs:        24000,
+		MaxTimeOffsetMs:        3000,
 		BlocksOfEpoch:          100,
 		MinValidatorVoteNum:    1e8,
 		VotePendingBlockNumber: 10,
