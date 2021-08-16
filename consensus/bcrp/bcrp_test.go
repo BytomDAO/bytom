@@ -34,6 +34,16 @@ func TestIsBCRPScript(t *testing.T) {
 			expected: false,
 		},
 		{
+			// p2wpkh script
+			program:  "001437e1aec83a4e6587ca9609e4e5aa728db7007449",
+			expected: false,
+		},
+		{
+			// p2wsh script
+			program:  "00200824e931fb806bd77fdcd291aad3bd0a4493443a4120062bd659e64a3e0bac66",
+			expected: false,
+		},
+		{
 			// len(contract) == 0
 			program:  "6a046263727001016a",
 			expected: false,
@@ -102,6 +112,16 @@ func TestIsCallContractScript(t *testing.T) {
 		},
 		{
 			program:  "51204e4f02d43bf50171f7f25d046b7f016002da410fc00d2e8902e7b170c98cf946",
+			expected: false,
+		},
+		{
+			// p2wpkh script
+			program:  "001437e1aec83a4e6587ca9609e4e5aa728db7007449",
+			expected: false,
+		},
+		{
+			// p2wsh script
+			program:  "00200824e931fb806bd77fdcd291aad3bd0a4493443a4120062bd659e64a3e0bac66",
 			expected: false,
 		},
 		{
