@@ -27,7 +27,7 @@ const (
 	logModule = "p2p"
 
 	minNumOutboundPeers = 4
-	maxNumLANPeers      = 5
+	maxNumLANPeers      = 15
 )
 
 //pre-define errors for connecting fail
