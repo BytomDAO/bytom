@@ -4,26 +4,29 @@
 
 bytomEndHeight(){
   secondsPerBlock=150
-  startTime="2021-08-11 09:55:44"
-  endTime="2021-08-11 10:30:00"
-  startHeight=704381
+  startTime="2021-08-16 16:39:04"
+  endTime="2021-08-20 09:00:00"
+  startHeight=707577
+
   startTimeSec=`date -j -f  "%Y-%m-%d %H:%M:%S"  "${startTime}" +%s`
   endTimeSec=`date -j -f  "%Y-%m-%d %H:%M:%S"  "${endTime}" +%s`
   endHeight=`echo "${startHeight} + (${endTimeSec} - ${startTimeSec})/${secondsPerBlock}" | bc`
 
-  echo "bytom end block height:" ${endHeight}
+  echo "bytom current height:" ${startTime} ${startHeight}
+  echo "bytom end block height:" ${endTime} ${endHeight}
 }
 
 vaporEndHeight(){
   secondsPerBlock=0.5
-  startTime="2021-08-10 17:53:41"
-  endTime="2021-08-11 10:00:00"
-  startHeight=127315855
+  startTime="2021-08-16 19:53:03"
+  endTime="2021-08-20 08:45:00"
+  startHeight=128346718
   startTimeSec=`date -j -f  "%Y-%m-%d %H:%M:%S"  "${startTime}" +%s`
   endTimeSec=`date -j -f  "%Y-%m-%d %H:%M:%S"  "${endTime}" +%s`
   endHeight=`echo "${startHeight} + (${endTimeSec} - ${startTimeSec})/${secondsPerBlock}" | bc`
 
-  echo "vapor end block height:" ${endHeight}
+  echo "vapor current height:" ${startTime} ${startHeight}
+  echo "vapor end block height:" ${endTime} ${endHeight}
 }
 
 bytomEndHeight
