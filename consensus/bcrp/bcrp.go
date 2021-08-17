@@ -65,6 +65,21 @@ func IsCallContractScript(prog []byte) bool {
 	return insts[1].Op == vm.OP_DATA_32 && len(insts[1].Data) == consensus.BCRPContractHashDataSize
 }
 
+// ParseContract parse contract from BCRP script
+// BCRP script format: OP_FAIL + OP_DATA_4 + "bcrp" + OP_DATA_1 + "1" + {{dynamic_op}} + contract
+func ParseContract(prog []byte) ([]byte, error) {
+	insts, err := vm.ParseProgram(prog)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(insts) != 4 {
+		return nil, errors.New("unsupport program")
+	}
+
+	return insts[3].Data, nil
+}
+
 // ParseContractHash parse contract hash from call BCRP script
 // call contract script format: OP_DATA_4 + "bcrp"+ OP_DATA_32 + SHA3-256(contract)
 func ParseContractHash(prog []byte) ([32]byte, error) {

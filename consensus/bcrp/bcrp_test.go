@@ -143,6 +143,36 @@ func TestIsCallContractScript(t *testing.T) {
 	}
 }
 
+func TestParseContract(t *testing.T) {
+	tests := []struct {
+		program  string
+		expected string
+	}{
+		{
+			// BCRP script format: OP_FAIL + OP_DATA_4 + "bcrp" + OP_DATA_1 + "1" + {{dynamic_op}} + contract
+			program:  "6a04626372700101100164740a52797b937b788791698700c0",
+			expected: "0164740a52797b937b788791698700c0",
+		},
+	}
+
+	for i, test := range tests {
+		program, err := hex.DecodeString(test.program)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		contract, err := ParseContract(program)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expected := hex.EncodeToString(contract[:])
+		if expected != test.expected {
+			t.Errorf("TestParseContract #%d failed: got %v want %v", i, expected, test.expected)
+		}
+	}
+}
+
 func TestParseContractHash(t *testing.T) {
 	tests := []struct {
 		program  string
