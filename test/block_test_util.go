@@ -12,7 +12,6 @@ import (
 func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*types.Block, error) {
 	gasUsed := uint64(0)
 	txsFee := uint64(0)
-	txEntries := []*bc.Tx{nil}
 
 	preBlockHeader := chain.BestBlockHeader()
 
@@ -21,7 +20,7 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 			Version:           1,
 			Height:            preBlockHeader.Height + 1,
 			PreviousBlockHash: preBlockHeader.Hash(),
-			Timestamp:         preBlockHeader.Timestamp + 1,
+			Timestamp:         preBlockHeader.Timestamp + 10000,
 			BlockCommitment:   types.BlockCommitment{},
 		},
 		Transactions: []*types.Tx{nil},
@@ -35,7 +34,6 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 		}
 
 		b.Transactions = append(b.Transactions, tx)
-		txEntries = append(txEntries, tx.Tx)
 		gasUsed += uint64(gasStatus.GasUsed)
 		txsFee += txFee(tx)
 	}
@@ -46,7 +44,15 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 	}
 
 	b.Transactions[0] = coinbaseTx
+	if len(txs) > 0 {
+		b.Transactions = append(b.Transactions, txs...)
+	}
+
+	txEntries := []*bc.Tx{nil}
 	txEntries[0] = coinbaseTx.Tx
+	for _, tx := range txs {
+		txEntries = append(txEntries, tx.Tx)
+	}
 	b.TransactionsMerkleRoot, err = types.TxMerkleRoot(txEntries)
 	return b, err
 }
