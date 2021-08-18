@@ -97,12 +97,14 @@ func (a *API) getBlock(ins BlockReq) Response {
 		}
 
 		resOutID := orig.ResultIds[0]
-		resOut, ok := orig.Entries[*resOutID].(*bc.OriginalOutput)
-		if ok {
-			tx.MuxID = *resOut.Source.Ref
-		} else {
-			resRetire, _ := orig.Entries[*resOutID].(*bc.Retirement)
-			tx.MuxID = *resRetire.Source.Ref
+		resOut := orig.Entries[*resOutID]
+		switch out :=resOut.(type) {
+		case *bc.OriginalOutput:
+			tx.MuxID = *out.Source.Ref
+		case *bc.VoteOutput:
+			tx.MuxID = *out.Source.Ref
+		case *bc.Retirement:
+			tx.MuxID = *out.Source.Ref
 		}
 
 		for i := range orig.Inputs {
