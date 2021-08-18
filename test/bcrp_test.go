@@ -106,7 +106,7 @@ func TestUseContractWithStateDataSuccess(t *testing.T) {
 	store := database.NewStore(db)
 	chain, _, _, _ := mockChainWithStore(store)
 
-	contract, err := hex.DecodeString("0164740a52797b937b788791698700c0")
+	contract, err := hex.DecodeString("01646c7c740a52797b937b788791698700c0")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,11 +116,11 @@ func TestUseContractWithStateDataSuccess(t *testing.T) {
 	}
 
 	arguments := [][]byte{
-		{byte(99)},
+		{byte(1)},
 	}
 
 	stateData := [][]byte{
-		{byte(1)},
+		{byte(99)},
 	}
 
 	if err := validateContract(chain, contract, arguments, stateData); err != nil {
@@ -136,7 +136,7 @@ func TestUseContractWithStateDataFailed(t *testing.T) {
 	store := database.NewStore(db)
 	chain, _, _, _ := mockChainWithStore(store)
 
-	contract, err := hex.DecodeString("0164740a52797b937b788791698700c0")
+	contract, err := hex.DecodeString("01646c7c740a52797b937b788791698700c0")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,11 +146,11 @@ func TestUseContractWithStateDataFailed(t *testing.T) {
 	}
 
 	arguments := [][]byte{
-		{byte(99)},
+		{byte(2)},
 	}
 
 	stateData := [][]byte{
-		{byte(2)},
+		{byte(99)},
 	}
 
 	if err := validateContract(chain, contract, arguments, stateData); errors.Root(err) != vm.ErrFalseVMResult {
