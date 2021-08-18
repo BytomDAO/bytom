@@ -6,51 +6,29 @@ import (
 	"os"
 	"testing"
 
+	"github.com/google/uuid"
+
 	"github.com/bytom/bytom/crypto/sha3pool"
 	"github.com/bytom/bytom/database"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/errors"
-	"github.com/bytom/bytom/protocol/bc"
-	"github.com/bytom/bytom/protocol/bc/types"
-	"github.com/bytom/bytom/protocol/state"
-	"github.com/bytom/bytom/protocol/validation"
 	"github.com/bytom/bytom/protocol/vm"
 )
 
 func TestRegisterContract(t *testing.T) {
-	db := dbm.NewDB("contract_test_db", "leveldb", "contract_test_db")
-	defer os.RemoveAll("contract_test_db")
+	dbName := uuid.New().String()
+	db := dbm.NewDB(dbName, "leveldb", dbName)
+	defer os.RemoveAll(dbName)
 
-	chain, _, _, _ := MockChain(db)
-	block, err := NewBlock(chain, nil, []byte{byte(vm.OP_TRUE)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	store := database.NewStore(db)
+	chain, _, _, _ := mockChainWithStore(store)
 
 	contract, err := hex.DecodeString("0164740a52797b937b788791698700c0")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	tx, err := CreateRegisterContractTx(block.Transactions[0], 0, contract)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defaultCtrlProg := []byte{byte(vm.OP_TRUE)}
-	block, err = NewBlock(chain, []*types.Tx{tx}, defaultCtrlProg)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	contractView := state.NewContractViewpoint()
-	if err := contractView.ApplyBlock(block); err != nil {
-		t.Fatal(err)
-	}
-
-	utxoView := &state.UtxoViewpoint{}
-	store := database.NewStore(db)
-	if err := store.SaveChainStatus(&block.BlockHeader, []*types.BlockHeader{&block.BlockHeader}, utxoView, contractView, 0, &bc.Hash{}); err != nil {
+	if err := registerContract(chain, store, contract); err != nil {
 		t.Fatal(err)
 	}
 
@@ -66,97 +44,116 @@ func TestRegisterContract(t *testing.T) {
 	}
 }
 
-func TestValidateContract(t *testing.T) {
-	// register
-	db := dbm.NewDB("contract_test_db", "leveldb", "contract_test_db")
-	defer os.RemoveAll("contract_test_db")
+func TestUseContractSuccess(t *testing.T) {
+	dbName := uuid.New().String()
+	db := dbm.NewDB(dbName, "leveldb", dbName)
+	defer os.RemoveAll(dbName)
 
 	store := database.NewStore(db)
-	chain, _, _, _ := MockChainWithStore(store)
-	block, err := NewBlock(chain, nil, []byte{byte(vm.OP_TRUE)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	chain, _, _, _ := mockChainWithStore(store)
 
 	contract, err := hex.DecodeString("0164740a52797b937b788791698700c0")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	tx, err := CreateRegisterContractTx(block.Transactions[0], 0, contract)
-	if err != nil {
+	if err := registerContract(chain, store, contract); err != nil {
 		t.Fatal(err)
 	}
 
-	defaultCtrlProg := []byte{byte(vm.OP_TRUE)}
-	block, err = NewBlock(chain, []*types.Tx{tx}, defaultCtrlProg)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	contractView := state.NewContractViewpoint()
-	if err := contractView.ApplyBlock(block); err != nil {
-		t.Fatal(err)
-	}
-
-	utxoView := &state.UtxoViewpoint{}
-	if err := store.SaveChainStatus(&block.BlockHeader, []*types.BlockHeader{&block.BlockHeader}, utxoView, contractView, 0, &bc.Hash{}); err != nil {
-		t.Fatal(err)
-	}
-
-	// call
-	block, err = NewBlock(chain, nil, []byte{byte(vm.OP_TRUE)})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var hash [32]byte
-	sha3pool.Sum256(hash[:], contract)
-	tx, err = CreateCallContractTx(block.Transactions[0], 0, hash[:])
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	prevBlock, err := NewBlock(chain, []*types.Tx{tx}, defaultCtrlProg)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// use valid arguments
 	arguments := [][]byte{
 		{byte(99)},
 		{byte(1)},
 	}
-	tx, err = CreateUseContractTx(prevBlock.Transactions[1], 0, arguments, defaultCtrlProg)
+
+	if err := validateContract(chain, contract, arguments, nil); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestUseContractFailed(t *testing.T) {
+	dbName := uuid.New().String()
+	db := dbm.NewDB(dbName, "leveldb", dbName)
+	defer os.RemoveAll(dbName)
+
+	store := database.NewStore(db)
+	chain, _, _, _ := mockChainWithStore(store)
+
+	contract, err := hex.DecodeString("0164740a52797b937b788791698700c0")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	block, err = NewBlock(chain, []*types.Tx{tx}, defaultCtrlProg)
-	if err != nil {
+	if err := registerContract(chain, store, contract); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := validation.ValidateTx(tx.Tx, types.MapBlock(block), chain.ProgramConverter); err != nil {
-		t.Fatal(err)
-	}
-
-	// use invalid arguments
-	arguments = [][]byte{
+	arguments := [][]byte{
 		{byte(99)},
 		{byte(2)},
 	}
-	tx, err = CreateUseContractTx(prevBlock.Transactions[1], 0, arguments, defaultCtrlProg)
+
+	if err := validateContract(chain, contract, arguments, nil); errors.Root(err) != vm.ErrFalseVMResult {
+		t.Fatal(err)
+	}
+}
+
+func TestUseContractWithStateDataSuccess(t *testing.T) {
+	dbName := uuid.New().String()
+	db := dbm.NewDB(dbName, "leveldb", dbName)
+	defer os.RemoveAll(dbName)
+
+	store := database.NewStore(db)
+	chain, _, _, _ := mockChainWithStore(store)
+
+	contract, err := hex.DecodeString("0164740a52797b937b788791698700c0")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	block, err = NewBlock(chain, []*types.Tx{tx}, defaultCtrlProg)
+	if err := registerContract(chain, store, contract); err != nil {
+		t.Fatal(err)
+	}
+
+	arguments := [][]byte{
+		{byte(99)},
+	}
+
+	stateData := [][]byte{
+		{byte(1)},
+	}
+
+	if err := validateContract(chain, contract, arguments, stateData); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestUseContractWithStateDataFailed(t *testing.T) {
+	dbName := uuid.New().String()
+	db := dbm.NewDB(dbName, "leveldb", dbName)
+	defer os.RemoveAll(dbName)
+
+	store := database.NewStore(db)
+	chain, _, _, _ := mockChainWithStore(store)
+
+	contract, err := hex.DecodeString("0164740a52797b937b788791698700c0")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := validation.ValidateTx(tx.Tx, types.MapBlock(block), chain.ProgramConverter); errors.Root(err) != vm.ErrFalseVMResult {
+	if err := registerContract(chain, store, contract); err != nil {
+		t.Fatal(err)
+	}
+
+	arguments := [][]byte{
+		{byte(99)},
+	}
+
+	stateData := [][]byte{
+		{byte(2)},
+	}
+
+	if err := validateContract(chain, contract, arguments, stateData); errors.Root(err) != vm.ErrFalseVMResult {
 		t.Fatal(err)
 	}
 }

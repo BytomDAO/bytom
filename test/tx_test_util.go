@@ -417,16 +417,8 @@ func CreateTxFromTx(baseTx *types.Tx, outputIndex uint64, outputAmount uint64, c
 }
 
 // CreateRegisterContractTx create register contract transaction
-func CreateRegisterContractTx(baseTx *types.Tx, outputIndex uint64, contract []byte) (*types.Tx, error) {
-	spendInput, err := CreateSpendInput(baseTx, outputIndex)
-	if err != nil {
-		return nil, err
-	}
-
-	txInput := &types.TxInput{
-		AssetVersion: assetVersion,
-		TypedInput:   spendInput,
-	}
+func CreateRegisterContractTx(contract []byte) (*types.Tx, error) {
+	txInput := types.NewSpendInput(nil, bc.NewHash([32]byte{0x01}), *consensus.BTMAssetID, 200000000, 1, []byte{0x51}, nil)
 
 	program, err := vmutil.RegisterProgram(contract)
 	if err != nil {
@@ -458,60 +450,15 @@ func CreateRegisterContractTx(baseTx *types.Tx, outputIndex uint64, contract []b
 	return tpl.Transaction, nil
 }
 
-// CreateCallContractTx create call contract transaction
-func CreateCallContractTx(baseTx *types.Tx, outputIndex uint64, contractHash []byte) (*types.Tx, error) {
-	spendInput, err := CreateSpendInput(baseTx, outputIndex)
-	if err != nil {
-		return nil, err
-	}
-
-	txInput := &types.TxInput{
-		AssetVersion: assetVersion,
-		TypedInput:   spendInput,
-	}
-
-	program, err := vmutil.CallContractProgram(contractHash)
-	if err != nil {
-		return nil, err
-	}
-
-	output := types.NewOriginalTxOutput(*consensus.BTMAssetID, 1000000000, program, [][]byte{})
-	builder := txbuilder.NewBuilder(time.Now())
-	if err := builder.AddInput(txInput, &txbuilder.SigningInstruction{}); err != nil {
-		return nil, err
-	}
-
-	if err := builder.AddOutput(output); err != nil {
-		return nil, err
-	}
-
-	tpl, _, err := builder.Build()
-	if err != nil {
-		return nil, err
-	}
-
-	txSerialized, err := tpl.Transaction.MarshalText()
-	if err != nil {
-		return nil, err
-	}
-
-	tpl.Transaction.Tx.SerializedSize = uint64(len(txSerialized))
-	tpl.Transaction.TxData.SerializedSize = uint64(len(txSerialized))
-	return tpl.Transaction, nil
-}
-
 // CreateUseContractTx create use contract transaction
-func CreateUseContractTx(baseTx *types.Tx, outputIndex uint64, arguments [][]byte, program []byte) (*types.Tx, error) {
-	spendInput, err := CreateSpendInput(baseTx, outputIndex)
+func CreateUseContractTx(hash []byte, arguments [][]byte, stateData [][]byte) (*types.Tx, error) {
+	program, err := vmutil.CallContractProgram(hash)
 	if err != nil {
 		return nil, err
 	}
 
-	spendInput.Arguments = arguments
-	txInput := &types.TxInput{
-		AssetVersion: assetVersion,
-		TypedInput:   spendInput,
-	}
+	txInput := types.NewSpendInput(nil, bc.NewHash([32]byte{0x01}), *consensus.BTMAssetID, 200000000, 1, program, stateData)
+	txInput.SetArguments(arguments)
 
 	output := types.NewOriginalTxOutput(*consensus.BTMAssetID, 100000000, program, [][]byte{})
 	builder := txbuilder.NewBuilder(time.Now())
