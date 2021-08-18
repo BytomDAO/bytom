@@ -415,3 +415,72 @@ func CreateTxFromTx(baseTx *types.Tx, outputIndex uint64, outputAmount uint64, c
 	tpl.Transaction.TxData.SerializedSize = uint64(len(txSerialized))
 	return tpl.Transaction, nil
 }
+
+// CreateRegisterContractTx create register contract transaction
+func CreateRegisterContractTx(contract []byte) (*types.Tx, error) {
+	txInput := types.NewSpendInput(nil, bc.NewHash([32]byte{0x01}), *consensus.BTMAssetID, 200000000, 1, []byte{0x51}, nil)
+
+	program, err := vmutil.RegisterProgram(contract)
+	if err != nil {
+		return nil, err
+	}
+
+	output := types.NewOriginalTxOutput(*consensus.BTMAssetID, 100000000, program, [][]byte{})
+	builder := txbuilder.NewBuilder(time.Now())
+	if err := builder.AddInput(txInput, &txbuilder.SigningInstruction{}); err != nil {
+		return nil, err
+	}
+
+	if err := builder.AddOutput(output); err != nil {
+		return nil, err
+	}
+
+	tpl, _, err := builder.Build()
+	if err != nil {
+		return nil, err
+	}
+
+	txSerialized, err := tpl.Transaction.MarshalText()
+	if err != nil {
+		return nil, err
+	}
+
+	tpl.Transaction.Tx.SerializedSize = uint64(len(txSerialized))
+	tpl.Transaction.TxData.SerializedSize = uint64(len(txSerialized))
+	return tpl.Transaction, nil
+}
+
+// CreateUseContractTx create use contract transaction
+func CreateUseContractTx(hash []byte, arguments [][]byte, stateData [][]byte) (*types.Tx, error) {
+	program, err := vmutil.CallContractProgram(hash)
+	if err != nil {
+		return nil, err
+	}
+
+	txInput := types.NewSpendInput(nil, bc.NewHash([32]byte{0x01}), *consensus.BTMAssetID, 200000000, 1, program, stateData)
+	txInput.SetArguments(arguments)
+
+	output := types.NewOriginalTxOutput(*consensus.BTMAssetID, 100000000, program, [][]byte{})
+	builder := txbuilder.NewBuilder(time.Now())
+	if err := builder.AddInput(txInput, &txbuilder.SigningInstruction{}); err != nil {
+		return nil, err
+	}
+
+	if err := builder.AddOutput(output); err != nil {
+		return nil, err
+	}
+
+	tpl, _, err := builder.Build()
+	if err != nil {
+		return nil, err
+	}
+
+	txSerialized, err := tpl.Transaction.MarshalText()
+	if err != nil {
+		return nil, err
+	}
+
+	tpl.Transaction.Tx.SerializedSize = uint64(len(txSerialized))
+	tpl.Transaction.TxData.SerializedSize = uint64(len(txSerialized))
+	return tpl.Transaction, nil
+}
