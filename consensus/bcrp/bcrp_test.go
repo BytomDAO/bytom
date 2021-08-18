@@ -143,6 +143,41 @@ func TestIsCallContractScript(t *testing.T) {
 	}
 }
 
+func TestParseContract(t *testing.T) {
+	tests := []struct {
+		program  string
+		expected string
+	}{
+		{
+			// BCRP script format: OP_FAIL + OP_DATA_4 + "bcrp" + OP_DATA_1 + "1" + {{dynamic_op}} + contract
+			program:  "6a04626372700101100164740a52797b937b788791698700c0",
+			expected: "0164740a52797b937b788791698700c0",
+		},
+		{
+			// BCRP script format: OP_FAIL + OP_DATA_4 + "bcrp" + OP_DATA_1 + "1" + {{dynamic_op}} + contract
+			program:  "6a046263727001014d2c0120e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c020e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e78740320e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c020e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e78740320e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c020e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e78740320e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c020e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403",
+			expected: "20e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c020e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e78740320e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c020e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e78740320e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c020e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e78740320e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c020e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403",
+		},
+	}
+
+	for i, test := range tests {
+		program, err := hex.DecodeString(test.program)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		contract, err := ParseContract(program)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expected := hex.EncodeToString(contract[:])
+		if expected != test.expected {
+			t.Errorf("TestParseContract #%d failed: got %v want %v", i, expected, test.expected)
+		}
+	}
+}
+
 func TestParseContractHash(t *testing.T) {
 	tests := []struct {
 		program  string
