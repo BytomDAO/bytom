@@ -1,12 +1,16 @@
 package vm
 
-import "github.com/bytom/bytom/math/checked"
+import (
+	"github.com/holiman/uint256"
+
+	"github.com/bytom/bytom/math/checked"
+)
 
 func opToAltStack(vm *virtualMachine) error {
-	err := vm.applyCost(2)
-	if err != nil {
+	if err := vm.applyCost(2); err != nil {
 		return err
 	}
+
 	if len(vm.dataStack) == 0 {
 		return ErrDataStackUnderflow
 	}
@@ -17,13 +21,14 @@ func opToAltStack(vm *virtualMachine) error {
 }
 
 func opFromAltStack(vm *virtualMachine) error {
-	err := vm.applyCost(2)
-	if err != nil {
+	if err := vm.applyCost(2); err != nil {
 		return err
 	}
+
 	if len(vm.altStack) == 0 {
 		return ErrAltStackUnderflow
 	}
+
 	// no standard memory cost accounting here
 	vm.dataStack = append(vm.dataStack, vm.altStack[len(vm.altStack)-1])
 	vm.altStack = vm.altStack[:len(vm.altStack)-1]
@@ -31,13 +36,12 @@ func opFromAltStack(vm *virtualMachine) error {
 }
 
 func op2Drop(vm *virtualMachine) error {
-	err := vm.applyCost(2)
-	if err != nil {
+	if err := vm.applyCost(2); err != nil {
 		return err
 	}
+
 	for i := 0; i < 2; i++ {
-		_, err = vm.pop(false)
-		if err != nil {
+		if _, err := vm.pop(false); err != nil {
 			return err
 		}
 	}
@@ -53,16 +57,16 @@ func op3Dup(vm *virtualMachine) error {
 }
 
 func nDup(vm *virtualMachine, n int) error {
-	err := vm.applyCost(int64(n))
-	if err != nil {
+	if err := vm.applyCost(int64(n)); err != nil {
 		return err
 	}
+
 	if len(vm.dataStack) < n {
 		return ErrDataStackUnderflow
 	}
+
 	for i := 0; i < n; i++ {
-		err = vm.push(vm.dataStack[len(vm.dataStack)-n], false)
-		if err != nil {
+		if err := vm.pushDataStack(vm.dataStack[len(vm.dataStack)-n], false); err != nil {
 			return err
 		}
 	}
@@ -70,16 +74,16 @@ func nDup(vm *virtualMachine, n int) error {
 }
 
 func op2Over(vm *virtualMachine) error {
-	err := vm.applyCost(2)
-	if err != nil {
+	if err := vm.applyCost(2); err != nil {
 		return err
 	}
+
 	if len(vm.dataStack) < 4 {
 		return ErrDataStackUnderflow
 	}
+
 	for i := 0; i < 2; i++ {
-		err = vm.push(vm.dataStack[len(vm.dataStack)-4], false)
-		if err != nil {
+		if err := vm.pushDataStack(vm.dataStack[len(vm.dataStack)-4], false); err != nil {
 			return err
 		}
 	}
@@ -87,13 +91,14 @@ func op2Over(vm *virtualMachine) error {
 }
 
 func op2Rot(vm *virtualMachine) error {
-	err := vm.applyCost(2)
-	if err != nil {
+	if err := vm.applyCost(2); err != nil {
 		return err
 	}
+
 	if len(vm.dataStack) < 6 {
 		return ErrDataStackUnderflow
 	}
+
 	newStack := make([][]byte, 0, len(vm.dataStack))
 	newStack = append(newStack, vm.dataStack[:len(vm.dataStack)-6]...)
 	newStack = append(newStack, vm.dataStack[len(vm.dataStack)-4:]...)
@@ -104,13 +109,14 @@ func op2Rot(vm *virtualMachine) error {
 }
 
 func op2Swap(vm *virtualMachine) error {
-	err := vm.applyCost(2)
-	if err != nil {
+	if err := vm.applyCost(2); err != nil {
 		return err
 	}
+
 	if len(vm.dataStack) < 4 {
 		return ErrDataStackUnderflow
 	}
+
 	newStack := make([][]byte, 0, len(vm.dataStack))
 	newStack = append(newStack, vm.dataStack[:len(vm.dataStack)-4]...)
 	newStack = append(newStack, vm.dataStack[len(vm.dataStack)-2:]...)
@@ -121,45 +127,36 @@ func op2Swap(vm *virtualMachine) error {
 }
 
 func opIfDup(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
+
 	item, err := vm.top()
 	if err != nil {
 		return err
 	}
+
 	if AsBool(item) {
-		err = vm.push(item, false)
-		if err != nil {
-			return err
-		}
+		return vm.pushDataStack(item, false)
 	}
 	return nil
 }
 
 func opDepth(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
-	err = vm.pushInt64(int64(len(vm.dataStack)), false)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	return vm.pushBigInt(uint256.NewInt(uint64(len(vm.dataStack))), false)
 }
 
 func opDrop(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
-	_, err = vm.pop(false)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	_, err := vm.pop(false)
+	return err
 }
 
 func opDup(vm *virtualMachine) error {
@@ -167,18 +164,18 @@ func opDup(vm *virtualMachine) error {
 }
 
 func opNip(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
+
 	top, err := vm.top()
 	if err != nil {
 		return err
 	}
+
 	// temporarily pop off the top value with no standard memory accounting
 	vm.dataStack = vm.dataStack[:len(vm.dataStack)-1]
-	_, err = vm.pop(false)
-	if err != nil {
+	if _, err = vm.pop(false); err != nil {
 		return err
 	}
 	// now put the top item back
@@ -187,88 +184,75 @@ func opNip(vm *virtualMachine) error {
 }
 
 func opOver(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
+
 	if len(vm.dataStack) < 2 {
 		return ErrDataStackUnderflow
 	}
-	err = vm.push(vm.dataStack[len(vm.dataStack)-2], false)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	return vm.pushDataStack(vm.dataStack[len(vm.dataStack)-2], false)
 }
 
 func opPick(vm *virtualMachine) error {
-	err := vm.applyCost(2)
+	if err := vm.applyCost(2); err != nil {
+		return err
+	}
+
+	n, err := vm.popBigInt(false)
 	if err != nil {
 		return err
 	}
-	n, err := vm.popInt64(false)
-	if err != nil {
-		return err
-	}
-	if n < 0 {
-		return ErrBadValue
-	}
-	off, ok := checked.AddInt64(n, 1)
+
+	off, ok := checked.AddInt64(int64(n.Uint64()), 1)
 	if !ok {
 		return ErrBadValue
 	}
-	if int64(len(vm.dataStack)) < off {
+
+	dataStackSize := int64(len(vm.dataStack))
+	if dataStackSize < off {
 		return ErrDataStackUnderflow
 	}
-	err = vm.push(vm.dataStack[int64(len(vm.dataStack))-(off)], false)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	return vm.pushDataStack(vm.dataStack[dataStackSize-off], false)
 }
 
 func opRoll(vm *virtualMachine) error {
-	err := vm.applyCost(2)
+	if err := vm.applyCost(2); err != nil {
+		return err
+	}
+
+	n, err := vm.popBigInt(false)
 	if err != nil {
 		return err
 	}
-	n, err := vm.popInt64(false)
-	if err != nil {
-		return err
-	}
-	if n < 0 {
-		return ErrBadValue
-	}
-	off, ok := checked.AddInt64(n, 1)
+
+	off, ok := checked.AddInt64(int64(n.Uint64()), 1)
 	if !ok {
 		return ErrBadValue
 	}
-	err = rot(vm, off)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	return rot(vm, off)
 }
 
 func opRot(vm *virtualMachine) error {
-	err := vm.applyCost(2)
-	if err != nil {
+	if err := vm.applyCost(2); err != nil {
 		return err
 	}
-	err = rot(vm, 3)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	return rot(vm, 3)
 }
 
 func rot(vm *virtualMachine, n int64) error {
 	if n < 1 {
 		return ErrBadValue
 	}
+
 	if int64(len(vm.dataStack)) < n {
 		return ErrDataStackUnderflow
 	}
+
 	index := int64(len(vm.dataStack)) - n
 	newStack := make([][]byte, 0, len(vm.dataStack))
 	newStack = append(newStack, vm.dataStack[:index]...)
@@ -279,34 +263,36 @@ func rot(vm *virtualMachine, n int64) error {
 }
 
 func opSwap(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
+
 	l := len(vm.dataStack)
 	if l < 2 {
 		return ErrDataStackUnderflow
 	}
+
 	vm.dataStack[l-1], vm.dataStack[l-2] = vm.dataStack[l-2], vm.dataStack[l-1]
 	return nil
 }
 
 func opTuck(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
+
 	if len(vm.dataStack) < 2 {
 		return ErrDataStackUnderflow
 	}
+
 	top2 := make([][]byte, 2)
 	copy(top2, vm.dataStack[len(vm.dataStack)-2:])
 	// temporarily remove the top two items without standard memory accounting
 	vm.dataStack = vm.dataStack[:len(vm.dataStack)-2]
-	err = vm.push(top2[1], false)
-	if err != nil {
+	if err := vm.pushDataStack(top2[1], false); err != nil {
 		return err
 	}
+
 	vm.dataStack = append(vm.dataStack, top2...)
 	return nil
 }

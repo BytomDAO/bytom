@@ -1,9 +1,12 @@
 package vm
 
-import "encoding/binary"
+import (
+	"github.com/holiman/uint256"
+)
 
 var trueBytes = []byte{1}
 
+// BoolBytes convert bool to bytes
 func BoolBytes(b bool) (result []byte) {
 	if b {
 		return trueBytes
@@ -11,6 +14,7 @@ func BoolBytes(b bool) (result []byte) {
 	return []byte{}
 }
 
+// AsBool convert bytes to bool
 func AsBool(bytes []byte) bool {
 	for _, b := range bytes {
 		if b != 0 {
@@ -20,33 +24,47 @@ func AsBool(bytes []byte) bool {
 	return false
 }
 
-func Int64Bytes(n int64) []byte {
-	if n == 0 {
-		return []byte{}
-	}
-	res := make([]byte, 8)
-	// converting int64 to uint64 is a safe operation that
-	// preserves all data
-	binary.LittleEndian.PutUint64(res, uint64(n))
-	for len(res) > 0 && res[len(res)-1] == 0 {
-		res = res[:len(res)-1]
-	}
-	return res
+// Uint64Bytes convert uint64 to bytes in vm
+func Uint64Bytes(n uint64) []byte {
+	return BigIntBytes(uint256.NewInt(n))
 }
 
-func AsInt64(b []byte) (int64, error) {
-	if len(b) == 0 {
-		return 0, nil
+// BigIntBytes conv big int to little endian bytes, uint256 is version 1.1.1
+func BigIntBytes(n *uint256.Int) []byte {
+	return reverse(n.Bytes())
+}
+
+// AsBigInt conv little endian bytes to big int
+func AsBigInt(b []byte) (*uint256.Int, error) {
+	if len(b) > 32 {
+		return nil, ErrBadValue
 	}
-	if len(b) > 8 {
+
+	res := uint256.NewInt(0).SetBytes(reverse(b))
+	if res.Sign() < 0 {
+		return nil, ErrRange
+	}
+
+	return res, nil
+}
+
+func bigIntInt64(n *uint256.Int) (int64, error) {
+	if !n.IsUint64() {
 		return 0, ErrBadValue
 	}
 
-	var padded [8]byte
-	copy(padded[:], b)
+	i := int64(n.Uint64())
+	if i < 0 {
+		return 0, ErrBadValue
+	}
+	return i, nil
+}
 
-	res := binary.LittleEndian.Uint64(padded[:])
-	// converting uint64 to int64 is a safe operation that
-	// preserves all data
-	return int64(res), nil
+// reverse []byte.
+func reverse(b []byte) []byte {
+	for i, j := 0, len(b)-1; i < j; i, j = i+1, j-1 {
+		b[i], b[j] = b[j], b[i]
+	}
+
+	return b
 }

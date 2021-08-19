@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -146,7 +147,7 @@ func isValidJSON(b []byte) bool {
 	return err == nil
 }
 
-func (w *Wallet) buildAnnotatedTransaction(orig *types.Tx, b *types.Block, statusFail bool, indexInBlock int) *query.AnnotatedTx {
+func (w *Wallet) buildAnnotatedTransaction(orig *types.Tx, b *types.Block, indexInBlock int) *query.AnnotatedTx {
 	tx := &query.AnnotatedTx{
 		ID:                     orig.ID,
 		Timestamp:              b.Timestamp,
@@ -156,7 +157,6 @@ func (w *Wallet) buildAnnotatedTransaction(orig *types.Tx, b *types.Block, statu
 		BlockTransactionsCount: uint32(len(b.Transactions)),
 		Inputs:                 make([]*query.AnnotatedInput, 0, len(orig.Inputs)),
 		Outputs:                make([]*query.AnnotatedOutput, 0, len(orig.Outputs)),
-		StatusFail:             statusFail,
 		Size:                   orig.SerializedSize,
 	}
 	for i := range orig.Inputs {
@@ -195,18 +195,32 @@ func (w *Wallet) BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInp
 		}
 	case *bc.Issuance:
 		in.Type = "issue"
-		in.IssuanceProgram = orig.IssuanceProgram()
+		in.IssuanceProgram = orig.ControlProgram()
 		arguments := orig.Arguments()
 		for _, arg := range arguments {
 			in.WitnessArguments = append(in.WitnessArguments, arg)
 		}
-		if assetDefinition := orig.AssetDefinition(); isValidJSON(assetDefinition) {
-			assetDefinition := json.RawMessage(assetDefinition)
+
+		if ii, ok := orig.TypedInput.(*types.IssuanceInput); ok && isValidJSON(ii.AssetDefinition) {
+			assetDefinition := json.RawMessage(ii.AssetDefinition)
 			in.AssetDefinition = &assetDefinition
 		}
 	case *bc.Coinbase:
 		in.Type = "coinbase"
 		in.Arbitrary = e.Arbitrary
+	case *bc.VetoInput:
+		in.Type = "veto"
+		in.ControlProgram = orig.ControlProgram()
+		in.Address = w.getAddressFromControlProgram(in.ControlProgram)
+		in.SpentOutputID = e.SpentOutputId
+		arguments := orig.Arguments()
+		for _, arg := range arguments {
+			in.WitnessArguments = append(in.WitnessArguments, arg)
+		}
+		if vetoInput, ok := orig.TypedInput.(*types.VetoInput); ok {
+			in.Vote = hex.EncodeToString(vetoInput.Vote)
+			in.Amount = vetoInput.Amount
+		}
 	}
 	return in
 }
@@ -257,10 +271,37 @@ func (w *Wallet) BuildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOut
 		Address:         w.getAddressFromControlProgram(orig.ControlProgram),
 	}
 
-	if vmutil.IsUnspendable(out.ControlProgram) {
+	switch {
+	// must deal with retirement first due to cases' priorities in the switch statement
+	case vmutil.IsUnspendable(out.ControlProgram):
+		// retirement
 		out.Type = "retire"
-	} else {
+	case orig.OutputType() == types.OriginalOutputType:
 		out.Type = "control"
+		if e, ok := tx.Entries[*outid]; ok {
+			if output, ok := e.(*bc.OriginalOutput); ok {
+				out.StateData = stateDataStrings(output.StateData)
+			}
+		}
+	case orig.OutputType() == types.VoteOutputType:
+		out.Type = "vote"
+		if e, ok := tx.Entries[*outid]; ok {
+			if output, ok := e.(*bc.VoteOutput); ok {
+				out.Vote = hex.EncodeToString(output.Vote)
+				out.StateData = stateDataStrings(output.StateData)
+			}
+		}
+	default:
+		log.Warn("unknown outType")
 	}
+
 	return out
+}
+
+func stateDataStrings(stateData [][]byte) []string {
+	ss := make([]string, 0, len(stateData))
+	for _, bytes := range stateData {
+		ss = append(ss, hex.EncodeToString(bytes))
+	}
+	return ss
 }

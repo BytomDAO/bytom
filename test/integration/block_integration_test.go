@@ -1,15 +1,10 @@
 package integration
 
 import (
-	"testing"
-
-	"time"
-
 	"github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/database"
 	"github.com/bytom/bytom/database/storage"
-	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
@@ -19,8 +14,7 @@ import (
 var blockMap map[int][]*attachBlock
 
 type attachBlock struct {
-	block        *types.Block
-	verifyResult []*bc.TxVerifyResult
+	block *types.Block
 }
 
 func init() {
@@ -29,10 +23,10 @@ func init() {
 	blockMap = map[int][]*attachBlock{
 		0: {
 			{
-				block:        config.GenesisBlock(),
-				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}},
+				block: config.GenesisBlock(),
 			},
 		},
+		// 0 号的hash不会变
 		1: {
 			{
 				block: &types.Block{
@@ -40,9 +34,7 @@ func init() {
 						Height:            1,
 						Version:           1,
 						Timestamp:         1556431597,
-						Nonce:             5,
-						Bits:              2305843009214532812,
-						PreviousBlockHash: testutil.MustDecodeHash("ce4fe9431cd0225b3a811f8f8ec922f2b07a921bb12a8dddae9a85540072c770"),
+						PreviousBlockHash: testutil.MustDecodeHash("6f62777fab457d134aa55d29197ea5874988627d8777f6a14ed032a2f06dcc2f"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -53,12 +45,11 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0031")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab"), [][]byte{}),
 							},
 						}),
 					},
 				},
-				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}},
 			},
 			{
 				block: &types.Block{
@@ -66,9 +57,7 @@ func init() {
 						Height:            1,
 						Version:           1,
 						Timestamp:         1556431697,
-						Nonce:             36,
-						Bits:              2305843009214532812,
-						PreviousBlockHash: testutil.MustDecodeHash("ce4fe9431cd0225b3a811f8f8ec922f2b07a921bb12a8dddae9a85540072c770"),
+						PreviousBlockHash: testutil.MustDecodeHash("6f62777fab457d134aa55d29197ea5874988627d8777f6a14ed032a2f06dcc2f"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -79,25 +68,22 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0031")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("00143d05e891b165b165afefa2e861e83a9745f80d8c")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("00143d05e891b165b165afefa2e861e83a9745f80d8c"), [][]byte{}),
 							},
 						}),
 					},
 				},
-				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}},
 			},
 		},
 		2: {
-			// only has coinbase transaction
+			//the below blocks's previous block is blockMap[1][0]
 			{
 				block: &types.Block{
 					BlockHeader: types.BlockHeader{
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431604,
-						Nonce:             0,
-						Bits:              2305843009214532812,
-						PreviousBlockHash: testutil.MustDecodeHash("2eaf7f40b0a0d4a5025f3d5d9b8589d3db1634f7b55089ca59253a9c587266b2"),
+						PreviousBlockHash: testutil.MustDecodeHash("0311998e27abc1c2f5cc1f86b1aca5e7dd3ca65d63359e0c7539c40207923e10"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -108,12 +94,11 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0032")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab"), [][]byte{}),
 							},
 						}),
 					},
 				},
-				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}},
 			},
 			// with spend btm transaction
 			{
@@ -122,9 +107,7 @@ func init() {
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431604,
-						Nonce:             12,
-						Bits:              2305843009214532812,
-						PreviousBlockHash: testutil.MustDecodeHash("2eaf7f40b0a0d4a5025f3d5d9b8589d3db1634f7b55089ca59253a9c587266b2"),
+						PreviousBlockHash: testutil.MustDecodeHash("0311998e27abc1c2f5cc1f86b1aca5e7dd3ca65d63359e0c7539c40207923e10"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -135,7 +118,7 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0032")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab"), [][]byte{}),
 							},
 						}),
 						types.NewTx(types.TxData{
@@ -150,15 +133,15 @@ func init() {
 									testutil.MustDecodeHash("28b7b53d8dc90006bf97e0a4eaae2a72ec3d869873188698b694beaf20789f21"),
 									*consensus.BTMAssetID, 10000000000, 0,
 									testutil.MustDecodeHexString("0014cade6dd7cbe2ea2b8ab90dfb8756dda4ba1624bc"),
+									[][]byte{},
 								),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("00143d05e891b165b165afefa2e861e83a9745f80d8c")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("00143d05e891b165b165afefa2e861e83a9745f80d8c"), [][]byte{}),
 							},
 						}),
 					},
 				},
-				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}, {StatusFail: false}},
 			},
 			// with btm retire transaction
 			{
@@ -167,9 +150,7 @@ func init() {
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431607,
-						Nonce:             4,
-						Bits:              2305843009214532812,
-						PreviousBlockHash: testutil.MustDecodeHash("2eaf7f40b0a0d4a5025f3d5d9b8589d3db1634f7b55089ca59253a9c587266b2"),
+						PreviousBlockHash: testutil.MustDecodeHash("0311998e27abc1c2f5cc1f86b1aca5e7dd3ca65d63359e0c7539c40207923e10"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -180,7 +161,7 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0032")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab"), [][]byte{}),
 							},
 						}),
 						types.NewTx(types.TxData{
@@ -195,15 +176,15 @@ func init() {
 									testutil.MustDecodeHash("28b7b53d8dc90006bf97e0a4eaae2a72ec3d869873188698b694beaf20789f21"),
 									*consensus.BTMAssetID, 10000000000, 0,
 									testutil.MustDecodeHexString("0014cade6dd7cbe2ea2b8ab90dfb8756dda4ba1624bc"),
+									[][]byte{},
 								),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("6a")), // retire
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("6a"), [][]byte{}), // retire
 							},
 						}),
 					},
 				},
-				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}, {StatusFail: false}},
 			},
 			// with issuance transaction
 			{
@@ -212,9 +193,7 @@ func init() {
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431607,
-						Nonce:             17,
-						Bits:              2305843009214532812,
-						PreviousBlockHash: testutil.MustDecodeHash("2eaf7f40b0a0d4a5025f3d5d9b8589d3db1634f7b55089ca59253a9c587266b2"),
+						PreviousBlockHash: testutil.MustDecodeHash("0311998e27abc1c2f5cc1f86b1aca5e7dd3ca65d63359e0c7539c40207923e10"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -225,7 +204,7 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0032")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab"), [][]byte{}),
 							},
 						}),
 						types.NewTx(types.TxData{
@@ -240,6 +219,7 @@ func init() {
 									testutil.MustDecodeHash("28b7b53d8dc90006bf97e0a4eaae2a72ec3d869873188698b694beaf20789f21"),
 									*consensus.BTMAssetID, 10000000000, 0,
 									testutil.MustDecodeHexString("0014cade6dd7cbe2ea2b8ab90dfb8756dda4ba1624bc"),
+									[][]byte{},
 								),
 								types.NewIssuanceInput(
 									testutil.MustDecodeHexString("fd0aec4229deb281"),
@@ -250,13 +230,12 @@ func init() {
 								),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
-								types.NewTxOutput(testutil.MustDecodeAsset("641ccb49dd38df9921a55e020d40a2323589c36ab5557f8a249ee01cc09d1836"), 10000000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab"), [][]byte{}),
+								types.NewOriginalTxOutput(testutil.MustDecodeAsset("641ccb49dd38df9921a55e020d40a2323589c36ab5557f8a249ee01cc09d1836"), 10000000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab"), [][]byte{}),
 							},
 						}),
 					},
 				},
-				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}, {StatusFail: false}},
 			},
 			// with issuance transaction but status fail is true
 			{
@@ -265,9 +244,7 @@ func init() {
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431607,
-						Nonce:             4,
-						Bits:              2305843009214532812,
-						PreviousBlockHash: testutil.MustDecodeHash("2eaf7f40b0a0d4a5025f3d5d9b8589d3db1634f7b55089ca59253a9c587266b2"),
+						PreviousBlockHash: testutil.MustDecodeHash("0311998e27abc1c2f5cc1f86b1aca5e7dd3ca65d63359e0c7539c40207923e10"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -278,7 +255,7 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0032")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab"), [][]byte{}),
 							},
 						}),
 						types.NewTx(types.TxData{
@@ -293,6 +270,7 @@ func init() {
 									testutil.MustDecodeHash("28b7b53d8dc90006bf97e0a4eaae2a72ec3d869873188698b694beaf20789f21"),
 									*consensus.BTMAssetID, 10000000000, 0,
 									testutil.MustDecodeHexString("0014cade6dd7cbe2ea2b8ab90dfb8756dda4ba1624bc"),
+									[][]byte{},
 								),
 								types.NewIssuanceInput(
 									testutil.MustDecodeHexString("fd0aec4229deb281"),
@@ -304,13 +282,12 @@ func init() {
 								),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
-								types.NewTxOutput(testutil.MustDecodeAsset("641ccb49dd38df9921a55e020d40a2323589c36ab5557f8a249ee01cc09d1836"), 10000000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab"), [][]byte{}),
+								types.NewOriginalTxOutput(testutil.MustDecodeAsset("641ccb49dd38df9921a55e020d40a2323589c36ab5557f8a249ee01cc09d1836"), 10000000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab"), [][]byte{}),
 							},
 						}),
 					},
 				},
-				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}, {StatusFail: true}},
 			},
 			// with non btm transaction
 			{
@@ -319,9 +296,7 @@ func init() {
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431607,
-						Nonce:             4,
-						Bits:              2305843009214532812,
-						PreviousBlockHash: testutil.MustDecodeHash("2eaf7f40b0a0d4a5025f3d5d9b8589d3db1634f7b55089ca59253a9c587266b2"),
+						PreviousBlockHash: testutil.MustDecodeHash("0311998e27abc1c2f5cc1f86b1aca5e7dd3ca65d63359e0c7539c40207923e10"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -332,7 +307,7 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0032")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab"), [][]byte{}),
 							},
 						}),
 						types.NewTx(types.TxData{
@@ -347,6 +322,7 @@ func init() {
 									testutil.MustDecodeHash("28b7b53d8dc90006bf97e0a4eaae2a72ec3d869873188698b694beaf20789f21"),
 									*consensus.BTMAssetID, 10000000000, 0,
 									testutil.MustDecodeHexString("0014cade6dd7cbe2ea2b8ab90dfb8756dda4ba1624bc"),
+									[][]byte{},
 								),
 								types.NewSpendInput(
 									[][]byte{
@@ -356,16 +332,16 @@ func init() {
 									testutil.MustDecodeHash("28b7b53d8dc90006bf97e0a4eaae2a72ec3d869873188698b694beaf20789f22"),
 									testutil.MustDecodeAsset("641ccb49dd38df9921a55e020d40a2323589c36ab5557f8a249ee01cc09d1836"), 10000000000, 1,
 									testutil.MustDecodeHexString("0014cade6dd7cbe2ea2b8ab90dfb8756dda4ba1624bc"),
+									[][]byte{},
 								),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
-								types.NewTxOutput(testutil.MustDecodeAsset("641ccb49dd38df9921a55e020d40a2323589c36ab5557f8a249ee01cc09d1836"), 10000000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab"), [][]byte{}),
+								types.NewOriginalTxOutput(testutil.MustDecodeAsset("641ccb49dd38df9921a55e020d40a2323589c36ab5557f8a249ee01cc09d1836"), 10000000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab"), [][]byte{}),
 							},
 						}),
 					},
 				},
-				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}, {StatusFail: false}},
 			},
 			// with non btm transaction but status fail is true
 			{
@@ -374,9 +350,7 @@ func init() {
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431607,
-						Nonce:             12,
-						Bits:              2305843009214532812,
-						PreviousBlockHash: testutil.MustDecodeHash("2eaf7f40b0a0d4a5025f3d5d9b8589d3db1634f7b55089ca59253a9c587266b2"),
+						PreviousBlockHash: testutil.MustDecodeHash("0311998e27abc1c2f5cc1f86b1aca5e7dd3ca65d63359e0c7539c40207923e10"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -387,7 +361,7 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0032")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41350000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab"), [][]byte{}),
 							},
 						}),
 						types.NewTx(types.TxData{
@@ -402,6 +376,7 @@ func init() {
 									testutil.MustDecodeHash("28b7b53d8dc90006bf97e0a4eaae2a72ec3d869873188698b694beaf20789f21"),
 									*consensus.BTMAssetID, 10000000000, 0,
 									testutil.MustDecodeHexString("0014cade6dd7cbe2ea2b8ab90dfb8756dda4ba1624bc"),
+									[][]byte{},
 								),
 								types.NewSpendInput(
 									// invalid signature
@@ -412,16 +387,16 @@ func init() {
 									testutil.MustDecodeHash("28b7b53d8dc90006bf97e0a4eaae2a72ec3d869873188698b694beaf20789f22"),
 									testutil.MustDecodeAsset("641ccb49dd38df9921a55e020d40a2323589c36ab5557f8a249ee01cc09d1836"), 10000000000, 1,
 									testutil.MustDecodeHexString("0014cade6dd7cbe2ea2b8ab90dfb8756dda4ba1624bc"),
+									[][]byte{},
 								),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
-								types.NewTxOutput(testutil.MustDecodeAsset("641ccb49dd38df9921a55e020d40a2323589c36ab5557f8a249ee01cc09d1836"), 10000000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 9900000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab"), [][]byte{}),
+								types.NewOriginalTxOutput(testutil.MustDecodeAsset("641ccb49dd38df9921a55e020d40a2323589c36ab5557f8a249ee01cc09d1836"), 10000000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab"), [][]byte{}),
 							},
 						}),
 					},
 				},
-				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}, {StatusFail: true}},
 			},
 		},
 		3: {
@@ -432,9 +407,7 @@ func init() {
 						Height:            3,
 						Version:           1,
 						Timestamp:         1556431640,
-						Nonce:             0,
-						Bits:              2305843009214532812,
-						PreviousBlockHash: testutil.MustDecodeHash("09c6064f4f1e7325440c45df03e97f97dbfbb66033315a384308256038af6c30"),
+						PreviousBlockHash: testutil.MustDecodeHash("d96091fb7784af594980012cadb05ad717d45603eab2b2105a2735ae5bb3aca3"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -445,12 +418,11 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0033")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab"), [][]byte{}),
 							},
 						}),
 					},
 				},
-				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}},
 			},
 			// the previous block is blockMap[2][2]
 			{
@@ -459,9 +431,7 @@ func init() {
 						Height:            3,
 						Version:           1,
 						Timestamp:         1556431640,
-						Nonce:             5,
-						Bits:              2305843009214532812,
-						PreviousBlockHash: testutil.MustDecodeHash("33f56264283cc12e3b232068caa13c1fd052c21b231a94e8c0a40bac25629f88"),
+						PreviousBlockHash: testutil.MustDecodeHash("222356873e67eacf3fa38ddb736c467471c8aa91f65686d28a96f7d39f8278e7"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -472,664 +442,16 @@ func init() {
 								types.NewCoinbaseInput(testutil.MustDecodeHexString("0033")),
 							},
 							Outputs: []*types.TxOutput{
-								types.NewTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab")),
+								types.NewOriginalTxOutput(*consensus.BTMAssetID, 41250000000, testutil.MustDecodeHexString("0014024bb9bfc639bdac292ff9ceb41b5c6f5a970eab"), [][]byte{}),
 							},
 						}),
 					},
 				},
-				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}},
 			},
 		},
 	}
 
 	mustPostProcessBlock()
-}
-
-func TestProcessBlock(t *testing.T) {
-	cases := []*processBlockTestCase{
-		{
-			desc: "process a invalid block",
-			newBlock: &types.Block{
-				BlockHeader: types.BlockHeader{
-					Height:            1,
-					Version:           1,
-					Bits:              2305843009214532812,
-					PreviousBlockHash: blockMap[0][0].block.Hash(),
-				},
-			},
-			wantStore: createStoreItems([]int{0}, []*attachBlock{blockMap[0][0]}),
-			wantBlockIndex: state.NewBlockIndexWithData(
-				map[bc.Hash]*state.BlockNode{
-					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-				},
-				[]*state.BlockNode{
-					mustNewBlockNode(&blockMap[0][0].block.BlockHeader, nil),
-				},
-			),
-			wantOrphanManage: protocol.NewOrphanManage(),
-			wantError:        true,
-		},
-		{
-			desc:      "process a orphan block normally",
-			newBlock:  blockMap[2][0].block,
-			wantStore: createStoreItems([]int{0}, []*attachBlock{blockMap[0][0]}),
-			wantBlockIndex: state.NewBlockIndexWithData(
-				map[bc.Hash]*state.BlockNode{
-					blockMap[0][0].block.Hash(): mustNewBlockNode(&blockMap[0][0].block.BlockHeader, nil),
-				},
-				[]*state.BlockNode{
-					mustNewBlockNode(&blockMap[0][0].block.BlockHeader, nil),
-				},
-			),
-			wantOrphanManage: protocol.NewOrphanManageWithData(
-				map[bc.Hash]*protocol.OrphanBlock{blockMap[2][0].block.Hash(): {Block: blockMap[2][0].block}},
-				map[bc.Hash][]*bc.Hash{blockMap[2][0].block.PreviousBlockHash: {hashPtr(blockMap[2][0].block.Hash())}},
-			),
-			wantIsOrphan: true,
-			wantError:    false,
-		},
-		{
-			desc:      "attach a block normally",
-			newBlock:  blockMap[1][0].block,
-			wantStore: createStoreItems([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}),
-			wantBlockIndex: state.NewBlockIndexWithData(
-				map[bc.Hash]*state.BlockNode{
-					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					blockMap[1][0].block.Hash(): mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-				[]*state.BlockNode{
-					mustNewBlockNode(&blockMap[0][0].block.BlockHeader, nil),
-					mustNewBlockNode(&blockMap[1][0].block.BlockHeader, mustNewBlockNode(&blockMap[0][0].block.BlockHeader, nil)),
-				},
-			),
-			wantOrphanManage: protocol.NewOrphanManage(),
-			wantIsOrphan:     false,
-			wantError:        false,
-		},
-		{
-			desc:      "init genesis block from db",
-			newBlock:  blockMap[1][0].block,
-			initStore: createStoreItems([]int{0}, []*attachBlock{blockMap[0][0]}),
-			wantStore: createStoreItems([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}),
-			wantBlockIndex: state.NewBlockIndexWithData(
-				map[bc.Hash]*state.BlockNode{
-					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					blockMap[1][0].block.Hash(): mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-				[]*state.BlockNode{
-					mustNewBlockNode(&blockMap[0][0].block.BlockHeader, nil),
-					mustNewBlockNode(&blockMap[1][0].block.BlockHeader, mustNewBlockNode(&blockMap[0][0].block.BlockHeader, nil)),
-				},
-			),
-			wantOrphanManage: protocol.NewOrphanManage(),
-			wantIsOrphan:     false,
-			wantError:        false,
-		},
-		{
-			desc:      "attach a block to fork chain normally, not rollback",
-			newBlock:  blockMap[2][0].block,
-			initStore: createStoreItems([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[1][1]}),
-			wantStore: createStoreItems([]int{0, 1, 3}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[1][1], blockMap[2][0]}),
-			wantBlockIndex: state.NewBlockIndexWithData(
-				map[bc.Hash]*state.BlockNode{
-					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					blockMap[1][0].block.Hash(): mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[1][1].block.Hash(): mustCreateBlockNode(&blockMap[1][1].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][0].block.Hash(): mustCreateBlockNode(&blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-				[]*state.BlockNode{
-					mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-			),
-			wantOrphanManage: protocol.NewOrphanManage(),
-			wantIsOrphan:     false,
-			wantError:        false,
-		},
-		{
-			desc:     "attach a block with btm transaction normally",
-			newBlock: blockMap[2][1].block,
-			initStore: createStoreItems([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}),
-			wantStore: createStoreItems([]int{0, 1, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][1]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}),
-			wantBlockIndex: state.NewBlockIndexWithData(
-				map[bc.Hash]*state.BlockNode{
-					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					blockMap[1][0].block.Hash(): mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][1].block.Hash(): mustCreateBlockNode(&blockMap[2][1].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-				[]*state.BlockNode{
-					mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[2][1].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-			),
-			wantOrphanManage: protocol.NewOrphanManage(),
-			wantIsOrphan:     false,
-			wantError:        false,
-		},
-		{
-			desc:     "attach a block with retire transaction normally",
-			newBlock: blockMap[2][2].block,
-			initStore: createStoreItems([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}),
-			wantStore: createStoreItems([]int{0, 1, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][2]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}),
-			wantBlockIndex: state.NewBlockIndexWithData(
-				map[bc.Hash]*state.BlockNode{
-					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					blockMap[1][0].block.Hash(): mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][2].block.Hash(): mustCreateBlockNode(&blockMap[2][2].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-				[]*state.BlockNode{
-					mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[2][2].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-			),
-			wantOrphanManage: protocol.NewOrphanManage(),
-			wantIsOrphan:     false,
-			wantError:        false,
-		},
-		{
-			desc:     "attach a block with issuance transaction normally",
-			newBlock: blockMap[2][3].block,
-			initStore: createStoreItems([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}),
-			wantStore: createStoreItems([]int{0, 1, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][3]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}),
-			wantBlockIndex: state.NewBlockIndexWithData(
-				map[bc.Hash]*state.BlockNode{
-					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					blockMap[1][0].block.Hash(): mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][3].block.Hash(): mustCreateBlockNode(&blockMap[2][3].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-				[]*state.BlockNode{
-					mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[2][3].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-			),
-			wantOrphanManage: protocol.NewOrphanManage(),
-			wantIsOrphan:     false,
-			wantError:        false,
-		},
-		{
-			desc:     "attach a block with issuance transaction but status fail is true",
-			newBlock: blockMap[2][4].block,
-			initStore: createStoreItems([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}),
-			wantStore: createStoreItems([]int{0, 1, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][4]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}),
-			wantBlockIndex: state.NewBlockIndexWithData(
-				map[bc.Hash]*state.BlockNode{
-					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					blockMap[1][0].block.Hash(): mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][4].block.Hash(): mustCreateBlockNode(&blockMap[2][4].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-				[]*state.BlockNode{
-					mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[2][4].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-			),
-			wantOrphanManage: protocol.NewOrphanManage(),
-			wantIsOrphan:     false,
-			wantError:        false,
-		},
-		{
-			desc:     "attach a block with non btm transaction",
-			newBlock: blockMap[2][5].block,
-			initStore: createStoreItems([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("be164edbce8bcd1d890c1164541b8418fdcb257499757d3b88561bca06e97e29"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}),
-			wantStore: createStoreItems([]int{0, 1, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][5]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("be164edbce8bcd1d890c1164541b8418fdcb257499757d3b88561bca06e97e29"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}),
-			wantBlockIndex: state.NewBlockIndexWithData(
-				map[bc.Hash]*state.BlockNode{
-					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					blockMap[1][0].block.Hash(): mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][5].block.Hash(): mustCreateBlockNode(&blockMap[2][5].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-				[]*state.BlockNode{
-					mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[2][5].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-			),
-			wantOrphanManage: protocol.NewOrphanManage(),
-			wantIsOrphan:     false,
-			wantError:        false,
-		},
-		{
-			desc:     "attach a block with non btm transaction but status fail is true",
-			newBlock: blockMap[2][6].block,
-			initStore: createStoreItems([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("be164edbce8bcd1d890c1164541b8418fdcb257499757d3b88561bca06e97e29"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}),
-			wantStore: createStoreItems([]int{0, 1, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][6]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("be164edbce8bcd1d890c1164541b8418fdcb257499757d3b88561bca06e97e29"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}),
-			wantBlockIndex: state.NewBlockIndexWithData(
-				map[bc.Hash]*state.BlockNode{
-					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					blockMap[1][0].block.Hash(): mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][6].block.Hash(): mustCreateBlockNode(&blockMap[2][6].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-				[]*state.BlockNode{
-					mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[2][6].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-			),
-			wantOrphanManage: protocol.NewOrphanManage(),
-			wantIsOrphan:     false,
-			wantError:        false,
-		},
-		{
-			desc:      "rollback a block only has coinbase transaction",
-			newBlock:  blockMap[2][0].block,
-			initStore: createStoreItems([]int{0, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[1][1]}),
-			wantStore: createStoreItems([]int{0, 1, 3}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[1][1], blockMap[2][0]}),
-			wantBlockIndex: state.NewBlockIndexWithData(
-				map[bc.Hash]*state.BlockNode{
-					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					blockMap[1][0].block.Hash(): mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[1][1].block.Hash(): mustCreateBlockNode(&blockMap[1][1].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][0].block.Hash(): mustCreateBlockNode(&blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-				[]*state.BlockNode{
-					mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-			),
-			wantOrphanManage: protocol.NewOrphanManage(),
-			wantIsOrphan:     false,
-			wantError:        false,
-		},
-		{
-			desc:     "rollback a block has spend btm transaction",
-			newBlock: blockMap[3][0].block,
-			initStore: createStoreItems([]int{0, 1, 3}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][1]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}),
-			wantStore: createStoreItems([]int{0, 1, 2, 4}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][1], blockMap[3][0]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 0, Spent: false},
-			}),
-			wantBlockIndex: state.NewBlockIndexWithData(
-				map[bc.Hash]*state.BlockNode{
-					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					blockMap[1][0].block.Hash(): mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][0].block.Hash(): mustCreateBlockNode(&blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][1].block.Hash(): mustCreateBlockNode(&blockMap[2][1].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[3][0].block.Hash(): mustCreateBlockNode(&blockMap[3][0].block.BlockHeader, &blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-				[]*state.BlockNode{
-					mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[3][0].block.BlockHeader, &blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-			),
-			wantOrphanManage: protocol.NewOrphanManage(),
-			wantIsOrphan:     false,
-			wantError:        false,
-		},
-		{
-			desc:     "rollback a block has issuance transaction",
-			newBlock: blockMap[3][0].block,
-			initStore: createStoreItems([]int{0, 1, 3}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][3]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}),
-			wantStore: createStoreItems([]int{0, 1, 2, 4}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][3], blockMap[3][0]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 0, Spent: false},
-			}),
-			wantBlockIndex: state.NewBlockIndexWithData(
-				map[bc.Hash]*state.BlockNode{
-					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					blockMap[1][0].block.Hash(): mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][0].block.Hash(): mustCreateBlockNode(&blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][3].block.Hash(): mustCreateBlockNode(&blockMap[2][3].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[3][0].block.Hash(): mustCreateBlockNode(&blockMap[3][0].block.BlockHeader, &blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-				[]*state.BlockNode{
-					mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[3][0].block.BlockHeader, &blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-			),
-			wantOrphanManage: protocol.NewOrphanManage(),
-			wantIsOrphan:     false,
-			wantError:        false,
-		},
-		{
-			desc:     "rollback a block has issuance transaction but status fail is true",
-			newBlock: blockMap[3][0].block,
-			initStore: createStoreItems([]int{0, 1, 3}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][4]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}),
-			wantStore: createStoreItems([]int{0, 1, 2, 4}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][4], blockMap[3][0]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 0, Spent: false},
-			}),
-			wantBlockIndex: state.NewBlockIndexWithData(
-				map[bc.Hash]*state.BlockNode{
-					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					blockMap[1][0].block.Hash(): mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][0].block.Hash(): mustCreateBlockNode(&blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][4].block.Hash(): mustCreateBlockNode(&blockMap[2][4].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[3][0].block.Hash(): mustCreateBlockNode(&blockMap[3][0].block.BlockHeader, &blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-				[]*state.BlockNode{
-					mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[3][0].block.BlockHeader, &blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-			),
-			wantOrphanManage: protocol.NewOrphanManage(),
-			wantIsOrphan:     false,
-			wantError:        false,
-		},
-		{
-			desc:     "rollback a block has spend non btm",
-			newBlock: blockMap[3][0].block,
-			initStore: createStoreItems([]int{0, 1, 3}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][5]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("be164edbce8bcd1d890c1164541b8418fdcb257499757d3b88561bca06e97e29"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}),
-			wantStore: createStoreItems([]int{0, 1, 2, 4}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][5], blockMap[3][0]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 0, Spent: false},
-			}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("be164edbce8bcd1d890c1164541b8418fdcb257499757d3b88561bca06e97e29"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 0, Spent: false},
-			}),
-			wantBlockIndex: state.NewBlockIndexWithData(
-				map[bc.Hash]*state.BlockNode{
-					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					blockMap[1][0].block.Hash(): mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][0].block.Hash(): mustCreateBlockNode(&blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][5].block.Hash(): mustCreateBlockNode(&blockMap[2][5].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[3][0].block.Hash(): mustCreateBlockNode(&blockMap[3][0].block.BlockHeader, &blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-				[]*state.BlockNode{
-					mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[3][0].block.BlockHeader, &blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-			),
-			wantOrphanManage: protocol.NewOrphanManage(),
-			wantIsOrphan:     false,
-			wantError:        false,
-		},
-		{
-			desc:     "rollback a block has spend non btm but status fail is true",
-			newBlock: blockMap[3][0].block,
-			initStore: createStoreItems([]int{0, 1, 3}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][6]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("be164edbce8bcd1d890c1164541b8418fdcb257499757d3b88561bca06e97e29"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}),
-			wantStore: createStoreItems([]int{0, 1, 2, 4}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][6], blockMap[3][0]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 0, Spent: false},
-			}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("be164edbce8bcd1d890c1164541b8418fdcb257499757d3b88561bca06e97e29"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}),
-			wantBlockIndex: state.NewBlockIndexWithData(
-				map[bc.Hash]*state.BlockNode{
-					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					blockMap[1][0].block.Hash(): mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][0].block.Hash(): mustCreateBlockNode(&blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][6].block.Hash(): mustCreateBlockNode(&blockMap[2][6].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[3][0].block.Hash(): mustCreateBlockNode(&blockMap[3][0].block.BlockHeader, &blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-				[]*state.BlockNode{
-					mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[3][0].block.BlockHeader, &blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-			),
-			wantOrphanManage: protocol.NewOrphanManage(),
-			wantIsOrphan:     false,
-			wantError:        false,
-		},
-		{
-			desc:      "rollback a block only has coinbase tx, and from orphan manage",
-			newBlock:  blockMap[1][0].block,
-			initStore: createStoreItems([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][1]}),
-			initOrphanManage: protocol.NewOrphanManageWithData(
-				map[bc.Hash]*protocol.OrphanBlock{
-					blockMap[2][0].block.Hash(): protocol.NewOrphanBlock(blockMap[2][0].block, time.Now().Add(time.Minute*60)),
-				},
-				map[bc.Hash][]*bc.Hash{blockMap[2][0].block.PreviousBlockHash: {hashPtr(blockMap[2][0].block.Hash())}},
-			),
-			wantStore: createStoreItems([]int{0, 1, 3}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[1][1], blockMap[2][0]}),
-			wantBlockIndex: state.NewBlockIndexWithData(
-				map[bc.Hash]*state.BlockNode{
-					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					blockMap[1][0].block.Hash(): mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[1][1].block.Hash(): mustCreateBlockNode(&blockMap[1][1].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][0].block.Hash(): mustCreateBlockNode(&blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-				[]*state.BlockNode{
-					mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-			),
-			wantOrphanManage: protocol.NewOrphanManage(),
-			wantIsOrphan:     false,
-			wantError:        false,
-		},
-		{
-			desc:     "rollback a block has spend btm tx, and from orphan manage",
-			newBlock: blockMap[2][0].block,
-			initStore: createStoreItems([]int{0, 1, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][1]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}),
-			initOrphanManage: protocol.NewOrphanManageWithData(
-				map[bc.Hash]*protocol.OrphanBlock{
-					blockMap[3][0].block.Hash(): protocol.NewOrphanBlock(blockMap[3][0].block, time.Now().Add(time.Minute*60)),
-				},
-				map[bc.Hash][]*bc.Hash{blockMap[3][0].block.PreviousBlockHash: {hashPtr(blockMap[3][0].block.Hash())}},
-			),
-			wantStore: createStoreItems([]int{0, 1, 2, 4}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][1], blockMap[3][0]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 0, Spent: false},
-			}),
-			wantBlockIndex: state.NewBlockIndexWithData(
-				map[bc.Hash]*state.BlockNode{
-					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					blockMap[1][0].block.Hash(): mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][0].block.Hash(): mustCreateBlockNode(&blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][1].block.Hash(): mustCreateBlockNode(&blockMap[2][1].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[3][0].block.Hash(): mustCreateBlockNode(&blockMap[3][0].block.BlockHeader, &blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-				[]*state.BlockNode{
-					mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[3][0].block.BlockHeader, &blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-			),
-			wantOrphanManage: protocol.NewOrphanManage(),
-			wantIsOrphan:     false,
-			wantError:        false,
-		},
-		{
-			desc:     "rollback a block has retire tx, and from orphan manage",
-			newBlock: blockMap[2][0].block,
-			initStore: createStoreItems([]int{0, 1, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][2]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}),
-			initOrphanManage: protocol.NewOrphanManageWithData(
-				map[bc.Hash]*protocol.OrphanBlock{
-					blockMap[3][0].block.Hash(): protocol.NewOrphanBlock(blockMap[3][0].block, time.Now().Add(time.Minute*60)),
-				},
-				map[bc.Hash][]*bc.Hash{blockMap[3][0].block.PreviousBlockHash: {hashPtr(blockMap[3][0].block.Hash())}},
-			),
-			wantStore: createStoreItems([]int{0, 1, 2, 4}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][2], blockMap[3][0]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 0, Spent: false},
-			}),
-			wantBlockIndex: state.NewBlockIndexWithData(
-				map[bc.Hash]*state.BlockNode{
-					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					blockMap[1][0].block.Hash(): mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][0].block.Hash(): mustCreateBlockNode(&blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][2].block.Hash(): mustCreateBlockNode(&blockMap[2][2].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[3][0].block.Hash(): mustCreateBlockNode(&blockMap[3][0].block.BlockHeader, &blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-				[]*state.BlockNode{
-					mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[3][0].block.BlockHeader, &blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-			),
-			wantOrphanManage: protocol.NewOrphanManage(),
-			wantIsOrphan:     false,
-			wantError:        false,
-		},
-		{
-			desc:     "rollback a block has issuance tx, and from orphan manage",
-			newBlock: blockMap[2][0].block,
-			initStore: createStoreItems([]int{0, 1, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][3]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}),
-			initOrphanManage: protocol.NewOrphanManageWithData(
-				map[bc.Hash]*protocol.OrphanBlock{
-					blockMap[3][0].block.Hash(): protocol.NewOrphanBlock(blockMap[3][0].block, time.Now().Add(time.Minute*60)),
-				},
-				map[bc.Hash][]*bc.Hash{blockMap[3][0].block.PreviousBlockHash: {hashPtr(blockMap[3][0].block.Hash())}},
-			),
-			wantStore: createStoreItems([]int{0, 1, 2, 4}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][3], blockMap[3][0]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 0, Spent: false},
-			}),
-			wantBlockIndex: state.NewBlockIndexWithData(
-				map[bc.Hash]*state.BlockNode{
-					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					blockMap[1][0].block.Hash(): mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][0].block.Hash(): mustCreateBlockNode(&blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][3].block.Hash(): mustCreateBlockNode(&blockMap[2][3].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[3][0].block.Hash(): mustCreateBlockNode(&blockMap[3][0].block.BlockHeader, &blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-				[]*state.BlockNode{
-					mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[3][0].block.BlockHeader, &blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-			),
-			wantOrphanManage: protocol.NewOrphanManage(),
-			wantIsOrphan:     false,
-			wantError:        false,
-		},
-		{
-			desc:     "rollback a block has non btm tx, and from orphan manage",
-			newBlock: blockMap[2][0].block,
-			initStore: createStoreItems([]int{0, 1, 2}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][5]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("be164edbce8bcd1d890c1164541b8418fdcb257499757d3b88561bca06e97e29"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 1, Spent: false},
-			}),
-			initOrphanManage: protocol.NewOrphanManageWithData(
-				map[bc.Hash]*protocol.OrphanBlock{
-					blockMap[3][0].block.Hash(): protocol.NewOrphanBlock(blockMap[3][0].block, time.Now().Add(time.Minute*60)),
-				},
-				map[bc.Hash][]*bc.Hash{blockMap[3][0].block.PreviousBlockHash: {hashPtr(blockMap[3][0].block.Hash())}},
-			),
-			wantStore: createStoreItems([]int{0, 1, 2, 4}, []*attachBlock{blockMap[0][0], blockMap[1][0], blockMap[2][0], blockMap[2][5], blockMap[3][0]}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("c93b687f98d039046cd2afd514c62f5d1c2c3b0804e4845b00a33e736ef48a33"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 0, Spent: false},
-			}, &storeItem{
-				key: database.CalcUtxoKey(hashPtr(testutil.MustDecodeHash("be164edbce8bcd1d890c1164541b8418fdcb257499757d3b88561bca06e97e29"))),
-				val: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 0, Spent: false},
-			}),
-			wantBlockIndex: state.NewBlockIndexWithData(
-				map[bc.Hash]*state.BlockNode{
-					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					blockMap[1][0].block.Hash(): mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][0].block.Hash(): mustCreateBlockNode(&blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[2][5].block.Hash(): mustCreateBlockNode(&blockMap[2][5].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					blockMap[3][0].block.Hash(): mustCreateBlockNode(&blockMap[3][0].block.BlockHeader, &blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-				[]*state.BlockNode{
-					mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-					mustCreateBlockNode(&blockMap[3][0].block.BlockHeader, &blockMap[2][0].block.BlockHeader, &blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-				},
-			),
-			wantOrphanManage: protocol.NewOrphanManage(),
-			wantIsOrphan:     false,
-			wantError:        false,
-		},
-	}
-
-	for _, c := range cases {
-		if err := c.Run(); err != nil {
-			panic(err)
-		}
-	}
 }
 
 func createStoreItems(mainChainIndexes []int, attachBlocks []*attachBlock, extralItem ...*storeItem) storeItems {
@@ -1147,30 +469,18 @@ func createStoreItems(mainChainIndexes []int, attachBlocks []*attachBlock, extra
 		block := attachBlock.block
 		blockHash := block.Hash()
 		items = append(items, &storeItem{
-			key: database.CalcBlockKey(&blockHash),
 			val: block,
 		})
-
 		items = append(items, &storeItem{
-			key: database.CalcTxStatusKey(&blockHash),
-			val: &bc.TransactionStatus{Version: 1, VerifyStatus: attachBlock.verifyResult},
-		})
-		items = append(items, &storeItem{
-			key: database.CalcBlockHeaderKey(block.Height, &blockHash),
+			key: database.CalcBlockHeaderKey(&blockHash),
 			val: block.BlockHeader,
 		})
-
 		if _, ok := mainChainIndexMap[i]; !ok {
 			continue
 		}
 
 		for i, tx := range block.Transactions {
-			statusFail := attachBlock.verifyResult[i].StatusFail
 			for _, input := range tx.Inputs {
-				if statusFail && input.AssetID() != *consensus.BTMAssetID {
-					continue
-				}
-
 				if _, ok := input.TypedInput.(*types.SpendInput); !ok {
 					continue
 				}
@@ -1182,14 +492,15 @@ func createStoreItems(mainChainIndexes []int, attachBlocks []*attachBlock, extra
 				items = append(items[0:index], items[index+1:]...)
 			}
 			for j, output := range tx.Outputs {
-				if statusFail && *tx.Outputs[j].AssetId != *consensus.BTMAssetID {
-					continue
-				}
 				if output.ControlProgram[0] == 0x6a {
 					continue
 				}
+				utxoType := storage.NormalUTXOType
+				if i == 0 {
+					utxoType = storage.CoinbaseUTXOType
+				}
 				items = append(items, &storeItem{key: database.CalcUtxoKey(tx.Tx.ResultIds[j]),
-					val: &storage.UtxoEntry{IsCoinBase: i == 0, BlockHeight: block.Height, Spent: false},
+					val: &storage.UtxoEntry{Type: utxoType, BlockHeight: block.Height, Spent: false},
 				})
 			}
 		}
@@ -1200,21 +511,13 @@ func createStoreItems(mainChainIndexes []int, attachBlocks []*attachBlock, extra
 	bestBlockHash := betBlock.Hash()
 	items = append(items, &storeItem{
 		key: database.BlockStoreKey,
-		val: &protocol.BlockStoreState{Height: betBlock.Height, Hash: &bestBlockHash},
+		val: &state.BlockStoreState{Height: betBlock.Height, Hash: &bestBlockHash},
 	})
 	return items
 }
 
 func hashPtr(hash bc.Hash) *bc.Hash {
 	return &hash
-}
-
-func mustCreateBlockNode(header *types.BlockHeader, parents ...*types.BlockHeader) *state.BlockNode {
-	var parentNode *state.BlockNode
-	for i := len(parents) - 1; i >= 0; i-- {
-		parentNode = mustNewBlockNode(parents[i], parentNode)
-	}
-	return mustNewBlockNode(header, parentNode)
 }
 
 func mustPostProcessBlock() {
@@ -1229,17 +532,11 @@ func mustPostProcessBlock() {
 
 func mustCalcMerkleRootHash(attachBlock *attachBlock) {
 	bcBlock := types.MapBlock(attachBlock.block)
-	txStatusHash, err := types.TxStatusMerkleRoot(attachBlock.verifyResult)
-	if err != nil {
-		panic("fail on calc genesis tx status merkle root")
-	}
-
 	merkleRoot, err := types.TxMerkleRoot(bcBlock.Transactions)
 	if err != nil {
 		panic("fail on calc genesis tx merkel root")
 	}
 
-	attachBlock.block.TransactionStatusHash = txStatusHash
 	attachBlock.block.TransactionsMerkleRoot = merkleRoot
 }
 
@@ -1254,14 +551,6 @@ func mustFillTransactionSize(block *types.Block) {
 	}
 }
 
-func mustNewBlockNode(h *types.BlockHeader, parent *state.BlockNode) *state.BlockNode {
-	node, err := state.NewBlockNode(h, parent)
-	if err != nil {
-		panic(err)
-	}
-	return node
-}
-
 func spendUTXO(spendOutputID bc.Hash, items storeItems, blockHeight uint64) int {
 	for i, item := range items {
 		utxo, ok := item.val.(*storage.UtxoEntry)
@@ -1271,11 +560,26 @@ func spendUTXO(spendOutputID bc.Hash, items storeItems, blockHeight uint64) int 
 		if string(database.CalcUtxoKey(&spendOutputID)) != string(item.key) {
 			continue
 		}
-		if utxo.Spent || (utxo.IsCoinBase && utxo.BlockHeight+consensus.CoinbasePendingBlockNumber > blockHeight) {
+		if utxo.Spent || (utxo.Type == storage.CoinbaseUTXOType && utxo.BlockHeight+consensus.CoinbasePendingBlockNumber > blockHeight) {
 			panic("utxo can not be use")
 		}
 		utxo.Spent = true
 		return i
 	}
 	panic("can not find available utxo")
+}
+
+func createStoreEntries(mainChainIndexes []int, attachBlocks []*attachBlock, extralItem ...*storeItem) []storeEntry {
+	storeItems := createStoreItems(mainChainIndexes, attachBlocks, extralItem...)
+	var storeEntries []storeEntry
+	for _, item := range storeItems {
+		entrys, err := serialItem(item)
+		if err != nil {
+			panic(err)
+		}
+
+		storeEntries = append(storeEntries, entrys...)
+	}
+
+	return storeEntries
 }

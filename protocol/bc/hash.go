@@ -50,6 +50,7 @@ func (h *Hash) UnmarshalText(v []byte) error {
 	if len(v) != 64 {
 		return fmt.Errorf("bad length hash string %d", len(v))
 	}
+
 	_, err := hex.Decode(b[:], v)
 	*h = NewHash(b)
 	return err
@@ -63,6 +64,7 @@ func (h *Hash) UnmarshalJSON(b []byte) error {
 		*h = Hash{}
 		return nil
 	}
+
 	var s string
 	if err := json.Unmarshal(b, &s); err != nil {
 		return err
@@ -89,6 +91,7 @@ func (h *Hash) ReadFrom(r io.Reader) (int64, error) {
 	if err != nil {
 		return int64(n), err
 	}
+
 	*h = NewHash(b32)
 	return int64(n), nil
 }
@@ -96,8 +99,5 @@ func (h *Hash) ReadFrom(r io.Reader) (int64, error) {
 // IsZero tells whether a Hash pointer is nil or points to an all-zero
 // hash.
 func (h *Hash) IsZero() bool {
-	if h == nil {
-		return true
-	}
-	return *h == Hash{}
+	return h == nil || *h == Hash{}
 }

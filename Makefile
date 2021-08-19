@@ -9,13 +9,9 @@ $(error "$$GOOS is not defined. If you are using Windows, try to re-make using '
 endif
 endif
 
-PACKAGES    := $(shell go list ./... | grep -v '/vendor/' | grep -v '/crypto/ed25519/chainkd' | grep -v '/mining/tensority')
-PACKAGES += 'github.com/bytom/bytom/mining/tensority/go_algorithm'
+PACKAGES    := $(shell go list ./... | grep -v '/lib/')
 
 BUILD_FLAGS := -ldflags "-X github.com/bytom/bytom/version.GitCommit=`git rev-parse HEAD`"
-
-MINER_BINARY32 := miner-$(GOOS)_386
-MINER_BINARY64 := miner-$(GOOS)_amd64
 
 BYTOMD_BINARY32 := bytomd-$(GOOS)_386
 BYTOMD_BINARY64 := bytomd-$(GOOS)_amd64
@@ -24,9 +20,6 @@ BYTOMCLI_BINARY32 := bytomcli-$(GOOS)_386
 BYTOMCLI_BINARY64 := bytomcli-$(GOOS)_amd64
 
 VERSION := $(shell awk -F= '/Version =/ {print $$2}' version/version.go | tr -d "\" ")
-
-MINER_RELEASE32 := miner-$(VERSION)-$(GOOS)_386
-MINER_RELEASE64 := miner-$(VERSION)-$(GOOS)_amd64
 
 BYTOMD_RELEASE32 := bytomd-$(VERSION)-$(GOOS)_386
 BYTOMD_RELEASE64 := bytomd-$(VERSION)-$(GOOS)_amd64
@@ -43,11 +36,6 @@ bytomd:
 	@echo "Building bytomd to cmd/bytomd/bytomd"
 	@go build $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
 
-bytomd-simd:
-	@echo "Building SIMD version bytomd to cmd/bytomd/bytomd"
-	@cd mining/tensority/cgo_algorithm/lib/ && make
-	@go build -tags="simd" $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
-
 bytomcli:
 	@echo "Building bytomcli to cmd/bytomcli/bytomcli"
 	@go build $(BUILD_FLAGS) -o cmd/bytomcli/bytomcli cmd/bytomcli/main.go
@@ -60,30 +48,28 @@ install:
 target:
 	mkdir -p $@
 
-binary: target/$(BYTOMD_BINARY32) target/$(BYTOMD_BINARY64) target/$(BYTOMCLI_BINARY32) target/$(BYTOMCLI_BINARY64) target/$(MINER_BINARY32) target/$(MINER_BINARY64)
+binary: target/$(BYTOMD_BINARY32) target/$(BYTOMD_BINARY64) target/$(BYTOMCLI_BINARY32) target/$(BYTOMCLI_BINARY64)
 
 ifeq ($(GOOS),windows)
 release: binary
-	cd target && cp -f $(MINER_BINARY32) $(MINER_BINARY32).exe
 	cd target && cp -f $(BYTOMD_BINARY32) $(BYTOMD_BINARY32).exe
 	cd target && cp -f $(BYTOMCLI_BINARY32) $(BYTOMCLI_BINARY32).exe
-	cd target && md5sum $(MINER_BINARY32).exe $(BYTOMD_BINARY32).exe $(BYTOMCLI_BINARY32).exe >$(BYTOM_RELEASE32).md5
-	cd target && zip $(BYTOM_RELEASE32).zip $(MINER_BINARY32).exe $(BYTOMD_BINARY32).exe $(BYTOMCLI_BINARY32).exe $(BYTOM_RELEASE32).md5
-	cd target && rm -f $(MINER_BINARY32) $(BYTOMD_BINARY32) $(BYTOMCLI_BINARY32) $(MINER_BINARY32).exe $(BYTOMD_BINARY32).exe $(BYTOMCLI_BINARY32).exe $(BYTOM_RELEASE32).md5
-	cd target && cp -f $(MINER_BINARY64) $(MINER_BINARY64).exe
+	cd target && md5sum  $(BYTOMD_BINARY32).exe $(BYTOMCLI_BINARY32).exe >$(BYTOM_RELEASE32).md5
+	cd target && zip $(BYTOM_RELEASE32).zip  $(BYTOMD_BINARY32).exe $(BYTOMCLI_BINARY32).exe $(BYTOM_RELEASE32).md5
+	cd target && rm -f  $(BYTOMD_BINARY32) $(BYTOMCLI_BINARY32)  $(BYTOMD_BINARY32).exe $(BYTOMCLI_BINARY32).exe $(BYTOM_RELEASE32).md5
 	cd target && cp -f $(BYTOMD_BINARY64) $(BYTOMD_BINARY64).exe
 	cd target && cp -f $(BYTOMCLI_BINARY64) $(BYTOMCLI_BINARY64).exe
-	cd target && md5sum $(MINER_BINARY64).exe $(BYTOMD_BINARY64).exe $(BYTOMCLI_BINARY64).exe >$(BYTOM_RELEASE64).md5
-	cd target && zip $(BYTOM_RELEASE64).zip $(MINER_BINARY64).exe $(BYTOMD_BINARY64).exe $(BYTOMCLI_BINARY64).exe $(BYTOM_RELEASE64).md5
-	cd target && rm -f $(MINER_BINARY64) $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) $(MINER_BINARY64).exe $(BYTOMD_BINARY64).exe $(BYTOMCLI_BINARY64).exe $(BYTOM_RELEASE64).md5
+	cd target && md5sum  $(BYTOMD_BINARY64).exe $(BYTOMCLI_BINARY64).exe >$(BYTOM_RELEASE64).md5
+	cd target && zip $(BYTOM_RELEASE64).zip  $(BYTOMD_BINARY64).exe $(BYTOMCLI_BINARY64).exe $(BYTOM_RELEASE64).md5
+	cd target && rm -f  $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64)  $(BYTOMD_BINARY64).exe $(BYTOMCLI_BINARY64).exe $(BYTOM_RELEASE64).md5
 else
 release: binary
-	cd target && md5sum $(MINER_BINARY32) $(BYTOMD_BINARY32) $(BYTOMCLI_BINARY32) >$(BYTOM_RELEASE32).md5
-	cd target && tar -czf $(BYTOM_RELEASE32).tgz $(MINER_BINARY32) $(BYTOMD_BINARY32) $(BYTOMCLI_BINARY32) $(BYTOM_RELEASE32).md5
-	cd target && rm -f $(MINER_BINARY32) $(BYTOMD_BINARY32) $(BYTOMCLI_BINARY32) $(BYTOM_RELEASE32).md5
-	cd target && md5sum $(MINER_BINARY64) $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) >$(BYTOM_RELEASE64).md5
-	cd target && tar -czf $(BYTOM_RELEASE64).tgz $(MINER_BINARY64) $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) $(BYTOM_RELEASE64).md5
-	cd target && rm -f $(MINER_BINARY64) $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) $(BYTOM_RELEASE64).md5
+	cd target && md5sum  $(BYTOMD_BINARY32) $(BYTOMCLI_BINARY32) >$(BYTOM_RELEASE32).md5
+	cd target && tar -czf $(BYTOM_RELEASE32).tgz  $(BYTOMD_BINARY32) $(BYTOMCLI_BINARY32) $(BYTOM_RELEASE32).md5
+	cd target && rm -f  $(BYTOMD_BINARY32) $(BYTOMCLI_BINARY32) $(BYTOM_RELEASE32).md5
+	cd target && md5sum  $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) >$(BYTOM_RELEASE64).md5
+	cd target && tar -czf $(BYTOM_RELEASE64).tgz  $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) $(BYTOM_RELEASE64).md5
+	cd target && rm -f  $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) $(BYTOM_RELEASE64).md5
 endif
 
 release-all: clean
@@ -95,7 +81,6 @@ clean:
 	@echo "Cleaning binaries built..."
 	@rm -rf cmd/bytomd/bytomd
 	@rm -rf cmd/bytomcli/bytomcli
-	@rm -rf cmd/miner/miner
 	@rm -rf target
 	@rm -rf $(GOPATH)/bin/bytomd
 	@rm -rf $(GOPATH)/bin/bytomcli
@@ -118,15 +103,9 @@ target/$(BYTOMCLI_BINARY32):
 target/$(BYTOMCLI_BINARY64):
 	CGO_ENABLED=0 GOARCH=amd64 go build $(BUILD_FLAGS) -o $@ cmd/bytomcli/main.go
 
-target/$(MINER_BINARY32):
-	CGO_ENABLED=0 GOARCH=386 go build $(BUILD_FLAGS) -o $@ cmd/miner/main.go
-
-target/$(MINER_BINARY64):
-	CGO_ENABLED=0 GOARCH=amd64 go build $(BUILD_FLAGS) -o $@ cmd/miner/main.go
-
 test:
 	@echo "====> Running go test"
-	@go test -tags "network" $(PACKAGES)
+	@go test $(PACKAGES)
 
 benchmark:
 	@go test -bench $(PACKAGES)
@@ -134,6 +113,6 @@ benchmark:
 functional-tests:
 	@go test -timeout=5m -tags="functional" ./test 
 
-ci: test functional-tests
+ci: test
 
 .PHONY: all target release-all clean test benchmark

@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -11,6 +12,7 @@ import (
 	"github.com/bytom/bytom/account"
 	"github.com/bytom/bytom/asset"
 	"github.com/bytom/bytom/blockchain/query"
+	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/crypto/sha3pool"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	chainjson "github.com/bytom/bytom/encoding/json"
@@ -120,8 +122,8 @@ type TxSummary struct {
 }
 
 // indexTransactions saves all annotated transactions to the database.
-func (w *Wallet) indexTransactions(batch dbm.Batch, b *types.Block, txStatus *bc.TransactionStatus) error {
-	annotatedTxs := w.filterAccountTxs(b, txStatus)
+func (w *Wallet) indexTransactions(batch dbm.Batch, b *types.Block) error {
+	annotatedTxs := w.filterAccountTxs(b)
 	saveExternalAssetDefinition(b, w.DB)
 	annotateTxsAccount(annotatedTxs, w.DB)
 
@@ -152,18 +154,17 @@ func (w *Wallet) indexTransactions(batch dbm.Batch, b *types.Block, txStatus *bc
 }
 
 // filterAccountTxs related and build the fully annotated transactions.
-func (w *Wallet) filterAccountTxs(b *types.Block, txStatus *bc.TransactionStatus) []*query.AnnotatedTx {
+func (w *Wallet) filterAccountTxs(b *types.Block) []*query.AnnotatedTx {
 	annotatedTxs := make([]*query.AnnotatedTx, 0, len(b.Transactions))
 
 transactionLoop:
 	for pos, tx := range b.Transactions {
-		statusFail, _ := txStatus.GetStatus(pos)
 		for _, v := range tx.Outputs {
 			var hash [32]byte
 			sha3pool.Sum256(hash[:], v.ControlProgram)
 
 			if bytes := w.DB.Get(account.ContractKey(hash)); bytes != nil {
-				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
+				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, pos))
 				continue transactionLoop
 			}
 		}
@@ -174,7 +175,7 @@ transactionLoop:
 				continue
 			}
 			if bytes := w.DB.Get(account.StandardUTXOKey(outid)); bytes != nil {
-				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
+				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, pos))
 				continue transactionLoop
 			}
 		}
@@ -222,18 +223,8 @@ func (w *Wallet) getGlobalTxByTxID(txID string) (*query.AnnotatedTx, error) {
 		return nil, err
 	}
 
-	txStatus, err := w.chain.GetTransactionStatus(blockHash)
-	if err != nil {
-		return nil, err
-	}
-
-	statusFail, err := txStatus.GetStatus(int(pos))
-	if err != nil {
-		return nil, err
-	}
-
 	tx := block.Transactions[int(pos)]
-	return w.buildAnnotatedTransaction(tx, block, statusFail, int(pos)), nil
+	return w.buildAnnotatedTransaction(tx, block, int(pos)), nil
 }
 
 // GetTransactionsSummary get transactions summary
@@ -311,7 +302,7 @@ func (w *Wallet) GetTransactions(accountID string) ([]*query.AnnotatedTx, error)
 
 // GetAccountBalances return all account balances
 func (w *Wallet) GetAccountBalances(accountID string, id string) ([]AccountBalance, error) {
-	return w.indexBalances(w.GetAccountUtxos(accountID, "", false, false))
+	return w.indexBalances(w.GetAccountUtxos(accountID, "", false, false, false))
 }
 
 // AccountBalance account balance
@@ -375,3 +366,73 @@ func (w *Wallet) indexBalances(accountUTXOs []*account.UTXO) ([]AccountBalance, 
 
 	return balances, nil
 }
+
+// GetAccountVotes return all account votes
+func (w *Wallet) GetAccountVotes(accountID string, id string) ([]AccountVotes, error) {
+	return w.indexVotes(w.GetAccountUtxos(accountID, "", false, false, true))
+}
+
+type voteDetail struct {
+	Vote       string `json:"vote"`
+	VoteNumber uint64 `json:"vote_number"`
+}
+
+// AccountVotes account vote
+type AccountVotes struct {
+	AccountID       string       `json:"account_id"`
+	Alias           string       `json:"account_alias"`
+	TotalVoteNumber uint64       `json:"total_vote_number"`
+	VoteDetails     []voteDetail `json:"vote_details"`
+}
+
+func (w *Wallet) indexVotes(accountUTXOs []*account.UTXO) ([]AccountVotes, error) {
+	accVote := make(map[string]map[string]uint64)
+	votes := []AccountVotes{}
+
+	for _, accountUTXO := range accountUTXOs {
+		if accountUTXO.AssetID != *consensus.BTMAssetID || accountUTXO.Vote == nil {
+			continue
+		}
+		xpub := hex.EncodeToString(accountUTXO.Vote)
+		if _, ok := accVote[accountUTXO.AccountID]; ok {
+			accVote[accountUTXO.AccountID][xpub] += accountUTXO.Amount
+		} else {
+			accVote[accountUTXO.AccountID] = map[string]uint64{xpub: accountUTXO.Amount}
+
+		}
+	}
+
+	var sortedAccount []string
+	for k := range accVote {
+		sortedAccount = append(sortedAccount, k)
+	}
+	sort.Strings(sortedAccount)
+
+	for _, id := range sortedAccount {
+		var sortedXpub []string
+		for k := range accVote[id] {
+			sortedXpub = append(sortedXpub, k)
+		}
+		sort.Strings(sortedXpub)
+
+		voteDetails := []voteDetail{}
+		voteTotal := uint64(0)
+		for _, xpub := range sortedXpub {
+			voteDetails = append(voteDetails, voteDetail{
+				Vote:       xpub,
+				VoteNumber: accVote[id][xpub],
+			})
+			voteTotal += accVote[id][xpub]
+		}
+		alias := w.AccountMgr.GetAliasByID(id)
+		votes = append(votes, AccountVotes{
+			Alias:           alias,
+			AccountID:       id,
+			VoteDetails:     voteDetails,
+			TotalVoteNumber: voteTotal,
+		})
+	}
+
+	return votes, nil
+}
+

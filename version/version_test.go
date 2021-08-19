@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"gopkg.in/fatih/set.v0"
 	gover "github.com/hashicorp/go-version"
+	"gopkg.in/fatih/set.v0"
 )
 
 func TestCompare(t *testing.T) {

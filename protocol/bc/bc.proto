@@ -54,10 +54,6 @@ message BlockHeader {
   Hash              previous_block_id       = 3;
   uint64            timestamp               = 4;
   Hash              transactions_root       = 5;
-  Hash              transaction_status_hash = 6;
-  uint64            nonce                   = 7;
-  uint64            bits                    = 8;
-  TransactionStatus transaction_status      = 9;
 }
 
 message TxHeader {
@@ -65,15 +61,6 @@ message TxHeader {
   uint64        serialized_size = 2;
   uint64        time_range      = 3;
   repeated Hash result_ids      = 4;
-}
-
-message TxVerifyResult {
-  bool status_fail = 1;
-}
-
-message TransactionStatus {
-  uint64                  version        = 1;
-  repeated TxVerifyResult verify_status  = 2;
 }
 
 message Mux {
@@ -88,10 +75,26 @@ message Coinbase {
   bytes            arbitrary           = 2;
 }
 
-message Output {
+message OriginalOutput {
   ValueSource source          = 1;
   Program     control_program = 2;
   uint64      ordinal         = 3;
+  repeated bytes  state_data  = 4;
+}
+
+message VoteOutput {
+  ValueSource source          = 1;
+  Program     control_program = 2;
+  uint64      ordinal         = 3;
+  bytes       vote            = 4;
+  repeated bytes  state_data  = 5;
+}
+
+message VetoInput {
+  Hash             spent_output_id     = 1;
+  ValueDestination witness_destination = 2;
+  repeated bytes   witness_arguments   = 3;
+  uint64           ordinal             = 4;
 }
 
 message Retirement {

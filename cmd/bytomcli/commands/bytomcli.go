@@ -147,8 +147,6 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(getBlockHashCmd)
 	BytomcliCmd.AddCommand(getBlockCmd)
 	BytomcliCmd.AddCommand(getBlockHeaderCmd)
-	BytomcliCmd.AddCommand(getDifficultyCmd)
-	BytomcliCmd.AddCommand(getHashRateCmd)
 
 	BytomcliCmd.AddCommand(createKeyCmd)
 	BytomcliCmd.AddCommand(deleteKeyCmd)
@@ -166,9 +164,6 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(deleteTransactionFeedCmd)
 	BytomcliCmd.AddCommand(getTransactionFeedCmd)
 	BytomcliCmd.AddCommand(updateTransactionFeedCmd)
-
-	BytomcliCmd.AddCommand(isMiningCmd)
-	BytomcliCmd.AddCommand(setMiningCmd)
 
 	BytomcliCmd.AddCommand(netInfoCmd)
 	BytomcliCmd.AddCommand(gasRateCmd)

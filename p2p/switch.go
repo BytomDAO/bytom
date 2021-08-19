@@ -8,12 +8,11 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
 
 	cfg "github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/consensus"
-	"github.com/bytom/bytom/crypto/ed25519"
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/event"
 	"github.com/bytom/bytom/p2p/connection"
@@ -28,7 +27,7 @@ const (
 	logModule = "p2p"
 
 	minNumOutboundPeers = 4
-	maxNumLANPeers      = 5
+	maxNumLANPeers      = 15
 )
 
 //pre-define errors for connecting fail
@@ -70,7 +69,7 @@ type Switch struct {
 	peers        *PeerSet
 	dialing      *cmn.CMap
 	nodeInfo     *NodeInfo             // our node info
-	nodePrivKey  crypto.PrivKeyEd25519 // our node privkey
+	nodePrivKey  chainkd.XPrv // our node privkey
 	discv        discv
 	lanDiscv     lanDiscv
 	security     Security
@@ -84,23 +83,11 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 	var discv *dht.Network
 	var lanDiscv *mdns.LANDiscover
 
-	config.P2P.PrivateKey, err = config.NodeKey()
-	if err != nil {
-		return nil, err
-	}
-
-	bytes, err := hex.DecodeString(config.P2P.PrivateKey)
-	if err != nil {
-		return nil, err
-	}
-
-	var newKey [64]byte
-	copy(newKey[:], bytes)
-	privKey := crypto.PrivKeyEd25519(newKey)
+	xPrv := config.PrivateKey()
 	if !config.VaultMode {
 		// Create listener
 		l, listenAddr = GetListener(config.P2P)
-		discv, err = dht.NewDiscover(config, ed25519.PrivateKey(bytes), l.ExternalAddress().Port)
+		discv, err = dht.NewDiscover(config, *xPrv, l.ExternalAddress().Port)
 		if err != nil {
 			return nil, err
 		}
@@ -109,11 +96,11 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 		}
 	}
 
-	return newSwitch(config, discv, lanDiscv, l, privKey, listenAddr)
+	return newSwitch(config, discv, lanDiscv, l, *xPrv, listenAddr)
 }
 
 // newSwitch creates a new Switch with the given config.
-func newSwitch(config *cfg.Config, discv discv, lanDiscv lanDiscv, l Listener, priv crypto.PrivKeyEd25519, listenAddr string) (*Switch, error) {
+func newSwitch(config *cfg.Config, discv discv, lanDiscv lanDiscv, l Listener, priv chainkd.XPrv, listenAddr string) (*Switch, error) {
 	sw := &Switch{
 		Config:       config,
 		peerConfig:   DefaultPeerConfig(config.P2P),
@@ -125,7 +112,7 @@ func newSwitch(config *cfg.Config, discv discv, lanDiscv lanDiscv, l Listener, p
 		nodePrivKey:  priv,
 		discv:        discv,
 		lanDiscv:     lanDiscv,
-		nodeInfo:     NewNodeInfo(config, priv.PubKey().Unwrap().(crypto.PubKeyEd25519), listenAddr),
+		nodeInfo:     NewNodeInfo(config, priv.XPub().PublicKey(), listenAddr),
 		security:     security.NewSecurity(config),
 	}
 
@@ -137,7 +124,7 @@ func newSwitch(config *cfg.Config, discv discv, lanDiscv lanDiscv, l Listener, p
 // OnStart implements BaseService. It starts all the reactors, peers, and listeners.
 func (sw *Switch) OnStart() error {
 	for _, reactor := range sw.reactors {
-		if _, err := reactor.Start(); err != nil {
+		if err := reactor.Start(); err != nil {
 			return err
 		}
 	}
@@ -197,7 +184,7 @@ func (sw *Switch) AddPeer(pc *peerConn, isLAN bool) error {
 	}
 
 	peer := newPeer(pc, peerNodeInfo, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError, isLAN)
-	if err := sw.security.DoFilter(peer.RemoteAddrHost(), peer.PubKey().String()); err != nil {
+	if err := sw.security.DoFilter(peer.RemoteAddrHost(), hex.EncodeToString(peer.PubKey())); err != nil {
 		return err
 	}
 
@@ -383,7 +370,7 @@ func (sw *Switch) connectLANPeersRoutine() {
 				continue
 			}
 			sw.connectLANPeers(LANPeer)
-		case <-sw.Quit:
+		case <-sw.Quit():
 			return
 		}
 	}
@@ -489,7 +476,7 @@ func (sw *Switch) ensureOutboundPeersRoutine() {
 		case <-ticker.C:
 			sw.ensureKeepConnectPeers()
 			sw.ensureOutboundPeers()
-		case <-sw.Quit:
+		case <-sw.Quit():
 			return
 		}
 	}
@@ -497,7 +484,7 @@ func (sw *Switch) ensureOutboundPeersRoutine() {
 
 func (sw *Switch) startInitPeer(peer *Peer) error {
 	// spawn send/recv routines
-	if _, err := peer.Start(); err != nil {
+	if err := peer.Start(); err != nil {
 		log.WithFields(log.Fields{"module": logModule, "remote peer:": peer.RemoteAddr, " err:": err}).Error("init peer err")
 	}
 

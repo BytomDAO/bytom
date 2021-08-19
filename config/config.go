@@ -1,8 +1,8 @@
 package config
 
 import (
+	"encoding/hex"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -10,7 +10,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/bytom/crypto/ed25519"
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 )
 
 var (
@@ -26,7 +26,6 @@ type Config struct {
 	Wallet    *WalletConfig    `mapstructure:"wallet"`
 	Auth      *RPCAuthConfig   `mapstructure:"auth"`
 	Web       *WebConfig       `mapstructure:"web"`
-	Simd      *SimdConfig      `mapstructure:"simd"`
 	Websocket *WebsocketConfig `mapstructure:"ws"`
 }
 
@@ -38,7 +37,6 @@ func DefaultConfig() *Config {
 		Wallet:     DefaultWalletConfig(),
 		Auth:       DefaultRPCAuthConfig(),
 		Web:        DefaultWebConfig(),
-		Simd:       DefaultSimdConfig(),
 		Websocket:  DefaultWebsocketConfig(),
 	}
 }
@@ -52,48 +50,48 @@ func (cfg *Config) SetRoot(root string) *Config {
 // NodeKey retrieves the currently configured private key of the node, checking
 // first any manually set key, falling back to the one found in the configured
 // data folder. If no key can be found, a new one is generated.
-func (cfg *Config) NodeKey() (string, error) {
-	// Use any specifically configured key.
-	if cfg.P2P.PrivateKey != "" {
-		return cfg.P2P.PrivateKey, nil
+func (cfg *Config) PrivateKey() *chainkd.XPrv {
+	if cfg.XPrv != nil {
+		return cfg.XPrv
 	}
 
-	keyFile := rootify(cfg.P2P.NodeKeyFile, cfg.BaseConfig.RootDir)
-	buf := make([]byte, ed25519.PrivateKeySize*2)
-	fd, err := os.Open(keyFile)
-	defer fd.Close()
-	if err == nil {
-		if _, err = io.ReadFull(fd, buf); err == nil {
-			return string(buf), nil
-		}
-	}
-
-	log.WithField("err", err).Warning("key file access failed")
-	_, privKey, err := ed25519.GenerateKey(nil)
+	filePath := rootify(cfg.PrivateKeyFile, cfg.BaseConfig.RootDir)
+	fildReader, err := os.Open(filePath)
 	if err != nil {
-		return "", err
+		log.WithField("err", err).Panic("fail on open private key file")
 	}
 
-	if err = ioutil.WriteFile(keyFile, []byte(privKey.String()), 0600); err != nil {
-		return "", err
+	defer fildReader.Close()
+	buf := make([]byte, 128)
+	if _, err = io.ReadFull(fildReader, buf); err != nil {
+		log.WithField("err", err).Panic("fail on read private key file")
 	}
-	return privKey.String(), nil
+
+	var xprv chainkd.XPrv
+	if _, err := hex.Decode(xprv[:], buf); err != nil {
+		log.WithField("err", err).Panic("fail on decode private key")
+	}
+
+	cfg.XPrv = &xprv
+	xpub := cfg.XPrv.XPub()
+	cfg.XPub = &xpub
+	return cfg.XPrv
 }
 
-//-----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 // BaseConfig
 type BaseConfig struct {
 	// The root directory for all data.
 	// This should be set in viper so it can unmarshal into this struct
 	RootDir string `mapstructure:"home"`
 
-	//The alias of the node
+	// The alias of the node
 	NodeAlias string `mapstructure:"node_alias"`
 
-	//The ID of the network to json
+	// The ID of the network to json
 	ChainID string `mapstructure:"chain_id"`
 
-	//log level to set
+	// log level to set
 	LogLevel string `mapstructure:"log_level"`
 
 	// A custom human readable name for this node
@@ -119,6 +117,10 @@ type BaseConfig struct {
 
 	// log file name
 	LogFile string `mapstructure:"log_file"`
+
+	PrivateKeyFile string `mapstructure:"private_key_file"`
+	XPrv           *chainkd.XPrv
+	XPub           *chainkd.XPub
 }
 
 // Default configurable base parameters.
@@ -132,6 +134,7 @@ func DefaultBaseConfig() BaseConfig {
 		KeysPath:          "keystore",
 		NodeAlias:         "",
 		LogFile:           "log",
+		PrivateKeyFile:    "node_key.txt",
 	}
 }
 
@@ -151,8 +154,6 @@ func (b BaseConfig) KeysDir() string {
 type P2PConfig struct {
 	ListenAddress    string `mapstructure:"laddr"`
 	Seeds            string `mapstructure:"seeds"`
-	PrivateKey       string `mapstructure:"node_key"`
-	NodeKeyFile      string `mapstructure:"node_key_file"`
 	SkipUPNP         bool   `mapstructure:"skip_upnp"`
 	LANDiscover      bool   `mapstructure:"lan_discoverable"`
 	MaxNumPeers      int    `mapstructure:"max_num_peers"`
@@ -168,10 +169,9 @@ type P2PConfig struct {
 func DefaultP2PConfig() *P2PConfig {
 	return &P2PConfig{
 		ListenAddress:    "tcp://0.0.0.0:46656",
-		NodeKeyFile:      "nodekey",
 		SkipUPNP:         false,
 		LANDiscover:      true,
-		MaxNumPeers:      50,
+		MaxNumPeers:      20,
 		HandshakeTimeout: 30,
 		DialTimeout:      3,
 		ProxyAddress:     "",
@@ -180,7 +180,7 @@ func DefaultP2PConfig() *P2PConfig {
 	}
 }
 
-//-----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 type WalletConfig struct {
 	Disable  bool   `mapstructure:"disable"`
 	Rescan   bool   `mapstructure:"rescan"`
@@ -194,10 +194,6 @@ type RPCAuthConfig struct {
 
 type WebConfig struct {
 	Closed bool `mapstructure:"closed"`
-}
-
-type SimdConfig struct {
-	Enable bool `mapstructure:"enable"`
 }
 
 type WebsocketConfig struct {
@@ -229,13 +225,6 @@ func DefaultWalletConfig() *WalletConfig {
 	}
 }
 
-// Default configurable web parameters.
-func DefaultSimdConfig() *SimdConfig {
-	return &SimdConfig{
-		Enable: false,
-	}
-}
-
 func DefaultWebsocketConfig() *WebsocketConfig {
 	return &WebsocketConfig{
 		MaxNumWebsockets:     25,
@@ -243,7 +232,7 @@ func DefaultWebsocketConfig() *WebsocketConfig {
 	}
 }
 
-//-----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 // Utils
 
 // helper function to make config creation independent of root dir

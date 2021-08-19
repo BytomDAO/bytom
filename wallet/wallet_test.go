@@ -15,6 +15,7 @@ import (
 	"github.com/bytom/bytom/blockchain/txbuilder"
 	"github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/contract"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/database"
 	dbm "github.com/bytom/bytom/database/leveldb"
@@ -120,7 +121,7 @@ func TestWalletUpdate(t *testing.T) {
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
 
-	chain, err := protocol.NewChain(store, txPool)
+	chain, err := protocol.NewChain(store, txPool, dispatcher)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,10 +168,7 @@ func TestWalletUpdate(t *testing.T) {
 
 	tx := types.NewTx(*txData)
 	block := mockSingleBlock(tx)
-	txStatus := bc.NewTransactionStatus()
-	txStatus.SetStatus(0, false)
-	txStatus.SetStatus(1, false)
-	store.SaveBlock(block, txStatus)
+	store.SaveBlock(block)
 
 	w := mockWallet(testDB, accountManager, reg, chain, dispatcher, true)
 	err = w.AttachBlock(block)
@@ -215,7 +213,7 @@ func TestRescanWallet(t *testing.T) {
 	store := database.NewStore(testDB)
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
-	chain, err := protocol.NewChain(store, txPool)
+	chain, err := protocol.NewChain(store, txPool, dispatcher)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -264,7 +262,7 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
 
-	chain, err := protocol.NewChain(store, txPool)
+	chain, err := protocol.NewChain(store, txPool, dispatcher)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -293,6 +291,7 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 	controlProg.KeyIndex = 1
 
 	reg := asset.NewRegistry(testDB, chain)
+	contractReg := contract.NewRegistry(testDB)
 	asset, err := reg.Define([]chainkd.XPub{xpub1.XPub}, 1, nil, 0, "TESTASSET", nil)
 	if err != nil {
 		t.Fatal(err)
@@ -311,9 +310,7 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 
 	tx := types.NewTx(*txData)
 	//block := mockSingleBlock(tx)
-	txStatus := bc.NewTransactionStatus()
-	txStatus.SetStatus(0, false)
-	w, err := NewWallet(testDB, accountManager, reg, hsm, chain, dispatcher, false)
+	w, err := NewWallet(testDB, accountManager, reg, contractReg, hsm, chain, dispatcher, false)
 	go w.memPoolTxQueryLoop()
 	w.eventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: protocol.MsgNewTx}})
 	time.Sleep(time.Millisecond * 10)
@@ -360,9 +357,9 @@ func mockTxData(utxos []*account.UTXO, testAccount *account.Account) (*txbuilder
 
 		out := &types.TxOutput{}
 		if utxo.AssetID == *consensus.BTMAssetID {
-			out = types.NewTxOutput(utxo.AssetID, 100, utxo.ControlProgram)
+			out = types.NewOriginalTxOutput(utxo.AssetID, 100, utxo.ControlProgram, nil)
 		} else {
-			out = types.NewTxOutput(utxo.AssetID, utxo.Amount, utxo.ControlProgram)
+			out = types.NewOriginalTxOutput(utxo.AssetID, utxo.Amount, utxo.ControlProgram, nil)
 		}
 		tplBuilder.AddOutput(out)
 	}
@@ -389,8 +386,7 @@ func mockSingleBlock(tx *types.Tx) *types.Block {
 		BlockHeader: types.BlockHeader{
 			Version: 1,
 			Height:  1,
-			Bits:    2305843009230471167,
 		},
-		Transactions: []*types.Tx{config.GenesisTx(), tx},
+		Transactions: append(config.GenesisTxs(), tx),
 	}
 }

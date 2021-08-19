@@ -1,37 +1,34 @@
 package node
 
 import (
-	"context"
 	"errors"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"path/filepath"
 
-	"github.com/prometheus/prometheus/util/flock"
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
 	browser "github.com/toqueteos/webbrowser"
+
+	"github.com/bytom/bytom/proposal/blockproposer"
+	"github.com/prometheus/prometheus/util/flock"
 
 	"github.com/bytom/bytom/accesstoken"
 	"github.com/bytom/bytom/account"
 	"github.com/bytom/bytom/api"
 	"github.com/bytom/bytom/asset"
 	"github.com/bytom/bytom/blockchain/pseudohsm"
-	"github.com/bytom/bytom/blockchain/txfeed"
 	cfg "github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/contract"
 	"github.com/bytom/bytom/database"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/env"
 	"github.com/bytom/bytom/event"
 	bytomLog "github.com/bytom/bytom/log"
-	"github.com/bytom/bytom/mining/cpuminer"
-	"github.com/bytom/bytom/mining/miningpool"
-	"github.com/bytom/bytom/mining/tensority"
 	"github.com/bytom/bytom/net/websocket"
 	"github.com/bytom/bytom/netsync"
-	"github.com/bytom/bytom/p2p"
 	"github.com/bytom/bytom/protocol"
 	w "github.com/bytom/bytom/wallet"
 )
@@ -54,25 +51,15 @@ type Node struct {
 	notificationMgr *websocket.WSNotificationManager
 	api             *api.API
 	chain           *protocol.Chain
-	txfeed          *txfeed.Tracker
-	cpuMiner        *cpuminer.CPUMiner
-	miningPool      *miningpool.MiningPool
+	blockProposer   *blockproposer.BlockProposer
 	miningEnable    bool
 }
 
 // NewNode create bytom node
 func NewNode(config *cfg.Config) *Node {
-	ctx := context.Background()
-	if err := lockDataDirectory(config); err != nil {
-		cmn.Exit("Error: " + err.Error())
+	if err := initNodeConfig(config); err != nil {
+		cmn.Exit(cmn.Fmt("Failed to init config: %v", err))
 	}
-
-	if err := bytomLog.InitLogFile(config); err != nil {
-		log.WithField("err", err).Fatalln("InitLogFile failed")
-	}
-
-	initActiveNetParams(config)
-	initCommonConfig(config)
 
 	// Get store
 	if config.DBBackend != "memdb" && config.DBBackend != "leveldb" {
@@ -86,7 +73,8 @@ func NewNode(config *cfg.Config) *Node {
 
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
-	chain, err := protocol.NewChain(store, txPool)
+
+	chain, err := protocol.NewChain(store, txPool, dispatcher)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
 	}
@@ -94,15 +82,6 @@ func NewNode(config *cfg.Config) *Node {
 	var accounts *account.Manager
 	var assets *asset.Registry
 	var wallet *w.Wallet
-	var txFeed *txfeed.Tracker
-
-	txFeedDB := dbm.NewDB("txfeeds", config.DBBackend, config.DBDir())
-	txFeed = txfeed.NewTracker(txFeedDB, chain)
-
-	if err = txFeed.Prepare(ctx); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("start txfeed")
-		return nil
-	}
 
 	hsm, err := pseudohsm.New(config.KeysDir())
 	if err != nil {
@@ -113,7 +92,8 @@ func NewNode(config *cfg.Config) *Node {
 		walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
 		accounts = account.NewManager(walletDB, chain)
 		assets = asset.NewRegistry(walletDB, chain)
-		wallet, err = w.NewWallet(walletDB, accounts, assets, hsm, chain, dispatcher, config.Wallet.TxIndex)
+		contracts := contract.NewRegistry(walletDB)
+		wallet, err = w.NewWallet(walletDB, accounts, assets, contracts, hsm, chain, dispatcher, config.Wallet.TxIndex)
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "error": err}).Error("init NewWallet")
 		}
@@ -124,7 +104,8 @@ func NewNode(config *cfg.Config) *Node {
 		}
 	}
 
-	syncManager, err := netsync.NewSyncManager(config, chain, txPool, dispatcher)
+	fastSyncDB := dbm.NewDB("fastsync", config.DBBackend, config.DBDir())
+	syncManager, err := netsync.NewSyncManager(config, chain, txPool, dispatcher, fastSyncDB)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create sync manager: %v", err))
 	}
@@ -150,22 +131,27 @@ func NewNode(config *cfg.Config) *Node {
 		accessTokens:    accessTokens,
 		wallet:          wallet,
 		chain:           chain,
-		txfeed:          txFeed,
 		miningEnable:    config.Mining,
-
 		notificationMgr: notificationMgr,
 	}
 
-	node.cpuMiner = cpuminer.NewCPUMiner(chain, accounts, txPool, dispatcher)
-	node.miningPool = miningpool.NewMiningPool(chain, accounts, txPool, dispatcher)
-
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
+	node.blockProposer = blockproposer.NewBlockProposer(chain, accounts, dispatcher)
+	return node
+}
 
-	if config.Simd.Enable {
-		tensority.UseSIMD = true
+func initNodeConfig(config *cfg.Config) error {
+	if err := lockDataDirectory(config); err != nil {
+		cmn.Exit("Error: " + err.Error())
 	}
 
-	return node
+	if err := bytomLog.InitLogFile(config); err != nil {
+		log.WithField("err", err).Fatalln("InitLogFile failed")
+	}
+
+	initActiveNetParams(config)
+	initCommonConfig(config)
+	return nil
 }
 
 // Lock data directory after daemonization
@@ -200,7 +186,7 @@ func launchWebBrowser(port string) {
 }
 
 func (n *Node) initAndstartAPIServer() {
-	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.cpuMiner, n.miningPool, n.chain, n.config, n.accessTokens, n.eventDispatcher, n.notificationMgr)
+	n.api = api.NewAPI(n.syncManager, n.wallet, n.blockProposer, n.chain, n.config, n.accessTokens, n.eventDispatcher, n.notificationMgr)
 
 	listenAddr := env.String("LISTEN", n.config.ApiAddress)
 	env.Parse()
@@ -213,7 +199,7 @@ func (n *Node) OnStart() error {
 			n.miningEnable = false
 			log.Error(err)
 		} else {
-			n.cpuMiner.Start()
+			n.blockProposer.Start()
 		}
 	}
 	if !n.config.VaultMode {
@@ -243,7 +229,7 @@ func (n *Node) OnStop() {
 	n.notificationMgr.WaitForShutdown()
 	n.BaseService.OnStop()
 	if n.miningEnable {
-		n.cpuMiner.Stop()
+		n.blockProposer.Stop()
 	}
 	if !n.config.VaultMode {
 		n.syncManager.Stop()
@@ -256,12 +242,4 @@ func (n *Node) RunForever() {
 	cmn.TrapSignal(func() {
 		n.Stop()
 	})
-}
-
-func (n *Node) NodeInfo() *p2p.NodeInfo {
-	return n.syncManager.NodeInfo()
-}
-
-func (n *Node) MiningPool() *miningpool.MiningPool {
-	return n.miningPool
 }

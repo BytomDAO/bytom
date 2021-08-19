@@ -10,12 +10,12 @@ import (
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/database"
+	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/event"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/vm"
-	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 const (
@@ -28,7 +28,7 @@ func MockChain(testDB dbm.DB) (*protocol.Chain, *database.Store, *protocol.TxPoo
 	store := database.NewStore(testDB)
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
-	chain, err := protocol.NewChain(store, txPool)
+	chain, err := protocol.NewChain(store, txPool, dispatcher)
 	return chain, store, txPool, err
 }
 
@@ -59,7 +59,7 @@ func MockTx(utxo *account.UTXO, testAccount *account.Account) (*txbuilder.Templa
 	if err := b.AddInput(txInput, sigInst); err != nil {
 		return nil, nil, err
 	}
-	out := types.NewTxOutput(*consensus.BTMAssetID, 100, []byte{byte(vm.OP_FAIL)})
+	out := types.NewOriginalTxOutput(*consensus.BTMAssetID, 100, []byte{byte(vm.OP_FAIL)}, nil)
 	if err := b.AddOutput(out); err != nil {
 		return nil, nil, err
 	}

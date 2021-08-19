@@ -1,8 +1,11 @@
 package vm
 
+import (
+	"github.com/holiman/uint256"
+)
+
 func opCheckOutput(vm *virtualMachine) error {
-	err := vm.applyCost(16)
-	if err != nil {
+	if err := vm.applyCost(16); err != nil {
 		return err
 	}
 
@@ -10,37 +13,37 @@ func opCheckOutput(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	vmVersion, err := vm.popInt64(true)
+
+	vmVersion, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	if vmVersion < 0 {
-		return ErrBadValue
-	}
+
 	assetID, err := vm.pop(true)
 	if err != nil {
 		return err
 	}
-	amount, err := vm.popInt64(true)
+
+	amountInt, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	if amount < 0 {
+
+	amount, overflow := amountInt.Uint64WithOverflow()
+	if overflow {
 		return ErrBadValue
 	}
-	index, err := vm.popInt64(true)
+
+	index, err := vm.popBigInt(true)
 	if err != nil {
 		return err
-	}
-	if index < 0 {
-		return ErrBadValue
 	}
 
 	if vm.context.CheckOutput == nil {
 		return ErrContext
 	}
 
-	ok, err := vm.context.CheckOutput(uint64(index), uint64(amount), assetID, uint64(vmVersion), code, vm.expansionReserved)
+	ok, err := vm.context.CheckOutput(uint64(index.Uint64()), amount, assetID, uint64(vmVersion.Uint64()), code, vm.altStack, vm.expansionReserved)
 	if err != nil {
 		return err
 	}
@@ -48,78 +51,74 @@ func opCheckOutput(vm *virtualMachine) error {
 }
 
 func opAsset(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
 
 	if vm.context.AssetID == nil {
 		return ErrContext
 	}
-	return vm.push(*vm.context.AssetID, true)
+	return vm.pushDataStack(*vm.context.AssetID, true)
 }
 
 func opAmount(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
 
 	if vm.context.Amount == nil {
 		return ErrContext
 	}
-	return vm.pushInt64(int64(*vm.context.Amount), true)
+
+	return vm.pushBigInt(uint256.NewInt(*vm.context.Amount), true)
 }
 
 func opProgram(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
 
-	return vm.push(vm.context.Code, true)
+	return vm.pushDataStack(vm.context.Code, true)
 }
 
 func opIndex(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
 
 	if vm.context.DestPos == nil {
 		return ErrContext
 	}
-	return vm.pushInt64(int64(*vm.context.DestPos), true)
+
+	return vm.pushBigInt(uint256.NewInt(*vm.context.DestPos), true)
 }
 
 func opEntryID(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
-	return vm.push(vm.context.EntryID, true)
+	return vm.pushDataStack(vm.context.EntryID, true)
 }
 
 func opOutputID(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
 
 	if vm.context.SpentOutputID == nil {
 		return ErrContext
 	}
-	return vm.push(*vm.context.SpentOutputID, true)
+	return vm.pushDataStack(*vm.context.SpentOutputID, true)
 }
 
 func opBlockHeight(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
+	if err := vm.applyCost(1); err != nil {
 		return err
 	}
 
 	if vm.context.BlockHeight == nil {
 		return ErrContext
 	}
-	return vm.pushInt64(int64(*vm.context.BlockHeight), true)
+
+	return vm.pushBigInt(uint256.NewInt(*vm.context.BlockHeight), true)
 }

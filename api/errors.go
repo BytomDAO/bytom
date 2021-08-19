@@ -9,6 +9,7 @@ import (
 	"github.com/bytom/bytom/blockchain/rpc"
 	"github.com/bytom/bytom/blockchain/signers"
 	"github.com/bytom/bytom/blockchain/txbuilder"
+	"github.com/bytom/bytom/contract"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/net/http/httperror"
 	"github.com/bytom/bytom/net/http/httpjson"
@@ -51,8 +52,8 @@ var respErrFormatter = map[error]httperror.Info{
 	signers.ErrDupeXPub:  {400, "BTM203", "Root XPubs cannot contain the same key more than once"},
 
 	// Contract error namespace (3xx)
-	ErrCompileContract: {400, "BTM300", "Compile contract failed"},
-	ErrInstContract:    {400, "BTM301", "Instantiate contract failed"},
+	contract.ErrContractDuplicated: {400, "BTM302", "Contract is duplicated"},
+	contract.ErrContractNotFound:   {400, "BTM303", "Contract not found"},
 
 	// Transaction error namespace (7xx)
 	// Build transaction error namespace (70x ~ 72x)

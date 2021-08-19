@@ -15,11 +15,11 @@ import (
 	"github.com/bytom/bytom/asset"
 	"github.com/bytom/bytom/blockchain/pseudohsm"
 	"github.com/bytom/bytom/consensus"
+	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/validation"
 	"github.com/bytom/bytom/protocol/vm"
-	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 func init() {
@@ -87,13 +87,6 @@ func (cfg *TxTestConfig) Run() error {
 			continue
 		}
 
-		gasOnlyTx := false
-		if err != nil && status.GasValid {
-			gasOnlyTx = true
-		}
-		if gasOnlyTx != t.GasOnly {
-			return fmt.Errorf("gas only tx %s validate failed", t.Describe)
-		}
 		if result && t.TxFee != status.BTMValue {
 			return fmt.Errorf("gas used dismatch, expected: %d, have: %d", t.TxFee, status.BTMValue)
 		}
@@ -106,7 +99,6 @@ type ttTransaction struct {
 	Describe string `json:"describe"`
 	Version  uint64 `json:"version"`
 	Valid    bool   `json:"valid"`
-	GasOnly  bool   `json:"gas_only"`
 	TxFee    uint64 `json:"tx_fee"`
 }
 
@@ -200,14 +192,14 @@ func TestCoinbaseMature(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := SolveAndUpdate(chain, block); err == nil {
+		if _, err = chain.ProcessBlock(block); err == nil {
 			t.Fatal("spent immature coinbase output success")
 		}
 		block, err = NewBlock(chain, nil, defaultCtrlProg)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := SolveAndUpdate(chain, block); err != nil {
+		if _, err := chain.ProcessBlock(block); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -216,7 +208,7 @@ func TestCoinbaseMature(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := SolveAndUpdate(chain, block); err != nil {
+	if _, err = chain.ProcessBlock(block); err != nil {
 		t.Fatalf("spent mature coinbase output failed: %s", err)
 	}
 }
@@ -257,7 +249,7 @@ func TestCoinbaseTx(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := SolveAndUpdate(chain, block); err == nil {
+		if _, err = chain.ProcessBlock(block); err == nil {
 			t.Fatalf("invalid coinbase tx validate success")
 		}
 	}

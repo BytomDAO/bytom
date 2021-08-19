@@ -1,7 +1,6 @@
 package test
 
 import (
-	"github.com/bytom/bytom/mining/tensority"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
@@ -13,45 +12,28 @@ import (
 func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*types.Block, error) {
 	gasUsed := uint64(0)
 	txsFee := uint64(0)
-	txEntries := []*bc.Tx{nil}
-	txStatus := bc.NewTransactionStatus()
-	if err := txStatus.SetStatus(0, false); err != nil {
-		return nil, err
-	}
 
 	preBlockHeader := chain.BestBlockHeader()
-	preBlockHash := preBlockHeader.Hash()
-	nextBits, err := chain.CalcNextBits(&preBlockHash)
-	if err != nil {
-		return nil, err
-	}
 
 	b := &types.Block{
 		BlockHeader: types.BlockHeader{
 			Version:           1,
 			Height:            preBlockHeader.Height + 1,
 			PreviousBlockHash: preBlockHeader.Hash(),
-			Timestamp:         preBlockHeader.Timestamp + 1,
+			Timestamp:         preBlockHeader.Timestamp + 10000,
 			BlockCommitment:   types.BlockCommitment{},
-			Bits:              nextBits,
 		},
 		Transactions: []*types.Tx{nil},
 	}
 
 	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: preBlockHeader.Height + 1}}
 	for _, tx := range txs {
-		gasOnlyTx := false
-		gasStatus, err := validation.ValidateTx(tx.Tx, bcBlock)
+		gasStatus, err := validation.ValidateTx(tx.Tx, bcBlock, chain.ProgramConverter)
 		if err != nil {
-			if !gasStatus.GasValid {
-				continue
-			}
-			gasOnlyTx = true
+			continue
 		}
 
-		txStatus.SetStatus(len(b.Transactions), gasOnlyTx)
 		b.Transactions = append(b.Transactions, tx)
-		txEntries = append(txEntries, tx.Tx)
 		gasUsed += uint64(gasStatus.GasUsed)
 		txsFee += txFee(tx)
 	}
@@ -62,13 +44,16 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 	}
 
 	b.Transactions[0] = coinbaseTx
-	txEntries[0] = coinbaseTx.Tx
-	b.TransactionsMerkleRoot, err = types.TxMerkleRoot(txEntries)
-	if err != nil {
-		return nil, err
+	if len(txs) > 0 {
+		b.Transactions = append(b.Transactions, txs...)
 	}
 
-	b.TransactionStatusHash, err = types.TxStatusMerkleRoot(txStatus.VerifyStatus)
+	txEntries := []*bc.Tx{nil}
+	txEntries[0] = coinbaseTx.Tx
+	for _, tx := range txs {
+		txEntries = append(txEntries, tx.Tx)
+	}
+	b.TransactionsMerkleRoot, err = types.TxMerkleRoot(txEntries)
 	return b, err
 }
 
@@ -91,26 +76,9 @@ func AppendBlocks(chain *protocol.Chain, num uint64) error {
 		if err != nil {
 			return err
 		}
-		if err := SolveAndUpdate(chain, block); err != nil {
+		if _, err := chain.ProcessBlock(block); err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-// SolveAndUpdate solve difficulty and update chain status
-func SolveAndUpdate(chain *protocol.Chain, block *types.Block) error {
-	seed, err := chain.CalcNextSeed(&block.PreviousBlockHash)
-	if err != nil {
-		return err
-	}
-	Solve(seed, block)
-	_, err = chain.ProcessBlock(block)
-	return err
-}
-
-// Solve simulate solve difficulty by add result to cache
-func Solve(seed *bc.Hash, block *types.Block) {
-	hash := block.BlockHeader.Hash()
-	tensority.AIHash.AddCache(&hash, seed, &bc.Hash{})
 }

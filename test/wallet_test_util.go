@@ -11,6 +11,7 @@ import (
 	"github.com/bytom/bytom/asset"
 	"github.com/bytom/bytom/blockchain/pseudohsm"
 	"github.com/bytom/bytom/blockchain/signers"
+	"github.com/bytom/bytom/contract"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/event"
@@ -183,7 +184,7 @@ func (ctx *walletTestContext) createAccount(name string, keys []string, quorum i
 }
 
 func (ctx *walletTestContext) update(block *types.Block) error {
-	if err := SolveAndUpdate(ctx.Chain, block); err != nil {
+	if _, err := ctx.Chain.ProcessBlock(block); err != nil {
 		return err
 	}
 	if err := ctx.Wallet.AttachBlock(block); err != nil {
@@ -259,8 +260,9 @@ func (cfg *walletTestConfig) Run() error {
 	walletDB := dbm.NewDB("wallet", "leveldb", path.Join(dirPath, "wallet_db"))
 	accountManager := account.NewManager(walletDB, chain)
 	assets := asset.NewRegistry(walletDB, chain)
+	contracts := contract.NewRegistry(walletDB)
 	dispatcher := event.NewDispatcher()
-	wallet, err := w.NewWallet(walletDB, accountManager, assets, hsm, chain, dispatcher, false)
+	wallet, err := w.NewWallet(walletDB, accountManager, assets, contracts, hsm, chain, dispatcher, false)
 	if err != nil {
 		return err
 	}

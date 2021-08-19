@@ -2,10 +2,13 @@ package mock
 
 import (
 	"errors"
-	"math/rand"
-
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
+)
+
+var (
+	ErrFoundHeaderByHash   = errors.New("can't find header by hash")
+	ErrFoundHeaderByHeight = errors.New("can't find header by height")
 )
 
 type Chain struct {
@@ -22,6 +25,10 @@ func NewChain() *Chain {
 		blockMap:    map[bc.Hash]*types.Block{},
 		prevOrphans: make(map[bc.Hash]*types.Block),
 	}
+}
+
+func (c *Chain) LastJustifiedHeader() (*types.BlockHeader, error) {
+	return nil, nil
 }
 
 func (c *Chain) BestBlockHeader() *types.BlockHeader {
@@ -66,27 +73,6 @@ func (c *Chain) GetHeaderByHeight(height uint64) (*types.BlockHeader, error) {
 		return nil, errors.New("can't find block")
 	}
 	return &block.BlockHeader, nil
-}
-
-func (c *Chain) GetTransactionStatus(hash *bc.Hash) (*bc.TransactionStatus, error) {
-	block, err := c.GetBlockByHash(hash)
-	if err != nil {
-		return nil, errors.New("can't find block by hash")
-	}
-	txCount := len(block.Transactions)
-	var statuses []*bc.TxVerifyResult
-	rand.Seed(int64(block.Height))
-	for i := 0; i < txCount; i++ {
-		status := &bc.TxVerifyResult{}
-		if fail := rand.Intn(2); fail == 0 {
-			status.StatusFail = true
-		} else {
-			status.StatusFail = false
-		}
-		statuses = append(statuses, status)
-	}
-	txStatus := &bc.TransactionStatus{VerifyStatus: statuses}
-	return txStatus, nil
 }
 
 func (c *Chain) InMainChain(hash bc.Hash) bool {

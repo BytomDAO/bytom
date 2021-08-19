@@ -2,11 +2,13 @@ package connection
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"testing"
 
-	"github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
+
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 )
 
 type dummyConn struct {
@@ -32,38 +34,42 @@ func makeDummyConnPair() (fooConn, barConn dummyConn) {
 
 func makeSecretConnPair(tb testing.TB) (fooSecConn, barSecConn *SecretConnection) {
 	fooConn, barConn := makeDummyConnPair()
-	fooPrvKey := crypto.GenPrivKeyEd25519()
-	fooPubKey := fooPrvKey.PubKey().Unwrap().(crypto.PubKeyEd25519)
-	barPrvKey := crypto.GenPrivKeyEd25519()
-	barPubKey := barPrvKey.PubKey().Unwrap().(crypto.PubKeyEd25519)
+	fooPrvKey, _ := chainkd.NewXPrv(nil)
+	fooPubKey := fooPrvKey.XPub()
+	barPrvKey, _ := chainkd.NewXPrv(nil)
+	barPubKey := barPrvKey.XPub()
 
-	cmn.Parallel(
-		func() {
-			var err error
-			fooSecConn, err = MakeSecretConnection(fooConn, fooPrvKey)
-			if err != nil {
-				tb.Errorf("Failed to establish SecretConnection for foo: %v", err)
-				return
-			}
-			remotePubBytes := fooSecConn.RemotePubKey()
-			if !bytes.Equal(remotePubBytes[:], barPubKey[:]) {
-				tb.Errorf("Unexpected fooSecConn.RemotePubKey.  Expected %v, got %v",
-					barPubKey, fooSecConn.RemotePubKey())
-			}
-		},
-		func() {
-			var err error
-			barSecConn, err = MakeSecretConnection(barConn, barPrvKey)
-			if barSecConn == nil {
-				tb.Errorf("Failed to establish SecretConnection for bar: %v", err)
-				return
-			}
-			remotePubBytes := barSecConn.RemotePubKey()
-			if !bytes.Equal(remotePubBytes[:], fooPubKey[:]) {
-				tb.Errorf("Unexpected barSecConn.RemotePubKey.  Expected %v, got %v",
-					fooPubKey, barSecConn.RemotePubKey())
-			}
-		})
+	fooSecConnTask := func(i int) (val interface{}, err error, abort bool) {
+		fooSecConn, err = MakeSecretConnection(fooConn, fooPrvKey)
+		if err != nil {
+			return nil, err, false
+		}
+
+		remotePubBytes := fooSecConn.RemotePubKey()
+		if !bytes.Equal(remotePubBytes[:], barPubKey[:]) {
+			return nil, fmt.Errorf("Unexpected fooSecConn.RemotePubKey.  Expected %v, got %v", barPubKey, remotePubBytes), false
+		}
+
+		return nil, nil, false
+	}
+
+	barSecConnTask := func(i int) (val interface{}, err error, about bool) {
+		barSecConn, err = MakeSecretConnection(barConn, barPrvKey)
+		if err != nil {
+			return nil, err, false
+		}
+
+		remotePubBytes := barSecConn.RemotePubKey()
+		if !bytes.Equal(remotePubBytes[:], fooPubKey[:]) {
+			return nil, fmt.Errorf("Unexpected barSecConn.RemotePubKey.  Expected %v, got %v", fooPubKey, remotePubBytes), false
+		}
+		return nil, nil, false
+	}
+
+	_, ok := cmn.Parallel(fooSecConnTask, barSecConnTask)
+	if !ok {
+		tb.Errorf("Parallel task run failed")
+	}
 
 	return
 }
@@ -86,50 +92,66 @@ func TestSecretConnectionReadWrite(t *testing.T) {
 	}
 
 	// A helper that will run with (fooConn, fooWrites, fooReads) and vice versa
-	genNodeRunner := func(nodeConn dummyConn, nodeWrites []string, nodeReads *[]string) func() {
-		return func() {
-			// Node handskae
-			nodePrvKey := crypto.GenPrivKeyEd25519()
+	genNodeRunner := func(nodeConn dummyConn, nodeWrites []string, nodeReads *[]string) func(int) (interface{}, error, bool) {
+		return func(i int) (val interface{}, err error, about bool) {
+			// Node handshake
+			nodePrvKey, _ := chainkd.NewXPrv(nil)
 			nodeSecretConn, err := MakeSecretConnection(nodeConn, nodePrvKey)
 			if err != nil {
-				t.Errorf("Failed to establish SecretConnection for node: %v", err)
-				return
+				return nil, err, false
 			}
+
+			nodeWriteTask := func(i int) (val interface{}, err error, about bool) {
+				// Node writes
+				for _, nodeWrite := range nodeWrites {
+					n, err := nodeSecretConn.Write([]byte(nodeWrite))
+					if err != nil {
+						t.Errorf("Failed to write to nodeSecretConn: %v", err)
+						return nil, err, false
+					}
+					if n != len(nodeWrite) {
+						t.Errorf("Failed to write all bytes. Expected %v, wrote %v", len(nodeWrite), n)
+
+						return nil, err, false
+					}
+				}
+				nodeConn.PipeWriter.Close()
+				return nil, nil, false
+			}
+
+			nodeReadsTask := func(i int) (val interface{}, err error, about bool) {
+				// Node reads
+				defer nodeConn.PipeReader.Close()
+				readBuffer := make([]byte, dataMaxSize)
+				for {
+					n, err := nodeSecretConn.Read(readBuffer)
+					if err == io.EOF {
+						return nil, nil, false
+					} else if err != nil {
+						return nil, err, false
+					}
+					*nodeReads = append(*nodeReads, string(readBuffer[:n]))
+				}
+			}
+
 			// In parallel, handle reads and writes
-			cmn.Parallel(
-				func() {
-					// Node writes
-					for _, nodeWrite := range nodeWrites {
-						n, err := nodeSecretConn.Write([]byte(nodeWrite))
-						if err != nil {
-							t.Errorf("Failed to write to nodeSecretConn: %v", err)
-							return
-						}
-						if n != len(nodeWrite) {
-							t.Errorf("Failed to write all bytes. Expected %v, wrote %v", len(nodeWrite), n)
-							return
-						}
-					}
-					nodeConn.PipeWriter.Close()
-				},
-				func() {
-					// Node reads
-					readBuffer := make([]byte, dataMaxSize)
-					for {
-						n, err := nodeSecretConn.Read(readBuffer)
-						if err == io.EOF {
-							return
-						} else if err != nil {
-							t.Errorf("Failed to read from nodeSecretConn: %v", err)
-							return
-						}
-						*nodeReads = append(*nodeReads, string(readBuffer[:n]))
-					}
-					nodeConn.PipeReader.Close()
-				})
+			trs, ok := cmn.Parallel(nodeWriteTask, nodeReadsTask)
+			if !ok {
+				t.Errorf("Parallel task run failed")
+			}
+			for i := 0; i < 2; i++ {
+				res, ok := trs.LatestResult(i)
+				if !ok {
+					t.Errorf("Task %d did not complete", i)
+				}
+
+				if res.Error != nil {
+					t.Errorf("Task %d should not has error but god %v", i, res.Error)
+				}
+			}
+			return
 		}
 	}
-
 	// Run foo & bar in parallel
 	cmn.Parallel(
 		genNodeRunner(fooConn, fooWrites, &fooReads),

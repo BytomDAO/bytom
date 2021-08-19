@@ -1,12 +1,12 @@
 package chainkd
 
 import (
+	"crypto/ed25519"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha512"
 	"io"
 
-	"github.com/bytom/bytom/crypto/ed25519"
 	"github.com/bytom/bytom/crypto/ed25519/ecmath"
 )
 
@@ -86,15 +86,6 @@ func (xprv XPrv) nonhardenedChild(sel []byte) (res XPrv) {
 	h.Sum(res[:0])
 
 	pruneIntermediateScalar(res[:32])
-
-	// Unrolled the following loop:
-	// var carry int
-	// carry = 0
-	// for i := 0; i < 32; i++ {
-	//         sum := int(xprv[i]) + int(res[i]) + carry
-	//         res[i] = byte(sum & 0xff)
-	//         carry = (sum >> 8)
-	// }
 
 	sum := int(0)
 

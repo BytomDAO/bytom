@@ -13,19 +13,6 @@ import (
 	"github.com/bytom/bytom/util"
 )
 
-func init() {
-	getDifficultyCmd.PersistentFlags().StringVar(&blockHash, "hash", "", "hash of block")
-	getDifficultyCmd.PersistentFlags().IntVar(&blockHeight, "height", 0, "height of block")
-
-	getHashRateCmd.PersistentFlags().StringVar(&blockHash, "hash", "", "hash of block")
-	getHashRateCmd.PersistentFlags().IntVar(&blockHeight, "height", 0, "height of block")
-}
-
-var (
-	blockHash   = ""
-	blockHeight = 0
-)
-
 var getBlockHashCmd = &cobra.Command{
 	Use:   "get-block-hash",
 	Short: "Get the hash of most recent block",
@@ -153,64 +140,6 @@ var getBlockHeaderCmd = &cobra.Command{
 		}{BlockHeight: height, BlockHash: hash}
 
 		data, exitCode := util.ClientCall("/get-block-header", req)
-		if exitCode != util.Success {
-			os.Exit(exitCode)
-		}
-		printJSON(data)
-	},
-}
-
-var getDifficultyCmd = &cobra.Command{
-	Use:   "get-difficulty",
-	Short: "Get the difficulty of most recent block",
-	Args:  cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
-		var hash chainjson.HexBytes
-		var err error
-
-		if blockHash != "" {
-			hash, err = hex.DecodeString(blockHash)
-			if err != nil {
-				jww.ERROR.Println(err)
-				os.Exit(util.ErrLocalExe)
-			}
-		}
-
-		req := &struct {
-			BlockHeight uint64             `json:"block_height"`
-			BlockHash   chainjson.HexBytes `json:"block_hash"`
-		}{BlockHeight: uint64(blockHeight), BlockHash: hash}
-
-		data, exitCode := util.ClientCall("/get-difficulty", req)
-		if exitCode != util.Success {
-			os.Exit(exitCode)
-		}
-		printJSON(data)
-	},
-}
-
-var getHashRateCmd = &cobra.Command{
-	Use:   "get-hash-rate",
-	Short: "Get the nonce of most recent block",
-	Args:  cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
-		var hash chainjson.HexBytes
-		var err error
-
-		if blockHash != "" {
-			hash, err = hex.DecodeString(blockHash)
-			if err != nil {
-				jww.ERROR.Println(err)
-				os.Exit(util.ErrLocalExe)
-			}
-		}
-
-		req := &struct {
-			BlockHeight uint64             `json:"block_height"`
-			BlockHash   chainjson.HexBytes `json:"block_hash"`
-		}{BlockHeight: uint64(blockHeight), BlockHash: hash}
-
-		data, exitCode := util.ClientCall("/get-hash-rate", req)
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}

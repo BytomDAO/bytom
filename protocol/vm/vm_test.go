@@ -9,6 +9,7 @@ import (
 	"testing/quick"
 
 	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/protocol/vm/mocks"
 	"github.com/bytom/bytom/testutil"
 )
 
@@ -32,112 +33,93 @@ func TestProgramNotOK(t *testing.T) {
 
 func doOKNotOK(t *testing.T, expectOK bool) {
 	cases := []struct {
-		prog string
-		args [][]byte
+		prog    string
+		args    [][]byte
+		wantErr bool
 	}{
-		{"TRUE", nil},
+		{"TRUE", nil, false},
 
 		// bitwise ops
-		{"INVERT 0xfef0 EQUAL", [][]byte{{0x01, 0x0f}}},
+		{"INVERT 0xfef0 EQUAL", [][]byte{{0x01, 0x0f}}, false},
 
-		{"AND 0x02 EQUAL", [][]byte{{0x03}, {0x06}}},
-		{"AND 0x02 EQUAL", [][]byte{{0x03, 0xff}, {0x06}}},
+		{"AND 0x02 EQUAL", [][]byte{{0x03}, {0x06}}, false},
+		{"AND 0x02 EQUAL", [][]byte{{0x03, 0xff}, {0x06}}, false},
 
-		{"OR 0x07 EQUAL", [][]byte{{0x03}, {0x06}}},
-		{"OR 0x07ff EQUAL", [][]byte{{0x03, 0xff}, {0x06}}},
+		{"OR 0x07 EQUAL", [][]byte{{0x03}, {0x06}}, false},
+		{"OR 0x07ff EQUAL", [][]byte{{0x03, 0xff}, {0x06}}, false},
 
-		{"XOR 0x05 EQUAL", [][]byte{{0x03}, {0x06}}},
-		{"XOR 0x05ff EQUAL", [][]byte{{0x03, 0xff}, {0x06}}},
+		{"XOR 0x05 EQUAL", [][]byte{{0x03}, {0x06}}, false},
+		{"XOR 0x05ff EQUAL", [][]byte{{0x03, 0xff}, {0x06}}, false},
 
 		// numeric and logical ops
-		{"1ADD 2 NUMEQUAL", [][]byte{Int64Bytes(1)}},
-		{"1ADD 0 NUMEQUAL", [][]byte{Int64Bytes(-1)}},
+		{"1ADD 2 NUMEQUAL", [][]byte{{0x01}}, false},
+		{"1ADD 0 NUMEQUAL", [][]byte{mocks.U256NumNegative1}, true},
 
-		{"1SUB 1 NUMEQUAL", [][]byte{Int64Bytes(2)}},
-		{"1SUB -1 NUMEQUAL", [][]byte{Int64Bytes(0)}},
+		{"1SUB 1 NUMEQUAL", [][]byte{Uint64Bytes(2)}, false},
+		{"1SUB -1 NUMEQUAL", [][]byte{Uint64Bytes(0)}, true},
 
-		{"2MUL 2 NUMEQUAL", [][]byte{Int64Bytes(1)}},
-		{"2MUL 0 NUMEQUAL", [][]byte{Int64Bytes(0)}},
-		{"2MUL -2 NUMEQUAL", [][]byte{Int64Bytes(-1)}},
+		{"2MUL 2 NUMEQUAL", [][]byte{Uint64Bytes(1)}, false},
+		{"2MUL 0 NUMEQUAL", [][]byte{Uint64Bytes(0)}, false},
 
-		{"2DIV 1 NUMEQUAL", [][]byte{Int64Bytes(2)}},
-		{"2DIV 0 NUMEQUAL", [][]byte{Int64Bytes(1)}},
-		{"2DIV 0 NUMEQUAL", [][]byte{Int64Bytes(0)}},
-		{"2DIV -1 NUMEQUAL", [][]byte{Int64Bytes(-1)}},
-		{"2DIV -1 NUMEQUAL", [][]byte{Int64Bytes(-2)}},
+		{"2DIV 1 NUMEQUAL", [][]byte{Uint64Bytes(2)}, false},
+		{"2DIV 0 NUMEQUAL", [][]byte{Uint64Bytes(1)}, false},
+		{"2DIV 0 NUMEQUAL", [][]byte{Uint64Bytes(0)}, false},
 
-		{"NEGATE -1 NUMEQUAL", [][]byte{Int64Bytes(1)}},
-		{"NEGATE 1 NUMEQUAL", [][]byte{Int64Bytes(-1)}},
-		{"NEGATE 0 NUMEQUAL", [][]byte{Int64Bytes(0)}},
+		{"0NOTEQUAL", [][]byte{Uint64Bytes(1)}, false},
+		{"0NOTEQUAL NOT", [][]byte{Uint64Bytes(0)}, false},
 
-		{"ABS 1 NUMEQUAL", [][]byte{Int64Bytes(1)}},
-		{"ABS 1 NUMEQUAL", [][]byte{Int64Bytes(-1)}},
-		{"ABS 0 NUMEQUAL", [][]byte{Int64Bytes(0)}},
+		{"ADD 5 NUMEQUAL", [][]byte{Uint64Bytes(2), Uint64Bytes(3)}, false},
 
-		{"0NOTEQUAL", [][]byte{Int64Bytes(1)}},
-		{"0NOTEQUAL NOT", [][]byte{Int64Bytes(0)}},
+		{"SUB 2 NUMEQUAL", [][]byte{Uint64Bytes(5), Uint64Bytes(3)}, false},
 
-		{"ADD 5 NUMEQUAL", [][]byte{Int64Bytes(2), Int64Bytes(3)}},
+		{"MUL 6 NUMEQUAL", [][]byte{Uint64Bytes(2), Uint64Bytes(3)}, false},
 
-		{"SUB 2 NUMEQUAL", [][]byte{Int64Bytes(5), Int64Bytes(3)}},
+		{"DIV 2 NUMEQUAL", [][]byte{Uint64Bytes(6), Uint64Bytes(3)}, false},
 
-		{"MUL 6 NUMEQUAL", [][]byte{Int64Bytes(2), Int64Bytes(3)}},
+		{"MOD 0 NUMEQUAL", [][]byte{Uint64Bytes(6), Uint64Bytes(2)}, false},
+		{"MOD 2 NUMEQUAL", [][]byte{Uint64Bytes(12), Uint64Bytes(10)}, false},
 
-		{"DIV 2 NUMEQUAL", [][]byte{Int64Bytes(6), Int64Bytes(3)}},
+		{"LSHIFT 2 NUMEQUAL", [][]byte{Uint64Bytes(1), Uint64Bytes(1)}, false},
+		{"LSHIFT 4 NUMEQUAL", [][]byte{Uint64Bytes(1), Uint64Bytes(2)}, false},
 
-		{"MOD 0 NUMEQUAL", [][]byte{Int64Bytes(6), Int64Bytes(2)}},
-		{"MOD 0 NUMEQUAL", [][]byte{Int64Bytes(-6), Int64Bytes(2)}},
-		{"MOD 0 NUMEQUAL", [][]byte{Int64Bytes(6), Int64Bytes(-2)}},
-		{"MOD 0 NUMEQUAL", [][]byte{Int64Bytes(-6), Int64Bytes(-2)}},
-		{"MOD 2 NUMEQUAL", [][]byte{Int64Bytes(12), Int64Bytes(10)}},
-		{"MOD 8 NUMEQUAL", [][]byte{Int64Bytes(-12), Int64Bytes(10)}},
-		{"MOD -8 NUMEQUAL", [][]byte{Int64Bytes(12), Int64Bytes(-10)}},
-		{"MOD -2 NUMEQUAL", [][]byte{Int64Bytes(-12), Int64Bytes(-10)}},
+		{"1 1 BOOLAND", nil, false},
+		{"1 0 BOOLAND NOT", nil, false},
+		{"0 1 BOOLAND NOT", nil, false},
+		{"0 0 BOOLAND NOT", nil, false},
 
-		{"LSHIFT 2 NUMEQUAL", [][]byte{Int64Bytes(1), Int64Bytes(1)}},
-		{"LSHIFT 4 NUMEQUAL", [][]byte{Int64Bytes(1), Int64Bytes(2)}},
-		{"LSHIFT -2 NUMEQUAL", [][]byte{Int64Bytes(-1), Int64Bytes(1)}},
-		{"LSHIFT -4 NUMEQUAL", [][]byte{Int64Bytes(-1), Int64Bytes(2)}},
+		{"1 1 BOOLOR", nil, false},
+		{"1 0 BOOLOR", nil, false},
+		{"0 1 BOOLOR", nil, false},
+		{"0 0 BOOLOR NOT", nil, false},
 
-		{"1 1 BOOLAND", nil},
-		{"1 0 BOOLAND NOT", nil},
-		{"0 1 BOOLAND NOT", nil},
-		{"0 0 BOOLAND NOT", nil},
-
-		{"1 1 BOOLOR", nil},
-		{"1 0 BOOLOR", nil},
-		{"0 1 BOOLOR", nil},
-		{"0 0 BOOLOR NOT", nil},
-
-		{"1 2 OR 3 EQUAL", nil},
+		{"1 2 OR 3 EQUAL", nil, false},
 
 		// splice ops
-		{"0 CATPUSHDATA 0x0000 EQUAL", [][]byte{{0x00}}},
-		{"0 0xff CATPUSHDATA 0x01ff EQUAL", nil},
-		{"CATPUSHDATA 0x050105 EQUAL", [][]byte{{0x05}, {0x05}}},
-		{"CATPUSHDATA 0xff01ff EQUAL", [][]byte{{0xff}, {0xff}}},
-		{"0 0xcccccc CATPUSHDATA 0x03cccccc EQUAL", nil},
-		{"0x05 0x05 SWAP 0xdeadbeef CATPUSHDATA DROP 0x05 EQUAL", nil},
-		{"0x05 0x05 SWAP 0xdeadbeef CATPUSHDATA DROP 0x05 EQUAL", nil},
+		{"0 CATPUSHDATA 0x0000 EQUAL", [][]byte{{0x00}}, false},
+		{"0 0xff CATPUSHDATA 0x01ff EQUAL", nil, false},
+		{"CATPUSHDATA 0x050105 EQUAL", [][]byte{{0x05}, {0x05}}, false},
+		{"CATPUSHDATA 0xff01ff EQUAL", [][]byte{{0xff}, {0xff}}, false},
+		{"0 0xcccccc CATPUSHDATA 0x03cccccc EQUAL", nil, false},
+		{"0x05 0x05 SWAP 0xdeadbeef CATPUSHDATA DROP 0x05 EQUAL", nil, false},
+		{"0x05 0x05 SWAP 0xdeadbeef CATPUSHDATA DROP 0x05 EQUAL", nil, false},
 
 		// // control flow ops
-		{"1 JUMP:7 0 1 EQUAL", nil},                                                       // jumps over 0
-		{"1 JUMP:$target 0 $target 1 EQUAL", nil},                                         // jumps over 0
-		{"1 1 JUMPIF:8 0 1 EQUAL", nil},                                                   // jumps over 0
-		{"1 1 JUMPIF:$target 0 $target 1 EQUAL", nil},                                     // jumps over 0
-		{"1 0 JUMPIF:8 0 1 EQUAL NOT", nil},                                               // doesn't jump over 0
-		{"1 0 JUMPIF:$target 0 $target 1 EQUAL NOT", nil},                                 // doesn't jump over 0
-		{"1 0 JUMPIF:1", nil},                                                             // doesn't jump, so no infinite loop
-		{"1 $target 0 JUMPIF:$target", nil},                                               // doesn't jump, so no infinite loop
-		{"4 1 JUMPIF:14 5 EQUAL JUMP:16 4 EQUAL", nil},                                    // if (true) { return x == 4; } else { return x == 5; }
-		{"4 1 JUMPIF:$true 5 EQUAL JUMP:$end $true 4 EQUAL $end", nil},                    // if (true) { return x == 4; } else { return x == 5; }
-		{"5 0 JUMPIF:14 5 EQUAL JUMP:16 4 EQUAL", nil},                                    // if (false) { return x == 4; } else { return x == 5; }
-		{"5 0 JUMPIF:$true 5 EQUAL JUMP:$end $true 4 $test EQUAL $end", nil},              // if (false) { return x == 4; } else { return x == 5; }
-		{"0 1 2 3 4 5 6 JUMP:13 DROP DUP 0 NUMNOTEQUAL JUMPIF:12 1", nil},                 // same as "0 1 2 3 4 5 6 WHILE DROP ENDWHILE 1"
-		{"0 1 2 3 4 5 6 JUMP:$dup $drop DROP $dup DUP 0 NUMNOTEQUAL JUMPIF:$drop 1", nil}, // same as "0 1 2 3 4 5 6 WHILE DROP ENDWHILE 1"
-		{"0 JUMP:7 1ADD DUP 10 LESSTHAN JUMPIF:6 10 NUMEQUAL", nil},                       // fixed version of "0 1 WHILE DROP 1ADD DUP 10 LESSTHAN ENDWHILE 10 NUMEQUAL"
-		{"0 JUMP:$dup $add 1ADD $dup DUP 10 LESSTHAN JUMPIF:$add 10 NUMEQUAL", nil},       // fixed version of "0 1 WHILE DROP 1ADD DUP 10 LESSTHAN ENDWHILE 10 NUMEQUAL"
-
+		{"1 JUMP:7 0 1 EQUAL", nil, false},                                                       // jumps over 0
+		{"1 JUMP:$target 0 $target 1 EQUAL", nil, false},                                         // jumps over 0
+		{"1 1 JUMPIF:8 0 1 EQUAL", nil, false},                                                   // jumps over 0
+		{"1 1 JUMPIF:$target 0 $target 1 EQUAL", nil, false},                                     // jumps over 0
+		{"1 0 JUMPIF:8 0 1 EQUAL NOT", nil, false},                                               // doesn't jump over 0
+		{"1 0 JUMPIF:$target 0 $target 1 EQUAL NOT", nil, false},                                 // doesn't jump over 0
+		{"1 0 JUMPIF:1", nil, false},                                                             // doesn't jump, so no infinite loop
+		{"1 $target 0 JUMPIF:$target", nil, false},                                               // doesn't jump, so no infinite loop
+		{"4 1 JUMPIF:14 5 EQUAL JUMP:16 4 EQUAL", nil, false},                                    // if (true) { return x == 4; } else { return x == 5; }
+		{"4 1 JUMPIF:$true 5 EQUAL JUMP:$end $true 4 EQUAL $end", nil, false},                    // if (true) { return x == 4; } else { return x == 5; }
+		{"5 0 JUMPIF:14 5 EQUAL JUMP:16 4 EQUAL", nil, false},                                    // if (false) { return x == 4; } else { return x == 5; }
+		{"5 0 JUMPIF:$true 5 EQUAL JUMP:$end $true 4 $test EQUAL $end", nil, false},              // if (false) { return x == 4; } else { return x == 5; }
+		{"0 1 2 3 4 5 6 JUMP:13 DROP DUP 0 NUMNOTEQUAL JUMPIF:12 1", nil, false},                 // same as "0 1 2 3 4 5 6 WHILE DROP ENDWHILE 1"
+		{"0 1 2 3 4 5 6 JUMP:$dup $drop DROP $dup DUP 0 NUMNOTEQUAL JUMPIF:$drop 1", nil, false}, // same as "0 1 2 3 4 5 6 WHILE DROP ENDWHILE 1"
+		{"0 JUMP:7 1ADD DUP 10 LESSTHAN JUMPIF:6 10 NUMEQUAL", nil, false},                       // fixed version of "0 1 WHILE DROP 1ADD DUP 10 LESSTHAN ENDWHILE 10 NUMEQUAL"
+		{"0 JUMP:$dup $add 1ADD $dup DUP 10 LESSTHAN JUMPIF:$add 10 NUMEQUAL", nil, false},       // fixed version of "0 1 WHILE DROP 1ADD DUP 10 LESSTHAN ENDWHILE 10 NUMEQUAL"
 	}
 	for i, c := range cases {
 		progSrc := c.prog
@@ -160,6 +142,11 @@ func doOKNotOK(t *testing.T, expectOK bool) {
 		if err == nil && vm.falseResult() {
 			err = ErrFalseVMResult
 		}
+
+		if (err != nil) == c.wantErr {
+			continue
+		}
+
 		if expectOK && err != nil {
 			trace.dump()
 			t.Errorf("case %d [%s]: expected success, got error %s", i, progSrc, err)

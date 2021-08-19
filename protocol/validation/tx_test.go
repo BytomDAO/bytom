@@ -61,12 +61,12 @@ func TestGasStatus(t *testing.T) {
 		},
 		{
 			input: &GasState{
-				GasLeft:  consensus.DefaultGasCredit,
+				GasLeft:  30000,
 				GasUsed:  0,
 				BTMValue: 0,
 			},
 			output: &GasState{
-				GasLeft:  200000,
+				GasLeft:  300000,
 				GasUsed:  0,
 				BTMValue: 80000000000,
 			},
@@ -77,12 +77,12 @@ func TestGasStatus(t *testing.T) {
 		},
 		{
 			input: &GasState{
-				GasLeft:  consensus.DefaultGasCredit,
+				GasLeft:  30000,
 				GasUsed:  0,
 				BTMValue: 0,
 			},
 			output: &GasState{
-				GasLeft:  200000,
+				GasLeft:  300000,
 				GasUsed:  0,
 				BTMValue: math.MaxInt64,
 			},
@@ -144,16 +144,14 @@ func TestGasStatus(t *testing.T) {
 				GasLeft:    1000,
 				GasUsed:    10,
 				StorageGas: 1000,
-				GasValid:   false,
 			},
 			output: &GasState{
 				GasLeft:    0,
 				GasUsed:    1010,
 				StorageGas: 1000,
-				GasValid:   true,
 			},
 			f: func(input *GasState) error {
-				return input.setGasValid()
+				return input.chargeStorageGas()
 			},
 			err: nil,
 		},
@@ -162,16 +160,14 @@ func TestGasStatus(t *testing.T) {
 				GasLeft:    900,
 				GasUsed:    10,
 				StorageGas: 1000,
-				GasValid:   false,
 			},
 			output: &GasState{
 				GasLeft:    -100,
 				GasUsed:    10,
 				StorageGas: 1000,
-				GasValid:   false,
 			},
 			f: func(input *GasState) error {
-				return input.setGasValid()
+				return input.chargeStorageGas()
 			},
 			err: ErrGasCalculate,
 		},
@@ -180,16 +176,14 @@ func TestGasStatus(t *testing.T) {
 				GasLeft:    1000,
 				GasUsed:    math.MaxInt64,
 				StorageGas: 1000,
-				GasValid:   false,
 			},
 			output: &GasState{
 				GasLeft:    0,
 				GasUsed:    0,
 				StorageGas: 1000,
-				GasValid:   false,
 			},
 			f: func(input *GasState) error {
-				return input.setGasValid()
+				return input.chargeStorageGas()
 			},
 			err: ErrGasCalculate,
 		},
@@ -198,16 +192,14 @@ func TestGasStatus(t *testing.T) {
 				GasLeft:    math.MinInt64,
 				GasUsed:    0,
 				StorageGas: 1000,
-				GasValid:   false,
 			},
 			output: &GasState{
 				GasLeft:    0,
 				GasUsed:    0,
 				StorageGas: 1000,
-				GasValid:   false,
 			},
 			f: func(input *GasState) error {
-				return input.setGasValid()
+				return input.chargeStorageGas()
 			},
 			err: ErrGasCalculate,
 		},
@@ -227,17 +219,18 @@ func TestGasStatus(t *testing.T) {
 func TestOverflow(t *testing.T) {
 	sourceID := &bc.Hash{V0: 9999}
 	ctrlProgram := []byte{byte(vm.OP_TRUE)}
+	converter := func(prog []byte) ([]byte, error) { return nil, nil }
 	newTx := func(inputs []uint64, outputs []uint64) *bc.Tx {
 		txInputs := make([]*types.TxInput, 0, len(inputs))
 		txOutputs := make([]*types.TxOutput, 0, len(outputs))
 
-		for _, amount := range inputs {
-			txInput := types.NewSpendInput(nil, *sourceID, *consensus.BTMAssetID, amount, 0, ctrlProgram)
+		for i, amount := range inputs {
+			txInput := types.NewSpendInput(nil, *sourceID, *consensus.BTMAssetID, amount, uint64(i), ctrlProgram, nil)
 			txInputs = append(txInputs, txInput)
 		}
 
 		for _, amount := range outputs {
-			txOutput := types.NewTxOutput(*consensus.BTMAssetID, amount, ctrlProgram)
+			txOutput := types.NewOriginalTxOutput(*consensus.BTMAssetID, amount, ctrlProgram, nil)
 			txOutputs = append(txOutputs, txOutput)
 		}
 
@@ -305,7 +298,7 @@ func TestOverflow(t *testing.T) {
 
 	for i, c := range cases {
 		tx := newTx(c.inputs, c.outputs)
-		if _, err := ValidateTx(tx, mockBlock()); rootErr(err) != c.err {
+		if _, err := ValidateTx(tx, mockBlock(), converter); rootErr(err) != c.err {
 			t.Fatalf("case %d test failed, want %s, have %s", i, c.err, rootErr(err))
 		}
 	}
@@ -323,7 +316,7 @@ func TestTxValidation(t *testing.T) {
 
 	addCoinbase := func(assetID *bc.AssetID, amount uint64, arbitrary []byte) {
 		coinbase := bc.NewCoinbase(arbitrary)
-		txOutput := types.NewTxOutput(*assetID, amount, []byte{byte(vm.OP_TRUE)})
+		txOutput := types.NewOriginalTxOutput(*assetID, amount, []byte{byte(vm.OP_TRUE)}, nil)
 		muxID := getMuxID(tx)
 		coinbase.SetDestination(muxID, &txOutput.AssetAmount, uint64(len(mux.Sources)))
 		coinbaseID := bc.EntryID(coinbase)
@@ -340,7 +333,7 @@ func TestTxValidation(t *testing.T) {
 			Position: uint64(len(tx.ResultIds)),
 		}
 		prog := &bc.Program{txOutput.VMVersion, txOutput.ControlProgram}
-		output := bc.NewOutput(src, prog, uint64(len(tx.ResultIds)))
+		output := bc.NewOriginalOutput(src, prog, nil, uint64(len(tx.ResultIds)))
 		outputID := bc.EntryID(output)
 		tx.Entries[outputID] = output
 
@@ -399,10 +392,10 @@ func TestTxValidation(t *testing.T) {
 			desc: "underflowing mux destination amounts",
 			f: func() {
 				mux.WitnessDestinations[0].Value.Amount = math.MaxInt64
-				out := tx.Entries[*mux.WitnessDestinations[0].Ref].(*bc.Output)
+				out := tx.Entries[*mux.WitnessDestinations[0].Ref].(*bc.OriginalOutput)
 				out.Source.Value.Amount = math.MaxInt64
 				mux.WitnessDestinations[1].Value.Amount = math.MaxInt64
-				out = tx.Entries[*mux.WitnessDestinations[1].Ref].(*bc.Output)
+				out = tx.Entries[*mux.WitnessDestinations[1].Ref].(*bc.OriginalOutput)
 				out.Source.Value.Amount = math.MaxInt64
 			},
 			err: ErrOverflow,
@@ -419,7 +412,7 @@ func TestTxValidation(t *testing.T) {
 		{
 			desc: "mismatched output source / mux dest position",
 			f: func() {
-				tx.Entries[*tx.ResultIds[0]].(*bc.Output).Source.Position = 1
+				tx.Entries[*tx.ResultIds[0]].(*bc.OriginalOutput).Source.Position = 1
 			},
 			err: ErrMismatchedPosition,
 		},
@@ -440,7 +433,7 @@ func TestTxValidation(t *testing.T) {
 				fixture2 := sample(t, fixture)
 				tx2 := types.NewTx(*fixture2.tx).Tx
 				out2ID := tx2.ResultIds[0]
-				out2 := tx2.Entries[*out2ID].(*bc.Output)
+				out2 := tx2.Entries[*out2ID].(*bc.OriginalOutput)
 				tx.Entries[*out2ID] = out2
 				mux.WitnessDestinations[0].Ref = out2ID
 			},
@@ -472,7 +465,7 @@ func TestTxValidation(t *testing.T) {
 			desc: "mismatched mux dest value / output source value",
 			f: func() {
 				outID := tx.ResultIds[0]
-				out := tx.Entries[*outID].(*bc.Output)
+				out := tx.Entries[*outID].(*bc.OriginalOutput)
 				mux.WitnessDestinations[0].Value = &bc.AssetAmount{
 					AssetId: out.Source.Value.AssetId,
 					Amount:  out.Source.Value.Amount + 1,
@@ -515,7 +508,7 @@ func TestTxValidation(t *testing.T) {
 			desc: "mismatched spent source/witness value",
 			f: func() {
 				spend := txSpend(t, tx, 1)
-				spentOutput := tx.Entries[*spend.SpentOutputId].(*bc.Output)
+				spentOutput := tx.Entries[*spend.SpentOutputId].(*bc.OriginalOutput)
 				spentOutput.Source.Value = &bc.AssetAmount{
 					AssetId: spend.WitnessDestination.Value.AssetId,
 					Amount:  spend.WitnessDestination.Value.Amount + 1,
@@ -531,21 +524,11 @@ func TestTxValidation(t *testing.T) {
 			err: ErrOverGasCredit,
 		},
 		{
-			desc: "can't find gas spend input in entries",
-			f: func() {
-				spendID := mux.Sources[len(mux.Sources)-1].Ref
-				delete(tx.Entries, *spendID)
-				mux.Sources = mux.Sources[:len(mux.Sources)-1]
-			},
-			err: bc.ErrMissingEntry,
-		},
-		{
 			desc: "no gas spend input",
 			f: func() {
 				spendID := mux.Sources[len(mux.Sources)-1].Ref
 				delete(tx.Entries, *spendID)
 				mux.Sources = mux.Sources[:len(mux.Sources)-1]
-				tx.GasInputIDs = nil
 				vs.gasStatus.GasLeft = 0
 			},
 			err: vm.ErrRunLimitExceeded,
@@ -556,7 +539,6 @@ func TestTxValidation(t *testing.T) {
 				spendID := mux.Sources[len(mux.Sources)-1].Ref
 				delete(tx.Entries, *spendID)
 				mux.Sources = mux.Sources[:len(mux.Sources)-1]
-				tx.GasInputIDs = nil
 			},
 			err: nil,
 		},
@@ -624,7 +606,7 @@ func TestTxValidation(t *testing.T) {
 			desc: "normal retirement output",
 			f: func() {
 				outputID := tx.ResultIds[0]
-				output := tx.Entries[*outputID].(*bc.Output)
+				output := tx.Entries[*outputID].(*bc.OriginalOutput)
 				retirement := bc.NewRetirement(output.Source, output.Ordinal)
 				retirementID := bc.EntryID(retirement)
 				tx.Entries[retirementID] = retirement
@@ -638,8 +620,8 @@ func TestTxValidation(t *testing.T) {
 			desc: "ordinal doesn't matter for prevouts",
 			f: func() {
 				spend := txSpend(t, tx, 1)
-				prevout := tx.Entries[*spend.SpentOutputId].(*bc.Output)
-				newPrevout := bc.NewOutput(prevout.Source, prevout.ControlProgram, 10)
+				prevout := tx.Entries[*spend.SpentOutputId].(*bc.OriginalOutput)
+				newPrevout := bc.NewOriginalOutput(prevout.Source, prevout.ControlProgram, prevout.StateData, 10)
 				hash := bc.EntryID(newPrevout)
 				spend.SpentOutputId = &hash
 			},
@@ -695,30 +677,29 @@ func TestTxValidation(t *testing.T) {
 func TestCoinbase(t *testing.T) {
 	cp, _ := vmutil.DefaultCoinbaseProgram()
 	retire, _ := vmutil.RetireProgram([]byte{})
+	converter := func(prog []byte) ([]byte, error) { return nil, nil }
 	CbTx := types.MapTx(&types.TxData{
 		SerializedSize: 1,
 		Inputs: []*types.TxInput{
 			types.NewCoinbaseInput(nil),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(*consensus.BTMAssetID, 888, cp),
+			types.NewOriginalTxOutput(*consensus.BTMAssetID, 888, cp, nil),
 		},
 	})
 
 	cases := []struct {
-		block    *bc.Block
-		txIndex  int
-		GasValid bool
-		err      error
+		block   *bc.Block
+		txIndex int
+		err     error
 	}{
 		{
 			block: &bc.Block{
 				BlockHeader:  &bc.BlockHeader{Height: 666},
 				Transactions: []*bc.Tx{CbTx},
 			},
-			txIndex:  0,
-			GasValid: true,
-			err:      nil,
+			txIndex: 0,
+			err:     nil,
 		},
 		{
 			block: &bc.Block{
@@ -731,14 +712,13 @@ func TestCoinbase(t *testing.T) {
 							types.NewCoinbaseInput(nil),
 						},
 						Outputs: []*types.TxOutput{
-							types.NewTxOutput(*consensus.BTMAssetID, 888, cp),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 888, cp, nil),
 						},
 					}),
 				},
 			},
-			txIndex:  1,
-			GasValid: false,
-			err:      ErrWrongCoinbaseTransaction,
+			txIndex: 1,
+			err:     ErrWrongCoinbaseTransaction,
 		},
 		{
 			block: &bc.Block{
@@ -749,18 +729,17 @@ func TestCoinbase(t *testing.T) {
 						SerializedSize: 1,
 						Inputs: []*types.TxInput{
 							types.NewCoinbaseInput(nil),
-							types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp),
+							types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp, nil),
 						},
 						Outputs: []*types.TxOutput{
-							types.NewTxOutput(*consensus.BTMAssetID, 888, cp),
-							types.NewTxOutput(*consensus.BTMAssetID, 90000000, cp),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 888, cp, nil),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 90000000, cp, nil),
 						},
 					}),
 				},
 			},
-			txIndex:  1,
-			GasValid: false,
-			err:      ErrWrongCoinbaseTransaction,
+			txIndex: 1,
+			err:     ErrWrongCoinbaseTransaction,
 		},
 		{
 			block: &bc.Block{
@@ -770,19 +749,18 @@ func TestCoinbase(t *testing.T) {
 					types.MapTx(&types.TxData{
 						SerializedSize: 1,
 						Inputs: []*types.TxInput{
-							types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp),
+							types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp, nil),
 							types.NewCoinbaseInput(nil),
 						},
 						Outputs: []*types.TxOutput{
-							types.NewTxOutput(*consensus.BTMAssetID, 888, cp),
-							types.NewTxOutput(*consensus.BTMAssetID, 90000000, cp),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 888, cp, nil),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 90000000, cp, nil),
 						},
 					}),
 				},
 			},
-			txIndex:  1,
-			GasValid: false,
-			err:      ErrWrongCoinbaseTransaction,
+			txIndex: 1,
+			err:     ErrWrongCoinbaseTransaction,
 		},
 		{
 			block: &bc.Block{
@@ -792,18 +770,17 @@ func TestCoinbase(t *testing.T) {
 						SerializedSize: 1,
 						Inputs: []*types.TxInput{
 							types.NewCoinbaseInput(nil),
-							types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp),
+							types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp, nil),
 						},
 						Outputs: []*types.TxOutput{
-							types.NewTxOutput(*consensus.BTMAssetID, 888, cp),
-							types.NewTxOutput(*consensus.BTMAssetID, 90000000, cp),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 888, cp, nil),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 90000000, cp, nil),
 						},
 					}),
 				},
 			},
-			txIndex:  0,
-			GasValid: true,
-			err:      nil,
+			txIndex: 0,
+			err:     nil,
 		},
 		{
 			block: &bc.Block{
@@ -813,40 +790,128 @@ func TestCoinbase(t *testing.T) {
 						SerializedSize: 1,
 						Inputs: []*types.TxInput{
 							types.NewCoinbaseInput(nil),
-							types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, retire),
+							types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, retire, nil),
 						},
 						Outputs: []*types.TxOutput{
-							types.NewTxOutput(*consensus.BTMAssetID, 888, cp),
-							types.NewTxOutput(*consensus.BTMAssetID, 90000000, cp),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 888, cp, nil),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 90000000, cp, nil),
 						},
 					}),
 				},
 			},
-			txIndex:  0,
-			GasValid: false,
-			err:      vm.ErrReturn,
+			txIndex: 0,
+			err:     vm.ErrReturn,
 		},
 	}
 
 	for i, c := range cases {
-		gasStatus, err := ValidateTx(c.block.Transactions[c.txIndex], c.block)
-
+		_, err := ValidateTx(c.block.Transactions[c.txIndex], c.block, converter)
 		if rootErr(err) != c.err {
 			t.Errorf("#%d got error %s, want %s", i, err, c.err)
-		}
-		if c.GasValid != gasStatus.GasValid {
-			t.Errorf("#%d got GasValid %t, want %t", i, gasStatus.GasValid, c.GasValid)
 		}
 	}
 }
 
-func TestRuleAA(t *testing.T) {
-	testData := "070100040161015f9bc47dda88eee18c7433340c16e054cabee4318a8d638e873be19e979df81dc7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0e3f9f5c80e01011600147c7662d92bd5e77454736f94731c60a6e9cbc69f6302404a17a5995b8163ee448719b462a5694b22a35522dd9883333fd462cc3d0aabf049445c5cbb911a40e1906a5bea99b23b1a79e215eeb1a818d8b1dd27e06f3004200530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce9940160015ee334d4fe18398f0232d2aca7050388ce4ee5ae82c8148d7f0cea748438b65135ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ace6842001011600147c7662d92bd5e77454736f94731c60a6e9cbc69f6302404a17a5995b8163ee448719b462a5694b22a35522dd9883333fd462cc3d0aabf049445c5cbb911a40e1906a5bea99b23b1a79e215eeb1a818d8b1dd27e06f3004200530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce9940161015f9bc47dda88eee18c7433340c16e054cabee4318a8d638e873be19e979df81dc7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0e3f9f5c80e01011600147c7662d92bd5e77454736f94731c60a6e9cbc69f63024062c29b20941e7f762c3afae232f61d8dac1c544825931e391408c6715c408ef69f494a1b3b61ce380ddee0c8b18ecac2b46ef96a62eebb6ec40f9f545410870a200530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce9940160015ee334d4fe18398f0232d2aca7050388ce4ee5ae82c8148d7f0cea748438b65135ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ace6842001011600147c7662d92bd5e77454736f94731c60a6e9cbc69f630240e443d66c75b4d5fa71676d60b0b067e6941f06349f31e5f73a7d51a73f5797632b2e01e8584cd1c8730dc16df075866b0c796bd7870182e2da4b37188208fe02200530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce99402013effffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa08ba3fae80e01160014aac0345165045e612b3d7363f39a372bead80ce700013effffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe08fe0fae80e01160014aac0345165045e612b3d7363f39a372bead80ce700"
+func TestDoubleSpend(t *testing.T) {
+	testData := "07010004016201609bc47dda88eee18c7433340c16e054cabee4318a8d638e873be19e979df81dc7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0e3f9f5c80e0101160014f233267911e94dc74df706fe3b697273e212d5450063024088b5e730136407312980d3b1446004a8c552111721a4ba48044365cf7f7785542f2d7799f73d7cba1be2301fdfb91ad6ea99559b1857a25336eaefd90675870f207642ba797fd89d1f98a8559b4ca74123697dd4dee882955acd0da9010a80d64e0161015fe334d4fe18398f0232d2aca7050388ce4ee5ae82c8148d7f0cea748438b65135ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ace684200101160014f233267911e94dc74df706fe3b697273e212d545006302404a17a5995b8163ee448719b462a5694b22a35522dd9883333fd462cc3d0aabf049445c5cbb911a40e1906a5bea99b23b1a79e215eeb1a818d8b1dd27e06f3004207642ba797fd89d1f98a8559b4ca74123697dd4dee882955acd0da9010a80d64e016201609bc47dda88eee18c7433340c16e054cabee4318a8d638e873be19e979df81dc7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0e3f9f5c80e0101160014f233267911e94dc74df706fe3b697273e212d5450063024088b5e730136407312980d3b1446004a8c552111721a4ba48044365cf7f7785542f2d7799f73d7cba1be2301fdfb91ad6ea99559b1857a25336eaefd90675870f207642ba797fd89d1f98a8559b4ca74123697dd4dee882955acd0da9010a80d64e0161015fe334d4fe18398f0232d2aca7050388ce4ee5ae82c8148d7f0cea748438b65135ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ace684200101160014f233267911e94dc74df706fe3b697273e212d545006302409278702c74eb3ae7666f9da4841443a4b001d6c7d7de631faf9f26eb464f6cdd741dcd4c2f3a1eb47cbc345f56a16902380b8f74b7a559f9bec854bd0e955b0c207642ba797fd89d1f98a8559b4ca74123697dd4dee882955acd0da9010a80d64e0201003fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa08ba3fae80e01160014aac0345165045e612b3d7363f39a372bead80ce7000001003fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe08fe0fae80e01160014aac0345165045e612b3d7363f39a372bead80ce70000"
+	/*
+		07  // serflags
+		01  // tx version
+		00  // time range
+		04  // input cnts
+
+		01  // input0: asset version
+		63  // input 0: input commitment length   +state length
+		01  // input 0: spend type flag
+		61 // input 0: spend commitment length  + state length
+		9bc47dda88eee18c7433340c16e054cabee4318a8d638e873be19e979df81dc7  // input 0: source id
+		ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff  // input 0: assetID
+		e0e3f9f5c80e  // amt
+		01  // source pos
+		01  // vm version
+		16  // spend program length
+		00147c7662d92bd5e77454736f94731c60a6e9cbc69f // spend program  + after state encode
+		00
+		63 // witness length
+		02 // arg array length
+		40 // 1 arg length
+		4a17a5995b8163ee448719b462a5694b22a35522dd9883333fd462cc3d0aabf049445c5cbb911a40e1906a5bea99b23b1a79e215eeb1a818d8b1dd27e06f3004 // 1 arg data
+		20 // 2 arg length
+		0530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce994 // 2 arg data
+		01 // input 1 ~ input 3,output 0 ~ output1 ...
+		61
+		01
+		5f
+		e334d4fe18398f0232d2aca7050388ce4ee5ae82c8148d7f0cea748438b65135
+		ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+		80ace68420
+		01
+		01
+		16
+		00147c7662d92bd5e77454736f94731c60a6e9cbc69f
+		00
+		63
+		02
+		40
+		4a17a5995b8163ee448719b462a5694b22a35522dd9883333fd462cc3d0aabf049445c5cbb911a40e1906a5bea99b23b1a79e215eeb1a818d8b1dd27e06f3004
+		20
+		0530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce994
+		01  // input2
+		62
+		01
+		60
+		9bc47dda88eee18c7433340c16e054cabee4318a8d638e873be19e979df81dc7
+		ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+		e0e3f9f5c80e
+		01
+		01
+		16
+		00147c7662d92bd5e77454736f94731c60a6e9cbc69f
+		00
+		63
+		02
+		40
+		62c29b20941e7f762c3afae232f61d8dac1c544825931e391408c6715c408ef69f494a1b3b61ce380ddee0c8b18ecac2b46ef96a62eebb6ec40f9f545410870a
+		20
+		0530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce994
+		01 // input3
+		61
+		01
+		5f
+		e334d4fe18398f0232d2aca7050388ce4ee5ae82c8148d7f0cea748438b65135
+		ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+		80ace68420
+		01
+		01
+		16
+		00147c7662d92bd5e77454736f94731c60a6e9cbc69f
+		00
+		63
+		02
+		40
+		e443d66c75b4d5fa71676d60b0b067e6941f06349f31e5f73a7d51a73f5797632b2e01e8584cd1c8730dc16df075866b0c796bd7870182e2da4b37188208fe02
+		20
+		0530c4bc9dd3cbf679fec6d824ce5c37b0c8dab88b67bcae3b000924b7dce994
+		02  //output cnts
+		01
+		00
+		3f
+		ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+		a08ba3fae80e
+		01
+		16
+		0014aac0345165045e612b3d7363f39a372bead80ce7
+		00
+		00
+		01003f
+		ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe08fe0fae80e01160014aac0345165045e612b3d7363f39a372bead80ce700
+		00
+	*/
+	converter := func(prog []byte) ([]byte, error) { return nil, nil }
 	tx := types.Tx{}
 	if err := tx.UnmarshalText([]byte(testData)); err != nil {
 		t.Errorf("fail on unmarshal txData: %s", err)
 	}
-
 	cases := []struct {
 		block    *bc.Block
 		GasValid bool
@@ -855,37 +920,24 @@ func TestRuleAA(t *testing.T) {
 		{
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
-					Height: ruleAA - 1,
+					Height: 5000,
 				},
 			},
-			GasValid: true,
-			err:      ErrMismatchedPosition,
-		},
-		{
-			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					Height: ruleAA,
-				},
-			},
-			GasValid: false,
-			err:      ErrEmptyInputIDs,
+			err: ErrInputDoubleSend,
 		},
 	}
 
 	for i, c := range cases {
-		gasStatus, err := ValidateTx(tx.Tx, c.block)
+		_, err := ValidateTx(tx.Tx, c.block, converter)
 		if rootErr(err) != c.err {
 			t.Errorf("#%d got error %s, want %s", i, err, c.err)
 		}
-		if c.GasValid != gasStatus.GasValid {
-			t.Errorf("#%d got GasValid %t, want %t", i, gasStatus.GasValid, c.GasValid)
-		}
 	}
-
 }
 
 // TestTimeRange test the checkTimeRange function (txtest#1004)
 func TestTimeRange(t *testing.T) {
+	converter := func(prog []byte) ([]byte, error) { return nil, nil }
 	cases := []struct {
 		timeRange uint64
 		err       bool
@@ -922,66 +974,20 @@ func TestTimeRange(t *testing.T) {
 			mockGasTxInput(),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(*consensus.BTMAssetID, 1, []byte{0x6a}),
+			types.NewOriginalTxOutput(*consensus.BTMAssetID, 1, []byte{0x6a}, nil),
 		},
 	})
 
 	for i, c := range cases {
 		tx.TimeRange = c.timeRange
-		if _, err := ValidateTx(tx, block); (err != nil) != c.err {
+		if _, err := ValidateTx(tx, block, converter); (err != nil) != c.err {
 			t.Errorf("#%d got error %t, want %t", i, !c.err, c.err)
 		}
 	}
 }
 
-func TestStandardTx(t *testing.T) {
-	fixture := sample(t, nil)
-	tx := types.NewTx(*fixture.tx).Tx
-
-	cases := []struct {
-		desc string
-		f    func()
-		err  error
-	}{
-		{
-			desc: "normal standard tx",
-			err:  nil,
-		},
-		{
-			desc: "not standard tx in spend input",
-			f: func() {
-				inputID := tx.GasInputIDs[0]
-				spend := tx.Entries[inputID].(*bc.Spend)
-				spentOutput, err := tx.Output(*spend.SpentOutputId)
-				if err != nil {
-					t.Fatal(err)
-				}
-				spentOutput.ControlProgram = &bc.Program{Code: []byte{0}}
-			},
-			err: ErrNotStandardTx,
-		},
-		{
-			desc: "not standard tx in output",
-			f: func() {
-				outputID := tx.ResultIds[0]
-				output := tx.Entries[*outputID].(*bc.Output)
-				output.ControlProgram = &bc.Program{Code: []byte{0}}
-			},
-			err: ErrNotStandardTx,
-		},
-	}
-
-	for i, c := range cases {
-		if c.f != nil {
-			c.f()
-		}
-		if err := checkStandardTx(tx, 0); err != c.err {
-			t.Errorf("case #%d (%s) got error %t, want %t", i, c.desc, err, c.err)
-		}
-	}
-}
-
 func TestValidateTxVersion(t *testing.T) {
+	converter := func(prog []byte) ([]byte, error) { return nil, nil }
 	cases := []struct {
 		desc  string
 		block *bc.Block
@@ -1020,7 +1026,7 @@ func TestValidateTxVersion(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		if _, err := ValidateTx(c.block.Transactions[0], c.block); rootErr(err) != c.err {
+		if _, err := ValidateTx(c.block.Transactions[0], c.block, converter); rootErr(err) != c.err {
 			t.Errorf("case #%d (%s) got error %t, want %t", i, c.desc, err, c.err)
 		}
 	}
@@ -1106,8 +1112,8 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 
 		result.txInputs = []*types.TxInput{
 			types.NewIssuanceInput([]byte{3}, 10, result.issuanceProg.Code, result.issuanceArgs, result.assetDef),
-			types.NewSpendInput(args1, *newHash(5), result.assetID, 20, 0, cp1),
-			types.NewSpendInput(args2, *newHash(8), result.assetID, 40, 0, cp2),
+			types.NewSpendInput(args1, *newHash(5), result.assetID, 20, 0, cp1, nil),
+			types.NewSpendInput(args2, *newHash(8), result.assetID, 40, 0, cp2, nil),
 		}
 	}
 
@@ -1124,8 +1130,8 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 		}
 
 		result.txOutputs = []*types.TxOutput{
-			types.NewTxOutput(result.assetID, 25, cp1),
-			types.NewTxOutput(result.assetID, 45, cp2),
+			types.NewOriginalTxOutput(result.assetID, 25, cp1, nil),
+			types.NewOriginalTxOutput(result.assetID, 45, cp2, nil),
 		}
 	}
 
@@ -1148,7 +1154,7 @@ func mockBlock() *bc.Block {
 
 func mockGasTxInput() *types.TxInput {
 	cp, _ := vmutil.DefaultCoinbaseProgram()
-	return types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp)
+	return types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp, nil)
 }
 
 // Like errors.Root, but also unwraps vm.Error objects.
@@ -1193,7 +1199,7 @@ func txSpend(t *testing.T, tx *bc.Tx, index int) *bc.Spend {
 func getMuxID(tx *bc.Tx) *bc.Hash {
 	out := tx.Entries[*tx.ResultIds[0]]
 	switch result := out.(type) {
-	case *bc.Output:
+	case *bc.OriginalOutput:
 		return result.Source.Ref
 	case *bc.Retirement:
 		return result.Source.Ref

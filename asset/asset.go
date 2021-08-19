@@ -2,6 +2,7 @@ package asset
 
 import (
 	"context"
+	"crypto/ed25519"
 	"encoding/json"
 	"strings"
 	"sync"
@@ -12,7 +13,6 @@ import (
 	"github.com/bytom/bytom/blockchain/signers"
 	"github.com/bytom/bytom/common"
 	"github.com/bytom/bytom/consensus"
-	"github.com/bytom/bytom/crypto/ed25519"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	chainjson "github.com/bytom/bytom/encoding/json"
@@ -126,7 +126,7 @@ func (reg *Registry) getNextAssetIndex() uint64 {
 }
 
 // Define defines a new Asset.
-func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, limitHeight int64, alias string, issuanceProgram chainjson.HexBytes) (*Asset, error) {
+func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, limitHeight uint64, alias string, issuanceProgram chainjson.HexBytes) (*Asset, error) {
 	var err error
 	var assetSigner *signers.Signer
 
@@ -363,7 +363,7 @@ func serializeAssetDef(def map[string]interface{}) ([]byte, error) {
 	return json.MarshalIndent(def, "", "  ")
 }
 
-func multisigIssuanceProgram(pubkeys []ed25519.PublicKey, nrequired int, blockHeight int64) (program []byte, vmversion uint64, err error) {
+func multisigIssuanceProgram(pubkeys []ed25519.PublicKey, nrequired int, blockHeight uint64) (program []byte, vmversion uint64, err error) {
 	issuanceProg, err := vmutil.P2SPMultiSigProgramWithHeight(pubkeys, nrequired, blockHeight)
 	if err != nil {
 		return nil, 0, err

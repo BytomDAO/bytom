@@ -15,13 +15,13 @@ func TestConvertProgram(t *testing.T) {
 		{
 			desc:    "multi sign 2-1",
 			program: "0020e402787b2bf9749f8fcdcc132a44e86bacf36780ec5df2189a11020d590533ee",
-			script:  "76aa20e402787b2bf9749f8fcdcc132a44e86bacf36780ec5df2189a11020d590533ee8808ffffffffffffffff7c00c0",
+			script:  "76aa20e402787b2bf9749f8fcdcc132a44e86bacf36780ec5df2189a11020d590533ee88007c00c0",
 			fun:     ConvertP2SHProgram,
 		},
 		{
 			desc:    "multi sign 5-3",
 			program: "00200824e931fb806bd77fdcd291aad3bd0a4493443a4120062bd659e64a3e0bac66",
-			script:  "76aa200824e931fb806bd77fdcd291aad3bd0a4493443a4120062bd659e64a3e0bac668808ffffffffffffffff7c00c0",
+			script:  "76aa200824e931fb806bd77fdcd291aad3bd0a4493443a4120062bd659e64a3e0bac6688007c00c0",
 			fun:     ConvertP2SHProgram,
 		},
 		{
@@ -60,6 +60,12 @@ func TestProgramType(t *testing.T) {
 		},
 		{
 			desc:    "ugly P2WPKHScript",
+			program: "511437e1aec83a4e6587ca9609e4e5aa728db7007449",
+			fun:     IsP2WPKHScript,
+			yes:     false,
+		},
+		{
+			desc:    "ugly P2WPKHScript",
 			program: "00200824e931fb806bd77fdcd291aad3bd0a4493443a4120062bd659e64a3e0bac66",
 			fun:     IsP2WPKHScript,
 			yes:     false,
@@ -71,10 +77,28 @@ func TestProgramType(t *testing.T) {
 			yes:     false,
 		},
 		{
+			desc:    "bcrp script",
+			program: "6a046263727001012820e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c0",
+			fun:     IsP2WPKHScript,
+			yes:     false,
+		},
+		{
+			desc:    "call contract script",
+			program: "0462637270204e4f02d43bf50171f7f25d046b7f016002da410fc00d2e8902e7b170c98cf946",
+			fun:     IsP2WPKHScript,
+			yes:     false,
+		},
+		{
 			desc:    "normal P2WSHScript",
 			program: "00200824e931fb806bd77fdcd291aad3bd0a4493443a4120062bd659e64a3e0bac66",
 			fun:     IsP2WSHScript,
 			yes:     true,
+		},
+		{
+			desc:    "ugly P2WSHScript",
+			program: "51200824e931fb806bd77fdcd291aad3bd0a4493443a4120062bd659e64a3e0bac66",
+			fun:     IsP2WSHScript,
+			yes:     false,
 		},
 		{
 			desc:    "ugly P2WSHScript",
@@ -85,6 +109,18 @@ func TestProgramType(t *testing.T) {
 		{
 			desc:    "ugly P2WSHScript",
 			program: "51",
+			fun:     IsP2WSHScript,
+			yes:     false,
+		},
+		{
+			desc:    "bcrp script",
+			program: "6a046263727001012820e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c0",
+			fun:     IsP2WSHScript,
+			yes:     false,
+		},
+		{
+			desc:    "call contract script",
+			program: "0462637270204e4f02d43bf50171f7f25d046b7f016002da410fc00d2e8902e7b170c98cf946",
 			fun:     IsP2WSHScript,
 			yes:     false,
 		},

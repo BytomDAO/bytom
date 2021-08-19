@@ -212,7 +212,7 @@ func (g *TxGenerator) AddTxOutput(accountAlias, assetAlias string, amount uint64
 	if err != nil {
 		return err
 	}
-	out := types.NewTxOutput(*assetAmount.AssetId, assetAmount.Amount, controlProgram.ControlProgram)
+	out := types.NewOriginalTxOutput(*assetAmount.AssetId, assetAmount.Amount, controlProgram.ControlProgram, nil)
 	return g.Builder.AddOutput(out)
 }
 
@@ -223,7 +223,7 @@ func (g *TxGenerator) AddRetirement(assetAlias string, amount uint64) error {
 		return err
 	}
 	retirementProgram := []byte{byte(vm.OP_FAIL)}
-	out := types.NewTxOutput(*assetAmount.AssetId, assetAmount.Amount, retirementProgram)
+	out := types.NewOriginalTxOutput(*assetAmount.AssetId, assetAmount.Amount, retirementProgram, nil)
 	return g.Builder.AddOutput(out)
 }
 
@@ -274,7 +274,7 @@ func txFee(tx *types.Tx) uint64 {
 // CreateSpendInput create SpendInput which spent the output from tx
 func CreateSpendInput(tx *types.Tx, outputIndex uint64) (*types.SpendInput, error) {
 	outputID := tx.ResultIds[outputIndex]
-	output, ok := tx.Entries[*outputID].(*bc.Output)
+	output, ok := tx.Entries[*outputID].(*bc.OriginalOutput)
 	if !ok {
 		return nil, fmt.Errorf("retirement can't be spent")
 	}
@@ -357,12 +357,12 @@ func SignInstructionFor(input *types.SpendInput, db dbm.DB, signer *signers.Sign
 
 // CreateCoinbaseTx create coinbase tx at block height
 func CreateCoinbaseTx(controlProgram []byte, height, txsFee uint64) (*types.Tx, error) {
-	coinbaseValue := consensus.BlockSubsidy(height) + txsFee
+	coinbaseValue := txsFee
 	builder := txbuilder.NewBuilder(time.Now())
-	if err := builder.AddInput(types.NewCoinbaseInput([]byte(string(height))), &txbuilder.SigningInstruction{}); err != nil {
+	if err := builder.AddInput(types.NewCoinbaseInput([]byte(fmt.Sprint(height))), &txbuilder.SigningInstruction{}); err != nil {
 		return nil, err
 	}
-	if err := builder.AddOutput(types.NewTxOutput(*consensus.BTMAssetID, coinbaseValue, controlProgram)); err != nil {
+	if err := builder.AddOutput(types.NewOriginalTxOutput(*consensus.BTMAssetID, coinbaseValue, controlProgram, nil)); err != nil {
 		return nil, err
 	}
 
@@ -392,11 +392,80 @@ func CreateTxFromTx(baseTx *types.Tx, outputIndex uint64, outputAmount uint64, c
 		AssetVersion: assetVersion,
 		TypedInput:   spendInput,
 	}
-	output := types.NewTxOutput(*consensus.BTMAssetID, outputAmount, ctrlProgram)
+	output := types.NewOriginalTxOutput(*consensus.BTMAssetID, outputAmount, ctrlProgram, nil)
 	builder := txbuilder.NewBuilder(time.Now())
 	if err := builder.AddInput(txInput, &txbuilder.SigningInstruction{}); err != nil {
 		return nil, err
 	}
+	if err := builder.AddOutput(output); err != nil {
+		return nil, err
+	}
+
+	tpl, _, err := builder.Build()
+	if err != nil {
+		return nil, err
+	}
+
+	txSerialized, err := tpl.Transaction.MarshalText()
+	if err != nil {
+		return nil, err
+	}
+
+	tpl.Transaction.Tx.SerializedSize = uint64(len(txSerialized))
+	tpl.Transaction.TxData.SerializedSize = uint64(len(txSerialized))
+	return tpl.Transaction, nil
+}
+
+// CreateRegisterContractTx create register contract transaction
+func CreateRegisterContractTx(contract []byte) (*types.Tx, error) {
+	txInput := types.NewSpendInput(nil, bc.NewHash([32]byte{0x01}), *consensus.BTMAssetID, 200000000, 1, []byte{0x51}, nil)
+
+	program, err := vmutil.RegisterProgram(contract)
+	if err != nil {
+		return nil, err
+	}
+
+	output := types.NewOriginalTxOutput(*consensus.BTMAssetID, 100000000, program, [][]byte{})
+	builder := txbuilder.NewBuilder(time.Now())
+	if err := builder.AddInput(txInput, &txbuilder.SigningInstruction{}); err != nil {
+		return nil, err
+	}
+
+	if err := builder.AddOutput(output); err != nil {
+		return nil, err
+	}
+
+	tpl, _, err := builder.Build()
+	if err != nil {
+		return nil, err
+	}
+
+	txSerialized, err := tpl.Transaction.MarshalText()
+	if err != nil {
+		return nil, err
+	}
+
+	tpl.Transaction.Tx.SerializedSize = uint64(len(txSerialized))
+	tpl.Transaction.TxData.SerializedSize = uint64(len(txSerialized))
+	return tpl.Transaction, nil
+}
+
+// CreateUseContractTx create use contract transaction
+func CreateUseContractTx(hash []byte, arguments [][]byte, stateData [][]byte) (*types.Tx, error) {
+	program, err := vmutil.CallContractProgram(hash)
+	if err != nil {
+		return nil, err
+	}
+
+	txInput := types.NewSpendInput(nil, bc.NewHash([32]byte{0x01}), *consensus.BTMAssetID, 200000000, 1, program, stateData)
+	txInput.SetArguments(arguments)
+
+	output := types.NewOriginalTxOutput(*consensus.BTMAssetID, 100000000, program, [][]byte{})
+	builder := txbuilder.NewBuilder(time.Now())
+	if err := builder.AddInput(txInput, &txbuilder.SigningInstruction{}); err != nil {
+		return nil, err
+	}
+
 	if err := builder.AddOutput(output); err != nil {
 		return nil, err
 	}

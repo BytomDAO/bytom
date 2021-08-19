@@ -12,21 +12,19 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 
 	"github.com/bytom/bytom/accesstoken"
-	"github.com/bytom/bytom/blockchain/txfeed"
 	cfg "github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/dashboard/dashboard"
 	"github.com/bytom/bytom/dashboard/equity"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/event"
-	"github.com/bytom/bytom/mining/cpuminer"
-	"github.com/bytom/bytom/mining/miningpool"
 	"github.com/bytom/bytom/net/http/authn"
 	"github.com/bytom/bytom/net/http/gzip"
 	"github.com/bytom/bytom/net/http/httpjson"
 	"github.com/bytom/bytom/net/http/static"
 	"github.com/bytom/bytom/net/websocket"
-	"github.com/bytom/bytom/netsync"
+	"github.com/bytom/bytom/netsync/peers"
 	"github.com/bytom/bytom/p2p"
+	"github.com/bytom/bytom/proposal/blockproposer"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/wallet"
 )
@@ -113,9 +111,7 @@ type API struct {
 	chain           *protocol.Chain
 	server          *http.Server
 	handler         http.Handler
-	txFeedTracker   *txfeed.Tracker
-	cpuMiner        *cpuminer.CPUMiner
-	miningPool      *miningpool.MiningPool
+	blockProposer   *blockproposer.BlockProposer
 	notificationMgr *websocket.WSNotificationManager
 	eventDispatcher *event.Dispatcher
 }
@@ -175,23 +171,20 @@ type NetSync interface {
 	IsCaughtUp() bool
 	PeerCount() int
 	GetNetwork() string
-	BestPeer() *netsync.PeerInfo
+	BestPeer() *peers.PeerInfo
 	DialPeerWithAddress(addr *p2p.NetAddress) error
-	GetPeerInfos() []*netsync.PeerInfo
+	GetPeerInfos() []*peers.PeerInfo
 	StopPeer(peerID string) error
 }
 
 // NewAPI create and initialize the API
-func NewAPI(sync NetSync, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, cpuMiner *cpuminer.CPUMiner, miningPool *miningpool.MiningPool, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, dispatcher *event.Dispatcher, notificationMgr *websocket.WSNotificationManager) *API {
+func NewAPI(sync NetSync, wallet *wallet.Wallet, blockProposer *blockproposer.BlockProposer, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, dispatcher *event.Dispatcher, notificationMgr *websocket.WSNotificationManager) *API {
 	api := &API{
-		sync:          sync,
-		wallet:        wallet,
-		chain:         chain,
-		accessTokens:  token,
-		txFeedTracker: txfeeds,
-		cpuMiner:      cpuMiner,
-		miningPool:    miningPool,
-
+		sync:            sync,
+		wallet:          wallet,
+		chain:           chain,
+		accessTokens:    token,
+		blockProposer:   blockProposer,
 		eventDispatcher: dispatcher,
 		notificationMgr: notificationMgr,
 	}
@@ -224,9 +217,6 @@ func (a *API) buildHandler() {
 		m.Handle("/get-mining-address", jsonHandler(a.getMiningAddress))
 		m.Handle("/set-mining-address", jsonHandler(a.setMiningAddress))
 
-		m.Handle("/get-coinbase-arbitrary", jsonHandler(a.getCoinbaseArbitrary))
-		m.Handle("/set-coinbase-arbitrary", jsonHandler(a.setCoinbaseArbitrary))
-
 		m.Handle("/create-asset", jsonHandler(a.createAsset))
 		m.Handle("/update-asset-alias", jsonHandler(a.updateAssetAlias))
 		m.Handle("/get-asset", jsonHandler(a.getAsset))
@@ -250,6 +240,7 @@ func (a *API) buildHandler() {
 
 		m.Handle("/list-balances", jsonHandler(a.listBalances))
 		m.Handle("/list-unspent-outputs", jsonHandler(a.listUnspentOutputs))
+		m.Handle("/list-account-votes", jsonHandler(a.listAccountVotes))
 
 		m.Handle("/decode-program", jsonHandler(a.decodeProgram))
 
@@ -270,11 +261,10 @@ func (a *API) buildHandler() {
 	m.Handle("/delete-access-token", jsonHandler(a.deleteAccessToken))
 	m.Handle("/check-access-token", jsonHandler(a.checkAccessToken))
 
-	m.Handle("/create-transaction-feed", jsonHandler(a.createTxFeed))
-	m.Handle("/get-transaction-feed", jsonHandler(a.getTxFeed))
-	m.Handle("/update-transaction-feed", jsonHandler(a.updateTxFeed))
-	m.Handle("/delete-transaction-feed", jsonHandler(a.deleteTxFeed))
-	m.Handle("/list-transaction-feeds", jsonHandler(a.listTxFeeds))
+	m.Handle("/create-contract", jsonHandler(a.createContract))
+	m.Handle("/update-contract-alias", jsonHandler(a.updateContractAlias))
+	m.Handle("/get-contract", jsonHandler(a.getContract))
+	m.Handle("/list-contracts", jsonHandler(a.listContracts))
 
 	m.Handle("/submit-transaction", jsonHandler(a.submit))
 	m.Handle("/submit-transactions", jsonHandler(a.submitTxs))
@@ -290,29 +280,22 @@ func (a *API) buildHandler() {
 	m.Handle("/get-block-hash", jsonHandler(a.getBestBlockHash))
 	m.Handle("/get-block-header", jsonHandler(a.getBlockHeader))
 	m.Handle("/get-block-count", jsonHandler(a.getBlockCount))
-	m.Handle("/get-difficulty", jsonHandler(a.getDifficulty))
-	m.Handle("/get-hash-rate", jsonHandler(a.getHashRate))
 
 	m.Handle("/is-mining", jsonHandler(a.isMining))
 	m.Handle("/set-mining", jsonHandler(a.setMining))
 
-	m.Handle("/get-work", jsonHandler(a.getWork))
-	m.Handle("/get-work-json", jsonHandler(a.getWorkJSON))
-	m.Handle("/submit-block", jsonHandler(a.submitBlock))
-	m.Handle("/submit-work", jsonHandler(a.submitWork))
-	m.Handle("/submit-work-json", jsonHandler(a.submitWorkJSON))
-
 	m.Handle("/verify-message", jsonHandler(a.verifyMessage))
-	m.Handle("/compile", jsonHandler(a.compileEquity))
 
 	m.Handle("/gas-rate", jsonHandler(a.gasRate))
 	m.Handle("/net-info", jsonHandler(a.getNetInfo))
+	m.Handle("/chain-status", jsonHandler(a.getChainStatus))
 
 	m.Handle("/list-peers", jsonHandler(a.listPeers))
 	m.Handle("/disconnect-peer", jsonHandler(a.disconnectPeer))
 	m.Handle("/connect-peer", jsonHandler(a.connectPeer))
 
 	m.Handle("/get-merkle-proof", jsonHandler(a.getMerkleProof))
+	m.Handle("/get-vote-result", jsonHandler(a.getVoteResult))
 
 	m.HandleFunc("/websocket-subscribe", a.websocketHandler)
 

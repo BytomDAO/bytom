@@ -1,4 +1,4 @@
-package db
+package leveldb
 
 import (
 	"testing"
@@ -23,7 +23,7 @@ func TestMemDbIterator(t *testing.T) {
 	i := 0
 	for iter.Next() {
 		assert.Equal(t, db.Get(iter.Key()), iter.Value(), "values dont match for key")
-		i += 1
+		i++
 	}
 	assert.Equal(t, i, len(db.db), "iterator didnt cover whole db")
 }

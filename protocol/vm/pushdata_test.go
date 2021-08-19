@@ -31,23 +31,6 @@ func TestPushdataOps(t *testing.T) {
 			dataStack: [][]byte{},
 		},
 		wantErr: ErrRunLimitExceeded,
-	}, {
-		op: OP_1NEGATE,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{},
-		},
-		wantVM: &virtualMachine{
-			runLimit:  49983,
-			dataStack: [][]byte{Int64Bytes(-1)},
-		},
-	}, {
-		op: OP_1NEGATE,
-		startVM: &virtualMachine{
-			runLimit:  1,
-			dataStack: [][]byte{},
-		},
-		wantErr: ErrRunLimitExceeded,
 	}}
 
 	pushdataops := []Op{OP_PUSHDATA1, OP_PUSHDATA2, OP_PUSHDATA4}
@@ -78,7 +61,7 @@ func TestPushdataOps(t *testing.T) {
 		})
 	}
 
-	pushops := append(pushdataops, OP_FALSE, OP_1NEGATE, OP_NOP)
+	pushops := append(pushdataops, OP_FALSE, OP_NOP)
 	for _, op := range pushops {
 		cases = append(cases, testStruct{
 			op: op,
@@ -112,19 +95,28 @@ func TestPushDataBytes(t *testing.T) {
 		data []byte
 		want []byte
 	}
-	cases := []test{{
-		data: nil,
-		want: []byte{byte(OP_0)},
-	}, {
-		data: make([]byte, 255),
-		want: append([]byte{byte(OP_PUSHDATA1), 0xff}, make([]byte, 255)...),
-	}, {
-		data: make([]byte, 1<<8),
-		want: append([]byte{byte(OP_PUSHDATA2), 0, 1}, make([]byte, 1<<8)...),
-	}, {
-		data: make([]byte, 1<<16),
-		want: append([]byte{byte(OP_PUSHDATA4), 0, 0, 1, 0}, make([]byte, 1<<16)...),
-	}}
+	cases := []test{
+		{
+			data: nil,
+			want: []byte{byte(OP_0)},
+		},
+		{
+			data: make([]byte, 255),
+			want: append([]byte{byte(OP_PUSHDATA1), 0xff}, make([]byte, 255)...),
+		},
+		{
+			data: make([]byte, 1<<8),
+			want: append([]byte{byte(OP_PUSHDATA2), 0, 1}, make([]byte, 1<<8)...),
+		},
+		{
+			data: make([]byte, 1<<16),
+			want: append([]byte{byte(OP_PUSHDATA4), 0, 0, 1, 0}, make([]byte, 1<<16)...),
+		},
+		{
+			data: make([]byte, 1<<16),
+			want: append([]byte{byte(OP_PUSHDATA4), 0, 0, 1, 0}, make([]byte, 1<<16)...),
+		},
+	}
 
 	for i := 1; i <= 75; i++ {
 		cases = append(cases, test{
@@ -134,21 +126,21 @@ func TestPushDataBytes(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		got := PushdataBytes(c.data)
+		got := PushDataBytes(c.data)
 
 		dl := len(c.data)
 		if dl > 10 {
 			dl = 10
 		}
 		if !bytes.Equal(got, c.want) {
-			t.Errorf("PushdataBytes(%x...) = %x...[%d] want %x...[%d]", c.data[:dl], got[:dl], len(got), c.want[:dl], len(c.want))
+			t.Errorf("PushDataBytes(%x...) = %x...[%d] want %x...[%d]", c.data[:dl], got[:dl], len(got), c.want[:dl], len(c.want))
 		}
 	}
 }
 
 func TestPushdataInt64(t *testing.T) {
 	type test struct {
-		num  int64
+		num  uint64
 		want []byte
 	}
 	cases := []test{{
@@ -163,26 +155,20 @@ func TestPushdataInt64(t *testing.T) {
 	}, {
 		num:  256,
 		want: []byte{byte(OP_DATA_2), 0x00, 0x01},
-	}, {
-		num:  -1,
-		want: []byte{byte(OP_DATA_8), 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
-	}, {
-		num:  -2,
-		want: []byte{byte(OP_DATA_8), 0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 	}}
 
 	for i := 1; i <= 16; i++ {
 		cases = append(cases, test{
-			num:  int64(i),
+			num:  uint64(i),
 			want: []byte{byte(OP_1) - 1 + byte(i)},
 		})
 	}
 
 	for _, c := range cases {
-		got := PushdataInt64(c.num)
+		got := PushDataUint64(c.num)
 
 		if !bytes.Equal(got, c.want) {
-			t.Errorf("PushdataInt64(%d) = %x want %x", c.num, got, c.want)
+			t.Errorf("PushDataInt64(%d) = %x want %x", c.num, got, c.want)
 		}
 	}
 }

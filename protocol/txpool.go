@@ -10,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/consensus/bcrp"
 	"github.com/bytom/bytom/event"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
@@ -44,12 +45,11 @@ type TxMsgEvent struct{ TxMsg *TxPoolMsg }
 
 // TxDesc store tx and related info for mining strategy
 type TxDesc struct {
-	Tx         *types.Tx `json:"transaction"`
-	Added      time.Time `json:"-"`
-	StatusFail bool      `json:"status_fail"`
-	Height     uint64    `json:"-"`
-	Weight     uint64    `json:"-"`
-	Fee        uint64    `json:"-"`
+	Tx     *types.Tx `json:"transaction"`
+	Added  time.Time `json:"-"`
+	Height uint64    `json:"-"`
+	Weight uint64    `json:"-"`
+	Fee    uint64    `json:"-"`
 }
 
 // TxPoolMsg is use for notify pool changes
@@ -67,7 +67,7 @@ type orphanTx struct {
 type TxPool struct {
 	lastUpdated     int64
 	mtx             sync.RWMutex
-	store           Store
+	store           state.Store
 	pool            map[bc.Hash]*TxDesc
 	utxo            map[bc.Hash]*types.Tx
 	orphans         map[bc.Hash]*orphanTx
@@ -77,7 +77,7 @@ type TxPool struct {
 }
 
 // NewTxPool init a new TxPool
-func NewTxPool(store Store, dispatcher *event.Dispatcher) *TxPool {
+func NewTxPool(store state.Store, dispatcher *event.Dispatcher) *TxPool {
 	tp := &TxPool{
 		lastUpdated:     time.Now().Unix(),
 		store:           store,
@@ -210,20 +210,30 @@ func isTransactionZeroOutput(tx *types.Tx) bool {
 	return false
 }
 
-func (tp *TxPool) IsDust(tx *types.Tx) bool {
-	return isTransactionNoBtmInput(tx) || isTransactionZeroOutput(tx)
+func isInvalidBCRPTx(tx *types.Tx) bool {
+	for _, output := range tx.TxData.Outputs {
+		if bcrp.IsBCRPScript(output.ControlProgram) {
+			if output.AssetId.String() != consensus.BTMAssetID.String() || output.Amount < consensus.BCRPRequiredBTMAmount {
+				return true
+			}
+		}
+	}
+	return false
 }
 
-func (tp *TxPool) processTransaction(tx *types.Tx, statusFail bool, height, fee uint64) (bool, error) {
+func (tp *TxPool) IsDust(tx *types.Tx) bool {
+	return isTransactionNoBtmInput(tx) || isTransactionZeroOutput(tx) || isInvalidBCRPTx(tx)
+}
+
+func (tp *TxPool) processTransaction(tx *types.Tx, height, fee uint64) (bool, error) {
 	tp.mtx.Lock()
 	defer tp.mtx.Unlock()
 
 	txD := &TxDesc{
-		Tx:         tx,
-		StatusFail: statusFail,
-		Weight:     tx.SerializedSize,
-		Height:     height,
-		Fee:        fee,
+		Tx:     tx,
+		Weight: tx.SerializedSize,
+		Height: height,
+		Fee:    fee,
 	}
 	requireParents, err := tp.checkOrphanUtxos(tx)
 	if err != nil {
@@ -243,12 +253,12 @@ func (tp *TxPool) processTransaction(tx *types.Tx, statusFail bool, height, fee 
 }
 
 // ProcessTransaction is the main entry for txpool handle new tx, ignore dust tx.
-func (tp *TxPool) ProcessTransaction(tx *types.Tx, statusFail bool, height, fee uint64) (bool, error) {
+func (tp *TxPool) ProcessTransaction(tx *types.Tx, height, fee uint64) (bool, error) {
 	if tp.IsDust(tx) {
 		log.WithFields(log.Fields{"module": logModule, "tx_id": tx.ID.String()}).Warn("dust tx")
 		return false, nil
 	}
-	return tp.processTransaction(tx, statusFail, height, fee)
+	return tp.processTransaction(tx, height, fee)
 }
 
 func (tp *TxPool) addOrphan(txD *TxDesc, requireParents []*bc.Hash) error {
@@ -276,14 +286,13 @@ func (tp *TxPool) addTransaction(txD *TxDesc) error {
 	txD.Added = time.Now()
 	tp.pool[tx.ID] = txD
 	for _, id := range tx.ResultIds {
-		output, err := tx.Output(*id)
+		_, err := tx.OriginalOutput(*id)
 		if err != nil {
 			// error due to it's a retirement, utxo doesn't care this output type so skip it
 			continue
 		}
-		if !txD.StatusFail || *output.Source.Value.AssetId == *consensus.BTMAssetID {
-			tp.utxo[*id] = tx
-		}
+
+		tp.utxo[*id] = tx
 	}
 
 	atomic.StoreInt64(&tp.lastUpdated, time.Now().Unix())

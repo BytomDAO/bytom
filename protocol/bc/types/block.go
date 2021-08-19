@@ -25,19 +25,38 @@ type Block struct {
 	Transactions []*Tx
 }
 
-// MarshalText fulfills the json.Marshaler interface. This guarantees that
-// blocks will get deserialized correctly when being parsed from HTTP requests.
-func (b *Block) MarshalText() ([]byte, error) {
+func (b *Block) marshalText(serflags uint8) ([]byte, error) {
 	buf := bufpool.Get()
 	defer bufpool.Put(buf)
 
-	if _, err := b.WriteTo(buf); err != nil {
+	ew := errors.NewWriter(buf)
+	if err := b.writeTo(ew, serflags); err != nil {
+		return nil, err
+	}
+
+	if err := ew.Err(); err != nil {
 		return nil, err
 	}
 
 	enc := make([]byte, hex.EncodedLen(buf.Len()))
 	hex.Encode(enc, buf.Bytes())
 	return enc, nil
+}
+
+// MarshalText fulfills the json.Marshaler interface. This guarantees that
+// blocks will get deserialized correctly when being parsed from HTTP requests.
+func (b *Block) MarshalText() ([]byte, error) {
+	return b.marshalText(SerBlockFull)
+}
+
+// MarshalTextForBlockHeader fulfills the json.Marshaler interface.
+func (b *Block) MarshalTextForBlockHeader() ([]byte, error) {
+	return b.marshalText(SerBlockHeader)
+}
+
+// MarshalTextForTransactions fulfills the json.Marshaler interface.
+func (b *Block) MarshalTextForTransactions() ([]byte, error) {
+	return b.marshalText(SerBlockTransactions)
 }
 
 // UnmarshalText fulfills the encoding.TextUnmarshaler interface.
@@ -59,12 +78,12 @@ func (b *Block) UnmarshalText(text []byte) error {
 }
 
 func (b *Block) readFrom(r *blockchain.Reader) error {
-	serflags, err := b.BlockHeader.readFrom(r)
+	serflag, err := b.BlockHeader.readFrom(r)
 	if err != nil {
 		return err
 	}
 
-	if serflags == SerBlockHeader {
+	if serflag == SerBlockHeader {
 		return nil
 	}
 
@@ -84,7 +103,7 @@ func (b *Block) readFrom(r *blockchain.Reader) error {
 	return nil
 }
 
-// WriteTo will write block to input io.Writer
+// WriteTo write block to io.Writer
 func (b *Block) WriteTo(w io.Writer) (int64, error) {
 	ew := errors.NewWriter(w)
 	if err := b.writeTo(ew, SerBlockFull); err != nil {

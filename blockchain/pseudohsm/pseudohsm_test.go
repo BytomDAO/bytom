@@ -1,13 +1,13 @@
 package pseudohsm
 
 import (
+	"crypto/ed25519"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
 
-	"github.com/bytom/bytom/crypto/ed25519"
 	"github.com/bytom/bytom/errors"
 )
 

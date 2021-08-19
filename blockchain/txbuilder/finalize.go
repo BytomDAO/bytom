@@ -5,7 +5,6 @@ import (
 	"context"
 
 	cfg "github.com/bytom/bytom/config"
-	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc/types"
@@ -31,16 +30,12 @@ var (
 // assembles a fully signed tx, and stores the effects of
 // its changes on the UTXO set.
 func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *types.Tx) error {
-	if fee := CalculateTxFee(tx); fee > cfg.CommonConfig.Wallet.MaxTxFee {
+	if tx.Fee() > cfg.CommonConfig.Wallet.MaxTxFee {
 		return ErrExtTxFee
 	}
 
 	if err := checkTxSighashCommitment(tx); err != nil {
 		return err
-	}
-
-	if len(tx.GasInputIDs) == 0 {
-		return ErrNoGasInput
 	}
 
 	// This part is use for prevent tx size  is 0
@@ -128,28 +123,4 @@ func checkTxSighashCommitment(tx *types.Tx) error {
 	}
 
 	return lastError
-}
-
-// CalculateTxFee calculate transaction fee
-func CalculateTxFee(tx *types.Tx) (fee uint64) {
-	totalInputBTM := uint64(0)
-	totalOutputBTM := uint64(0)
-
-	for _, input := range tx.Inputs {
-		if input.InputType() == types.CoinbaseInputType {
-			return 0
-		}
-		if input.AssetID() == *consensus.BTMAssetID {
-			totalInputBTM += input.Amount()
-		}
-	}
-
-	for _, output := range tx.Outputs {
-		if *output.AssetId == *consensus.BTMAssetID {
-			totalOutputBTM += output.Amount
-		}
-	}
-
-	fee = totalInputBTM - totalOutputBTM
-	return
 }

@@ -3,9 +3,8 @@ package chainkd
 import (
 	"bytes"
 	"crypto"
+	"crypto/ed25519"
 	"testing"
-
-	"github.com/bytom/bytom/crypto/ed25519"
 )
 
 // Testing basic InnerSign+Verify and the invariants:

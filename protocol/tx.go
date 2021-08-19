@@ -3,6 +3,7 @@ package protocol
 import (
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bytom/bytom/consensus/bcrp"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
@@ -12,11 +13,6 @@ import (
 
 // ErrBadTx is returned for transactions failing validation
 var ErrBadTx = errors.New("invalid transaction")
-
-// GetTransactionStatus return the transaction status of give block
-func (c *Chain) GetTransactionStatus(hash *bc.Hash) (*bc.TransactionStatus, error) {
-	return c.store.GetTransactionStatus(hash)
-}
 
 // GetTransactionsUtxo return all the utxos that related to the txs' inputs
 func (c *Chain) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) error {
@@ -37,15 +33,22 @@ func (c *Chain) ValidateTx(tx *types.Tx) (bool, error) {
 	}
 
 	bh := c.BestBlockHeader()
-	gasStatus, err := validation.ValidateTx(tx.Tx, types.MapBlock(&types.Block{BlockHeader: *bh}))
-	if !gasStatus.GasValid {
+	gasStatus, err := validation.ValidateTx(tx.Tx, types.MapBlock(&types.Block{BlockHeader: *bh}), c.ProgramConverter)
+	if err != nil {
+		log.WithFields(log.Fields{"module": logModule, "tx_id": tx.Tx.ID.String(), "error": err}).Info("transaction status fail")
 		c.txPool.AddErrCache(&tx.ID, err)
 		return false, err
 	}
 
+	return c.txPool.ProcessTransaction(tx, bh.Height, gasStatus.BTMValue)
+}
+
+//ProgramConverter convert program. Only for BCRP now
+func (c *Chain) ProgramConverter(prog []byte) ([]byte, error) {
+	hash, err := bcrp.ParseContractHash(prog)
 	if err != nil {
-		log.WithFields(log.Fields{"module": logModule, "tx_id": tx.Tx.ID.String(), "error": err}).Info("transaction status fail")
+		return nil, err
 	}
 
-	return c.txPool.ProcessTransaction(tx, err != nil, bh.Height, gasStatus.BTMValue)
+	return c.store.GetContract(hash)
 }

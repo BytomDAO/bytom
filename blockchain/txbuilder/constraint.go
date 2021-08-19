@@ -39,8 +39,8 @@ type payConstraint struct {
 
 func (p payConstraint) code() []byte {
 	builder := vmutil.NewBuilder()
-	builder.AddInt64(int64(p.Index))
-	builder.AddInt64(int64(p.Amount)).AddData(p.AssetId.Bytes()).AddInt64(1).AddData(p.Program)
+	builder.AddUint64(uint64(p.Index))
+	builder.AddUint64(uint64(p.Amount)).AddData(p.AssetId.Bytes()).AddUint64(1).AddData(p.Program)
 	builder.AddOp(vm.OP_CHECKOUTPUT)
 	prog, _ := builder.Build() // error is impossible
 	return prog

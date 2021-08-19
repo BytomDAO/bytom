@@ -59,6 +59,7 @@ var testCases = []struct {
 }
 
 func TestQueryDNSSeeds(t *testing.T) {
+	t.Skip()
 	for i, tc := range testCases {
 		consensus.ActiveNetParams = consensus.NetParams[tc.chainID]
 		addresses, err := QueryDNSSeeds(tc.lookupHost)

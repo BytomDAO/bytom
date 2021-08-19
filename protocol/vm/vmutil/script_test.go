@@ -1,10 +1,10 @@
 package vmutil
 
 import (
+	"crypto/ed25519"
 	"encoding/hex"
 	"testing"
 
-	"github.com/bytom/bytom/crypto/ed25519"
 	"github.com/bytom/bytom/errors"
 )
 
@@ -107,7 +107,7 @@ func TestP2SPMultiSigProgramWithHeight(t *testing.T) {
 	tests := []struct {
 		pubkeys     []ed25519.PublicKey
 		nrequired   int
-		height      int64
+		height      uint64
 		wantProgram string
 		wantErr     error
 	}{
@@ -125,12 +125,6 @@ func TestP2SPMultiSigProgramWithHeight(t *testing.T) {
 			pubkeys:     []ed25519.PublicKey{pub1, pub2, pub3},
 			nrequired:   2,
 			wantProgram: "ae20988650ff921c82d47a953527894f792572ba63197c56e5fe79e5df0c444d6bb6207192bf4eac0789ee19c88dfa87861cf59e215820f7bdb7be02761d9ed92e6c62208bcd251d9f4e03877130b6e6f1d577eda562375f07c3cdfad8f1d541002fd1a35253ad",
-		},
-		{
-			pubkeys:   []ed25519.PublicKey{pub1},
-			nrequired: 1,
-			height:    -1,
-			wantErr:   errors.WithDetail(ErrBadValue, "negative blockHeight"),
 		},
 		{
 			pubkeys:     []ed25519.PublicKey{pub1},
@@ -192,7 +186,7 @@ func TestP2SPMultiSigProgramWithHeight(t *testing.T) {
 func TestGetIssuanceProgramRestrictHeight(t *testing.T) {
 	tests := []struct {
 		issuanceProgram string
-		wantHeight      int64
+		wantHeight      uint64
 	}{
 		{
 			issuanceProgram: "",
@@ -206,6 +200,10 @@ func TestGetIssuanceProgramRestrictHeight(t *testing.T) {
 			issuanceProgram: "01c8cda069ae20f44dd85be89de08b0f894476ccc7b3eebcf0a288c79504fa7e4c8033f5b7338020c86dc682ce3ecac64e165d9b5f8cca9ee05bd0d4df07adbfd11251ad7e88f1685152ad",
 			wantHeight:      200,
 		},
+		{
+			issuanceProgram: "08c8c8c8c8c8c8c8c8cda069ae20f44dd85be89de08b0f894476ccc7b3eebcf0a288c79504fa7e4c8033f5b7338020c86dc682ce3ecac64e165d9b5f8cca9ee05bd0d4df07adbfd11251ad7e88f1685152ad",
+			wantHeight:      14468034567615334600,
+		},
 	}
 
 	for i, test := range tests {
@@ -217,6 +215,73 @@ func TestGetIssuanceProgramRestrictHeight(t *testing.T) {
 		gotHeight := GetIssuanceProgramRestrictHeight(program)
 		if gotHeight != test.wantHeight {
 			t.Errorf("TestGetIssuanceProgramRestrictHeight #%d failed: got %d want %d", i, gotHeight, test.wantHeight)
+		}
+	}
+}
+
+func TestRegisterProgram(t *testing.T) {
+	tests := []struct {
+		contract string
+		expected string
+	}{
+		{
+			// len(contract) == 40
+			contract: "20e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c0",
+			expected: "6a046263727001012820e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c0",
+		},
+		{
+			// len(contract) == 150
+			contract: "20e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c020e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e78740320e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c020e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403",
+			expected: "6a046263727001014c9620e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c020e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e78740320e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c020e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403",
+		},
+		{
+			// len(contract) == 300
+			contract: "20e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c020e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e78740320e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c020e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e78740320e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c020e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e78740320e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c020e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403",
+			expected: "6a046263727001014d2c0120e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c020e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e78740320e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c020e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e78740320e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c020e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e78740320e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c020e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403",
+		},
+	}
+
+	for _, test := range tests {
+		contract, err := hex.DecodeString(test.contract)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		program, err := RegisterProgram(contract)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if hex.EncodeToString(program) != test.expected {
+			t.Errorf("got program data: %s, expect program data: %s", hex.EncodeToString(program), test.expected)
+		}
+	}
+}
+
+func TestCallContractProgram(t *testing.T) {
+	tests := []struct {
+		contractID string
+		expected   string
+	}{
+		{
+			contractID: "4e4f02d43bf50171f7f25d046b7f016002da410fc00d2e8902e7b170c98cf946",
+			expected:   "0462637270204e4f02d43bf50171f7f25d046b7f016002da410fc00d2e8902e7b170c98cf946",
+		},
+	}
+
+	for _, test := range tests {
+		contractID, err := hex.DecodeString(test.contractID)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		program, err := CallContractProgram(contractID)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if hex.EncodeToString(program) != test.expected {
+			t.Errorf("got program data: %s, expect program data: %s", hex.EncodeToString(program), test.expected)
 		}
 	}
 }

@@ -1,7 +1,9 @@
 package vmutil
 
 import (
-	"github.com/bytom/bytom/crypto/ed25519"
+	"crypto/ed25519"
+
+	"github.com/bytom/bytom/consensus/bcrp"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/vm"
 )
@@ -26,9 +28,9 @@ func (b *Builder) addP2SPMultiSig(pubkeys []ed25519.PublicKey, nrequired int) er
 	for _, p := range pubkeys {
 		b.AddData(p)
 	}
-	b.AddInt64(int64(nrequired))    // stack is now [... SIG SIG SIG PREDICATEHASH PUB PUB PUB M]
-	b.AddInt64(int64(len(pubkeys))) // stack is now [... SIG SIG SIG PREDICATEHASH PUB PUB PUB M N]
-	b.AddOp(vm.OP_CHECKMULTISIG)    // stack is now [... NARGS]
+	b.AddUint64(uint64(nrequired))    // stack is now [... SIG SIG SIG PREDICATEHASH PUB PUB PUB M]
+	b.AddUint64(uint64(len(pubkeys))) // stack is now [... SIG SIG SIG PREDICATEHASH PUB PUB PUB M N]
+	b.AddOp(vm.OP_CHECKMULTISIG)      // stack is now [... NARGS]
 	return nil
 }
 
@@ -42,7 +44,7 @@ func DefaultCoinbaseProgram() ([]byte, error) {
 // P2WPKHProgram return the segwit pay to public key hash
 func P2WPKHProgram(hash []byte) ([]byte, error) {
 	builder := NewBuilder()
-	builder.AddInt64(0)
+	builder.AddUint64(0)
 	builder.AddData(hash)
 	return builder.Build()
 }
@@ -50,7 +52,7 @@ func P2WPKHProgram(hash []byte) ([]byte, error) {
 // P2WSHProgram return the segwit pay to script hash
 func P2WSHProgram(hash []byte) ([]byte, error) {
 	builder := NewBuilder()
-	builder.AddInt64(0)
+	builder.AddUint64(0)
 	builder.AddData(hash)
 	return builder.Build()
 }
@@ -62,6 +64,26 @@ func RetireProgram(comment []byte) ([]byte, error) {
 	if len(comment) != 0 {
 		builder.AddData(comment)
 	}
+	return builder.Build()
+}
+
+// RegisterProgram generates the script for register contract output
+// follow BCRP(bytom contract register protocol)
+func RegisterProgram(contract []byte) ([]byte, error) {
+	builder := NewBuilder()
+	builder.AddOp(vm.OP_FAIL)
+	builder.AddData([]byte(bcrp.BCRP))
+	builder.AddData([]byte{byte(bcrp.Version)})
+	builder.AddData(contract)
+	return builder.Build()
+}
+
+// CallContractProgram generates the script for control contract output
+// follow BCRP(bytom contract register protocol)
+func CallContractProgram(hash []byte) ([]byte, error) {
+	builder := NewBuilder()
+	builder.AddData([]byte(bcrp.BCRP))
+	builder.AddData(hash)
 	return builder.Build()
 }
 
@@ -85,9 +107,9 @@ func P2SHProgram(scriptHash []byte) ([]byte, error) {
 	builder.AddOp(vm.OP_SHA3)
 	builder.AddData(scriptHash)
 	builder.AddOp(vm.OP_EQUALVERIFY)
-	builder.AddInt64(-1)
+	builder.AddUint64(0)
 	builder.AddOp(vm.OP_SWAP)
-	builder.AddInt64(0)
+	builder.AddUint64(0)
 	builder.AddOp(vm.OP_CHECKPREDICATE)
 	return builder.Build()
 }
@@ -102,16 +124,15 @@ func P2SPMultiSigProgram(pubkeys []ed25519.PublicKey, nrequired int) ([]byte, er
 }
 
 // P2SPMultiSigProgramWithHeight generates the script with block height for control transaction output
-func P2SPMultiSigProgramWithHeight(pubkeys []ed25519.PublicKey, nrequired int, blockHeight int64) ([]byte, error) {
+func P2SPMultiSigProgramWithHeight(pubkeys []ed25519.PublicKey, nrequired int, blockHeight uint64) ([]byte, error) {
 	builder := NewBuilder()
 	if blockHeight > 0 {
-		builder.AddInt64(blockHeight)
+		builder.AddUint64(blockHeight)
 		builder.AddOp(vm.OP_BLOCKHEIGHT)
 		builder.AddOp(vm.OP_GREATERTHAN)
 		builder.AddOp(vm.OP_VERIFY)
-	} else if blockHeight < 0 {
-		return nil, errors.WithDetail(ErrBadValue, "negative blockHeight")
 	}
+
 	if err := builder.addP2SPMultiSig(pubkeys, nrequired); err != nil {
 		return nil, err
 	}
@@ -136,15 +157,20 @@ func checkMultiSigParams(nrequired, npubkeys int64) error {
 
 // GetIssuanceProgramRestrictHeight return issuance program restrict height
 // if height invalid return 0
-func GetIssuanceProgramRestrictHeight(program []byte) int64 {
+func GetIssuanceProgramRestrictHeight(program []byte) uint64 {
 	insts, err := vm.ParseProgram(program)
 	if err != nil {
 		return 0
 	}
 
 	if len(insts) >= 4 && insts[0].IsPushdata() && insts[1].Op == vm.OP_BLOCKHEIGHT && insts[2].Op == vm.OP_GREATERTHAN && insts[3].Op == vm.OP_VERIFY {
-		height, err := vm.AsInt64(insts[0].Data)
+		heightInt, err := vm.AsBigInt(insts[0].Data)
 		if err != nil {
+			return 0
+		}
+
+		height, overflow := heightInt.Uint64WithOverflow()
+		if overflow {
 			return 0
 		}
 

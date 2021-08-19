@@ -4,10 +4,10 @@ import (
 	"net"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
 
 	cfg "github.com/bytom/bytom/config"
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/p2p/connection"
 	"github.com/bytom/bytom/p2p/discover/dht"
@@ -73,7 +73,7 @@ func Connect2Switches(switches []*Switch, i, j int) {
 
 func startSwitches(switches []*Switch) error {
 	for _, s := range switches {
-		_, err := s.Start() // start switch and reactors
+		err := s.Start() // start switch and reactors
 		if err != nil {
 			return err
 		}
@@ -88,7 +88,7 @@ func (m *mockDiscv) ReadRandomNodes(buf []*dht.Node) (n int) {
 	return 0
 }
 
-func MakeSwitch(cfg *cfg.Config, testdb dbm.DB, privKey crypto.PrivKeyEd25519, initSwitch func(*Switch) *Switch) *Switch {
+func MakeSwitch(cfg *cfg.Config, testdb dbm.DB, privKey chainkd.XPrv, initSwitch func(*Switch) *Switch) *Switch {
 	// new switch, add reactors
 	l, listenAddr := GetListener(cfg.P2P)
 	cfg.P2P.LANDiscover = false

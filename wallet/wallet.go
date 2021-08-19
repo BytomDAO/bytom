@@ -9,6 +9,7 @@ import (
 	"github.com/bytom/bytom/account"
 	"github.com/bytom/bytom/asset"
 	"github.com/bytom/bytom/blockchain/pseudohsm"
+	"github.com/bytom/bytom/contract"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/event"
@@ -48,6 +49,7 @@ type Wallet struct {
 	TxIndexFlag     bool
 	AccountMgr      *account.Manager
 	AssetReg        *asset.Registry
+	ContractReg     *contract.Registry
 	Hsm             *pseudohsm.HSM
 	chain           *protocol.Chain
 	RecoveryMgr     *recoveryManager
@@ -58,11 +60,12 @@ type Wallet struct {
 }
 
 //NewWallet return a new wallet instance
-func NewWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) (*Wallet, error) {
+func NewWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry, contract *contract.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) (*Wallet, error) {
 	w := &Wallet{
 		DB:              walletDB,
 		AccountMgr:      account,
 		AssetReg:        asset,
+		ContractReg:     contract,
 		chain:           chain,
 		Hsm:             hsm,
 		RecoveryMgr:     newRecoveryManager(walletDB, account),
@@ -178,23 +181,17 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 		return nil
 	}
 
-	blockHash := block.Hash()
-	txStatus, err := w.chain.GetTransactionStatus(&blockHash)
-	if err != nil {
-		return err
-	}
-
 	if err := w.RecoveryMgr.FilterRecoveryTxs(block); err != nil {
 		log.WithField("err", err).Error("filter recovery txs")
 		w.RecoveryMgr.finished()
 	}
 
 	storeBatch := w.DB.NewBatch()
-	if err := w.indexTransactions(storeBatch, block, txStatus); err != nil {
+	if err := w.indexTransactions(storeBatch, block); err != nil {
 		return err
 	}
 
-	w.attachUtxos(storeBatch, block, txStatus)
+	w.attachUtxos(storeBatch, block)
 	w.status.WorkHeight = block.Height
 	w.status.WorkHash = block.Hash()
 	if w.status.WorkHeight >= w.status.BestHeight {
@@ -209,14 +206,8 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 	w.rw.Lock()
 	defer w.rw.Unlock()
 
-	blockHash := block.Hash()
-	txStatus, err := w.chain.GetTransactionStatus(&blockHash)
-	if err != nil {
-		return err
-	}
-
 	storeBatch := w.DB.NewBatch()
-	w.detachUtxos(storeBatch, block, txStatus)
+	w.detachUtxos(storeBatch, block)
 	w.deleteTransactions(storeBatch, w.status.BestHeight)
 
 	w.status.BestHeight = block.Height - 1

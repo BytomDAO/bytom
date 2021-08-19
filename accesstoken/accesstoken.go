@@ -10,9 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bytom/bytom/crypto/sha3pool"
-	"github.com/bytom/bytom/errors"
 	dbm "github.com/bytom/bytom/database/leveldb"
+	"github.com/bytom/bytom/errors"
 )
 
 const tokenSize = 32
@@ -70,12 +69,9 @@ func (cs *CredentialStore) Create(id, typ string) (*Token, error) {
 		return nil, err
 	}
 
-	hashedSecret := make([]byte, tokenSize)
-	sha3pool.Sum256(hashedSecret, secret)
-
 	token := &Token{
 		ID:      id,
-		Token:   fmt.Sprintf("%s:%x", id, hashedSecret),
+		Token:   fmt.Sprintf("%s:%x", id, secret),
 		Type:    typ,
 		Created: time.Now(),
 	}
@@ -84,32 +80,28 @@ func (cs *CredentialStore) Create(id, typ string) (*Token, error) {
 	if err != nil {
 		return nil, err
 	}
-	cs.DB.Set(key, value)
 
+	cs.DB.Set(key, value)
 	return token, nil
 }
 
 // Check returns whether or not an id-secret pair is a valid access token.
 func (cs *CredentialStore) Check(id string, secret string) error {
-	if !validIDRegexp.MatchString(id) {
-		return errors.WithDetailf(ErrBadID, "invalid id %q", id)
-	}
-
-	var value []byte
-	token := &Token{}
-
-	if value = cs.DB.Get([]byte(id)); value == nil {
+	value := cs.DB.Get([]byte(id))
+	if value == nil {
 		return errors.WithDetailf(ErrNoMatchID, "check id %q nonexisting", id)
 	}
+
+	token := &Token{}
 	if err := json.Unmarshal(value, token); err != nil {
 		return err
 	}
 
-	if strings.Split(token.Token, ":")[1] == secret {
-		return nil
+	if splitStrings := strings.Split(token.Token, ":"); len(splitStrings) != 2 || splitStrings[1] != secret {
+		return ErrInvalidToken
 	}
 
-	return ErrInvalidToken
+	return nil
 }
 
 // List lists all access tokens.
@@ -123,21 +115,13 @@ func (cs *CredentialStore) List() ([]*Token, error) {
 		if err := json.Unmarshal(iter.Value(), token); err != nil {
 			return nil, err
 		}
+
 		tokens = append(tokens, token)
 	}
 	return tokens, nil
 }
 
 // Delete deletes an access token by id.
-func (cs *CredentialStore) Delete(id string) error {
-	if !validIDRegexp.MatchString(id) {
-		return errors.WithDetailf(ErrBadID, "invalid id %q", id)
-	}
-
-	if value := cs.DB.Get([]byte(id)); value == nil {
-		return errors.WithDetailf(ErrNoMatchID, "check id %q", id)
-	}
-
+func (cs *CredentialStore) Delete(id string) {
 	cs.DB.Delete([]byte(id))
-	return nil
 }

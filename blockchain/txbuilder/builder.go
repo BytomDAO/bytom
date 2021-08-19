@@ -45,6 +45,11 @@ func (b *TemplateBuilder) AddOutput(o *types.TxOutput) error {
 	return nil
 }
 
+// Outputs return outputs of transactions
+func (b *TemplateBuilder) Outputs() []*types.TxOutput {
+	return b.outputs
+}
+
 // InputCount return number of input in the template builder
 func (b *TemplateBuilder) InputCount() int {
 	return len(b.inputs)
@@ -132,6 +137,6 @@ func (b *TemplateBuilder) Build() (*Template, *types.TxData, error) {
 	}
 
 	tpl.Transaction = types.NewTx(*tx)
-	tpl.Fee = CalculateTxFee(tpl.Transaction)
+	tpl.Fee = tx.Fee()
 	return tpl, tx, nil
 }

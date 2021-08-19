@@ -62,6 +62,7 @@ func ComputeAssetID(prog []byte, vmVersion uint64, data *Hash) AssetID {
 		},
 		Data: data,
 	}
+
 	return def.ComputeAssetID()
 }
 
@@ -71,6 +72,7 @@ func (a *AssetAmount) ReadFrom(r *blockchain.Reader) (err error) {
 	if _, err = assetID.ReadFrom(r); err != nil {
 		return err
 	}
+
 	a.AssetId = &assetID
 	a.Amount, err = blockchain.ReadVarint63(r)
 	return err
@@ -82,6 +84,7 @@ func (a AssetAmount) WriteTo(w io.Writer) (int64, error) {
 	if err != nil {
 		return n, err
 	}
+
 	n2, err := blockchain.WriteVarint63(w, a.Amount)
 	return n + int64(n2), err
 }
@@ -91,8 +94,10 @@ func (a *AssetAmount) Equal(other *AssetAmount) (eq bool, err error) {
 	if a == nil || other == nil {
 		return false, errors.New("empty asset amount")
 	}
+
 	if a.AssetId == nil || other.AssetId == nil {
 		return false, errors.New("empty asset id")
 	}
+
 	return a.Amount == other.Amount && *a.AssetId == *other.AssetId, nil
 }

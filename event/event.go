@@ -20,11 +20,11 @@ const (
 var (
 	// ErrMuxClosed is returned when Posting on a closed TypeMux.
 	ErrMuxClosed = errors.New("event: mux closed")
-	//ErrDuplicateSubscribe is returned when subscribe duplicate type
+	// ErrDuplicateSubscribe is returned when subscribe duplicate type
 	ErrDuplicateSubscribe = errors.New("event: subscribe duplicate type")
 )
 
-type NewMinedBlockEvent struct{ Block types.Block }
+type NewProposedBlockEvent struct{ Block types.Block }
 
 // TypeMuxEvent is a time-tagged notification pushed to subscribers.
 type TypeMuxEvent struct {

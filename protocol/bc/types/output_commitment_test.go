@@ -21,23 +21,25 @@ func TestReadWriteOutputCommitment(t *testing.T) {
 				AssetAmount:    bc.AssetAmount{AssetId: &btmAssetID, Amount: 100},
 				VMVersion:      1,
 				ControlProgram: testutil.MustDecodeHexString("00140876db6ca8f4542a836f0edd42b87d095d081182"),
+				StateData:      [][]byte{[]byte("stateData1")},
 			},
-			encodeString: "39ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff64011600140876db6ca8f4542a836f0edd42b87d095d081182",
+			encodeString: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff64011600140876db6ca8f4542a836f0edd42b87d095d081182010a73746174654461746131",
 		},
 		{
 			oc: &OutputCommitment{
 				AssetAmount:    bc.AssetAmount{AssetId: &btmAssetID, Amount: 50},
 				VMVersion:      1,
 				ControlProgram: testutil.MustDecodeHexString("00148bf7800b2333afd8414d6e903d58c4908b9bbcc7"),
+				StateData:      [][]byte{[]byte("stateData2")},
 			},
-			encodeString: "39ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff32011600148bf7800b2333afd8414d6e903d58c4908b9bbcc7",
+			encodeString: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff32011600148bf7800b2333afd8414d6e903d58c4908b9bbcc7010a73746174654461746132",
 		},
 	}
 
 	for _, c := range cases {
 		buff := []byte{}
 		buffer := bytes.NewBuffer(buff)
-		if err := c.oc.writeExtensibleString(buffer, nil, 1); err != nil {
+		if err := c.oc.writeTo(buffer, 1); err != nil {
 			t.Fatal(err)
 		}
 
@@ -47,8 +49,7 @@ func TestReadWriteOutputCommitment(t *testing.T) {
 		}
 
 		oc := &OutputCommitment{}
-		_, err := oc.readFrom(blockchain.NewReader(buffer.Bytes()), 1)
-		if err != nil {
+		if err := oc.readFrom(blockchain.NewReader(buffer.Bytes()), 1); err != nil {
 			t.Fatal(err)
 		}
 

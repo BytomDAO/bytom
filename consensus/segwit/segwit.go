@@ -31,7 +31,7 @@ func IsP2WPKHScript(prog []byte) bool {
 	if len(insts) != 2 {
 		return false
 	}
-	if insts[0].Op > vm.OP_16 {
+	if insts[0].Op != vm.OP_0 {
 		return false
 	}
 	return insts[1].Op == vm.OP_DATA_20 && len(insts[1].Data) == consensus.PayToWitnessPubKeyHashDataSize
@@ -45,7 +45,7 @@ func IsP2WSHScript(prog []byte) bool {
 	if len(insts) != 2 {
 		return false
 	}
-	if insts[0].Op > vm.OP_16 {
+	if insts[0].Op != vm.OP_0 {
 		return false
 	}
 	return insts[1].Op == vm.OP_DATA_32 && len(insts[1].Data) == consensus.PayToWitnessScriptHashDataSize

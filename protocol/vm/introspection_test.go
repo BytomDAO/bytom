@@ -106,8 +106,9 @@ func TestIntrospectionOps(t *testing.T) {
 				{1},
 				[]byte("missingprog"),
 			},
+			altStack: [][]byte{[]byte("statedata")},
 			context: &Context{
-				CheckOutput: func(uint64, uint64, []byte, uint64, []byte, bool) (bool, error) {
+				CheckOutput: func(uint64, uint64, []byte, uint64, []byte, [][]byte, bool) (bool, error) {
 					return false, nil
 				},
 			},
@@ -116,49 +117,8 @@ func TestIntrospectionOps(t *testing.T) {
 			runLimit:     50062,
 			deferredCost: -78,
 			dataStack:    [][]byte{{}},
+			altStack:     [][]byte{[]byte("statedata")},
 		},
-	}, {
-		op: OP_CHECKOUTPUT,
-		startVM: &virtualMachine{
-			dataStack: [][]byte{
-				{4},
-				mustDecodeHex("1f2a05f881ed9fa0c9068a84823677409f863891a2196eb55dbfbb677a566374"),
-				{7},
-				append([]byte{2}, make([]byte, 31)...),
-				Int64Bytes(-1),
-				[]byte("controlprog"),
-			},
-			context: &Context{},
-		},
-		wantErr: ErrBadValue,
-	}, {
-		op: OP_CHECKOUTPUT,
-		startVM: &virtualMachine{
-			dataStack: [][]byte{
-				{4},
-				mustDecodeHex("1f2a05f881ed9fa0c9068a84823677409f863891a2196eb55dbfbb677a566374"),
-				Int64Bytes(-1),
-				append([]byte{2}, make([]byte, 31)...),
-				{1},
-				[]byte("controlprog"),
-			},
-			context: &Context{},
-		},
-		wantErr: ErrBadValue,
-	}, {
-		op: OP_CHECKOUTPUT,
-		startVM: &virtualMachine{
-			dataStack: [][]byte{
-				Int64Bytes(-1),
-				mustDecodeHex("1f2a05f881ed9fa0c9068a84823677409f863891a2196eb55dbfbb677a566374"),
-				{7},
-				append([]byte{2}, make([]byte, 31)...),
-				{1},
-				[]byte("controlprog"),
-			},
-			context: &Context{},
-		},
-		wantErr: ErrBadValue,
 	}, {
 		op: OP_CHECKOUTPUT,
 		startVM: &virtualMachine{
@@ -170,8 +130,9 @@ func TestIntrospectionOps(t *testing.T) {
 				{1},
 				[]byte("controlprog"),
 			},
+			altStack: [][]byte{[]byte("statedata")},
 			context: &Context{
-				CheckOutput: func(uint64, uint64, []byte, uint64, []byte, bool) (bool, error) {
+				CheckOutput: func(uint64, uint64, []byte, uint64, []byte, [][]byte, bool) (bool, error) {
 					return false, ErrBadValue
 				},
 			},
@@ -189,7 +150,8 @@ func TestIntrospectionOps(t *testing.T) {
 				{1},
 				[]byte("controlprog"),
 			},
-			context: &Context{},
+			altStack: [][]byte{[]byte("statedata")},
+			context:  &Context{},
 		},
 		wantErr: ErrRunLimitExceeded,
 	}, {

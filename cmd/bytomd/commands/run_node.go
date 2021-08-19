@@ -2,7 +2,6 @@ package commands
 
 import (
 	"strings"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -22,8 +21,6 @@ func init() {
 	runNodeCmd.Flags().String("prof_laddr", config.ProfListenAddress, "Use http to profile bytomd programs")
 	runNodeCmd.Flags().Bool("mining", config.Mining, "Enable mining")
 
-	runNodeCmd.Flags().Bool("simd.enable", config.Simd.Enable, "Enable SIMD mechan for tensority")
-
 	runNodeCmd.Flags().Bool("auth.disable", config.Auth.Disable, "Disable rpc access authenticate")
 
 	runNodeCmd.Flags().Bool("wallet.disable", config.Wallet.Disable, "Disable wallet")
@@ -39,7 +36,6 @@ func init() {
 	// p2p flags
 	runNodeCmd.Flags().String("p2p.laddr", config.P2P.ListenAddress, "Node listen address. (0.0.0.0:0 means any interface, any port)")
 	runNodeCmd.Flags().String("p2p.seeds", config.P2P.Seeds, "Comma delimited host:port seed nodes")
-	runNodeCmd.Flags().String("p2p.node_key", config.P2P.PrivateKey, "Node key for p2p communication")
 	runNodeCmd.Flags().Bool("p2p.skip_upnp", config.P2P.SkipUPNP, "Skip UPNP configuration")
 	runNodeCmd.Flags().Bool("p2p.lan_discoverable", config.P2P.LANDiscover, "Whether the node can be discovered by nodes in the LAN")
 	runNodeCmd.Flags().Int("p2p.max_num_peers", config.P2P.MaxNumPeers, "Set max num peers")
@@ -78,22 +74,22 @@ func setLogLevel(level string) {
 }
 
 func runNode(cmd *cobra.Command, args []string) error {
-	startTime := time.Now()
+	// startTime := time.Now()
 	setLogLevel(config.LogLevel)
 
 	// Create & start node
 	n := node.NewNode(config)
-	if _, err := n.Start(); err != nil {
+	if err := n.Start(); err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Fatal("failed to start node")
 	}
 
-	nodeInfo := n.NodeInfo()
-	log.WithFields(log.Fields{
-		"module":   logModule,
-		"version":  nodeInfo.Version,
-		"network":  nodeInfo.Network,
-		"duration": time.Since(startTime),
-	}).Info("start node complete")
+	// nodeInfo := n.NodeInfo()
+	// log.WithFields(log.Fields{
+	// 	"module":   logModule,
+	// 	"version":  nodeInfo,
+	// 	"network":  nodeInfo.Network,
+	// 	"duration": time.Since(startTime),
+	// }).Info("start node complete")
 
 	// Trap signal, run forever.
 	n.RunForever()

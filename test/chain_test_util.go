@@ -8,13 +8,13 @@ import (
 	"github.com/bytom/bytom/blockchain/txbuilder"
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/database"
+	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/vm"
 	"github.com/golang/protobuf/proto"
-	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 const utxoPrefix = "UT:"
@@ -43,20 +43,6 @@ func (ctx *chainTestContext) validateStatus(block *types.Block) error {
 		return fmt.Errorf("chain status error")
 	}
 
-	// validate tx status
-	txStatus, err := ctx.Chain.GetTransactionStatus(&blockHash)
-	if err != nil {
-		return err
-	}
-
-	txStatusMerkleRoot, err := types.TxStatusMerkleRoot(txStatus.VerifyStatus)
-	if err != nil {
-		return err
-	}
-
-	if txStatusMerkleRoot != block.TransactionStatusHash {
-		return fmt.Errorf("tx status error")
-	}
 	return nil
 }
 
@@ -67,7 +53,7 @@ func (ctx *chainTestContext) validateExecution(block *types.Block) error {
 			if utxoEntry == nil {
 				continue
 			}
-			if !utxoEntry.IsCoinBase {
+			if utxoEntry.Type != storage.CoinbaseUTXOType {
 				return fmt.Errorf("found non-coinbase spent utxo entry")
 			}
 			if !utxoEntry.Spent {
@@ -208,7 +194,7 @@ func (t *ctTransaction) createTransaction(ctx *chainTestContext, txs []*types.Tx
 	}
 
 	for _, amount := range t.Outputs {
-		output := types.NewTxOutput(*consensus.BTMAssetID, amount, []byte{byte(vm.OP_TRUE)})
+		output := types.NewOriginalTxOutput(*consensus.BTMAssetID, amount, []byte{byte(vm.OP_TRUE)}, nil)
 		if err := builder.AddOutput(output); err != nil {
 			return nil, err
 		}
@@ -249,7 +235,7 @@ func (cfg *chainTestConfig) Run() error {
 		if err != nil {
 			return err
 		}
-		err = SolveAndUpdate(ctx.Chain, block)
+		_, err = ctx.Chain.ProcessBlock(block)
 		if err != nil && blk.Invalid {
 			continue
 		}
@@ -297,5 +283,6 @@ func isSpent(hash *bc.Hash, block *types.Block) bool {
 			}
 		}
 	}
+
 	return false
 }

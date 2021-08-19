@@ -2,6 +2,7 @@ package txbuilder
 
 import (
 	"context"
+	"crypto/ed25519"
 	"encoding/hex"
 	"encoding/json"
 	"math"
@@ -14,7 +15,6 @@ import (
 	"github.com/bytom/bytom/common"
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/crypto"
-	"github.com/bytom/bytom/crypto/ed25519"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	chainjson "github.com/bytom/bytom/encoding/json"
 	"github.com/bytom/bytom/errors"
@@ -28,14 +28,14 @@ import (
 type testAction bc.AssetAmount
 
 func (t testAction) Build(ctx context.Context, b *TemplateBuilder) error {
-	in := types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), *t.AssetId, t.Amount, 0, nil)
+	in := types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), *t.AssetId, t.Amount, 0, nil, nil)
 	tplIn := &SigningInstruction{}
 
 	err := b.AddInput(in, tplIn)
 	if err != nil {
 		return err
 	}
-	return b.AddOutput(types.NewTxOutput(*t.AssetId, t.Amount, []byte("change")))
+	return b.AddOutput(types.NewOriginalTxOutput(*t.AssetId, t.Amount, []byte("change"), nil))
 }
 
 func (t testAction) ActionType() string {
@@ -69,11 +69,11 @@ func TestBuild(t *testing.T) {
 		Transaction: types.NewTx(types.TxData{
 			Version: 1,
 			Inputs: []*types.TxInput{
-				types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), assetID1, 5, 0, nil),
+				types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), assetID1, 5, 0, nil, nil),
 			},
 			Outputs: []*types.TxOutput{
-				types.NewTxOutput(assetID2, 6, []byte("dest")),
-				types.NewTxOutput(assetID1, 5, []byte("change")),
+				types.NewOriginalTxOutput(assetID2, 6, []byte("dest"), nil),
+				types.NewOriginalTxOutput(assetID1, 5, []byte("change"), nil),
 			},
 		}),
 		SigningInstructions: []*SigningInstruction{{
@@ -112,7 +112,7 @@ func TestSignatureWitnessMaterialize(t *testing.T) {
 			types.NewIssuanceInput([]byte{1}, 100, issuanceProg, nil, nil),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(assetID, 100, outscript),
+			types.NewOriginalTxOutput(assetID, 100, outscript, nil),
 		},
 	})
 
@@ -129,7 +129,7 @@ func TestSignatureWitnessMaterialize(t *testing.T) {
 	sig2 := privkey2.Sign(msg[:])
 	sig3 := privkey3.Sign(msg[:])
 	want := [][]byte{
-		vm.Int64Bytes(0),
+		vm.Uint64Bytes(0),
 		sig1,
 		sig2,
 		prog,
@@ -195,56 +195,56 @@ func TestCheckBlankCheck(t *testing.T) {
 		want error
 	}{{
 		tx: &types.TxData{
-			Inputs: []*types.TxInput{types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil)},
+			Inputs: []*types.TxInput{types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil, nil)},
 		},
 		want: ErrBlankCheck,
 	}, {
 		tx: &types.TxData{
-			Inputs:  []*types.TxInput{types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil)},
-			Outputs: []*types.TxOutput{types.NewTxOutput(bc.AssetID{}, 3, nil)},
+			Inputs:  []*types.TxInput{types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil, nil)},
+			Outputs: []*types.TxOutput{types.NewOriginalTxOutput(bc.AssetID{}, 3, nil, nil)},
 		},
 		want: ErrBlankCheck,
 	}, {
 		tx: &types.TxData{
 			Inputs: []*types.TxInput{
-				types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil),
-				types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.NewAssetID([32]byte{1}), 5, 0, nil),
+				types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil, nil),
+				types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.NewAssetID([32]byte{1}), 5, 0, nil, nil),
 			},
-			Outputs: []*types.TxOutput{types.NewTxOutput(bc.AssetID{}, 5, nil)},
+			Outputs: []*types.TxOutput{types.NewOriginalTxOutput(bc.AssetID{}, 5, nil, nil)},
 		},
 		want: ErrBlankCheck,
 	}, {
 		tx: &types.TxData{
-			Inputs: []*types.TxInput{types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil)},
+			Inputs: []*types.TxInput{types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil, nil)},
 			Outputs: []*types.TxOutput{
-				types.NewTxOutput(bc.AssetID{}, math.MaxInt64, nil),
-				types.NewTxOutput(bc.AssetID{}, 7, nil),
+				types.NewOriginalTxOutput(bc.AssetID{}, math.MaxInt64, nil, nil),
+				types.NewOriginalTxOutput(bc.AssetID{}, 7, nil, nil),
 			},
 		},
 		want: ErrBadAmount,
 	}, {
 		tx: &types.TxData{
 			Inputs: []*types.TxInput{
-				types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil),
-				types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, math.MaxInt64, 0, nil),
+				types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil, nil),
+				types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, math.MaxInt64, 0, nil, nil),
 			},
 		},
 		want: ErrBadAmount,
 	}, {
 		tx: &types.TxData{
-			Inputs:  []*types.TxInput{types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil)},
-			Outputs: []*types.TxOutput{types.NewTxOutput(bc.AssetID{}, 5, nil)},
+			Inputs:  []*types.TxInput{types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil, nil)},
+			Outputs: []*types.TxOutput{types.NewOriginalTxOutput(bc.AssetID{}, 5, nil, nil)},
 		},
 		want: nil,
 	}, {
 		tx: &types.TxData{
-			Outputs: []*types.TxOutput{types.NewTxOutput(bc.AssetID{}, 5, nil)},
+			Outputs: []*types.TxOutput{types.NewOriginalTxOutput(bc.AssetID{}, 5, nil, nil)},
 		},
 		want: nil,
 	}, {
 		tx: &types.TxData{
-			Inputs:  []*types.TxInput{types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil)},
-			Outputs: []*types.TxOutput{types.NewTxOutput(bc.NewAssetID([32]byte{1}), 5, nil)},
+			Inputs:  []*types.TxInput{types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil, nil)},
+			Outputs: []*types.TxOutput{types.NewOriginalTxOutput(bc.NewAssetID([32]byte{1}), 5, nil, nil)},
 		},
 		want: nil,
 	}}
@@ -296,10 +296,10 @@ func TestCreateTxByUtxo(t *testing.T) {
 	tx := types.NewTx(types.TxData{
 		Version: 1,
 		Inputs: []*types.TxInput{
-			types.NewSpendInput(nil, utxo.SourceID, utxo.AssetID, utxo.Amount, utxo.SourcePos, utxo.ControlProgram),
+			types.NewSpendInput(nil, utxo.SourceID, utxo.AssetID, utxo.Amount, utxo.SourcePos, utxo.ControlProgram, nil),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(*consensus.BTMAssetID, 10000000000, recvProg),
+			types.NewOriginalTxOutput(*consensus.BTMAssetID, 10000000000, recvProg, nil),
 		},
 	})
 

@@ -1,13 +1,13 @@
 package vm
 
 import (
+	"crypto/ed25519"
 	"crypto/sha256"
 	"hash"
 
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bytom/bytom/crypto"
-	"github.com/bytom/bytom/crypto/ed25519"
 	"github.com/bytom/bytom/math/checked"
 )
 
@@ -24,42 +24,47 @@ func doHash(vm *virtualMachine, hashFactory func() hash.Hash) error {
 	if err != nil {
 		return err
 	}
+
 	cost := int64(len(x))
 	if cost < 64 {
 		cost = 64
 	}
-	err = vm.applyCost(cost)
-	if err != nil {
+
+	if err = vm.applyCost(cost); err != nil {
 		return err
 	}
+
 	h := hashFactory()
-	_, err = h.Write(x)
-	if err != nil {
+	if _, err = h.Write(x); err != nil {
 		return err
 	}
-	return vm.push(h.Sum(nil), false)
+	return vm.pushDataStack(h.Sum(nil), false)
 }
 
 func opCheckSig(vm *virtualMachine) error {
-	err := vm.applyCost(1024)
-	if err != nil {
+	if err := vm.applyCost(1024); err != nil {
 		return err
 	}
+
 	pubkeyBytes, err := vm.pop(true)
 	if err != nil {
 		return err
 	}
+
 	msg, err := vm.pop(true)
 	if err != nil {
 		return err
 	}
+
 	sig, err := vm.pop(true)
 	if err != nil {
 		return err
 	}
+
 	if len(msg) != 32 {
 		return ErrBadValue
 	}
+
 	if len(pubkeyBytes) != ed25519.PublicKeySize {
 		return vm.pushBool(false, true)
 	}
@@ -67,25 +72,39 @@ func opCheckSig(vm *virtualMachine) error {
 }
 
 func opCheckMultiSig(vm *virtualMachine) error {
-	numPubkeys, err := vm.popInt64(true)
+	numPubkeysBigInt, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
+
+	numPubkeys, err := bigIntInt64(numPubkeysBigInt)
+	if err != nil {
+		return err
+	}
+
 	pubCost, ok := checked.MulInt64(numPubkeys, 1024)
 	if numPubkeys < 0 || !ok {
 		return ErrBadValue
 	}
-	err = vm.applyCost(pubCost)
+
+	if err = vm.applyCost(pubCost); err != nil {
+		return err
+	}
+
+	numSigsBigInt, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	numSigs, err := vm.popInt64(true)
+
+	numSigs, err := bigIntInt64(numSigsBigInt)
 	if err != nil {
 		return err
 	}
+
 	if numSigs < 0 || numSigs > numPubkeys || (numPubkeys > 0 && numSigs == 0) {
 		return ErrBadValue
 	}
+
 	pubkeyByteses := make([][]byte, 0, numPubkeys)
 	for i := int64(0); i < numPubkeys; i++ {
 		pubkeyBytes, err := vm.pop(true)
@@ -94,13 +113,16 @@ func opCheckMultiSig(vm *virtualMachine) error {
 		}
 		pubkeyByteses = append(pubkeyByteses, pubkeyBytes)
 	}
+
 	msg, err := vm.pop(true)
 	if err != nil {
 		return err
 	}
+
 	if len(msg) != 32 {
 		return ErrBadValue
 	}
+
 	sigs := make([][]byte, 0, numSigs)
 	for i := int64(0); i < numSigs; i++ {
 		sig, err := vm.pop(true)
@@ -124,18 +146,20 @@ func opCheckMultiSig(vm *virtualMachine) error {
 		}
 		pubkeys = pubkeys[1:]
 	}
+
 	return vm.pushBool(len(sigs) == 0, true)
 }
 
 func opTxSigHash(vm *virtualMachine) error {
-	err := vm.applyCost(256)
-	if err != nil {
+	if err := vm.applyCost(256); err != nil {
 		return err
 	}
+
 	if vm.context.TxSigHash == nil {
 		return ErrContext
 	}
-	return vm.push(vm.context.TxSigHash(), false)
+
+	return vm.pushDataStack(vm.context.TxSigHash(), false)
 }
 
 func opHash160(vm *virtualMachine) error {
@@ -149,5 +173,5 @@ func opHash160(vm *virtualMachine) error {
 		return err
 	}
 
-	return vm.push(crypto.Ripemd160(data), false)
+	return vm.pushDataStack(crypto.Ripemd160(data), false)
 }

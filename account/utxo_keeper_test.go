@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
+	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/testutil"
-	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 func TestAddUnconfirmedUtxo(t *testing.T) {
@@ -519,7 +519,7 @@ func TestReserve(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		if _, err := c.before.Reserve("testAccount", &bc.AssetID{}, c.reserveAmount, true, c.exp); err != c.err {
+		if _, err := c.before.Reserve("testAccount", &bc.AssetID{}, c.reserveAmount, true, nil, c.exp); err != c.err {
 			t.Errorf("case %d: got error %v want error %v", i, err, c.err)
 		}
 		checkUtxoKeeperEqual(t, i, &c.before, &c.after)
@@ -869,7 +869,7 @@ func TestFindUtxos(t *testing.T) {
 			testDB.Set(StandardUTXOKey(u.OutputID), data)
 		}
 
-		gotUtxos, immatureAmount := c.uk.findUtxos("testAccount", &bc.AssetID{}, c.useUnconfirmed)
+		gotUtxos, immatureAmount := c.uk.findUtxos("testAccount", &bc.AssetID{}, c.useUnconfirmed, nil)
 		if !testutil.DeepEqual(gotUtxos, c.wantUtxos) {
 			t.Errorf("case %d: got %v want %v", i, gotUtxos, c.wantUtxos)
 		}

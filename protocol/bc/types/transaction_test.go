@@ -41,14 +41,14 @@ func TestTransaction(t *testing.T) {
 		{
 			tx: NewTx(TxData{
 				Version:        1,
-				SerializedSize: uint64(261),
+				SerializedSize: uint64(284),
 				TimeRange:      654,
 				Inputs: []*TxInput{
 					NewIssuanceInput([]byte("nonce"), 254354, []byte("issuanceProgram"), [][]byte{[]byte("arguments1"), []byte("arguments2")}, []byte("assetDefinition")),
-					NewSpendInput([][]byte{[]byte("arguments3"), []byte("arguments4")}, testutil.MustDecodeHash("fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409"), *consensus.BTMAssetID, 254354, 3, []byte("spendProgram")),
+					NewSpendInput([][]byte{[]byte("arguments3"), []byte("arguments4")}, testutil.MustDecodeHash("fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409"), *consensus.BTMAssetID, 254354, 3, []byte("spendProgram"), [][]byte{[]byte("stateData")}),
 				},
 				Outputs: []*TxOutput{
-					NewTxOutput(testutil.MustDecodeAsset("a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf"), 254354, []byte("true")),
+					NewOriginalTxOutput(testutil.MustDecodeAsset("a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf"), 254354, []byte("true"), [][]byte{[]byte("stateData")}),
 				},
 			}),
 			hex: strings.Join([]string{
@@ -62,57 +62,62 @@ func TestTransaction(t *testing.T) {
 				"05",         // input 0: nonce length
 				"6e6f6e6365", // input 0: nonce
 				"a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf", // input 0: assetID
-				"92c30f", // input 0: amount
-				"38",     // input 0: input witness length
-				"0f",     // input 0: asset definition length
+				"92c30f",                         // input 0: amount
+				"38",                             // input 0: input witness length
+				"0f",                             // input 0: asset definition length
 				"6173736574446566696e6974696f6e", // input 0: asset definition
-				"01", // input 0: vm version
-				"0f", // input 0: issuanceProgram length
+				"01",                             // input 0: vm version
+				"0f",                             // input 0: issuanceProgram length
 				"69737375616e636550726f6772616d", // input 0: issuance program
-				"02", // input 0: argument array length
-				"0a", // input 0: first argument length
-				"617267756d656e747331", // input 0: first argument data
-				"0a", // input 0: second argument length
-				"617267756d656e747332", // input 0: second argument data
-				"01", // input 1: asset version
-				"54", // input 1: input commitment length
-				"01", // input 1: spend type flag
-				"52", // input 1: spend commitment length
+				"02",                             // input 0: argument array length
+				"0a",                             // input 0: first argument length
+				"617267756d656e747331",           // input 0: first argument data
+				"0a",                             // input 0: second argument length
+				"617267756d656e747332",           // input 0: second argument data
+				"01",                             // input 1: asset version
+				"5f",                             // input 1: input commitment length
+				"01",                             // input 1: spend type flag
+				"5d",                             // input 1: spend commitment length
 				"fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409", // input 1: source id
 				"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // input 1: assetID
-				"92c30f", // input 1: amount
-				"03",     // input 1: source position
-				"01",     // input 1: vm version
-				"0c",     // input 1: spend program length
+				"92c30f",                   // input 1: amount
+				"03",                       // input 1: source position
+				"01",                       // input 1: vm version
+				"0c",                       // input 1: spend program length
 				"7370656e6450726f6772616d", // input 1: spend program
-				"17", // input 1: witness length
-				"02", // input 1: argument array length
-				"0a", // input 1: first argument length
-				"617267756d656e747333", // input 1: first argument data
-				"0a", // input 1: second argument length
-				"617267756d656e747334", // input 1: second argument data
-				"01", // outputs count
-				"01", // output 0: asset version
-				"29", // output 0: serialization length
+				"0109",                     // input 1: state data length
+				"737461746544617461",       // input 1: state data
+				"17",                       // input 1: witness length
+				"02",                       // input 1: argument array length
+				"0a",                       // input 1: first argument length
+				"617267756d656e747333",     // input 1: first argument data
+				"0a",                       // input 1: second argument length
+				"617267756d656e747334",     // input 1: second argument data
+				"01",                       // outputs count
+				"01",                       // output 0: asset version
+				"00",
+				"34", // output 0: serialization length
 				"a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf", // output 0: assetID
-				"92c30f",   // output 0: amount
-				"01",       // output 0: version
-				"04",       // output 0: control program length
-				"74727565", // output 0: control program
-				"00",       // output 0: witness length
+				"92c30f",             // output 0: amount
+				"01",                 // output 0: version
+				"04",                 // output 0: control program length
+				"74727565",           // output 0: control program
+				"0109",               // output 0: state data length
+				"737461746544617461", // output 0: state data
+				"00",                 // output 0: witness length
 			}, ""),
-			hash: testutil.MustDecodeHash("a0ece5ca48dca27708394852599cb4d04af22c36538c03cb72663f3091406c17"),
+			hash: testutil.MustDecodeHash("509632e139a418be372cd4b73c8de7b8aa5215c47848bf76ed2488d0a5c0c55e"),
 		},
 		{
 			tx: NewTx(TxData{
 				Version:        1,
-				SerializedSize: uint64(108),
+				SerializedSize: uint64(132),
 				Inputs: []*TxInput{
 					NewCoinbaseInput([]byte("arbitrary")),
 				},
 				Outputs: []*TxOutput{
-					NewTxOutput(*consensus.BTMAssetID, 254354, []byte("true")),
-					NewTxOutput(*consensus.BTMAssetID, 254354, []byte("false")),
+					NewOriginalTxOutput(*consensus.BTMAssetID, 254354, []byte("true"), [][]byte{[]byte("stateData")}),
+					NewOriginalTxOutput(*consensus.BTMAssetID, 254354, []byte("false"), [][]byte{[]byte("stateData")}),
 				},
 			}),
 			hex: strings.Join([]string{
@@ -128,23 +133,29 @@ func TestTransaction(t *testing.T) {
 				"00",                 // input 0: witness length
 				"02",                 // outputs count
 				"01",                 // output 0: asset version
-				"29",                 // output 0: serialization length
+				"00",
+				"34", // output 0: serialization length
 				"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // output 0: assetID
-				"92c30f",   // output 0: amount
-				"01",       // output 0: version
-				"04",       // output 0: control program length
-				"74727565", // output 0: control program
-				"00",       // output 0: witness length
-				"01",       // output 1: asset version
-				"2a",       // output 1: serialization length
+				"92c30f",             // output 0: amount
+				"01",                 // output 0: version
+				"04",                 // output 0: control program length
+				"74727565",           // output 0: control program
+				"0109",               // output 0: state data length
+				"737461746544617461", // output 0: state data
+				"00",                 // output 0: witness length
+				"01",                 // output 1: asset version
+				"00",
+				"35", // output 1: serialization length
 				"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // output 1: assetID
-				"92c30f",     // output 1: amount
-				"01",         // output 1: version
-				"05",         // output 1: control program length
-				"66616c7365", // output 1: control program
-				"00",         // output 1: witness length
+				"92c30f",             // output 1: amount
+				"01",                 // output 1: version
+				"05",                 // output 1: control program length
+				"66616c7365",         // output 1: control program
+				"0109",               // output 0: state data length
+				"737461746544617461", // output 0: state data
+				"00",                 // output 1: witness length
 			}, ""),
-			hash: testutil.MustDecodeHash("c2e2f388706fc06cca6aba5e85e0e85029f772872e1b6e6c32a70da22d0309dc"),
+			hash: testutil.MustDecodeHash("4243fc12f6e8704c5e4318a2addc648d29fd1c03a8fe1246badafa5efd8b5339"),
 		},
 	}
 	for i, test := range cases {
@@ -185,7 +196,7 @@ func TestTransaction(t *testing.T) {
 
 func TestTransactionTrailingGarbage(t *testing.T) {
 	// validTxHex is a valid tx, we don't care what's inside as long as it's valid
-	validTxHex := `07010001012b00030a0908916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380a094a58d1d09000101010103010203010129000000000000000000000000000000000000000000000000000000000000000080a094a58d1d01010100`
+	validTxHex := `07010001012b00030a0908916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380a094a58d1d090001010101030102030101002a000000000000000000000000000000000000000000000000000000000000000080a094a58d1d0101010000`
 	validTx := Tx{}
 	if err := validTx.UnmarshalText([]byte(validTxHex)); err != nil {
 		t.Fatal(err)
@@ -239,7 +250,28 @@ func TestInvalidIssuance(t *testing.T) {
 }
 
 func TestFuzzUnknownAssetVersion(t *testing.T) {
-	rawTx := `07010001012b00030a0908916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380a094a58d1d09000101010103010203010129000000000000000000000000000000000000000000000000000000000000000080a094a58d1d01010100`
+	rawTx := `07010001012b00030a0908916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380a094a58d1d090001010101030102030101002a000000000000000000000000000000000000000000000000000000000000000080a094a58d1d0101010000`
+	/*
+		07
+		01
+		00
+		01
+		01
+		2b
+		00
+		03
+		0a0908
+		916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a263
+		80a094a58d1d0900
+		0101010103010203010100
+		29
+		0000000000000000000000000000000000000000000000000000000000000000
+		80a094a58d1d
+		01
+		01
+		01
+		00
+	*/
 	want := Tx{}
 	if err := want.UnmarshalText([]byte(rawTx)); err != nil {
 		t.Fatal(err)
@@ -276,8 +308,8 @@ func BenchmarkTxWriteToFalse(b *testing.B) {
 func BenchmarkTxWriteToTrue200(b *testing.B) {
 	tx := &Tx{}
 	for i := 0; i < 200; i++ {
-		tx.Inputs = append(tx.Inputs, NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil))
-		tx.Outputs = append(tx.Outputs, NewTxOutput(bc.AssetID{}, 0, nil))
+		tx.Inputs = append(tx.Inputs, NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil, nil))
+		tx.Outputs = append(tx.Outputs, NewOriginalTxOutput(bc.AssetID{}, 0, nil, nil))
 	}
 	for i := 0; i < b.N; i++ {
 		tx.writeTo(ioutil.Discard, 0)
@@ -287,8 +319,8 @@ func BenchmarkTxWriteToTrue200(b *testing.B) {
 func BenchmarkTxWriteToFalse200(b *testing.B) {
 	tx := &Tx{}
 	for i := 0; i < 200; i++ {
-		tx.Inputs = append(tx.Inputs, NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil))
-		tx.Outputs = append(tx.Outputs, NewTxOutput(bc.AssetID{}, 0, nil))
+		tx.Inputs = append(tx.Inputs, NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil, nil))
+		tx.Outputs = append(tx.Outputs, NewOriginalTxOutput(bc.AssetID{}, 0, nil, nil))
 	}
 	for i := 0; i < b.N; i++ {
 		tx.writeTo(ioutil.Discard, serRequired)
@@ -296,7 +328,7 @@ func BenchmarkTxWriteToFalse200(b *testing.B) {
 }
 
 func BenchmarkTxInputWriteToTrue(b *testing.B) {
-	input := NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil)
+	input := NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil, nil)
 	ew := errors.NewWriter(ioutil.Discard)
 	for i := 0; i < b.N; i++ {
 		input.writeTo(ew)
@@ -304,7 +336,7 @@ func BenchmarkTxInputWriteToTrue(b *testing.B) {
 }
 
 func BenchmarkTxInputWriteToFalse(b *testing.B) {
-	input := NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil)
+	input := NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil, nil)
 	ew := errors.NewWriter(ioutil.Discard)
 	for i := 0; i < b.N; i++ {
 		input.writeTo(ew)
@@ -312,7 +344,7 @@ func BenchmarkTxInputWriteToFalse(b *testing.B) {
 }
 
 func BenchmarkTxOutputWriteToTrue(b *testing.B) {
-	output := NewTxOutput(bc.AssetID{}, 0, nil)
+	output := NewOriginalTxOutput(bc.AssetID{}, 0, nil, nil)
 	ew := errors.NewWriter(ioutil.Discard)
 	for i := 0; i < b.N; i++ {
 		output.writeTo(ew)
@@ -320,7 +352,7 @@ func BenchmarkTxOutputWriteToTrue(b *testing.B) {
 }
 
 func BenchmarkTxOutputWriteToFalse(b *testing.B) {
-	output := NewTxOutput(bc.AssetID{}, 0, nil)
+	output := NewOriginalTxOutput(bc.AssetID{}, 0, nil, nil)
 	ew := errors.NewWriter(ioutil.Discard)
 	for i := 0; i < b.N; i++ {
 		output.writeTo(ew)

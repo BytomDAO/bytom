@@ -2,6 +2,7 @@ package types
 
 import (
 	"bytes"
+	"reflect"
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
@@ -15,10 +16,10 @@ func TestMapSpendTx(t *testing.T) {
 	cases := []*TxData{
 		&TxData{
 			Inputs: []*TxInput{
-				NewSpendInput(nil, testutil.MustDecodeHash("fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409"), *consensus.BTMAssetID, 88, 3, []byte{1}),
+				NewSpendInput(nil, testutil.MustDecodeHash("fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409"), *consensus.BTMAssetID, 88, 3, []byte{1}, [][]byte{[]byte{2}}),
 			},
 			Outputs: []*TxOutput{
-				NewTxOutput(*consensus.BTMAssetID, 80, []byte{1}),
+				NewOriginalTxOutput(*consensus.BTMAssetID, 80, []byte{1}, [][]byte{[]byte{2}}),
 			},
 		},
 		&TxData{
@@ -26,17 +27,17 @@ func TestMapSpendTx(t *testing.T) {
 				NewIssuanceInput([]byte("nonce"), 254354, []byte("issuanceProgram"), [][]byte{[]byte("arguments1"), []byte("arguments2")}, []byte("assetDefinition")),
 			},
 			Outputs: []*TxOutput{
-				NewTxOutput(*consensus.BTMAssetID, 80, []byte{1}),
+				NewOriginalTxOutput(*consensus.BTMAssetID, 80, []byte{1}, [][]byte{[]byte{2}}),
 			},
 		},
 		&TxData{
 			Inputs: []*TxInput{
 				NewIssuanceInput([]byte("nonce"), 254354, []byte("issuanceProgram"), [][]byte{[]byte("arguments1"), []byte("arguments2")}, []byte("assetDefinition")),
-				NewSpendInput(nil, testutil.MustDecodeHash("db7b16ac737440d6e38559996ddabb207d7ce84fbd6f3bfd2525d234761dc863"), *consensus.BTMAssetID, 88, 3, []byte{1}),
+				NewSpendInput(nil, testutil.MustDecodeHash("db7b16ac737440d6e38559996ddabb207d7ce84fbd6f3bfd2525d234761dc863"), *consensus.BTMAssetID, 88, 3, []byte{1}, [][]byte{[]byte{2}}),
 			},
 			Outputs: []*TxOutput{
-				NewTxOutput(*consensus.BTMAssetID, 80, []byte{1}),
-				NewTxOutput(*consensus.BTMAssetID, 80, []byte{1}),
+				NewOriginalTxOutput(*consensus.BTMAssetID, 80, []byte{1}, [][]byte{[]byte{2}}),
+				NewOriginalTxOutput(*consensus.BTMAssetID, 80, []byte{1}, [][]byte{[]byte{2}}),
 			},
 		},
 	}
@@ -58,11 +59,11 @@ func TestMapSpendTx(t *testing.T) {
 					t.Errorf("tx.InputIDs[%d]'s asset amount is not equal after map'", i)
 				}
 			case *bc.Spend:
-				spendOut, err := tx.Output(*newInput.SpentOutputId)
+				spendOut, err := tx.OriginalOutput(*newInput.SpentOutputId)
 				if err != nil {
 					t.Fatal(err)
 				}
-				if *spendOut.Source.Value != oldIn.AssetAmount() {
+				if *spendOut.Source.Value.AssetId != oldIn.AssetID() || spendOut.Source.Value.Amount != oldIn.Amount() {
 					t.Errorf("tx.InputIDs[%d]'s asset amount is not equal after map'", i)
 				}
 			default:
@@ -75,7 +76,7 @@ func TestMapSpendTx(t *testing.T) {
 			if !ok {
 				t.Errorf("entryMap contains nothing for header.ResultIds[%d] (%x)", i, tx.ResultIds[i].Bytes())
 			}
-			newOut, ok := resultEntry.(*bc.Output)
+			newOut, ok := resultEntry.(*bc.OriginalOutput)
 			if !ok {
 				t.Errorf("header.ResultIds[%d] has type %T, expected *Output", i, resultEntry)
 			}
@@ -89,6 +90,9 @@ func TestMapSpendTx(t *testing.T) {
 			if !bytes.Equal(newOut.ControlProgram.Code, oldOut.ControlProgram) {
 				t.Errorf("header.ResultIds[%d].(*output).ControlProgram.Code is %x, expected %x", i, newOut.ControlProgram.Code, oldOut.ControlProgram)
 			}
+			if !reflect.DeepEqual(newOut.StateData, oldOut.StateData) {
+				t.Errorf("header.ResultIds[%d].(*output).StateData.StateData is %x, expected %x", i, newOut.StateData, oldOut.StateData)
+			}
 
 		}
 	}
@@ -100,7 +104,7 @@ func TestMapCoinbaseTx(t *testing.T) {
 			NewCoinbaseInput([]byte("TestMapCoinbaseTx")),
 		},
 		Outputs: []*TxOutput{
-			NewTxOutput(*consensus.BTMAssetID, 800000000000, []byte{1}),
+			NewOriginalTxOutput(*consensus.BTMAssetID, 800000000000, []byte{1}, [][]byte{[]byte{2}}),
 		},
 	}
 	oldOut := txData.Outputs[0]
@@ -114,9 +118,6 @@ func TestMapCoinbaseTx(t *testing.T) {
 	if len(tx.SpentOutputIDs) != 0 {
 		t.Errorf("coinbase tx doesn't spend any utxo")
 	}
-	if len(tx.GasInputIDs) != 1 {
-		t.Errorf("coinbase tx should have 1 gas input")
-	}
 	if len(tx.ResultIds) != 1 {
 		t.Errorf("expect to  only have one output")
 	}
@@ -125,7 +126,7 @@ func TestMapCoinbaseTx(t *testing.T) {
 	if !ok {
 		t.Errorf("entryMap contains nothing for output")
 	}
-	newOut, ok := outEntry.(*bc.Output)
+	newOut, ok := outEntry.(*bc.OriginalOutput)
 	if !ok {
 		t.Errorf("header.ResultIds[0] has type %T, expected *Output", outEntry)
 	}

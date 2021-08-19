@@ -339,8 +339,6 @@ func TestStackUnderflow(t *testing.T) {
 		{1, op1Sub},
 		{1, op2Mul},
 		{1, op2Div},
-		{1, opNegate},
-		{1, opAbs},
 		{1, opNot},
 		{1, op0NotEqual},
 		{2, opAdd},
@@ -405,10 +403,8 @@ func TestStackUnderflow(t *testing.T) {
 					if err != ErrDataStackUnderflow {
 						t.Errorf("err = %v, want ErrStackUnderflow", err)
 					}
-
 				})
 			}
-
 		})
 	}
 }

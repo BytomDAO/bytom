@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"crypto/ed25519"
 	"encoding/hex"
 	"fmt"
 
@@ -11,9 +12,7 @@ import (
 	"github.com/bytom/bytom/asset"
 	"github.com/bytom/bytom/blockchain/query"
 	"github.com/bytom/bytom/blockchain/signers"
-	"github.com/bytom/bytom/blockchain/txbuilder"
 	"github.com/bytom/bytom/consensus"
-	"github.com/bytom/bytom/crypto/ed25519"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	chainjson "github.com/bytom/bytom/encoding/json"
 	"github.com/bytom/bytom/errors"
@@ -189,19 +188,18 @@ func (a *API) getUnconfirmedTx(ctx context.Context, filter struct {
 	}
 
 	tx := &BlockTx{
-		ID:         txDesc.Tx.ID,
-		Version:    txDesc.Tx.Version,
-		Size:       txDesc.Tx.SerializedSize,
-		TimeRange:  txDesc.Tx.TimeRange,
-		Inputs:     []*query.AnnotatedInput{},
-		Outputs:    []*query.AnnotatedOutput{},
-		StatusFail: txDesc.StatusFail,
+		ID:        txDesc.Tx.ID,
+		Version:   txDesc.Tx.Version,
+		Size:      txDesc.Tx.SerializedSize,
+		TimeRange: txDesc.Tx.TimeRange,
+		Inputs:    []*query.AnnotatedInput{},
+		Outputs:   []*query.AnnotatedOutput{},
 	}
 
 	resOutID := txDesc.Tx.ResultIds[0]
 	resOut := txDesc.Tx.Entries[*resOutID]
 	switch out := resOut.(type) {
-	case *bc.Output:
+	case *bc.OriginalOutput:
 		tx.MuxID = *out.Source.Ref
 	case *bc.Retirement:
 		tx.MuxID = *out.Source.Ref
@@ -269,7 +267,7 @@ func (a *API) decodeRawTransaction(ctx context.Context, ins struct {
 		tx.Outputs = append(tx.Outputs, a.wallet.BuildAnnotatedOutput(&ins.Tx, i))
 	}
 
-	tx.Fee = txbuilder.CalculateTxFee(&ins.Tx)
+	tx.Fee = ins.Tx.Fee()
 	return NewSuccessResponse(tx)
 }
 
@@ -291,7 +289,7 @@ func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 		}
 		accountID = acc.ID
 	}
-	accountUTXOs := a.wallet.GetAccountUtxos(accountID, filter.ID, filter.Unconfirmed, filter.SmartContract)
+	accountUTXOs := a.wallet.GetAccountUtxos(accountID, filter.ID, filter.Unconfirmed, filter.SmartContract, false)
 
 	UTXOs := []query.AnnotatedUTXO{}
 	for _, utxo := range accountUTXOs {
@@ -422,4 +420,24 @@ func (a *API) listPubKeys(ctx context.Context, ins struct {
 		RootXPub:    account.XPubs[0],
 		PubKeyInfos: pubKeyInfos,
 	})
+}
+
+func (a *API) listAccountVotes(ctx context.Context, filter struct {
+	AccountID    string `json:"account_id"`
+	AccountAlias string `json:"account_alias"`
+}) Response {
+	accountID := filter.AccountID
+	if filter.AccountAlias != "" {
+		acc, err := a.wallet.AccountMgr.FindByAlias(filter.AccountAlias)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+		accountID = acc.ID
+	}
+
+	votes, err := a.wallet.GetAccountVotes(accountID, "")
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(votes)
 }

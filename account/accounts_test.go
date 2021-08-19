@@ -11,11 +11,11 @@ import (
 	"github.com/bytom/bytom/blockchain/signers"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/database"
+	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/event"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/testutil"
-	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 func TestCreateAccountWithUppercase(t *testing.T) {
@@ -117,7 +117,6 @@ func TestUpdateAccountAlias(t *testing.T) {
 
 func TestDeleteAccount(t *testing.T) {
 	m := mockAccountManager(t)
-
 	account1, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, "test-alias1", signers.BIP0044)
 	if err != nil {
 		testutil.FatalErr(t, err)
@@ -128,17 +127,15 @@ func TestDeleteAccount(t *testing.T) {
 		testutil.FatalErr(t, err)
 	}
 
-	found, err := m.FindByID(account1.ID)
-	if err != nil {
-		t.Errorf("expected account %v should be deleted", found)
-	}
-
 	if err = m.DeleteAccount(account2.ID); err != nil {
 		testutil.FatalErr(t, err)
 	}
 
-	found, err = m.FindByID(account2.ID)
-	if err != nil {
+	if found, err := m.FindByID(account1.ID); err != nil {
+		t.Errorf("expected account %v should not be deleted", found)
+	}
+
+	if found, err := m.FindByID(account2.ID); err == nil {
 		t.Errorf("expected account %v should be deleted", found)
 	}
 }
@@ -211,12 +208,12 @@ func mockAccountManager(t *testing.T) *Manager {
 	}
 	defer os.RemoveAll(dirPath)
 
-	testDB := dbm.NewDB("testdb", "memdb", dirPath)
+	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
 	dispatcher := event.NewDispatcher()
 
 	store := database.NewStore(testDB)
 	txPool := protocol.NewTxPool(store, dispatcher)
-	chain, err := protocol.NewChain(store, txPool)
+	chain, err := protocol.NewChain(store, txPool, dispatcher)
 	if err != nil {
 		t.Fatal(err)
 	}

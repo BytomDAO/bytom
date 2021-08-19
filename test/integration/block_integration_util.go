@@ -1,12 +1,13 @@
 package integration
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
 	"reflect"
-	"strings"
 	"sort"
+	"strings"
 
 	"github.com/golang/protobuf/proto"
 
@@ -30,101 +31,12 @@ type storeItem struct {
 	val interface{}
 }
 
-type serialFun func(obj interface{}) ([]byte, error)
-type deserialFun func(data []byte) (interface{}, error)
-
-func getSerialFun(item interface{}) (serialFun, error) {
-	switch item.(type) {
-	case *protocol.BlockStoreState:
-		return json.Marshal, nil
-	case *types.Block:
-		return func(obj interface{}) ([]byte, error) {
-			block := obj.(*types.Block)
-			return block.MarshalText()
-		}, nil
-	case types.BlockHeader:
-		return func(obj interface{}) ([]byte, error) {
-			bh := obj.(types.BlockHeader)
-			return bh.MarshalText()
-		}, nil
-	case *bc.TransactionStatus:
-		return func(obj interface{}) ([]byte, error) {
-			status := obj.(*bc.TransactionStatus)
-			return proto.Marshal(status)
-		}, nil
-	case *storage.UtxoEntry:
-		return func(obj interface{}) ([]byte, error) {
-			utxo := obj.(*storage.UtxoEntry)
-			return proto.Marshal(utxo)
-		}, nil
-	}
-	typ := reflect.TypeOf(item)
-	return nil, fmt.Errorf("can not found any serialization function for type:%s", typ.Name())
-}
-
-func getDeserialFun(key []byte) (deserialFun, error) {
-	funMap := map[string]deserialFun{
-		string(database.BlockStoreKey): func(data []byte) (interface{}, error) {
-			storeState := &protocol.BlockStoreState{}
-			err := json.Unmarshal(data, storeState)
-			return storeState, err
-		},
-		string(database.TxStatusPrefix): func(data []byte) (interface{}, error) {
-			status := &bc.TransactionStatus{}
-			err := proto.Unmarshal(data, status)
-			return status, err
-		},
-		string(database.BlockPrefix): func(data []byte) (interface{}, error) {
-			block := &types.Block{}
-			err := block.UnmarshalText(data)
-			sortSpendOutputID(block)
-			return block, err
-		},
-		string(database.BlockHeaderPrefix): func(data []byte) (interface{}, error) {
-			bh := types.BlockHeader{}
-			err := bh.UnmarshalText(data)
-			return bh, err
-		},
-		database.UtxoPreFix: func(data []byte) (interface{}, error) {
-			utxo := &storage.UtxoEntry{}
-			err := proto.Unmarshal(data, utxo)
-			return utxo, err
-		},
-	}
-
-	for prefix, converter := range funMap {
-		if strings.HasPrefix(string(key), prefix) {
-			return converter, nil
-		}
-	}
-	return nil, fmt.Errorf("can not found any deserialization function for key:%s", string(key))
-}
-
 type storeItems []*storeItem
-
-func (s1 storeItems) equals(s2 storeItems) bool {
-	if s2 == nil {
-		return false
-	}
-
-	itemMap1 := make(map[string]interface{}, len(s1))
-	for _, item := range s1 {
-		itemMap1[string(item.key)] = item.val
-	}
-
-	itemMap2 := make(map[string]interface{}, len(s2))
-	for _, item := range s2 {
-		itemMap2[string(item.key)] = item.val
-	}
-
-	return testutil.DeepEqual(itemMap1, itemMap2)
-}
 
 type processBlockTestCase struct {
 	desc             string
-	initStore        []*storeItem
-	wantStore        []*storeItem
-	wantBlockIndex   *state.BlockIndex
+	initStore        []storeEntry
+	wantStore        []storeEntry
 	initOrphanManage *protocol.OrphanManage
 	wantOrphanManage *protocol.OrphanManage
 	wantIsOrphan     bool
@@ -135,7 +47,7 @@ type processBlockTestCase struct {
 func (p *processBlockTestCase) Run() error {
 	defer os.RemoveAll(dbDir)
 	if p.initStore == nil {
-		p.initStore = make([]*storeItem, 0)
+		p.initStore = make([]storeEntry, 0)
 	}
 	store, db, err := initStore(p)
 	if err != nil {
@@ -148,7 +60,7 @@ func (p *processBlockTestCase) Run() error {
 	}
 
 	txPool := protocol.NewTxPool(store, event.NewDispatcher())
-	chain, err := protocol.NewChainWithOrphanManage(store, txPool, orphanManage)
+	chain, err := protocol.NewChainWithOrphanManage(store, txPool, orphanManage, nil)
 	if err != nil {
 		return err
 	}
@@ -163,20 +75,18 @@ func (p *processBlockTestCase) Run() error {
 	}
 
 	if p.wantStore != nil {
-		gotStoreItems, err := loadStoreItems(db)
-		if err != nil {
-			return err
-		}
+		gotStoreEntries := loadStoreEntries(db)
+		if !equalsStoreEntries(p.wantStore, gotStoreEntries) {
+			gotMap := make(map[string]string)
+			for _, entry := range gotStoreEntries {
+				gotMap[hex.EncodeToString(entry.key)] = hex.EncodeToString(entry.val)
+			}
 
-		if !storeItems(gotStoreItems).equals(p.wantStore) {
-			return fmt.Errorf("#case(%s) want store:%v, got store:%v", p.desc, p.wantStore, gotStoreItems)
-		}
-	}
-
-	if p.wantBlockIndex != nil {
-		blockIndex := chain.GetBlockIndex()
-		if !blockIndex.Equals(p.wantBlockIndex) {
-			return fmt.Errorf("#case(%s) want block index:%v, got block index:%v", p.desc, *p.wantBlockIndex, *blockIndex)
+			wantMap := make(map[string]string)
+			for _, entry := range p.wantStore {
+				wantMap[hex.EncodeToString(entry.key)] = hex.EncodeToString(entry.val)
+			}
+			return fmt.Errorf("#case(%s) want store:%v, got store:%v", p.desc, p.wantStore, gotStoreEntries)
 		}
 	}
 
@@ -188,44 +98,11 @@ func (p *processBlockTestCase) Run() error {
 	return nil
 }
 
-func loadStoreItems(db dbm.DB) ([]*storeItem, error) {
-	iter := db.Iterator()
-	defer iter.Release()
-
-	var items []*storeItem
-	for iter.Next() {
-		item := &storeItem{key: iter.Key()}
-		fun, err := getDeserialFun(iter.Key())
-		if err != nil {
-			return nil, err
-		}
-
-		val, err := fun(iter.Value())
-		if err != nil {
-			return nil, err
-		}
-
-		item.val = val
-		items = append(items, item)
-	}
-	return items, nil
-}
-
-func initStore(c *processBlockTestCase) (protocol.Store, dbm.DB, error) {
+func initStore(c *processBlockTestCase) (state.Store, dbm.DB, error) {
 	testDB := dbm.NewDB("testdb", "leveldb", dbDir)
 	batch := testDB.NewBatch()
-	for _, item := range c.initStore {
-		fun, err := getSerialFun(item.val)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		bytes, err := fun(item.val)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		batch.Set(item.key, bytes)
+	for _, entry := range c.initStore {
+		batch.Set(entry.key, entry.val)
 	}
 	batch.Write()
 	return database.NewStore(testDB), testDB, nil
@@ -242,3 +119,86 @@ type HashSlice []bc.Hash
 func (p HashSlice) Len() int           { return len(p) }
 func (p HashSlice) Less(i, j int) bool { return p[i].String() < p[j].String() }
 func (p HashSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+type storeEntry struct {
+	key []byte
+	val []byte
+}
+
+func serialItem(item *storeItem) ([]storeEntry, error) {
+	var storeEntrys []storeEntry
+	switch item.val.(type) {
+	case *state.BlockStoreState:
+		bytes, err := json.Marshal(item.val)
+		if err != nil {
+			return nil, err
+		}
+
+		storeEntrys = append(storeEntrys, storeEntry{key: item.key, val: bytes})
+	case *types.Block:
+		block := item.val.(*types.Block)
+		hash := block.Hash()
+		binaryBlockHeader, err := block.MarshalTextForBlockHeader()
+		if err != nil {
+			return nil, err
+		}
+
+		storeEntrys = append(storeEntrys, storeEntry{key: database.CalcBlockHeaderKey(&hash), val: binaryBlockHeader})
+		binaryBlockTxs, err := block.MarshalTextForTransactions()
+		if err != nil {
+			return nil, err
+		}
+
+		storeEntrys = append(storeEntrys, storeEntry{key: database.CalcBlockTransactionsKey(&hash), val: binaryBlockTxs})
+	case types.BlockHeader:
+		bh := item.val.(types.BlockHeader)
+		bytes, err := bh.MarshalText()
+		if err != nil {
+			return nil, err
+		}
+
+		storeEntrys = append(storeEntrys, storeEntry{key: item.key, val: bytes})
+	case *storage.UtxoEntry:
+		utxo := item.val.(*storage.UtxoEntry)
+		bytes, err := proto.Marshal(utxo)
+		if err != nil {
+			return nil, err
+		}
+
+		storeEntrys = append(storeEntrys, storeEntry{key: item.key, val: bytes})
+	default:
+		typ := reflect.TypeOf(item.val)
+		return nil, fmt.Errorf("can not found any serialization function for type:%s", typ.Name())
+	}
+
+	return storeEntrys, nil
+}
+
+func equalsStoreEntries(s1, s2 []storeEntry) bool {
+	itemMap1 := make(map[string]interface{}, len(s1))
+	for _, item := range s1 {
+		itemMap1[string(item.key)] = item.val
+	}
+
+	itemMap2 := make(map[string]interface{}, len(s2))
+	for _, item := range s2 {
+		itemMap2[string(item.key)] = item.val
+	}
+
+	return testutil.DeepEqual(itemMap1, itemMap2)
+}
+
+func loadStoreEntries(db dbm.DB) []storeEntry {
+	var entries []storeEntry
+	iter := db.Iterator()
+	defer iter.Release()
+	for iter.Next() {
+		if strings.HasPrefix(string(iter.Key()), string(database.BlockHashesKeyPrefix)) {
+			continue
+		}
+
+		item := storeEntry{key: iter.Key(), val: iter.Value()}
+		entries = append(entries, item)
+	}
+	return entries
+}
