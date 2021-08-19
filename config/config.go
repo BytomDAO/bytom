@@ -249,14 +249,14 @@ func DefaultDataDir() string {
 	// Try to place the data folder in the user's home dir
 	home := homeDir()
 	if home == "" {
-		return "./.bytom"
+		return "./.bytom2"
 	}
 	switch runtime.GOOS {
 	case "darwin":
 		// In order to be compatible with old data path,
 		// copy the data from the old path to the new path
 		oldPath := filepath.Join(home, "Library", "Bytom")
-		newPath := filepath.Join(home, "Library", "Application Support", "Bytom")
+		newPath := filepath.Join(home, "Library", "Application Support", "Bytom2")
 		if !isFolderNotExists(oldPath) && isFolderNotExists(newPath) {
 			if err := os.Rename(oldPath, newPath); err != nil {
 				log.Errorf("DefaultDataDir: %v", err)
@@ -265,9 +265,9 @@ func DefaultDataDir() string {
 		}
 		return newPath
 	case "windows":
-		return filepath.Join(home, "AppData", "Roaming", "Bytom")
+		return filepath.Join(home, "AppData", "Roaming", "Bytom2")
 	default:
-		return filepath.Join(home, ".bytom")
+		return filepath.Join(home, ".bytom2")
 	}
 }
 
