@@ -40,7 +40,8 @@ type AnnotatedInput struct {
 	SignData         bc.Hash              `json:"sign_data,omitempty"`
 
 	// Vote assign value only input is vote type
-	Vote string `json:"vote,omitempty"`
+	Vote      string   `json:"vote,omitempty"`
+	StateData []string `json:"state_data,omitempty"`
 }
 
 //AnnotatedOutput means an annotated transaction output.

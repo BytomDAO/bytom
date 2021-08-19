@@ -45,7 +45,7 @@ func onlyHaveInputActions(req *BuildRequest) (bool, error) {
 			return false, errors.WithDetailf(ErrBadActionType, "no action type provided on action %d", i)
 		}
 
-		if strings.HasPrefix(actionType, "spend") || actionType == "issue" {
+		if strings.HasPrefix(actionType, "spend") || actionType == "issue" || actionType == "veto" {
 			count++
 		}
 	}

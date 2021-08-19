@@ -97,12 +97,14 @@ func (a *API) getBlock(ins BlockReq) Response {
 		}
 
 		resOutID := orig.ResultIds[0]
-		resOut, ok := orig.Entries[*resOutID].(*bc.OriginalOutput)
-		if ok {
-			tx.MuxID = *resOut.Source.Ref
-		} else {
-			resRetire, _ := orig.Entries[*resOutID].(*bc.Retirement)
-			tx.MuxID = *resRetire.Source.Ref
+		resOut := orig.Entries[*resOutID]
+		switch out :=resOut.(type) {
+		case *bc.OriginalOutput:
+			tx.MuxID = *out.Source.Ref
+		case *bc.VoteOutput:
+			tx.MuxID = *out.Source.Ref
+		case *bc.Retirement:
+			tx.MuxID = *out.Source.Ref
 		}
 
 		for i := range orig.Inputs {
@@ -148,7 +150,6 @@ func (a *API) getRawBlock(ins BlockReq) Response {
 // GetBlockHeaderResp is resp struct for getBlockHeader API
 type GetBlockHeaderResp struct {
 	BlockHeader *types.BlockHeader `json:"block_header"`
-	Reward      uint64             `json:"reward"`
 }
 
 func (a *API) getBlockHeader(ins BlockReq) Response {
@@ -159,7 +160,6 @@ func (a *API) getBlockHeader(ins BlockReq) Response {
 
 	resp := &GetBlockHeaderResp{
 		BlockHeader: &block.BlockHeader,
-		Reward:      block.Transactions[0].Outputs[0].Amount,
 	}
 	return NewSuccessResponse(resp)
 }

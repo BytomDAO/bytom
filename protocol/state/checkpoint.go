@@ -6,6 +6,7 @@ import (
 
 	"github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
@@ -128,7 +129,6 @@ func (c *Checkpoint) Increase(block *types.Block) error {
 	c.Timestamp = block.Timestamp
 	c.applyVotes(block)
 	c.applyValidatorReward(block)
-	c.applyFederationReward()
 	return nil
 }
 
@@ -214,7 +214,10 @@ func getValidatorOrder(startTimestamp, blockTimestamp, numOfValidators uint64) u
 
 func federationValidators() map[string]*Validator {
 	validators := map[string]*Validator{}
-	for i, xPub := range config.CommonConfig.Federation.Xpubs {
+	if consensus.ActiveNetParams.Name == consensus.SoloNetParams.Name {
+		consensus.ActiveNetParams.FederationXpubs = []chainkd.XPub{config.CommonConfig.PrivateKey().XPub()}
+	}
+	for i, xPub := range consensus.ActiveNetParams.FederationXpubs {
 		validators[xPub.String()] = &Validator{PubKey: xPub.String(), Order: i}
 	}
 	return validators

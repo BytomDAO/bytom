@@ -43,7 +43,7 @@ type BlockProposer struct {
 func (b *BlockProposer) generateBlocks() {
 	xpub := config.CommonConfig.PrivateKey().XPub()
 	xpubStr := hex.EncodeToString(xpub[:])
-	ticker := time.NewTicker(time.Duration(consensus.ActiveNetParams.BlockTimeInterval) * time.Millisecond)
+	ticker := time.NewTicker(time.Duration(consensus.ActiveNetParams.BlockTimeInterval) * time.Millisecond / 4)
 	defer ticker.Stop()
 
 	for {
@@ -57,14 +57,18 @@ func (b *BlockProposer) generateBlocks() {
 		bestBlockHash := bestBlockHeader.Hash()
 
 		now := uint64(time.Now().UnixNano() / 1e6)
-		base := now
-		if now < bestBlockHeader.Timestamp {
-			base = bestBlockHeader.Timestamp
+		base := bestBlockHeader.Timestamp
+		if now > bestBlockHeader.Timestamp+consensus.ActiveNetParams.BlockTimeInterval {
+			base = now - consensus.ActiveNetParams.BlockTimeInterval
 		}
 		minTimeToNextBlock := consensus.ActiveNetParams.BlockTimeInterval - base%consensus.ActiveNetParams.BlockTimeInterval
 		nextBlockTime := base + minTimeToNextBlock
 		if (nextBlockTime - now) < consensus.ActiveNetParams.BlockTimeInterval/10 {
 			nextBlockTime += consensus.ActiveNetParams.BlockTimeInterval
+		}
+
+		if nextBlockTime > now {
+			continue
 		}
 
 		validator, err := b.chain.GetValidator(&bestBlockHash, nextBlockTime)
