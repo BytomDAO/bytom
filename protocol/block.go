@@ -114,7 +114,10 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 			return err
 		}
 
-		contractView.DetachBlock(b)
+		if err := contractView.DetachBlock(b); err != nil {
+			return err
+		}
+
 		for _, tx := range b.Transactions[1:] {
 			txsToRestore[tx.ID] = tx
 		}
@@ -138,7 +141,10 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 			return err
 		}
 
-		contractView.ApplyBlock(b)
+		if err := contractView.ApplyBlock(b); err != nil {
+			return err
+		}
+
 		for _, tx := range b.Transactions[1:] {
 			if _, ok := txsToRestore[tx.ID]; !ok {
 				txsToRemove[tx.ID] = tx
