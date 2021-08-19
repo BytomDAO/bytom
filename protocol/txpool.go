@@ -213,9 +213,7 @@ func isTransactionZeroOutput(tx *types.Tx) bool {
 func isInvalidBCRPTx(tx *types.Tx) bool {
 	for _, output := range tx.TxData.Outputs {
 		if bcrp.IsBCRPScript(output.ControlProgram) {
-			if output.AssetId.String() != consensus.BTMAssetID.String() || output.Amount < consensus.BCRPRequiredBTMAmount {
-				return true
-			}
+			return true
 		}
 	}
 	return false
