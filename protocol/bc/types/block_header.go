@@ -31,7 +31,7 @@ func (bh *BlockHeader) Hash() bc.Hash {
 
 // Time returns the time represented by the Timestamp in block header.
 func (bh *BlockHeader) Time() time.Time {
-	return time.Unix(int64(bh.Timestamp), 0).UTC()
+	return time.Unix(int64(bh.Timestamp/1000), 0).UTC()
 }
 
 // MarshalText fulfills the json.Marshaler interface. This guarantees that
