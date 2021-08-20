@@ -69,7 +69,7 @@ type SupLink struct {
 func (s *SupLink) IsMajority(numOfValidators int) bool {
 	numOfSignatures := 0
 	for _, signature := range s.Signatures {
-		if len(signature) >= 0 {
+		if len(signature) > 0 {
 			numOfSignatures++
 		}
 	}
