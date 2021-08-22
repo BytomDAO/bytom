@@ -104,7 +104,7 @@ func (to *TxOutput) writeTo(w io.Writer) error {
 
 // ComputeOutputID assembles an output entry given a spend commitment and
 // computes and returns its corresponding entry ID.
-func ComputeOutputID(sc *SpendCommitment) (h bc.Hash, err error) {
+func ComputeOutputID(sc *SpendCommitment, inputType uint8, vote []byte) (h bc.Hash, err error) {
 	defer func() {
 		if r, ok := recover().(error); ok {
 			err = r
@@ -116,6 +116,15 @@ func ComputeOutputID(sc *SpendCommitment) (h bc.Hash, err error) {
 		Position: sc.SourcePosition,
 	}
 
-	o := bc.NewOriginalOutput(src, &bc.Program{VmVersion: sc.VMVersion, Code: sc.ControlProgram}, sc.StateData, 0)
+	var o bc.Entry
+	switch inputType {
+	case SpendInputType:
+		o = bc.NewOriginalOutput(src, &bc.Program{VmVersion: sc.VMVersion, Code: sc.ControlProgram}, sc.StateData, 0)
+	case VetoInputType:
+		o = bc.NewVoteOutput(src, &bc.Program{VmVersion: sc.VMVersion, Code: sc.ControlProgram}, sc.StateData, 0, vote)
+	default:
+		return h, fmt.Errorf("input type error:[%v]", inputType)
+	}
+
 	return bc.EntryID(o), nil
 }

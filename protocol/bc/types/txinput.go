@@ -113,9 +113,9 @@ func (t *TxInput) SetArguments(args [][]byte) {
 func (t *TxInput) SpentOutputID() (o bc.Hash, err error) {
 	switch inp := t.TypedInput.(type) {
 	case *SpendInput:
-		o, err = ComputeOutputID(&inp.SpendCommitment)
+		o, err = ComputeOutputID(&inp.SpendCommitment, inp.InputType(), nil)
 	case *VetoInput:
-		o, err = ComputeOutputID(&inp.SpendCommitment)
+		o, err = ComputeOutputID(&inp.SpendCommitment, inp.InputType(), inp.Vote)
 	}
 	return o, err
 }
