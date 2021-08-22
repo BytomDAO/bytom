@@ -134,7 +134,7 @@ func TestComputeOutputID(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		outputID, err := ComputeOutputID(c.sc)
+		outputID, err := ComputeOutputID(c.sc, SpendInputType, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
