@@ -30,7 +30,7 @@ const (
 	maxNumLANPeers      = 15
 )
 
-//pre-define errors for connecting fail
+// pre-define errors for connecting fail
 var (
 	ErrDuplicatePeer  = errors.New("Duplicate peer")
 	ErrConnectSelf    = errors.New("Connect self")
@@ -68,7 +68,7 @@ type Switch struct {
 	reactorsByCh map[byte]Reactor
 	peers        *PeerSet
 	dialing      *cmn.CMap
-	nodeInfo     *NodeInfo             // our node info
+	nodeInfo     *NodeInfo    // our node info
 	nodePrivKey  chainkd.XPrv // our node privkey
 	discv        discv
 	lanDiscv     lanDiscv
@@ -96,11 +96,11 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 		}
 	}
 
-	return newSwitch(config, discv, lanDiscv, l, *xPrv, listenAddr)
+	return NewSwitchDetail(config, discv, lanDiscv, l, *xPrv, listenAddr)
 }
 
-// newSwitch creates a new Switch with the given config.
-func newSwitch(config *cfg.Config, discv discv, lanDiscv lanDiscv, l Listener, priv chainkd.XPrv, listenAddr string) (*Switch, error) {
+// NewSwitchDetail creates a new Switch with the given config.
+func NewSwitchDetail(config *cfg.Config, discv discv, lanDiscv lanDiscv, l Listener, priv chainkd.XPrv, listenAddr string) (*Switch, error) {
 	sw := &Switch{
 		Config:       config,
 		peerConfig:   DefaultPeerConfig(config.P2P),
@@ -119,6 +119,26 @@ func newSwitch(config *cfg.Config, discv discv, lanDiscv lanDiscv, l Listener, p
 	sw.AddListener(l)
 	sw.BaseService = *cmn.NewBaseService(nil, "P2P Switch", sw)
 	return sw, nil
+}
+
+func (sw *Switch) GetDiscv() discv {
+	return sw.discv
+}
+
+func (sw *Switch) GetNodeInfo() *NodeInfo {
+	return sw.nodeInfo
+}
+
+func (sw *Switch) GetPeers() *PeerSet {
+	return sw.peers
+}
+
+func (sw *Switch) GetReactors() map[string]Reactor {
+	return sw.reactors
+}
+
+func (sw *Switch) GetSecurity() Security {
+	return sw.security
 }
 
 // OnStart implements BaseService. It starts all the reactors, peers, and listeners.
@@ -226,7 +246,7 @@ func (sw *Switch) AddListener(l Listener) {
 	sw.listeners = append(sw.listeners, l)
 }
 
-//DialPeerWithAddress dial node from net address
+// DialPeerWithAddress dial node from net address
 func (sw *Switch) DialPeerWithAddress(addr *NetAddress) error {
 	log.WithFields(log.Fields{"module": logModule, "address": addr}).Debug("Dialing peer")
 	sw.dialing.Set(addr.IP.String(), addr)
@@ -254,7 +274,7 @@ func (sw *Switch) IsBanned(ip string, level byte, reason string) bool {
 	return sw.security.IsBanned(ip, level, reason)
 }
 
-//IsDialing prevent duplicate dialing
+// IsDialing prevent duplicate dialing
 func (sw *Switch) IsDialing(addr *NetAddress) bool {
 	return sw.dialing.Has(addr.IP.String())
 }
@@ -294,7 +314,7 @@ func (sw *Switch) NodeInfo() *NodeInfo {
 	return sw.nodeInfo
 }
 
-//Peers return switch peerset
+// Peers return switch peerset
 func (sw *Switch) Peers() *PeerSet {
 	return sw.peers
 }
@@ -343,7 +363,7 @@ func (sw *Switch) connectLANPeers(lanPeer mdns.LANPeerEvent) {
 	for i := 0; i < len(lanPeer.IP); i++ {
 		addresses = append(addresses, NewLANNetAddressIPPort(lanPeer.IP[i], uint16(lanPeer.Port)))
 	}
-	sw.dialPeers(addresses)
+	sw.DialPeers(addresses)
 }
 
 func (sw *Switch) connectLANPeersRoutine() {
@@ -407,7 +427,7 @@ func (sw *Switch) dialPeerWorker(a *NetAddress, wg *sync.WaitGroup) {
 	wg.Done()
 }
 
-func (sw *Switch) dialPeers(addresses []*NetAddress) {
+func (sw *Switch) DialPeers(addresses []*NetAddress) {
 	connectedPeers := make(map[string]struct{})
 	for _, peer := range sw.Peers().List() {
 		connectedPeers[peer.RemoteAddrHost()] = struct{}{}
@@ -443,7 +463,7 @@ func (sw *Switch) ensureKeepConnectPeers() {
 		addresses = append(addresses, address)
 	}
 
-	sw.dialPeers(addresses)
+	sw.DialPeers(addresses)
 }
 
 func (sw *Switch) ensureOutboundPeers() {
@@ -461,7 +481,7 @@ func (sw *Switch) ensureOutboundPeers() {
 		address := NewNetAddressIPPort(nodes[i].IP, nodes[i].TCP)
 		addresses = append(addresses, address)
 	}
-	sw.dialPeers(addresses)
+	sw.DialPeers(addresses)
 }
 
 func (sw *Switch) ensureOutboundPeersRoutine() {

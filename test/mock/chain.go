@@ -2,8 +2,10 @@ package mock
 
 import (
 	"errors"
+
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/protocol/casper"
 )
 
 var (
@@ -17,6 +19,10 @@ type Chain struct {
 	blockMap        map[bc.Hash]*types.Block
 
 	prevOrphans map[bc.Hash]*types.Block
+}
+
+func (c *Chain) ProcessBlockVerification(msg *casper.ValidCasperSignMsg) error {
+	return nil
 }
 
 func NewChain() *Chain {
