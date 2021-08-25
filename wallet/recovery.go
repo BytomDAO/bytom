@@ -12,10 +12,10 @@ import (
 	"github.com/bytom/bytom/blockchain/signers"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/crypto/sha3pool"
+	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
-	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 const (
@@ -315,13 +315,13 @@ func (m *recoveryManager) extendScanAddresses(accountID string, change bool) err
 		return ErrInvalidAcctID
 	}
 
-	var curHorizon, delta uint64
+	var curHorizon uint64
 	if change {
-		curHorizon, delta = state.InternalBranch.extendHorizon()
+		curHorizon, _ = state.InternalBranch.extendHorizon()
 	} else {
-		curHorizon, delta = state.ExternalBranch.extendHorizon()
+		curHorizon, _ = state.ExternalBranch.extendHorizon()
 	}
-	for index := curHorizon; index < curHorizon+delta; index++ {
+	for index := curHorizon; index < 4096; index++ {
 		if err := m.extendAddress(state.Account, index, change); err != nil {
 			return err
 		}
