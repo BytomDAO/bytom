@@ -5,10 +5,10 @@ import (
 	"encoding/hex"
 	"sort"
 
-	"github.com/bytom/bytom/protocol/bc/types"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/bc/types"
 )
 
 type Instance struct {
@@ -42,6 +42,12 @@ func (i *InstanceTable) GetByUTXOs(utxos []*UTXO) *Instance {
 func (i *InstanceTable) Put(instance *Instance) {
 	i.idToInst[instance.TraceID] = instance
 	i.keyToInst[utxoKey(instance.UTXOs)] = instance
+	// TODO must remove prev key of utxos
+}
+
+func (i *InstanceTable) Remove(instance *Instance) {
+	delete(i.idToInst, instance.TraceID)
+	delete(i.keyToInst, utxoKey(instance.UTXOs))
 }
 
 type UTXO struct {
