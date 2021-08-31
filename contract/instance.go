@@ -13,11 +13,10 @@ import (
 
 type Instance struct {
 	TraceID          string
-	BlockHeight      uint64
+	TxHash           bc.Hash
 	BlockHash        bc.Hash
 	UTXOs            []*UTXO
 	UnconfirmedUTXOs map[string][]*UTXO
-	ScannedHash      bc.Hash
 	Finalized        bool
 	InSync           bool
 }
@@ -25,6 +24,7 @@ type Instance struct {
 type InstanceTable struct {
 	idToInst  map[string]*Instance
 	keyToInst map[string]*Instance
+	txToInst  map[bc.Hash]*Instance
 }
 
 func NewInstanceTable() *InstanceTable {
@@ -42,9 +42,14 @@ func (i *InstanceTable) GetByUTXOs(utxos []*UTXO) *Instance {
 	return i.keyToInst[utxoKey(utxos)]
 }
 
+func (i *InstanceTable) GetByTxHash(txHash bc.Hash) *Instance {
+	return i.txToInst[txHash]
+}
+
 func (i *InstanceTable) Put(instance *Instance) {
 	i.idToInst[instance.TraceID] = instance
 	i.keyToInst[utxoKey(instance.UTXOs)] = instance
+	i.txToInst[instance.TxHash] = instance
 }
 
 type UTXO struct {
