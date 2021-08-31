@@ -13,7 +13,6 @@ import (
 
 type Instance struct {
 	TraceID   string
-	TxHash    bc.Hash
 	BlockHash bc.Hash
 	UTXOs     []*UTXO
 	Finalized bool
