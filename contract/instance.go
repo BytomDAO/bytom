@@ -45,9 +45,11 @@ func (i *InstanceTable) Put(instance *Instance) {
 	// TODO must remove prev key of utxos
 }
 
-func (i *InstanceTable) Remove(instance *Instance) {
-	delete(i.idToInst, instance.TraceID)
-	delete(i.keyToInst, utxoKey(instance.UTXOs))
+func (i *InstanceTable) Remove(id string) {
+	if inst, ok := i.idToInst[id]; ok {
+		delete(i.idToInst, id)
+		delete(i.keyToInst, utxoKey(inst.UTXOs))
+	}
 }
 
 type UTXO struct {
