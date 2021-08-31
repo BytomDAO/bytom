@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"sort"
 
+	"github.com/google/uuid"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bytom/bytom/protocol/bc"
@@ -13,10 +14,21 @@ import (
 
 type Instance struct {
 	TraceID   string
-	BlockHash bc.Hash
 	UTXOs     []*UTXO
 	Finalized bool
 	InSync    bool
+}
+
+func NewInstance(inUTXOs, outUTXOs []*UTXO) *Instance {
+	inst := &Instance{
+		TraceID:   uuid.New().String(),
+		UTXOs:     outUTXOs,
+		Finalized: len(outUTXOs) == 0,
+	}
+	if inst.Finalized {
+		inst.UTXOs = inUTXOs
+	}
+	return inst
 }
 
 type InstanceTable struct {
