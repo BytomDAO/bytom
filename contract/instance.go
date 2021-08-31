@@ -25,7 +25,7 @@ type InstanceTable struct {
 	keyToInst map[string]*Instance
 }
 
-func (i *InstanceTable) NewInstanceTable() *InstanceTable {
+func NewInstanceTable() *InstanceTable {
 	return &InstanceTable{
 		idToInst:  make(map[string]*Instance),
 		keyToInst: make(map[string]*Instance),
