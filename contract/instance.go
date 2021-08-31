@@ -16,7 +16,6 @@ type Instance struct {
 	TxHash           bc.Hash
 	BlockHash        bc.Hash
 	UTXOs            []*UTXO
-	UnconfirmedUTXOs map[string][]*UTXO
 	Finalized        bool
 	InSync           bool
 }
