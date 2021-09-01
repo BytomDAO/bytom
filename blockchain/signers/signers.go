@@ -75,23 +75,21 @@ func GetBip0032Path(s *Signer, ks keySpace, itemIndexes ...uint64) [][]byte {
 }
 
 // getBip0044Path returns the complete path for bip0044 derived keys
-func getBip0044Path(accountIndex uint64, change bool, addrIndex uint64) [][]byte {
+func getBip0044Path(change bool, addrIndex uint64) [][]byte {
 	var path [][]byte
-	path = append(path, BIP44Purpose[:]) //purpose
-	path = append(path, BTMCoinType[:])  //coin type
-	accIdxBytes := make([]byte, 4)
-	binary.LittleEndian.PutUint32(accIdxBytes, uint32(accountIndex))
-	path = append(path, accIdxBytes) //account index
-	branchBytes := make([]byte, 4)
+
+	changeBytes := make([]byte, 4)
 	if change {
-		binary.LittleEndian.PutUint32(branchBytes, uint32(1))
+		binary.LittleEndian.PutUint32(changeBytes, uint32(1))
 	} else {
-		binary.LittleEndian.PutUint32(branchBytes, uint32(0))
+		binary.LittleEndian.PutUint32(changeBytes, uint32(0))
 	}
-	path = append(path, branchBytes) //change
+	path = append(path, changeBytes)
+
 	addrIdxBytes := make([]byte, 4)
 	binary.LittleEndian.PutUint32(addrIdxBytes[:], uint32(addrIndex))
-	path = append(path, addrIdxBytes[:]) //address index
+	path = append(path, addrIdxBytes[:])
+
 	return path
 }
 
@@ -101,7 +99,7 @@ func Path(s *Signer, ks keySpace, change bool, addrIndex uint64) ([][]byte, erro
 	case BIP0032:
 		return GetBip0032Path(s, ks, addrIndex), nil
 	case BIP0044:
-		return getBip0044Path(s.KeyIndex, change, addrIndex), nil
+		return getBip0044Path(change, addrIndex), nil
 	}
 	return nil, ErrDeriveRule
 }
