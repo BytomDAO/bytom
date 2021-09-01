@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	"github.com/google/uuid"
+
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bytom/bytom/protocol/bc"
@@ -32,43 +33,46 @@ func NewInstance(inUTXOs, outUTXOs []*UTXO) *Instance {
 }
 
 type InstanceTable struct {
-	idToInst  map[string]*Instance
-	keyToInst map[string]*Instance
+	traceIdToInst  map[string]*Instance
+	utxoHashToInst map[string]*Instance
 }
 
 func NewInstanceTable() *InstanceTable {
 	return &InstanceTable{
-		idToInst:  make(map[string]*Instance),
-		keyToInst: make(map[string]*Instance),
+		traceIdToInst:  make(map[string]*Instance),
+		utxoHashToInst: make(map[string]*Instance),
 	}
 }
 
 func (i *InstanceTable) GetByID(id string) *Instance {
-	return i.idToInst[id]
+	return i.traceIdToInst[id]
 }
 
 func (i *InstanceTable) GetByUTXOs(utxos []*UTXO) *Instance {
-	return i.keyToInst[utxoKey(utxos)]
+	return i.utxoHashToInst[utxoKey(utxos)]
 }
 
 func (i *InstanceTable) Put(instance *Instance) {
-	i.idToInst[instance.TraceID] = instance
-	i.keyToInst[utxoKey(instance.UTXOs)] = instance
+	i.traceIdToInst[instance.TraceID] = instance
+	i.utxoHashToInst[utxoKey(instance.UTXOs)] = instance
 	// TODO must remove prev key of utxos
 }
 
 func (i *InstanceTable) Remove(id string) {
-	if inst, ok := i.idToInst[id]; ok {
-		delete(i.idToInst, id)
-		delete(i.keyToInst, utxoKey(inst.UTXOs))
+	if inst, ok := i.traceIdToInst[id]; ok {
+		delete(i.traceIdToInst, id)
+		delete(i.utxoHashToInst, utxoKey(inst.UTXOs))
 	}
 }
 
 type UTXO struct {
-	assetID bc.AssetID
-	amount  uint64
-	hash    bc.Hash
-	program []byte
+	assetID   bc.AssetID
+	sourceID  uint64
+	sourcePos uint64
+	stateData []byte
+	amount    uint64
+	hash      bc.Hash
+	program   []byte
 }
 
 func inputToUTXO(input *types.TxInput) *UTXO {

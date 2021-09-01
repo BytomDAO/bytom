@@ -22,7 +22,7 @@ func (t *Tracer) AddUnconfirmedTx(tx *types.Tx) error {
 	return nil
 }
 
-func (t *Tracer) CreateNewInstance(txHash, blockHash bc.Hash) (string, error) {
+func (t *Tracer) CreateInstance(txHash, blockHash bc.Hash) (string, error) {
 	return "", nil
 }
 

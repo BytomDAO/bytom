@@ -5,7 +5,7 @@ import (
 )
 
 type TraceService interface {
-	CreateNewInstance(txHash, blockHash bc.Hash) (string, error)
+	CreateInstance(txHash, blockHash bc.Hash) (string, error)
 
 	RemoveInstance(traceID string) error
 

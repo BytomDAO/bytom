@@ -16,7 +16,6 @@ func NewInfrastructure(chain ChainService, repository Repository) *Infrastructur
 
 type ChainService interface {
 	BestChain() (uint64, bc.Hash)
-	GetTx(hash bc.Hash) (*types.Tx, error)
 	GetBlock(hash bc.Hash) (*types.Block, error)
 }
 
