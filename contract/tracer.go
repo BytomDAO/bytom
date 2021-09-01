@@ -62,10 +62,7 @@ func (t *Tracer) DetachBlock(block *types.Block) error {
 	var instances []*Instance
 	for _, tx := range block.Transactions {
 		inUTXOs, outUTXOs := t.parseTransfer(tx)
-		utxos := outUTXOs
-		if len(outUTXOs) == 0 {
-			utxos = inUTXOs
-		}
+		utxos := append(outUTXOs, inUTXOs...)
 		if len(utxos) == 0 {
 			continue
 		}
