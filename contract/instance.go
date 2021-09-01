@@ -1,12 +1,7 @@
 package contract
 
 import (
-	"bytes"
-	"encoding/hex"
-	"sort"
-
 	"github.com/google/uuid"
-	"golang.org/x/crypto/sha3"
 
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
@@ -47,20 +42,24 @@ func (i *InstanceTable) GetByID(id string) *Instance {
 	return i.traceIdToInst[id]
 }
 
-func (i *InstanceTable) GetByUTXOs(utxos []*UTXO) *Instance {
-	return i.utxoHashToInst[utxoKey(utxos)]
+func (i *InstanceTable) GetByUTXO(utxoHash string) *Instance {
+	return i.utxoHashToInst[utxoHash]
 }
 
 func (i *InstanceTable) Put(instance *Instance) {
 	i.traceIdToInst[instance.TraceID] = instance
-	i.utxoHashToInst[utxoKey(instance.UTXOs)] = instance
+	for _, utxo := range instance.UTXOs {
+		i.utxoHashToInst[utxo.hash.String()] = instance
+	}
 	// TODO must remove prev key of utxos
 }
 
 func (i *InstanceTable) Remove(id string) {
 	if inst, ok := i.traceIdToInst[id]; ok {
 		delete(i.traceIdToInst, id)
-		delete(i.utxoHashToInst, utxoKey(inst.UTXOs))
+		for _, utxo := range inst.UTXOs {
+			delete(i.utxoHashToInst, utxo.hash.String())
+		}
 	}
 }
 
@@ -91,17 +90,4 @@ func outputToUTXO(output *types.TxOutput, outputID bc.Hash) *UTXO {
 		hash:    outputID,
 		program: output.ControlProgram,
 	}
-}
-
-func utxoKey(utxos []*UTXO) string {
-	sort.Slice(utxos, func(i, j int) bool {
-		return utxos[i].hash.String() < utxos[j].hash.String()
-	})
-
-	buff := new(bytes.Buffer)
-	for _, u := range utxos {
-		buff.Write(u.hash.Bytes())
-	}
-	digest := sha3.Sum256(buff.Bytes())
-	return hex.EncodeToString(digest[:])
 }
