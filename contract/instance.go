@@ -6,7 +6,6 @@ import (
 	"sort"
 
 	"github.com/google/uuid"
-
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bytom/bytom/protocol/bc"
