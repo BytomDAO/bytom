@@ -40,7 +40,7 @@ func (t *Tracer) ApplyBlock(block *types.Block) error {
 	t.Lock()
 	defer t.Unlock()
 
-	var instances []*Instance
+	var newInstances, oldInstances []*Instance
 	for _, tx := range block.Transactions {
 		inUTXOs, outUTXOs := t.parseTransfer(tx)
 		if len(inUTXOs) == 0 {
@@ -48,21 +48,22 @@ func (t *Tracer) ApplyBlock(block *types.Block) error {
 		}
 
 		if inst := t.table.GetByUTXO(inUTXOs[0].hash); inst != nil {
-			newInst := NewInstance(inUTXOs, outUTXOs)
-			newInst.TraceID = inst.TraceID
+			newInst := NewInstance(inst.TraceID, inUTXOs, outUTXOs)
 			newInst.InSync = true
-			instances = append(instances, newInst)
+			newInstances = append(newInstances, newInst)
+			oldInstances = append(oldInstances, inst)
 		}
 	}
-	return t.saveInstances(instances)
+	return t.saveInstances(newInstances, oldInstances)
 }
 
 func (t *Tracer) DetachBlock(block *types.Block) error {
 	t.Lock()
 	defer t.Unlock()
 
-	var instances []*Instance
-	for _, tx := range block.Transactions {
+	var newInstances, oldInstances []*Instance
+	for i := len(block.Transactions); i >= 0; i-- {
+		tx := block.Transactions[i]
 		inUTXOs, outUTXOs := t.parseTransfer(tx)
 		utxos := append(outUTXOs, inUTXOs...)
 		if len(utxos) == 0 {
@@ -70,15 +71,13 @@ func (t *Tracer) DetachBlock(block *types.Block) error {
 		}
 
 		if inst := t.table.GetByUTXO(utxos[0].hash); inst != nil {
-			instances = append(instances, &Instance{
-				TraceID:   inst.TraceID,
-				UTXOs:     inUTXOs,
-				Finalized: false,
-				InSync:    true,
-			})
+			newInst := NewInstance(inst.TraceID, outUTXOs, inUTXOs)
+			newInst.InSync = true
+			newInstances = append(newInstances, newInst)
+			oldInstances = append(oldInstances, inst)
 		}
 	}
-	return t.saveInstances(instances)
+	return t.saveInstances(newInstances, oldInstances)
 }
 
 func (t *Tracer) AddUnconfirmedTx(tx *types.Tx) error {
@@ -98,8 +97,7 @@ func (t *Tracer) CreateInstance(txHash, blockHash bc.Hash) (string, error) {
 				return "", errors.New("input of tx has not contract")
 			}
 
-			inst := NewInstance(inUTXOs, outUTXOs)
-			inst.TraceID = uuid.New().String()
+			inst := NewInstance(uuid.New().String(), inUTXOs, outUTXOs)
 			if err := t.infra.Repository.SaveInstances([]*Instance{inst}); err != nil {
 				return "", err
 			}
@@ -141,9 +139,13 @@ func (t *Tracer) parseTransfer(tx *types.Tx) ([]*UTXO, []*UTXO) {
 	return inUTXOs, outUTXOs
 }
 
-func (t *Tracer) saveInstances(instances []*Instance) error {
+func (t *Tracer) saveInstances(instances, oldInstances []*Instance) error {
 	if err := t.infra.Repository.SaveInstances(instances); err != nil {
 		return err
+	}
+
+	for _, inst := range oldInstances {
+		t.table.Remove(inst.TraceID)
 	}
 
 	for _, inst := range instances {

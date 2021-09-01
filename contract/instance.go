@@ -12,8 +12,9 @@ type Instance struct {
 	InSync    bool
 }
 
-func NewInstance(inUTXOs, outUTXOs []*UTXO) *Instance {
+func NewInstance(traceID string, inUTXOs, outUTXOs []*UTXO) *Instance {
 	inst := &Instance{
+		TraceID:   traceID,
 		UTXOs:     outUTXOs,
 		Finalized: len(outUTXOs) == 0,
 	}
@@ -48,7 +49,6 @@ func (i *InstanceTable) Put(instance *Instance) {
 	for _, utxo := range instance.UTXOs {
 		i.utxoHashToInst[utxo.hash] = instance
 	}
-	// TODO must remove prev key of utxos
 }
 
 func (i *InstanceTable) Remove(id string) {
