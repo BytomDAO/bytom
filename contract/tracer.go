@@ -1,8 +1,10 @@
 package contract
 
 import (
+	"errors"
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/consensus/segwit"
@@ -84,7 +86,31 @@ func (t *Tracer) AddUnconfirmedTx(tx *types.Tx) error {
 }
 
 func (t *Tracer) CreateInstance(txHash, blockHash bc.Hash) (string, error) {
-	return "", nil
+	block, err := t.infra.Chain.GetBlock(blockHash)
+	if err != nil {
+		return "", err
+	}
+
+	for _, tx := range block.Transactions {
+		if tx.ID == txHash {
+			inUTXOs, outUTXOs := t.parseTransfer(tx)
+			if len(inUTXOs) == 0 {
+				return "", errors.New("input of tx has not contract")
+			}
+
+			inst := NewInstance(inUTXOs, outUTXOs)
+			inst.TraceID = uuid.New().String()
+			if err := t.infra.Repository.SaveInstances([]*Instance{inst}); err != nil {
+				return "", err
+			}
+
+			if !inst.Finalized {
+				t.scheduler.AddNewJob(inst)
+			}
+			return inst.TraceID, nil
+		}
+	}
+	return "", errors.New("tx hash and block hash is mismatch")
 }
 
 func (t *Tracer) RemoveInstance(traceID string) error {
