@@ -56,7 +56,30 @@ func (t *Tracer) ApplyBlock(block *types.Block) error {
 }
 
 func (t *Tracer) DetachBlock(block *types.Block) error {
-	return nil
+	t.Lock()
+	defer t.Unlock()
+
+	var instances []*Instance
+	for _, tx := range block.Transactions {
+		inUTXOs, outUTXOs := t.parseTransfer(tx)
+		utxos := outUTXOs
+		if len(outUTXOs) == 0 {
+			utxos = inUTXOs
+		}
+		if len(utxos) == 0 {
+			continue
+		}
+
+		if inst := t.table.GetByUTXO(utxos[0].hash); inst != nil {
+			instances = append(instances, &Instance{
+				TraceID:   inst.TraceID,
+				UTXOs:     inUTXOs,
+				Finalized: false,
+				InSync:    true,
+			})
+		}
+	}
+	return t.saveInstances(instances)
 }
 
 func (t *Tracer) AddUnconfirmedTx(tx *types.Tx) error {
