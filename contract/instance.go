@@ -1,8 +1,6 @@
 package contract
 
 import (
-	"github.com/google/uuid"
-
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 )
@@ -14,9 +12,9 @@ type Instance struct {
 	InSync    bool
 }
 
-func NewInstance(inUTXOs, outUTXOs []*UTXO) *Instance {
+func NewInstance(traceID string, inUTXOs, outUTXOs []*UTXO) *Instance {
 	inst := &Instance{
-		TraceID:   uuid.New().String(),
+		TraceID:   traceID,
 		UTXOs:     outUTXOs,
 		Finalized: len(outUTXOs) == 0,
 	}
@@ -28,13 +26,13 @@ func NewInstance(inUTXOs, outUTXOs []*UTXO) *Instance {
 
 type InstanceTable struct {
 	traceIdToInst  map[string]*Instance
-	utxoHashToInst map[string]*Instance
+	utxoHashToInst map[bc.Hash]*Instance
 }
 
 func NewInstanceTable() *InstanceTable {
 	return &InstanceTable{
 		traceIdToInst:  make(map[string]*Instance),
-		utxoHashToInst: make(map[string]*Instance),
+		utxoHashToInst: make(map[bc.Hash]*Instance),
 	}
 }
 
@@ -42,52 +40,61 @@ func (i *InstanceTable) GetByID(id string) *Instance {
 	return i.traceIdToInst[id]
 }
 
-func (i *InstanceTable) GetByUTXO(utxoHash string) *Instance {
+func (i *InstanceTable) GetByUTXO(utxoHash bc.Hash) *Instance {
 	return i.utxoHashToInst[utxoHash]
 }
 
 func (i *InstanceTable) Put(instance *Instance) {
 	i.traceIdToInst[instance.TraceID] = instance
 	for _, utxo := range instance.UTXOs {
-		i.utxoHashToInst[utxo.hash.String()] = instance
+		i.utxoHashToInst[utxo.hash] = instance
 	}
-	// TODO must remove prev key of utxos
 }
 
 func (i *InstanceTable) Remove(id string) {
 	if inst, ok := i.traceIdToInst[id]; ok {
 		delete(i.traceIdToInst, id)
 		for _, utxo := range inst.UTXOs {
-			delete(i.utxoHashToInst, utxo.hash.String())
+			delete(i.utxoHashToInst, utxo.hash)
 		}
 	}
 }
 
 type UTXO struct {
-	assetID   bc.AssetID
-	sourceID  uint64
-	sourcePos uint64
-	stateData []byte
-	amount    uint64
 	hash      bc.Hash
+	assetID   bc.AssetID
+	amount    uint64
 	program   []byte
+	sourceID  bc.Hash
+	sourcePos uint64
+	stateData [][]byte
 }
 
-func inputToUTXO(input *types.TxInput) *UTXO {
-	outputID, _ := input.SpentOutputID()
+func inputToUTXO(tx *types.Tx, index int) *UTXO {
+	input := tx.Inputs[index]
+	spendInput := input.TypedInput.(*types.SpendInput)
 	return &UTXO{
-		assetID: input.AssetID(),
-		amount:  input.Amount(),
-		hash:    outputID,
-		program: input.ControlProgram(),
+		hash:      tx.InputIDs[index],
+		assetID:   input.AssetID(),
+		amount:    input.Amount(),
+		program:   input.ControlProgram(),
+		sourceID:  spendInput.SourceID,
+		sourcePos: spendInput.SourcePosition,
+		stateData: spendInput.StateData,
 	}
 }
 
-func outputToUTXO(output *types.TxOutput, outputID bc.Hash) *UTXO {
+func outputToUTXO(tx *types.Tx, index int) *UTXO {
+	output := tx.Outputs[index]
+	outputID := tx.OutputID(index)
+	originalOutput, _ := tx.OriginalOutput(*outputID)
 	return &UTXO{
-		assetID: *output.AssetId,
-		amount:  output.Amount,
-		hash:    outputID,
-		program: output.ControlProgram,
+		hash:      *outputID,
+		assetID:   *output.AssetId,
+		amount:    output.Amount,
+		program:   output.ControlProgram,
+		sourceID:  *originalOutput.Source.Ref,
+		sourcePos: uint64(index),
+		stateData: originalOutput.StateData,
 	}
 }
