@@ -80,14 +80,14 @@ func getBip0044Path(change bool, addrIndex uint64) [][]byte {
 
 	changeBytes := make([]byte, 4)
 	if change {
-		binary.LittleEndian.PutUint32(changeBytes, uint32(1))
+		binary.BigEndian.PutUint32(changeBytes, uint32(1))
 	} else {
-		binary.LittleEndian.PutUint32(changeBytes, uint32(0))
+		binary.BigEndian.PutUint32(changeBytes, uint32(0))
 	}
 	path = append(path, changeBytes)
 
 	addrIdxBytes := make([]byte, 4)
-	binary.LittleEndian.PutUint32(addrIdxBytes[:], uint32(addrIndex))
+	binary.BigEndian.PutUint32(addrIdxBytes[:], uint32(addrIndex))
 	path = append(path, addrIdxBytes[:])
 
 	return path

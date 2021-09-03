@@ -270,7 +270,7 @@ func (m *Manager) CreateBatchAddresses(accountID string, change bool, stopIndex 
 		return err
 	}
 
-	for currentIndex++; currentIndex <= stopIndex; currentIndex++ {
+	for ; currentIndex <= stopIndex; currentIndex++ {
 		cp, err := CreateCtrlProgram(account, currentIndex, change)
 		if err != nil {
 			return err
