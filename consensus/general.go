@@ -3,6 +3,7 @@ package consensus
 import (
 	"encoding/binary"
 	"fmt"
+	"math"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -37,6 +38,7 @@ const (
 	BCRPRequiredBTMAmount = uint64(100000000)
 
 	BTMAlias = "BTM"
+	defaultVotePendingNum = 302400
 )
 
 type CasperConfig struct {
@@ -53,9 +55,15 @@ type CasperConfig struct {
 	MinValidatorVoteNum uint64
 
 	// VotePendingBlockNumber is the locked block number of vote utxo
-	VotePendingBlockNumber uint64
+	VotePendingBlockNums []VotePendingBlockNum
 
 	FederationXpubs []chainkd.XPub
+}
+
+type VotePendingBlockNum struct {
+	BeginBlock uint64
+	EndBlock   uint64
+	Num        uint64
 }
 
 // BTMAssetID is BTM's asset id, the soul asset of Bytom
@@ -119,7 +127,10 @@ var MainNetParams = Params{
 		MaxTimeOffsetMs:        3000,
 		BlocksOfEpoch:          100,
 		MinValidatorVoteNum:    1e14,
-		VotePendingBlockNumber: 14400,
+		VotePendingBlockNums:   []VotePendingBlockNum{
+			{BeginBlock: 0, EndBlock: 432000, Num: 14400},
+			{BeginBlock: 432000, EndBlock: math.MaxUint64, Num: defaultVotePendingNum},
+		},
 		FederationXpubs: []chainkd.XPub{
 			xpub("f9003633ccbd8cc37e034f4dbe70d9fae980d437948d8cb908d0cab7909780d74a324b4decb5dfcd43fbc6b896ac066b7e02c733a1537360e933278a101a850c"),
 			xpub("d301fee5d4ba7eb5b9d41ca13ec56c19daceb5f6b752d91d49777fd1fc7c45891e5773cafb3b6d6ab764ef2794e8ba953c8bdb9dc77a3af51e979f96885f96b2"),
@@ -140,7 +151,7 @@ var TestNetParams = Params{
 		MaxTimeOffsetMs:        3000,
 		BlocksOfEpoch:          100,
 		MinValidatorVoteNum:    1e8,
-		VotePendingBlockNumber: 10,
+		VotePendingBlockNums:   []VotePendingBlockNum{{BeginBlock: 0, EndBlock: math.MaxUint64, Num: 10}},
 		FederationXpubs: []chainkd.XPub{
 			xpub("7732fac62320799ff5e4eec1dc4ba7b07dc0e5a647850bf0bc34cb9aca195a05a1118b57d377947d7936156c831c87b700ed945a82cae63aff14905beb39d001"),
 			xpub("08543fef8c3ca27483954f80eee6d461c307b6aa564aafaf235a4bd2740debbc71b14af78715c94cbc1d16fa84da97a3eabc5b21f003ab49882e4af7f9f00bbd"),
@@ -159,9 +170,18 @@ var SoloNetParams = Params{
 		MaxTimeOffsetMs:        24000,
 		BlocksOfEpoch:          100,
 		MinValidatorVoteNum:    1e8,
-		VotePendingBlockNumber: 10,
+		VotePendingBlockNums:   []VotePendingBlockNum{{BeginBlock: 0, EndBlock: math.MaxUint64, Num: 10}},
 		FederationXpubs:        []chainkd.XPub{},
 	},
+}
+
+func VotePendingBlockNums(height uint64) uint64 {
+	for _, pendingNum := range ActiveNetParams.VotePendingBlockNums {
+		if height >= pendingNum.BeginBlock && height < pendingNum.EndBlock {
+			return pendingNum.Num
+		}
+	}
+	return defaultVotePendingNum
 }
 
 // InitActiveNetParams load the config by chain ID

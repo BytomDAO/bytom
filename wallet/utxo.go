@@ -230,7 +230,7 @@ func txOutToUtxos(tx *types.Tx, blockHeight uint64) []*account.UTXO {
 			}
 
 		case *bc.VoteOutput:
-			voteValidHeight := blockHeight + consensus.ActiveNetParams.VotePendingBlockNumber
+			voteValidHeight := blockHeight + consensus.VotePendingBlockNums(blockHeight)
 			if validHeight < voteValidHeight {
 				validHeight = voteValidHeight
 			}
