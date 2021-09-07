@@ -63,7 +63,7 @@ func (t *traceScheduler) processLoop() {
 					log.WithField("err", err).Error("detach on trace scheduler")
 					break
 				}
-				height--
+				height -= 2
 			}
 			if bestHeight, _ := t.infra.Chain.BestChain(); height == bestHeight {
 				if err := t.finishJobs(jobs, catchedJobs, *prevHash); err != nil {
