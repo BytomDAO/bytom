@@ -144,16 +144,17 @@ func (t *traceScheduler) finishJobs(jobs, catchedJobs map[bc.Hash][]*Instance, s
 		return err
 	}
 
-	t.weighted.Release(int64(len(offChainInstances)))
-	for _, inst := range offChainInstances {
-		t.instances.Delete(inst.TraceID)
-	}
+	t.releaseInstances(offChainInstances)
 
 	if ok := t.tracerService.takeOverInstances(inSyncInstances, scannedHash); ok {
-		t.weighted.Release(int64(len(inSyncInstances)))
-		for _, inst := range inSyncInstances {
-			t.instances.Delete(inst.TraceID)
-		}
+		t.releaseInstances(inSyncInstances)
 	}
 	return nil
+}
+
+func (t *traceScheduler) releaseInstances(instances []*Instance) {
+	t.weighted.Release(int64(len(instances)))
+	for _, inst := range instances {
+		t.instances.Delete(inst.TraceID)
+	}
 }
