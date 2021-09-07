@@ -15,7 +15,7 @@ var errInstQueueOverflow = errors.New("instance queue is overflow")
 
 type traceScheduler struct {
 	weighted      *semaphore.Weighted
-	instances     sync.Map
+	instances     *sync.Map
 	tracerService *TracerService
 	infra         *Infrastructure
 	tracer        *tracer
@@ -23,8 +23,9 @@ type traceScheduler struct {
 
 func newTraceScheduler(infra *Infrastructure) *traceScheduler {
 	scheduler := &traceScheduler{
-		weighted: semaphore.NewWeighted(1000),
-		infra:    infra,
+		weighted:  semaphore.NewWeighted(1000),
+		instances: new(sync.Map),
+		infra:     infra,
 	}
 	go scheduler.processLoop()
 	return scheduler
