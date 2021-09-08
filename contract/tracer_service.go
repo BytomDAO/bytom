@@ -21,9 +21,10 @@ var (
 
 type TracerService struct {
 	sync.RWMutex
-	tracer    *tracer
-	infra     *Infrastructure
-	scheduler *traceScheduler
+	tracer           *tracer
+	infra            *Infrastructure
+	scheduler        *traceScheduler
+	unconfirmedIndex map[bc.Hash]*TreeNode
 }
 
 func NewTracerService(infra *Infrastructure, scheduler *traceScheduler) *TracerService {
@@ -42,7 +43,12 @@ func NewTracerService(infra *Infrastructure, scheduler *traceScheduler) *TracerS
 			}
 		}
 	}
-	return &TracerService{infra: infra, tracer: newTracer(instances), scheduler: scheduler}
+	return &TracerService{
+		infra:            infra,
+		tracer:           newTracer(instances),
+		scheduler:        scheduler,
+		unconfirmedIndex: make(map[bc.Hash]*TreeNode),
+	}
 }
 
 func (t *TracerService) ApplyBlock(block *types.Block) error {
@@ -61,8 +67,23 @@ func (t *TracerService) DetachBlock(block *types.Block) error {
 	return t.infra.Repository.SaveInstances(newInstances)
 }
 
-func (t *TracerService) AddUnconfirmedTx(tx *types.Tx) error {
-	return nil
+func (t *TracerService) AddUnconfirmedTx(tx *types.Tx) {
+	inUTXOs, outUTXOs := parseTransfer(tx)
+	if len(inUTXOs) == 0 || len(outUTXOs) == 0 {
+		return
+	}
+
+	treeNode := &TreeNode{TxHash: tx.ID, UTXOs: outUTXOs}
+	if inst := t.tracer.table.GetByUTXO(inUTXOs[0].hash); inst != nil {
+		inst.Unconfirmed = append(inst.Unconfirmed, treeNode)
+		t.addToUnconfirmedIndex(treeNode, outUTXOs)
+		return
+	}
+
+	if parent, ok := t.unconfirmedIndex[inUTXOs[0].hash]; ok {
+		parent.Children = append(parent.Children, treeNode)
+		t.addToUnconfirmedIndex(treeNode, outUTXOs)
+	}
 }
 
 func (t *TracerService) CreateInstance(txHash, blockHash bc.Hash) (string, error) {
@@ -80,7 +101,7 @@ func (t *TracerService) CreateInstance(txHash, blockHash bc.Hash) (string, error
 		return "", errTxAndBlockIsMismatch
 	}
 
-	inUTXOs, outUTXOs := t.tracer.parseTransfer(tx)
+	inUTXOs, outUTXOs := parseTransfer(tx)
 	if len(inUTXOs) == 0 && len(outUTXOs) == 0 {
 		return "", errTxNotIncludeContract
 	}
@@ -142,6 +163,12 @@ func (t *TracerService) addNewTraceJob(inst *Instance, block *types.Block) error
 		}
 	}
 	return nil
+}
+
+func (t *TracerService) addToUnconfirmedIndex(treeNode *TreeNode, utxos []*UTXO) {
+	for _, utxo := range utxos {
+		t.unconfirmedIndex[utxo.hash] = treeNode
+	}
 }
 
 func findTx(block *types.Block, txHash bc.Hash) *types.Tx {

@@ -34,7 +34,7 @@ func (t *tracer) removeInstance(traceID string) {
 func (t *tracer) applyBlock(block *types.Block) []*Instance {
 	var newInstances, oldInstances []*Instance
 	for _, tx := range block.Transactions {
-		inUTXOs, outUTXOs := t.parseTransfer(tx)
+		inUTXOs, outUTXOs := parseTransfer(tx)
 		if len(inUTXOs) == 0 {
 			continue
 		}
@@ -42,6 +42,11 @@ func (t *tracer) applyBlock(block *types.Block) []*Instance {
 		if inst := t.table.GetByUTXO(inUTXOs[0].hash); inst != nil {
 			newInst := NewInstance(inst.TraceID, inUTXOs, outUTXOs)
 			newInst.Status = InSync
+			for _, node := range inst.Unconfirmed {
+				if node.TxHash == tx.ID {
+					newInst.Unconfirmed = node.Children
+				}
+			}
 			newInstances = append(newInstances, newInst)
 			oldInstances = append(oldInstances, inst)
 		}
@@ -54,7 +59,7 @@ func (t *tracer) detachBlock(block *types.Block) []*Instance {
 	var newInstances, oldInstances []*Instance
 	for i := len(block.Transactions); i >= 0; i-- {
 		tx := block.Transactions[i]
-		inUTXOs, outUTXOs := t.parseTransfer(tx)
+		inUTXOs, outUTXOs := parseTransfer(tx)
 		utxos := append(outUTXOs, inUTXOs...)
 		if len(utxos) == 0 {
 			continue
@@ -71,7 +76,7 @@ func (t *tracer) detachBlock(block *types.Block) []*Instance {
 	return newInstances
 }
 
-func (t *tracer) parseTransfer(tx *types.Tx) ([]*UTXO, []*UTXO) {
+func parseTransfer(tx *types.Tx) ([]*UTXO, []*UTXO) {
 	var inUTXOs, outUTXOs []*UTXO
 	for i, input := range tx.Inputs {
 		if segwit.IsP2WSHScript(input.ControlProgram()) {

@@ -14,9 +14,16 @@ const (
 	OffChain
 )
 
+type TreeNode struct {
+	TxHash   bc.Hash
+	UTXOs    []*UTXO
+	Children []*TreeNode
+}
+
 type Instance struct {
 	TraceID       string
 	UTXOs         []*UTXO
+	Unconfirmed   []*TreeNode
 	Status        Status
 	ScannedHash   bc.Hash
 	ScannedHeight uint64
@@ -24,8 +31,8 @@ type Instance struct {
 
 func NewInstance(traceID string, inUTXOs, outUTXOs []*UTXO) *Instance {
 	inst := &Instance{
-		TraceID:   traceID,
-		UTXOs:     outUTXOs,
+		TraceID: traceID,
+		UTXOs:   outUTXOs,
 	}
 	inst.Status = Lagging
 	if len(outUTXOs) == 0 {
