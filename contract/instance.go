@@ -5,20 +5,38 @@ import (
 	"github.com/bytom/bytom/protocol/bc/types"
 )
 
+type Status uint8
+
+const (
+	Lagging Status = iota + 1
+	InSync
+	Finalized
+	OffChain
+)
+
+type TreeNode struct {
+	TxHash   bc.Hash
+	UTXOs    []*UTXO
+	Children []*TreeNode
+}
+
 type Instance struct {
-	TraceID   string
-	UTXOs     []*UTXO
-	Finalized bool
-	InSync    bool
+	TraceID       string
+	UTXOs         []*UTXO
+	Unconfirmed   []*TreeNode
+	Status        Status
+	ScannedHash   bc.Hash
+	ScannedHeight uint64
 }
 
 func NewInstance(traceID string, inUTXOs, outUTXOs []*UTXO) *Instance {
 	inst := &Instance{
-		TraceID:   traceID,
-		UTXOs:     outUTXOs,
-		Finalized: len(outUTXOs) == 0,
+		TraceID: traceID,
+		UTXOs:   outUTXOs,
 	}
-	if inst.Finalized {
+	inst.Status = Lagging
+	if len(outUTXOs) == 0 {
+		inst.Status = Finalized
 		inst.UTXOs = inUTXOs
 	}
 	return inst
