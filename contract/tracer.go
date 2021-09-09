@@ -1,70 +1,65 @@
 package contract
 
 import (
-	"errors"
-	"sync"
-
-	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
-
 	"github.com/bytom/bytom/consensus/segwit"
-	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 )
 
-type Tracer struct {
-	sync.RWMutex
-	table     *InstanceTable
-	infra     *Infrastructure
-	scheduler *TraceScheduler
+type tracer struct {
+	table *InstanceTable
 }
 
-func NewTracer(infra *Infrastructure, scheduler *TraceScheduler) *Tracer {
-	instances, err := infra.Repository.LoadInstances()
-	if err != nil {
-		logrus.WithField("err", err).Fatal("load instances from db")
-	}
-
+func newTracer(instances []*Instance) *tracer {
 	table := NewInstanceTable()
 	for _, inst := range instances {
-		if inst.InSync {
-			table.Put(inst)
-		} else {
-			scheduler.AddNewJob(inst)
-		}
+		table.Put(inst)
 	}
-	return &Tracer{infra: infra, table: table, scheduler: scheduler}
+	return &tracer{table: table}
 }
 
-func (t *Tracer) ApplyBlock(block *types.Block) error {
-	t.Lock()
-	defer t.Unlock()
+func (t *tracer) addInstances(instances []*Instance) {
+	for _, inst := range instances {
+		t.table.Put(inst)
+	}
+}
 
+func (t *tracer) addInstance(instance *Instance) {
+	t.table.Put(instance)
+}
+
+func (t *tracer) removeInstance(traceID string) {
+	t.table.Remove(traceID)
+}
+
+func (t *tracer) applyBlock(block *types.Block) []*Instance {
 	var newInstances, oldInstances []*Instance
 	for _, tx := range block.Transactions {
-		inUTXOs, outUTXOs := t.parseTransfer(tx)
+		inUTXOs, outUTXOs := parseTransfer(tx)
 		if len(inUTXOs) == 0 {
 			continue
 		}
 
 		if inst := t.table.GetByUTXO(inUTXOs[0].hash); inst != nil {
 			newInst := NewInstance(inst.TraceID, inUTXOs, outUTXOs)
-			newInst.InSync = true
+			newInst.Status = InSync
+			for _, node := range inst.Unconfirmed {
+				if node.TxHash == tx.ID {
+					newInst.Unconfirmed = node.Children
+				}
+			}
 			newInstances = append(newInstances, newInst)
 			oldInstances = append(oldInstances, inst)
 		}
 	}
-	return t.saveInstances(newInstances, oldInstances)
+	t.saveInstances(newInstances, oldInstances)
+	return newInstances
 }
 
-func (t *Tracer) DetachBlock(block *types.Block) error {
-	t.Lock()
-	defer t.Unlock()
-
+func (t *tracer) detachBlock(block *types.Block) []*Instance {
 	var newInstances, oldInstances []*Instance
 	for i := len(block.Transactions); i >= 0; i-- {
 		tx := block.Transactions[i]
-		inUTXOs, outUTXOs := t.parseTransfer(tx)
+		inUTXOs, outUTXOs := parseTransfer(tx)
 		utxos := append(outUTXOs, inUTXOs...)
 		if len(utxos) == 0 {
 			continue
@@ -72,58 +67,16 @@ func (t *Tracer) DetachBlock(block *types.Block) error {
 
 		if inst := t.table.GetByUTXO(utxos[0].hash); inst != nil {
 			newInst := NewInstance(inst.TraceID, outUTXOs, inUTXOs)
-			newInst.InSync = true
+			newInst.Status = InSync
 			newInstances = append(newInstances, newInst)
 			oldInstances = append(oldInstances, inst)
 		}
 	}
-	return t.saveInstances(newInstances, oldInstances)
+	t.saveInstances(newInstances, oldInstances)
+	return newInstances
 }
 
-func (t *Tracer) AddUnconfirmedTx(tx *types.Tx) error {
-	return nil
-}
-
-func (t *Tracer) CreateInstance(txHash, blockHash bc.Hash) (string, error) {
-	block, err := t.infra.Chain.GetBlock(blockHash)
-	if err != nil {
-		return "", err
-	}
-
-	for _, tx := range block.Transactions {
-		if tx.ID == txHash {
-			inUTXOs, outUTXOs := t.parseTransfer(tx)
-			if len(inUTXOs) == 0 {
-				return "", errors.New("input of tx has not contract")
-			}
-
-			inst := NewInstance(uuid.New().String(), inUTXOs, outUTXOs)
-			if err := t.infra.Repository.SaveInstances([]*Instance{inst}); err != nil {
-				return "", err
-			}
-
-			if !inst.Finalized {
-				t.scheduler.AddNewJob(inst)
-			}
-			return inst.TraceID, nil
-		}
-	}
-	return "", errors.New("tx hash and block hash is mismatch")
-}
-
-func (t *Tracer) RemoveInstance(traceID string) error {
-	return nil
-}
-
-func (t *Tracer) GetInstance(traceID string) (*Instance, error) {
-	return nil, nil
-}
-
-func (t *Tracer) takeOverInstance(instance *Instance) bool {
-	return false
-}
-
-func (t *Tracer) parseTransfer(tx *types.Tx) ([]*UTXO, []*UTXO) {
+func parseTransfer(tx *types.Tx) ([]*UTXO, []*UTXO) {
 	var inUTXOs, outUTXOs []*UTXO
 	for i, input := range tx.Inputs {
 		if segwit.IsP2WSHScript(input.ControlProgram()) {
@@ -139,11 +92,7 @@ func (t *Tracer) parseTransfer(tx *types.Tx) ([]*UTXO, []*UTXO) {
 	return inUTXOs, outUTXOs
 }
 
-func (t *Tracer) saveInstances(instances, oldInstances []*Instance) error {
-	if err := t.infra.Repository.SaveInstances(instances); err != nil {
-		return err
-	}
-
+func (t *tracer) saveInstances(instances, oldInstances []*Instance) {
 	for _, inst := range oldInstances {
 		t.table.Remove(inst.TraceID)
 	}
@@ -151,5 +100,4 @@ func (t *Tracer) saveInstances(instances, oldInstances []*Instance) error {
 	for _, inst := range instances {
 		t.table.Put(inst)
 	}
-	return nil
 }
