@@ -179,6 +179,16 @@ func (s *Store) GetBlock(hash *bc.Hash) (*types.Block, error) {
 	}, nil
 }
 
+// GetBlockByHeight return the block by given height
+func (s *Store) GetBlockByHeight(height uint64) (*types.Block, error) {
+	hash, err := s.GetMainChainHash(height)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.GetBlock(hash)
+}
+
 // GetTransactionsUtxo will return all the utxo that related to the input txs
 func (s *Store) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) error {
 	return getTransactionsUtxo(s.db, view, txs)

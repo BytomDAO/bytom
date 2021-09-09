@@ -85,7 +85,7 @@ func (t *Tracer) AddUnconfirmedTx(tx *types.Tx) error {
 }
 
 func (t *Tracer) CreateInstance(txHash, blockHash bc.Hash) (string, error) {
-	block, err := t.infra.Chain.GetBlock(blockHash)
+	block, err := t.infra.Repository.GetBlock(&blockHash)
 	if err != nil {
 		return "", err
 	}

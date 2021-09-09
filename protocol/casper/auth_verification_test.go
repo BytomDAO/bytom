@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/contract"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/errors"
@@ -107,6 +108,7 @@ func (s *mockStore2) CheckpointsFromNode(height uint64, hash *bc.Hash) ([]*state
 }
 func (s *mockStore2) BlockExist(hash *bc.Hash) bool                            { return false }
 func (s *mockStore2) GetBlock(*bc.Hash) (*types.Block, error)                  { return nil, nil }
+func (s *mockStore2) GetBlockByHeight(uint642 uint64) (*types.Block, error)    { return nil, nil }
 func (s *mockStore2) GetStoreStatus() *state.BlockStoreState                   { return nil }
 func (s *mockStore2) GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error { return nil }
 func (s *mockStore2) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)             { return nil, nil }
@@ -128,3 +130,8 @@ func (s *mockStore2) GetCheckpoint(hash *bc.Hash) (*state.Checkpoint, error) {
 	}
 	return nil, errors.New("fail to get checkpoint")
 }
+
+func (s *mockStore2) GetInstance(traceID string) (*contract.Instance, error) { return nil, nil }
+func (s *mockStore2) LoadInstances() ([]*contract.Instance, error) { return nil, nil }
+func (s *mockStore2) SaveInstances(instances []*contract.Instance) error { return nil }
+func (s *mockStore2) RemoveInstance(traceID string) {}

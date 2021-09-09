@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytom/bytom/contract"
 	"github.com/davecgh/go-spew/spew"
 
 	"github.com/bytom/bytom/consensus"
@@ -106,6 +107,7 @@ func (s *mockStore) CheckpointsFromNode(height uint64, hash *bc.Hash) ([]*state.
 }
 func (s *mockStore) BlockExist(hash *bc.Hash) bool                            { return false }
 func (s *mockStore) GetBlock(*bc.Hash) (*types.Block, error)                  { return nil, nil }
+func (s *mockStore) GetBlockByHeight(uint642 uint64) (*types.Block, error)    { return nil, nil }
 func (s *mockStore) GetStoreStatus() *state.BlockStoreState                   { return nil }
 func (s *mockStore) GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error { return nil }
 func (s *mockStore) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)             { return nil, nil }
@@ -116,6 +118,11 @@ func (s *mockStore) SaveBlockHeader(*types.BlockHeader) error                 { 
 func (s *mockStore) SaveChainStatus(*types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, *state.ContractViewpoint, uint64, *bc.Hash) error {
 	return nil
 }
+func (s *mockStore) GetInstance(traceID string) (*contract.Instance, error) { return nil, nil }
+func (s *mockStore) LoadInstances() ([]*contract.Instance, error) { return nil, nil }
+func (s *mockStore) SaveInstances(instances []*contract.Instance) error { return nil }
+func (s *mockStore) RemoveInstance(traceID string) {}
+
 
 func TestAddOrphan(t *testing.T) {
 	cases := []struct {
@@ -605,6 +612,7 @@ func (s *mockStore1) CheckpointsFromNode(height uint64, hash *bc.Hash) ([]*state
 }
 func (s *mockStore1) BlockExist(hash *bc.Hash) bool           { return false }
 func (s *mockStore1) GetBlock(*bc.Hash) (*types.Block, error) { return nil, nil }
+func (s *mockStore1) GetBlockByHeight(uint64) (*types.Block, error) { return nil, nil }
 func (s *mockStore1) GetStoreStatus() *state.BlockStoreState  { return nil }
 func (s *mockStore1) GetTransactionsUtxo(utxoView *state.UtxoViewpoint, tx []*bc.Tx) error {
 	for _, hash := range testTxs[2].SpentOutputIDs {
@@ -620,6 +628,10 @@ func (s *mockStore1) SaveBlockHeader(*types.BlockHeader) error     { return nil 
 func (s *mockStore1) SaveChainStatus(*types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, *state.ContractViewpoint, uint64, *bc.Hash) error {
 	return nil
 }
+func (s *mockStore1) GetInstance(traceID string) (*contract.Instance, error) { return nil, nil }
+func (s *mockStore1) LoadInstances() ([]*contract.Instance, error) { return nil, nil }
+func (s *mockStore1) SaveInstances(instances []*contract.Instance) error { return nil }
+func (s *mockStore1) RemoveInstance(traceID string) {}
 
 func TestProcessTransaction(t *testing.T) {
 	txPool := &TxPool{
