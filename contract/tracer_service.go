@@ -87,12 +87,12 @@ func (t *TracerService) AddUnconfirmedTx(tx *types.Tx) {
 }
 
 func (t *TracerService) CreateInstance(txHash, blockHash bc.Hash) (string, error) {
-	block, err := t.infra.Chain.GetBlock(blockHash)
+	block, err := t.infra.Chain.GetBlockByHash(&blockHash)
 	if err != nil {
 		return "", err
 	}
 
-	if bestHeight, _ := t.infra.Chain.BestChain(); bestHeight-block.Height > maxAdvanceTraceBlockNum {
+	if bestHeight := t.infra.Chain.BestBlockHeight(); bestHeight-block.Height > maxAdvanceTraceBlockNum {
 		return "", errGivenTxTooEarly
 	}
 
@@ -118,10 +118,7 @@ func (t *TracerService) RemoveInstance(traceID string) error {
 	t.Lock()
 	defer t.Unlock()
 
-	if err := t.infra.Repository.RemoveInstance(traceID); err != nil {
-		return err
-	}
-
+	t.infra.Repository.RemoveInstance(traceID)
 	t.tracer.removeInstance(traceID)
 	return nil
 }
@@ -134,8 +131,7 @@ func (t *TracerService) takeOverInstances(instances []*Instance, blockHash bc.Ha
 	t.RLock()
 	defer t.RUnlock()
 
-	_, bestHash := t.infra.Chain.BestChain()
-	if blockHash != bestHash {
+	if bestHash := t.infra.Chain.BestBlockHash(); blockHash != *bestHash {
 		return false
 	}
 

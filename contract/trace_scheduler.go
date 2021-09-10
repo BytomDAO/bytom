@@ -65,7 +65,7 @@ func (t *traceScheduler) processLoop() {
 				}
 				height -= 2
 			}
-			if bestHeight, _ := t.infra.Chain.BestChain(); height == bestHeight {
+			if bestHeight := t.infra.Chain.BestBlockHeight(); height == bestHeight {
 				if err := t.finishJobs(jobs, catchedJobs, *prevHash); err != nil {
 					log.WithField("err", err).Error("finish jobs")
 					break
@@ -110,7 +110,7 @@ func (t *traceScheduler) tryAttach(height uint64, prevHash *bc.Hash, jobs, catch
 }
 
 func (t *traceScheduler) detach(prevHash *bc.Hash, catchedJobs map[bc.Hash][]*Instance) error {
-	prevBlock, err := t.infra.Chain.GetBlock(*prevHash)
+	prevBlock, err := t.infra.Chain.GetBlockByHash(prevHash)
 	if err != nil {
 		return err
 	}
