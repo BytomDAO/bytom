@@ -17,11 +17,11 @@ func NewInfrastructure(chain ChainService, repository Repository) *Infrastructur
 type ChainService interface {
 	BestBlockHeight() uint64
 	BestBlockHash() *bc.Hash
+	GetBlockByHash(*bc.Hash) (*types.Block, error)
+	GetBlockByHeight(uint64) (*types.Block, error)
 }
 
 type Repository interface {
-	GetBlock(hash *bc.Hash) (*types.Block, error)
-	GetBlockByHeight(height uint64) (*types.Block, error)
 	GetInstance(traceID string) (*Instance, error)
 	LoadInstances() ([]*Instance, error)
 	SaveInstances(instances []*Instance) error

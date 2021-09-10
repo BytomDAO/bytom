@@ -90,7 +90,7 @@ func (t *traceScheduler) prepareJobs() (map[bc.Hash][]*Instance, uint64) {
 }
 
 func (t *traceScheduler) tryAttach(height uint64, prevHash *bc.Hash, jobs, catchedJobs map[bc.Hash][]*Instance) (bool, error) {
-	block, err := t.infra.Repository.GetBlockByHeight(height)
+	block, err := t.infra.Chain.GetBlockByHeight(height)
 	if err != nil {
 		return false, err
 	}
@@ -110,7 +110,7 @@ func (t *traceScheduler) tryAttach(height uint64, prevHash *bc.Hash, jobs, catch
 }
 
 func (t *traceScheduler) detach(prevHash *bc.Hash, catchedJobs map[bc.Hash][]*Instance) error {
-	prevBlock, err := t.infra.Repository.GetBlock(prevHash)
+	prevBlock, err := t.infra.Chain.GetBlockByHash(prevHash)
 	if err != nil {
 		return err
 	}

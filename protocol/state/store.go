@@ -1,7 +1,6 @@
 package state
 
 import (
-	"github.com/bytom/bytom/contract"
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
@@ -12,7 +11,6 @@ type Store interface {
 	BlockExist(*bc.Hash) bool
 
 	GetBlock(*bc.Hash) (*types.Block, error)
-	GetBlockByHeight(uint64) (*types.Block, error)
 	GetBlockHeader(*bc.Hash) (*types.BlockHeader, error)
 	GetStoreStatus() *BlockStoreState
 	GetTransactionsUtxo(*UtxoViewpoint, []*bc.Tx) error
@@ -24,11 +22,6 @@ type Store interface {
 	CheckpointsFromNode(height uint64, hash *bc.Hash) ([]*Checkpoint, error)
 	GetCheckpointsByHeight(uint64) ([]*Checkpoint, error)
 	SaveCheckpoints([]*Checkpoint) error
-
-	GetInstance(traceID string) (*contract.Instance, error)
-	LoadInstances() ([]*contract.Instance, error)
-	SaveInstances(instances []*contract.Instance) error
-	RemoveInstance(traceID string)
 
 	SaveBlock(*types.Block) error
 	SaveBlockHeader(*types.BlockHeader) error
