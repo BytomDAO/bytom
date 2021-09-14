@@ -3,6 +3,7 @@ package vmutil
 import (
 	"crypto/ed25519"
 	"encoding/hex"
+	"reflect"
 	"testing"
 
 	"github.com/bytom/bytom/errors"
@@ -211,10 +212,16 @@ func TestGetIssuanceProgramRestrictHeight(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-
+		originProgram := make([]byte, len(program))
+		copy(originProgram, program)
 		gotHeight := GetIssuanceProgramRestrictHeight(program)
 		if gotHeight != test.wantHeight {
 			t.Errorf("TestGetIssuanceProgramRestrictHeight #%d failed: got %d want %d", i, gotHeight, test.wantHeight)
+			return
+		}
+
+		if !reflect.DeepEqual(originProgram, program) {
+			t.Errorf("TestGetIssuanceProgramRestrictHeight #%d failed: after got %v before %v", i, program, originProgram)
 		}
 	}
 }

@@ -3,6 +3,7 @@ package vm
 import (
 	"bytes"
 	"math/big"
+	"reflect"
 	"testing"
 
 	"github.com/holiman/uint256"
@@ -134,5 +135,51 @@ func TestInt64BigIntConvert(t *testing.T) {
 		if !testutil.DeepEqual(x, y) {
 			t.Errorf("case %d fail on compare %d bytes", i, c)
 		}
+	}
+}
+
+func Test_reverse(t *testing.T) {
+	type args struct {
+		b []byte
+	}
+	type wants struct {
+		origin []byte
+		want   []byte
+	}
+	tests := []struct {
+		name  string
+		args  args
+		wants wants
+	}{
+		{
+			name: "test reverse",
+			args: args{
+				b: []byte{0x00, 0x00, 0x00, 0x00, 0x01},
+			},
+			wants: wants{
+				origin: []byte{0x00, 0x00, 0x00, 0x00, 0x01},
+				want:   []byte{0x01, 0x00, 0x00, 0x00, 0x00},
+			},
+		},
+		{
+			name: "test reverse 1",
+			args: args{
+				b: []byte{0x01, 0x02, 0x20, 0x03, 0x01},
+			},
+			wants: wants{
+				origin: []byte{0x01, 0x02, 0x20, 0x03, 0x01},
+				want:   []byte{0x01, 0x03, 0x20, 0x02, 0x01},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := reverse(tt.args.b); !reflect.DeepEqual(got, tt.wants.want) {
+				t.Errorf("reverse() = %v, want %v", got, tt.wants.want)
+			}
+			if !reflect.DeepEqual(tt.args.b, tt.wants.origin) {
+				t.Errorf("after reverse args = %v, origin %v", tt.args.b, tt.wants.origin)
+			}
+		})
 	}
 }
