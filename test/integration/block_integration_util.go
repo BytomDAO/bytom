@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/bytom/bytom/contract"
 	"github.com/golang/protobuf/proto"
 
 	"github.com/bytom/bytom/database"
@@ -54,13 +55,16 @@ func (p *processBlockTestCase) Run() error {
 		return err
 	}
 
+	traceDB := dbm.NewDB("trace", "leveldb", dbDir)
+	traceStore := contract.NewTraceStore(traceDB)
+
 	orphanManage := p.initOrphanManage
 	if orphanManage == nil {
 		orphanManage = protocol.NewOrphanManage()
 	}
 
 	txPool := protocol.NewTxPool(store, event.NewDispatcher())
-	chain, err := protocol.NewChainWithOrphanManage(store, txPool, orphanManage, nil)
+	chain, err := protocol.NewChainWithOrphanManage(store, traceStore, txPool, orphanManage, nil)
 	if err != nil {
 		return err
 	}

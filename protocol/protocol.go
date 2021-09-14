@@ -3,6 +3,7 @@ package protocol
 import (
 	"sync"
 
+	"github.com/bytom/bytom/contract"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/config"
@@ -23,6 +24,7 @@ type Chain struct {
 	txPool          *TxPool
 	store           state.Store
 	casper          *casper.Casper
+	tracerService   *contract.TracerService
 	processBlockCh  chan *processBlockMsg
 	eventDispatcher *event.Dispatcher
 
@@ -31,11 +33,11 @@ type Chain struct {
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
-func NewChain(store state.Store, txPool *TxPool, eventDispatcher *event.Dispatcher) (*Chain, error) {
-	return NewChainWithOrphanManage(store, txPool, NewOrphanManage(), eventDispatcher)
+func NewChain(store state.Store, traceStore *contract.TraceStore, txPool *TxPool, eventDispatcher *event.Dispatcher) (*Chain, error) {
+	return NewChainWithOrphanManage(store, traceStore, txPool, NewOrphanManage(), eventDispatcher)
 }
 
-func NewChainWithOrphanManage(store state.Store, txPool *TxPool, manage *OrphanManage, eventDispatcher *event.Dispatcher) (*Chain, error) {
+func NewChainWithOrphanManage(store state.Store, traceStore *contract.TraceStore, txPool *TxPool, manage *OrphanManage, eventDispatcher *event.Dispatcher) (*Chain, error) {
 	c := &Chain{
 		orphanManage:    manage,
 		eventDispatcher: eventDispatcher,
@@ -65,6 +67,9 @@ func NewChainWithOrphanManage(store state.Store, txPool *TxPool, manage *OrphanM
 	}
 
 	c.casper = casper
+
+	infra := contract.NewInfrastructure(c, traceStore)
+	c.tracerService = contract.NewTracerService(infra)
 	go c.blockProcessor()
 	return c, nil
 }

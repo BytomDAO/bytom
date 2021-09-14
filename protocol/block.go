@@ -118,6 +118,10 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 			return err
 		}
 
+		if err := c.tracerService.DetachBlock(b); err != nil {
+			return err
+		}
+
 		for _, tx := range b.Transactions[1:] {
 			txsToRestore[tx.ID] = tx
 		}
@@ -142,6 +146,10 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 		}
 
 		if err := contractView.ApplyBlock(b); err != nil {
+			return err
+		}
+
+		if err := c.tracerService.ApplyBlock(b); err != nil {
 			return err
 		}
 

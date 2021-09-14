@@ -2,12 +2,14 @@ package test
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"github.com/bytom/bytom/account"
 	"github.com/bytom/bytom/blockchain/pseudohsm"
 	"github.com/bytom/bytom/blockchain/txbuilder"
 	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/contract"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/database"
 	dbm "github.com/bytom/bytom/database/leveldb"
@@ -25,10 +27,14 @@ const (
 
 // MockChain mock chain with genesis block
 func MockChain(testDB dbm.DB) (*protocol.Chain, *database.Store, *protocol.TxPool, error) {
+	traceDB := dbm.NewDB("trace", "leveldb", "trace_db")
+	defer os.RemoveAll("trace_db")
+
 	store := database.NewStore(testDB)
+	traceStore := contract.NewTraceStore(traceDB)
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
-	chain, err := protocol.NewChain(store, txPool, dispatcher)
+	chain, err := protocol.NewChain(store, traceStore, txPool, dispatcher)
 	return chain, store, txPool, err
 }
 

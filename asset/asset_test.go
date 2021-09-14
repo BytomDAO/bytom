@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/contract"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/database"
 	dbm "github.com/bytom/bytom/database/leveldb"
@@ -158,11 +159,12 @@ func TestListAssets(t *testing.T) {
 	}
 }
 
-func mockChain(testDB dbm.DB) (*protocol.Chain, error) {
+func mockChain(testDB, traceDB dbm.DB) (*protocol.Chain, error) {
 	store := database.NewStore(testDB)
+	traceStore := contract.NewTraceStore(traceDB)
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
-	chain, err := protocol.NewChain(store, txPool, dispatcher)
+	chain, err := protocol.NewChain(store, traceStore, txPool, dispatcher)
 	if err != nil {
 		return nil, err
 	}
@@ -177,9 +179,10 @@ func mockNewRegistry(t *testing.T) *Registry {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	traceDB := dbm.NewDB("trace", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 
-	chain, err := mockChain(testDB)
+	chain, err := mockChain(testDB, traceDB)
 	if err != nil {
 		t.Fatal(err)
 	}

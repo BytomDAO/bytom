@@ -3,6 +3,7 @@ package contract
 import (
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/google/uuid"
 )
 
 type Status uint8
@@ -14,24 +15,24 @@ const (
 	OffChain
 )
 
-type TreeNode struct {
+type treeNode struct {
 	TxHash   bc.Hash
 	UTXOs    []*UTXO
-	Children []*TreeNode
+	Children []*treeNode
 }
 
 type Instance struct {
 	TraceID       string
 	UTXOs         []*UTXO
-	Unconfirmed   []*TreeNode
+	Unconfirmed   []*treeNode
 	Status        Status
 	ScannedHash   bc.Hash
 	ScannedHeight uint64
 }
 
-func NewInstance(traceID string, inUTXOs, outUTXOs []*UTXO) *Instance {
+func NewInstance(inUTXOs, outUTXOs []*UTXO) *Instance {
 	inst := &Instance{
-		TraceID: traceID,
+		TraceID: uuid.New().String(),
 		UTXOs:   outUTXOs,
 	}
 	inst.Status = Lagging
@@ -42,39 +43,72 @@ func NewInstance(traceID string, inUTXOs, outUTXOs []*UTXO) *Instance {
 	return inst
 }
 
-type InstanceTable struct {
+func (i *Instance) transferTo(newUTXOs []*UTXO) *Instance {
+	inst := &Instance{
+		TraceID:     i.TraceID,
+		Status:      i.Status,
+		Unconfirmed: i.Unconfirmed,
+		UTXOs:       newUTXOs,
+	}
+	if len(newUTXOs) == 0 {
+		inst.Status = Finalized
+		inst.UTXOs = i.UTXOs
+	}
+	return inst
+}
+
+func (i *Instance) confirmTx(txHash bc.Hash) {
+	for _, node := range i.Unconfirmed {
+		if node.TxHash == txHash {
+			i.Unconfirmed = node.Children
+			return
+		}
+	}
+	i.Unconfirmed = nil
+}
+
+type instanceTable struct {
 	traceIdToInst  map[string]*Instance
 	utxoHashToInst map[bc.Hash]*Instance
 }
 
-func NewInstanceTable() *InstanceTable {
-	return &InstanceTable{
+func newInstanceTable() *instanceTable {
+	return &instanceTable{
 		traceIdToInst:  make(map[string]*Instance),
 		utxoHashToInst: make(map[bc.Hash]*Instance),
 	}
 }
 
-func (i *InstanceTable) GetByID(id string) *Instance {
+func (i *instanceTable) getByID(id string) *Instance {
 	return i.traceIdToInst[id]
 }
 
-func (i *InstanceTable) GetByUTXO(utxoHash bc.Hash) *Instance {
+func (i *instanceTable) getByUTXO(utxoHash bc.Hash) *Instance {
 	return i.utxoHashToInst[utxoHash]
 }
 
-func (i *InstanceTable) Put(instance *Instance) {
-	i.traceIdToInst[instance.TraceID] = instance
-	for _, utxo := range instance.UTXOs {
-		i.utxoHashToInst[utxo.hash] = instance
+func (i *instanceTable) save(newInst *Instance) {
+	if old, ok := i.traceIdToInst[newInst.TraceID]; ok {
+		for _, utxo := range old.UTXOs {
+			delete(i.utxoHashToInst, utxo.hash)
+		}
 	}
+	i.add(newInst)
 }
 
-func (i *InstanceTable) Remove(id string) {
+func (i *instanceTable) remove(id string) {
 	if inst, ok := i.traceIdToInst[id]; ok {
 		delete(i.traceIdToInst, id)
 		for _, utxo := range inst.UTXOs {
 			delete(i.utxoHashToInst, utxo.hash)
 		}
+	}
+}
+
+func (i *instanceTable) add(instance *Instance) {
+	i.traceIdToInst[instance.TraceID] = instance
+	for _, utxo := range instance.UTXOs {
+		i.utxoHashToInst[utxo.hash] = instance
 	}
 }
 

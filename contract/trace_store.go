@@ -6,8 +6,12 @@ import (
 	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
-type InstanceDB struct {
+type TraceStore struct {
 	db dbm.DB
+}
+
+func NewTraceStore(db dbm.DB) *TraceStore {
+	return &TraceStore{db: db}
 }
 
 func calcInstanceKey(traceID string) []byte {
@@ -15,9 +19,9 @@ func calcInstanceKey(traceID string) []byte {
 }
 
 // GetInstance return instance by given trace id
-func (i *InstanceDB) GetInstance(traceID string) (*Instance, error) {
+func (t *TraceStore) GetInstance(traceID string) (*Instance, error) {
 	key := calcInstanceKey(traceID)
-	data := i.db.Get(key)
+	data := t.db.Get(key)
 	instance := &Instance{}
 	if err := json.Unmarshal(data, instance); err != nil {
 		return nil, err
@@ -27,8 +31,8 @@ func (i *InstanceDB) GetInstance(traceID string) (*Instance, error) {
 }
 
 // LoadInstances used to load all instances in db
-func (i *InstanceDB) LoadInstances() ([]*Instance, error) {
-	iter := i.db.Iterator()
+func (t *TraceStore) LoadInstances() ([]*Instance, error) {
+	iter := t.db.Iterator()
 	defer iter.Release()
 
 	var instances []*Instance
@@ -44,8 +48,8 @@ func (i *InstanceDB) LoadInstances() ([]*Instance, error) {
 }
 
 // SaveInstances used to batch save multiple instances
-func (i *InstanceDB) SaveInstances(instances []*Instance) error {
-	batch := i.db.NewBatch()
+func (t *TraceStore) SaveInstances(instances []*Instance) error {
+	batch := t.db.NewBatch()
 	for _, inst := range instances {
 		key := calcInstanceKey(inst.TraceID)
 		data, err := json.Marshal(inst)
@@ -60,7 +64,7 @@ func (i *InstanceDB) SaveInstances(instances []*Instance) error {
 }
 
 // RemoveInstance delete a instance by given trace id
-func (i *InstanceDB) RemoveInstance(traceID string) {
+func (t *TraceStore) RemoveInstance(traceID string) {
 	key := calcInstanceKey(traceID)
-	i.db.Delete(key)
+	t.db.Delete(key)
 }
