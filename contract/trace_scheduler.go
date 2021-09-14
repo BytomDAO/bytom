@@ -27,8 +27,12 @@ func newTraceScheduler(infra *Infrastructure) *traceScheduler {
 		instances: new(sync.Map),
 		infra:     infra,
 	}
-	go scheduler.processLoop()
 	return scheduler
+}
+
+func (t *traceScheduler) start(service *TracerService) {
+	t.tracerService = service
+	go t.processLoop()
 }
 
 func (t *traceScheduler) addNewJob(instance *Instance) error {
