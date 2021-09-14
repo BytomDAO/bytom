@@ -1,12 +1,8 @@
 package test
 
 import (
-	"os"
-
-	"github.com/bytom/bytom/contract"
 	"github.com/bytom/bytom/crypto/sha3pool"
 	"github.com/bytom/bytom/database"
-	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/event"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
@@ -17,13 +13,9 @@ import (
 )
 
 func mockChainWithStore(store *database.Store) (*protocol.Chain, *database.Store, *protocol.TxPool, error) {
-	traceDB := dbm.NewDB("trace", "leveldb", "trace_db")
-	defer os.RemoveAll("trace_db")
-
 	dispatcher := event.NewDispatcher()
-	traceStore := contract.NewTraceStore(traceDB)
 	txPool := protocol.NewTxPool(store, dispatcher)
-	chain, err := protocol.NewChain(store, traceStore, txPool, dispatcher)
+	chain, err := protocol.NewChain(store, txPool, dispatcher)
 	return chain, store, txPool, err
 }
 

@@ -74,10 +74,7 @@ func NewNode(config *cfg.Config) *Node {
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
 
-	traceDB := dbm.NewDB("trace", config.DBBackend, config.DBDir())
-	traceStore := contract.NewTraceStore(traceDB)
-
-	chain, err := protocol.NewChain(store, traceStore, txPool, dispatcher)
+	chain, err := protocol.NewChain(store, txPool, dispatcher)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
 	}

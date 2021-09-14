@@ -9,7 +9,6 @@ import (
 
 	"github.com/bytom/bytom/blockchain/pseudohsm"
 	"github.com/bytom/bytom/blockchain/signers"
-	"github.com/bytom/bytom/contract"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/database"
 	dbm "github.com/bytom/bytom/database/leveldb"
@@ -214,11 +213,8 @@ func mockAccountManager(t *testing.T) *Manager {
 
 	store := database.NewStore(testDB)
 
-	traceDB := dbm.NewDB("trace", "leveldb", dirPath)
-	traceStore := contract.NewTraceStore(traceDB)
-
 	txPool := protocol.NewTxPool(store, dispatcher)
-	chain, err := protocol.NewChain(store, traceStore, txPool, dispatcher)
+	chain, err := protocol.NewChain(store, txPool, dispatcher)
 	if err != nil {
 		t.Fatal(err)
 	}

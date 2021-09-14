@@ -115,15 +115,13 @@ func TestWalletUpdate(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	traceDB := dbm.NewDB("trace", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 
 	store := database.NewStore(testDB)
-	traceStore := contract.NewTraceStore(traceDB)
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
 
-	chain, err := protocol.NewChain(store, traceStore, txPool, dispatcher)
+	chain, err := protocol.NewChain(store, txPool, dispatcher)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,15 +207,13 @@ func TestRescanWallet(t *testing.T) {
 	}
 	defer os.RemoveAll(dirPath)
 
-	traceDB := dbm.NewDB("trace", "leveldb", "temp")
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 
 	store := database.NewStore(testDB)
-	traceStore := contract.NewTraceStore(traceDB)
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
-	chain, err := protocol.NewChain(store, traceStore, txPool, dispatcher)
+	chain, err := protocol.NewChain(store, txPool, dispatcher)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -261,14 +257,12 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
-	traceDB := dbm.NewDB("trace", "leveldb", dirPath)
 
 	store := database.NewStore(testDB)
-	traceStore := contract.NewTraceStore(traceDB)
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
 
-	chain, err := protocol.NewChain(store, traceStore, txPool, dispatcher)
+	chain, err := protocol.NewChain(store, txPool, dispatcher)
 	if err != nil {
 		t.Fatal(err)
 	}
