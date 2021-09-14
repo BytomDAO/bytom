@@ -212,7 +212,6 @@ func mockAccountManager(t *testing.T) *Manager {
 	dispatcher := event.NewDispatcher()
 
 	store := database.NewStore(testDB)
-
 	txPool := protocol.NewTxPool(store, dispatcher)
 	chain, err := protocol.NewChain(store, txPool, dispatcher)
 	if err != nil {
