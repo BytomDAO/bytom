@@ -138,6 +138,13 @@ func (c *Chain) BestBlockHash() *bc.Hash {
 	return &bestHash
 }
 
+// BestChain return the current height and block hash of the chain
+func (c *Chain) BestChain() (uint64, bc.Hash) {
+	c.cond.L.Lock()
+	defer c.cond.L.Unlock()
+	return c.bestBlockHeader.Height, c.bestBlockHeader.Hash()
+}
+
 // AllValidators return all validators has vote num
 func (c *Chain) AllValidators(blockHash *bc.Hash) ([]*state.Validator, error) {
 	parentCheckpoint, err := c.casper.ParentCheckpoint(blockHash)

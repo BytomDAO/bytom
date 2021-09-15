@@ -32,7 +32,7 @@ func (t *tracer) removeInstance(traceID string) {
 func (t *tracer) applyBlock(block *types.Block) []*Instance {
 	var newInstances []*Instance
 	for _, tx := range block.Transactions {
-		transfers := t.parseTransfers(tx)
+		transfers := parseTransfers(tx)
 		for _, transfer := range transfers {
 			if len(transfer.inUTXOs) == 0 {
 				continue
@@ -53,7 +53,7 @@ func (t *tracer) detachBlock(block *types.Block) []*Instance {
 	var newInstances []*Instance
 	for i := len(block.Transactions); i >= 0; i-- {
 		tx := block.Transactions[i]
-		transfers := t.parseTransfers(tx)
+		transfers := parseTransfers(tx)
 		for _, transfer := range transfers {
 			utxos := append(transfer.outUTXOs, transfer.inUTXOs...)
 			if inst := t.table.getByUTXO(utxos[0].hash); inst != nil {
@@ -72,7 +72,7 @@ type transfer struct {
 	outUTXOs []*UTXO
 }
 
-func (t *tracer) parseTransfers(tx *types.Tx) []*transfer {
+func parseTransfers(tx *types.Tx) []*transfer {
 	inUTXOs, outUTXOs := parseContractUTXOs(tx)
 	groupInUTXOs := groupUTXOs(inUTXOs)
 	groupOutUTXOs := groupUTXOs(outUTXOs)

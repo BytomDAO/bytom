@@ -16,7 +16,7 @@ var errInstQueueOverflow = errors.New("instance queue is overflow")
 type traceScheduler struct {
 	weighted      *semaphore.Weighted
 	instances     *sync.Map
-	tracerService *TracerService
+	tracerService *TraceService
 	infra         *Infrastructure
 	tracer        *tracer
 }
@@ -30,7 +30,7 @@ func newTraceScheduler(infra *Infrastructure) *traceScheduler {
 	return scheduler
 }
 
-func (t *traceScheduler) start(service *TracerService) {
+func (t *traceScheduler) start(service *TraceService) {
 	t.tracerService = service
 	go t.processLoop()
 }
@@ -69,7 +69,7 @@ func (t *traceScheduler) processLoop() {
 				}
 				height -= 2
 			}
-			if bestHeight := t.infra.Chain.BestBlockHeight(); height == bestHeight {
+			if bestHeight := t.tracerService.BestHeight(); height == bestHeight {
 				if err := t.finishJobs(jobs, catchedJobs, *prevHash); err != nil {
 					log.WithField("err", err).Error("finish jobs")
 					break

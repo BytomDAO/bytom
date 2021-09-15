@@ -30,7 +30,7 @@ type Instance struct {
 	ScannedHeight uint64
 }
 
-func NewInstance(inUTXOs, outUTXOs []*UTXO) *Instance {
+func newInstance(inUTXOs, outUTXOs []*UTXO) *Instance {
 	inst := &Instance{
 		TraceID: uuid.New().String(),
 		UTXOs:   outUTXOs,
