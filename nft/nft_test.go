@@ -134,3 +134,64 @@ func TestBuy(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// 10个ETH质押被120个ETH买走, 然后被质押15个ETH
+func TestOfferBuy(t *testing.T) {
+	contract, err := NewContract(platformScript, marginFold)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	offer, err := NewOffer(contract)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	oldStateData := [][]byte{
+		createrScript,
+		vm.Uint64Bytes(taxRate),
+		nftAsset.Bytes(),
+		ownerScirpt,
+		ETH.Bytes(),
+		vm.Uint64Bytes(10000000000),
+	}
+
+	newStateData := [][]byte{
+		createrScript,
+		vm.Uint64Bytes(taxRate),
+		nftAsset.Bytes(),
+		buyerScirpt,
+		ETH.Bytes(),
+		vm.Uint64Bytes(15000000000),
+	}
+
+	arguments := [][]byte{
+		buyerScirpt,
+		vm.Uint64Bytes(120000000000),
+		vm.Uint64Bytes(15000000000),
+		vm.Uint64Bytes(0),
+	}
+
+	tx := types.NewTx(types.TxData{
+		Version:        1,
+		SerializedSize: 10000,
+		Inputs: []*types.TxInput{
+			types.NewSpendInput(arguments, utxoSourceID, nftAsset, 1, 0, contract, oldStateData),
+			types.NewSpendInput(arguments, utxoSourceID, ETH, 10000000000, 1, contract, oldStateData),
+			types.NewSpendInput(nil, utxoSourceID, ETH, 135000000000, 2, offer, newStateData),
+			types.NewSpendInput(nil, utxoSourceID, *consensus.BTMAssetID, 100000000, 1, anyCanSpendScript, nil),
+		},
+		Outputs: []*types.TxOutput{
+			types.NewOriginalTxOutput(nftAsset, 1, contract, newStateData),
+			types.NewOriginalTxOutput(ETH, 15000000000, contract, newStateData),
+			types.NewOriginalTxOutput(ETH, 12000000000, createrScript, oldStateData),
+			types.NewOriginalTxOutput(ETH, 1200000000, platformScript, oldStateData),
+			types.NewOriginalTxOutput(ETH, 116800000000, ownerScirpt, oldStateData),
+		},
+	})
+
+	_, err = validation.ValidateTx(tx.Tx, &bc.Block{BlockHeader: &bc.BlockHeader{}}, func(prog []byte) ([]byte, error) { return nil, nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+}
