@@ -79,6 +79,8 @@ func NewNode(config *cfg.Config) *Node {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
 	}
 
+	startTraceUpdater(chain, config)
+
 	var accounts *account.Manager
 	var assets *asset.Registry
 	var wallet *w.Wallet
@@ -138,6 +140,14 @@ func NewNode(config *cfg.Config) *Node {
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 	node.blockProposer = blockproposer.NewBlockProposer(chain, accounts, dispatcher)
 	return node
+}
+
+func startTraceUpdater(chain *protocol.Chain, cfg *cfg.Config) {
+	db := dbm.NewDB("trace", cfg.DBBackend, cfg.DBDir())
+	store := contract.NewTraceStore(db)
+	tracerService := contract.NewTraceService(contract.NewInfrastructure(chain, store))
+	traceUpdater := contract.NewTraceUpdater(tracerService, chain)
+	go traceUpdater.Sync()
 }
 
 func initNodeConfig(config *cfg.Config) error {

@@ -18,60 +18,93 @@ var (
 	errTxNotIncludeContract = errors.New("input of tx not include utxo contract")
 )
 
-type TracerService struct {
+type TraceService struct {
 	sync.RWMutex
 	tracer           *tracer
 	infra            *Infrastructure
 	scheduler        *traceScheduler
 	unconfirmedIndex map[bc.Hash]*treeNode
+	bestHeight       uint64
+	bestHash         bc.Hash
 }
 
-func NewTracerService(infra *Infrastructure) *TracerService {
+func NewTraceService(infra *Infrastructure) *TraceService {
 	allInstances, err := infra.Repository.LoadInstances()
 	if err != nil {
 		logrus.WithField("err", err).Fatal("load instances from db")
 	}
 
-	scheduler := newTraceScheduler(infra)
+	chainStatus := infra.Repository.GetChainStatus()
+	if chainStatus == nil {
+		chainStatus.BlockHeight, chainStatus.BlockHash = infra.Chain.BestChain()
+		if err := infra.Repository.SaveChainStatus(chainStatus);  err != nil {
+			logrus.WithField("err", err).Fatal("init chain status for trace service")
+		}
+	}
 
-	var instances []*Instance
-	for _, inst := range allInstances {
+	scheduler := newTraceScheduler(infra)
+	inSyncInstances := dispatchInstances(allInstances, scheduler)
+
+	service := &TraceService{
+		infra:            infra,
+		tracer:           newTracer(inSyncInstances),
+		scheduler:        scheduler,
+		unconfirmedIndex: make(map[bc.Hash]*treeNode),
+		bestHeight:       chainStatus.BlockHeight,
+		bestHash:         chainStatus.BlockHash,
+	}
+	scheduler.start(service)
+	return service
+}
+
+func dispatchInstances(instances []*Instance, scheduler *traceScheduler) []*Instance {
+	var result []*Instance
+	for _, inst := range instances {
 		if inst.Status == InSync {
-			instances = append(instances, inst)
+			result = append(result, inst)
 		} else if inst.Status == Lagging {
 			if err := scheduler.addNewJob(inst); err != nil {
 				logrus.WithField("err", err).Fatal("add new job when init tracer")
 			}
 		}
 	}
-	service := &TracerService{
-		infra:            infra,
-		tracer:           newTracer(instances),
-		scheduler:        scheduler,
-		unconfirmedIndex: make(map[bc.Hash]*treeNode),
-	}
-	scheduler.start(service)
-	return service
+	return result
 }
 
-func (t *TracerService) ApplyBlock(block *types.Block) error {
+func (t *TraceService) BestHeight() uint64 {
+	t.RLock()
+	defer t.RUnlock()
+	return t.bestHeight
+}
+
+func (t *TraceService) BestHash() bc.Hash {
+	t.RLock()
+	defer t.RUnlock()
+	return t.bestHash
+}
+
+func (t *TraceService) ApplyBlock(block *types.Block) error {
 	t.Lock()
 	defer t.Unlock()
 
 	newInstances := t.tracer.applyBlock(block)
-	return t.infra.Repository.SaveInstances(newInstances)
+	t.bestHeight++
+	t.bestHash = block.Hash()
+	return t.infra.Repository.SaveInstancesWithStatus(newInstances, t.bestHeight, t.bestHash)
 }
 
-func (t *TracerService) DetachBlock(block *types.Block) error {
+func (t *TraceService) DetachBlock(block *types.Block) error {
 	t.Lock()
 	defer t.Unlock()
 
 	newInstances := t.tracer.detachBlock(block)
-	return t.infra.Repository.SaveInstances(newInstances)
+	t.bestHeight--
+	t.bestHash = block.PreviousBlockHash
+	return t.infra.Repository.SaveInstancesWithStatus(newInstances, t.bestHeight, t.bestHash)
 }
 
-func (t *TracerService) AddUnconfirmedTx(tx *types.Tx) {
-	transfers := t.tracer.parseTransfers(tx)
+func (t *TraceService) AddUnconfirmedTx(tx *types.Tx) {
+	transfers := parseTransfers(tx)
 	for _, transfer := range transfers {
 		inUTXOs, outUTXOs := transfer.inUTXOs, transfer.outUTXOs
 		if len(inUTXOs) == 0 || len(outUTXOs) == 0 {
@@ -92,13 +125,13 @@ func (t *TracerService) AddUnconfirmedTx(tx *types.Tx) {
 	}
 }
 
-func (t *TracerService) CreateInstance(txHash, blockHash bc.Hash) ([]string, error) {
+func (t *TraceService) CreateInstance(txHash, blockHash bc.Hash) ([]string, error) {
 	block, err := t.infra.Chain.GetBlockByHash(&blockHash)
 	if err != nil {
 		return nil, err
 	}
 
-	if bestHeight := t.infra.Chain.BestBlockHeight(); bestHeight-block.Height > maxAdvanceTraceBlockNum {
+	if bestHeight, _ := t.infra.Chain.BestChain(); bestHeight-block.Height > maxAdvanceTraceBlockNum {
 		return nil, errGivenTxTooEarly
 	}
 
@@ -107,14 +140,14 @@ func (t *TracerService) CreateInstance(txHash, blockHash bc.Hash) ([]string, err
 		return nil, errTxAndBlockIsMismatch
 	}
 
-	transfers := t.tracer.parseTransfers(tx)
+	transfers := parseTransfers(tx)
 	if len(transfers) == 0 {
 		return nil, errTxNotIncludeContract
 	}
 
 	var traceIDs []string
 	for _, transfer := range transfers {
-		inst := NewInstance(transfer.inUTXOs, transfer.outUTXOs)
+		inst := newInstance(transfer.inUTXOs, transfer.outUTXOs)
 		traceIDs = append(traceIDs, inst.TraceID)
 		if err := t.addNewTraceJob(inst, block); err != nil {
 			return nil, err
@@ -123,7 +156,7 @@ func (t *TracerService) CreateInstance(txHash, blockHash bc.Hash) ([]string, err
 	return traceIDs, nil
 }
 
-func (t *TracerService) RemoveInstance(traceID string) error {
+func (t *TraceService) RemoveInstance(traceID string) error {
 	t.Lock()
 	defer t.Unlock()
 
@@ -132,15 +165,15 @@ func (t *TracerService) RemoveInstance(traceID string) error {
 	return nil
 }
 
-func (t *TracerService) GetInstance(traceID string) (*Instance, error) {
+func (t *TraceService) GetInstance(traceID string) (*Instance, error) {
 	return t.infra.Repository.GetInstance(traceID)
 }
 
-func (t *TracerService) takeOverInstances(instances []*Instance, blockHash bc.Hash) bool {
+func (t *TraceService) takeOverInstances(instances []*Instance, blockHash bc.Hash) bool {
 	t.RLock()
 	defer t.RUnlock()
 
-	if bestHash := t.infra.Chain.BestBlockHash(); blockHash != *bestHash {
+	if blockHash != t.bestHash {
 		return false
 	}
 
@@ -153,7 +186,7 @@ func (t *TracerService) takeOverInstances(instances []*Instance, blockHash bc.Ha
 	return true
 }
 
-func (t *TracerService) addNewTraceJob(inst *Instance, block *types.Block) error {
+func (t *TraceService) addNewTraceJob(inst *Instance, block *types.Block) error {
 	if err := t.infra.Repository.SaveInstances([]*Instance{inst}); err != nil {
 		return err
 	}
@@ -168,7 +201,7 @@ func (t *TracerService) addNewTraceJob(inst *Instance, block *types.Block) error
 	return nil
 }
 
-func (t *TracerService) addToUnconfirmedIndex(treeNode *treeNode, utxos []*UTXO) {
+func (t *TraceService) addToUnconfirmedIndex(treeNode *treeNode, utxos []*UTXO) {
 	for _, utxo := range utxos {
 		t.unconfirmedIndex[utxo.hash] = treeNode
 	}

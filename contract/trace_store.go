@@ -4,7 +4,30 @@ import (
 	"encoding/json"
 
 	dbm "github.com/bytom/bytom/database/leveldb"
+	"github.com/bytom/bytom/protocol/bc"
+	"github.com/sirupsen/logrus"
 )
+
+const (
+	colon = byte(0x3a)
+
+	instance byte = iota + 1
+	chainStatus
+)
+
+var (
+	instancePrefixKey    = []byte{instance, colon}
+	chainStatusPrefixKey = []byte{chainStatus, colon}
+)
+
+func instanceKey(traceID string) []byte {
+	return append(instancePrefixKey, []byte(traceID)...)
+}
+
+func chainStatusKey() []byte {
+	return chainStatusPrefixKey
+}
+
 
 type TraceStore struct {
 	db dbm.DB
@@ -14,13 +37,9 @@ func NewTraceStore(db dbm.DB) *TraceStore {
 	return &TraceStore{db: db}
 }
 
-func calcInstanceKey(traceID string) []byte {
-	return append([]byte(traceID), []byte(":")...)
-}
-
 // GetInstance return instance by given trace id
 func (t *TraceStore) GetInstance(traceID string) (*Instance, error) {
-	key := calcInstanceKey(traceID)
+	key := instanceKey(traceID)
 	data := t.db.Get(key)
 	instance := &Instance{}
 	if err := json.Unmarshal(data, instance); err != nil {
@@ -50,8 +69,66 @@ func (t *TraceStore) LoadInstances() ([]*Instance, error) {
 // SaveInstances used to batch save multiple instances
 func (t *TraceStore) SaveInstances(instances []*Instance) error {
 	batch := t.db.NewBatch()
+	if err := t.saveInstances(instances, batch); err != nil {
+		return err
+	}
+
+	batch.Write()
+	return nil
+}
+
+// RemoveInstance delete a instance by given trace id
+func (t *TraceStore) RemoveInstance(traceID string) {
+	key := instanceKey(traceID)
+	t.db.Delete(key)
+}
+
+// SaveInstancesWithStatus batch save the instances and chain status
+func (t *TraceStore) SaveInstancesWithStatus(instances []*Instance, blockHeight uint64, blockHash bc.Hash) error {
+	batch := t.db.NewBatch()
+	if err := t.saveInstances(instances, batch); err != nil {
+		return err
+	}
+
+	chainData, err := json.Marshal(&ChainStatus{BlockHeight: blockHeight, BlockHash: blockHash})
+	if err != nil {
+		return err
+	}
+
+	batch.Set(chainStatusKey(), chainData)
+	batch.Write()
+	return nil
+}
+
+// GetChainStatus return the current chain status
+func (t *TraceStore) GetChainStatus() *ChainStatus {
+	data := t.db.Get(chainStatusKey())
+	if data == nil {
+		return nil
+	}
+
+	chainStatus := &ChainStatus{}
+	if err := json.Unmarshal(data, chainStatus); err != nil {
+		logrus.WithField("err", err).Fatal("get chain status from trace store")
+	}
+
+	return chainStatus
+}
+
+// SaveChainStatus save the chain status
+func (t *TraceStore) SaveChainStatus(chainStatus *ChainStatus) error {
+	data, err := json.Marshal(chainStatus)
+	if err != nil {
+		return err
+	}
+
+	t.db.Set(chainStatusKey(), data)
+	return nil
+}
+
+func (t *TraceStore) saveInstances(instances []*Instance, batch dbm.Batch) error {
 	for _, inst := range instances {
-		key := calcInstanceKey(inst.TraceID)
+		key := instanceKey(inst.TraceID)
 		data, err := json.Marshal(inst)
 		if err != nil {
 			return err
@@ -59,12 +136,5 @@ func (t *TraceStore) SaveInstances(instances []*Instance) error {
 
 		batch.Set(key, data)
 	}
-	batch.Write()
 	return nil
-}
-
-// RemoveInstance delete a instance by given trace id
-func (t *TraceStore) RemoveInstance(traceID string) {
-	key := calcInstanceKey(traceID)
-	t.db.Delete(key)
 }
