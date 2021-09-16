@@ -18,6 +18,7 @@ type ChainService interface {
 	BestChain() (uint64, bc.Hash)
 	GetBlockByHash(*bc.Hash) (*types.Block, error)
 	GetBlockByHeight(uint64) (*types.Block, error)
+	BlockWaiter(height uint64) <-chan struct{}
 }
 
 type ChainStatus struct {

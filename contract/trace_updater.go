@@ -1,7 +1,6 @@
 package contract
 
 import (
-	"github.com/bytom/bytom/protocol"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -9,10 +8,10 @@ var logModule = "tracer"
 
 type TraceUpdater struct {
 	*TraceService
-	chain *protocol.Chain
+	chain ChainService
 }
 
-func NewTraceUpdater(traceService *TraceService, chain *protocol.Chain) *TraceUpdater {
+func NewTraceUpdater(traceService *TraceService, chain ChainService) *TraceUpdater {
 	return &TraceUpdater{
 		TraceService: traceService,
 		chain:        chain,
@@ -21,27 +20,27 @@ func NewTraceUpdater(traceService *TraceService, chain *protocol.Chain) *TraceUp
 
 func (t *TraceUpdater) Sync() {
 	for {
-		for !t.chain.InMainChain(t.BestHash()) {
-			block, err := t.chain.GetBlockByHash(&t.bestHash)
-			if err != nil {
-				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("walletUpdater GetBlockByHash")
-				return
-			}
-
-			if err := t.DetachBlock(block); err != nil {
-				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("walletUpdater detachBlock stop")
-				return
-			}
-		}
-
 		block, _ := t.chain.GetBlockByHeight(t.BestHeight() + 1)
 		if block == nil {
 			t.walletBlockWaiter()
 			continue
 		}
 
+		if bestHash := t.BestHash(); block.PreviousBlockHash != bestHash {
+			block, err := t.chain.GetBlockByHash(&bestHash)
+			if err != nil {
+				log.WithFields(log.Fields{"module": logModule, "err": err, "block_hash": bestHash.String()}).Errorf("trace updater get block")
+				return
+			}
+
+			if err := t.DetachBlock(block); err != nil {
+				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("trace updater detach block")
+				return
+			}
+		}
+
 		if err := t.ApplyBlock(block); err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("walletUpdater AttachBlock stop")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("trace updater attach block")
 			return
 		}
 	}
