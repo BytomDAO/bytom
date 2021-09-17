@@ -58,7 +58,6 @@ func (t *TraceStore) LoadInstances() ([]*Instance, error) {
 	var instances []*Instance
 	for iter.Next() {
 		instance := &Instance{}
-		fmt.Println(string(iter.Value()))
 		if err := json.Unmarshal(iter.Value(), instance); err != nil {
 			return nil, err
 		}
