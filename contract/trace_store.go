@@ -51,7 +51,7 @@ func (t *TraceStore) GetInstance(traceID string) (*Instance, error) {
 
 // LoadInstances used to load all instances in db
 func (t *TraceStore) LoadInstances() ([]*Instance, error) {
-	iter := t.db.Iterator()
+	iter := t.db.IteratorPrefix(instancePrefixKey)
 	defer iter.Release()
 
 	var instances []*Instance

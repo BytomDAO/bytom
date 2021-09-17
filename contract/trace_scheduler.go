@@ -49,98 +49,100 @@ func (t *traceScheduler) processLoop() {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		jobs, beginHeight := t.prepareJobs()
+		jobs, beginHeight, beginHash := t.prepareJobs()
 		if len(jobs) == 0 {
 			continue
 		}
 
-		t.tracer = newTracer(nil)
+		t.tracer = newTracer(jobs[beginHash])
 
-		var prevHash *bc.Hash
-		catchedJobs := make(map[bc.Hash][]*Instance)
-		for height := beginHeight + 1; ; height++ {
-			if ok, err := t.tryAttach(height, prevHash, jobs, catchedJobs); err != nil {
+		for height, blockHash := beginHeight, beginHash; ; height++ {
+			if bestHeight := t.tracerService.BestHeight(); height == bestHeight {
+				if err := t.finishJobs(jobs, blockHash); err != nil {
+					log.WithField("err", err).Error("finish jobs")
+					break
+				}
+			}
+
+			if ok, err := t.tryAttach(height+1, &blockHash, jobs); err != nil {
 				log.WithField("err", err).Error("try attach on trace scheduler")
 				break
 			} else if !ok {
-				if err := t.detach(prevHash, catchedJobs); err != nil {
+				if err := t.detach(&blockHash, jobs); err != nil {
 					log.WithField("err", err).Error("detach on trace scheduler")
 					break
 				}
 				height -= 2
 			}
-			if bestHeight := t.tracerService.BestHeight(); height == bestHeight {
-				if err := t.finishJobs(jobs, catchedJobs, *prevHash); err != nil {
-					log.WithField("err", err).Error("finish jobs")
-					break
-				}
-			}
 		}
 	}
 }
 
-func (t *traceScheduler) prepareJobs() (map[bc.Hash][]*Instance, uint64) {
-	var beginHeight uint64 = math.MaxUint64
+func (t *traceScheduler) prepareJobs() (map[bc.Hash][]*Instance, uint64, bc.Hash) {
+	beginHeight, beginHash := uint64(math.MaxUint64), bc.Hash{}
 	hashToJobs := make(map[bc.Hash][]*Instance)
 	t.instances.Range(func(_, value interface{}) bool {
 		inst := value.(*Instance)
 		hashToJobs[inst.ScannedHash] = append(hashToJobs[inst.ScannedHash], inst)
 		if inst.ScannedHeight < beginHeight {
 			beginHeight = inst.ScannedHeight
+			beginHash = inst.ScannedHash
 		}
 		return true
 	})
-	return hashToJobs, beginHeight
+	return hashToJobs, beginHeight, beginHash
 }
 
-func (t *traceScheduler) tryAttach(height uint64, prevHash *bc.Hash, jobs, catchedJobs map[bc.Hash][]*Instance) (bool, error) {
+func (t *traceScheduler) tryAttach(height uint64, blockHash *bc.Hash, jobs map[bc.Hash][]*Instance) (bool, error) {
 	block, err := t.infra.Chain.GetBlockByHeight(height)
 	if err != nil {
 		return false, err
 	}
 
-	if prevHash != nil && block.PreviousBlockHash != *prevHash {
+	if block.PreviousBlockHash != *blockHash {
 		return false, nil
 	}
 
-	if instances, ok := jobs[block.PreviousBlockHash]; ok {
-		t.tracer.addInstances(instances)
-		catchedJobs[block.PreviousBlockHash] = instances
-	}
-
 	t.tracer.applyBlock(block)
-	*prevHash = block.Hash()
+	*blockHash = block.Hash()
+
+	if instances, ok := jobs[block.Hash()]; ok {
+		t.tracer.addInstances(instances)
+	}
 	return true, nil
 }
 
-func (t *traceScheduler) detach(prevHash *bc.Hash, catchedJobs map[bc.Hash][]*Instance) error {
-	prevBlock, err := t.infra.Chain.GetBlockByHash(prevHash)
+func (t *traceScheduler) detach(blockHash *bc.Hash, jobs map[bc.Hash][]*Instance) error {
+	block, err := t.infra.Chain.GetBlockByHash(blockHash)
 	if err != nil {
 		return err
 	}
 
-	if instances, ok := catchedJobs[prevBlock.Hash()]; ok {
+	if instances, ok := jobs[block.Hash()]; ok {
 		for _, inst := range instances {
 			t.tracer.removeInstance(inst.TraceID)
 		}
-		delete(catchedJobs, prevBlock.Hash())
 	}
 
-	t.tracer.detachBlock(prevBlock)
-	*prevHash = prevBlock.PreviousBlockHash
+	t.tracer.detachBlock(block)
+	*blockHash = block.PreviousBlockHash
 	return nil
 }
 
-func (t *traceScheduler) finishJobs(jobs, catchedJobs map[bc.Hash][]*Instance, scannedHash bc.Hash) error {
-	var inSyncInstances, offChainInstances []*Instance
-	for hash, instances := range jobs {
-		if _, ok := catchedJobs[hash]; !ok {
-			offChainInstances = append(offChainInstances, instances...)
-			for _, inst := range instances {
+func (t *traceScheduler) finishJobs(jobs map[bc.Hash][]*Instance, scannedHash bc.Hash) error {
+	inSyncInstances := t.tracer.allInstances()
+	inSyncMap := make(map[string]bool)
+	for _, inst := range inSyncInstances {
+		inSyncMap[inst.TraceID] = true
+	}
+
+	var offChainInstances []*Instance
+	for _, instances := range jobs {
+		for _, inst := range instances {
+			if _, ok := inSyncMap[inst.TraceID]; !ok {
 				inst.Status = OffChain
+				offChainInstances = append(offChainInstances, inst)
 			}
-		} else {
-			inSyncInstances = append(inSyncInstances, instances...)
 		}
 	}
 

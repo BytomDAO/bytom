@@ -8,15 +8,19 @@ import (
 )
 
 type tracer struct {
-	table *instanceTable
+	table *instanceIndex
 }
 
 func newTracer(instances []*Instance) *tracer {
-	table := newInstanceTable()
+	table := newInstanceIndex()
 	for _, inst := range instances {
 		table.save(inst)
 	}
 	return &tracer{table: table}
+}
+
+func (t *tracer) allInstances() []*Instance {
+	return t.table.getAll()
 }
 
 func (t *tracer) addInstances(instances []*Instance) {
@@ -38,9 +42,8 @@ func (t *tracer) applyBlock(block *types.Block) []*Instance {
 				continue
 			}
 
-			if inst := t.table.getByUTXO(transfer.inUTXOs[0].hash); inst != nil {
-				newInst := inst.transferTo(transfer.outUTXOs)
-				newInst.confirmTx(tx.ID)
+			if inst := t.table.getByUTXO(transfer.inUTXOs[0].Hash); inst != nil {
+				newInst := inst.transferTo(transfer.outUTXOs, tx.ID)
 				newInstances = append(newInstances, newInst)
 			}
 		}
@@ -51,14 +54,13 @@ func (t *tracer) applyBlock(block *types.Block) []*Instance {
 
 func (t *tracer) detachBlock(block *types.Block) []*Instance {
 	var newInstances []*Instance
-	for i := len(block.Transactions); i >= 0; i-- {
+	for i := len(block.Transactions) - 1; i >= 0; i-- {
 		tx := block.Transactions[i]
 		transfers := parseTransfers(tx)
 		for _, transfer := range transfers {
 			utxos := append(transfer.outUTXOs, transfer.inUTXOs...)
-			if inst := t.table.getByUTXO(utxos[0].hash); inst != nil {
-				newInst := inst.transferTo(transfer.inUTXOs)
-				newInst.Unconfirmed = nil
+			if inst := t.table.getByUTXO(utxos[0].Hash); inst != nil {
+				newInst := inst.rollbackTo(transfer.inUTXOs)
 				newInstances = append(newInstances, newInst)
 			}
 		}
@@ -93,7 +95,7 @@ func parseTransfers(tx *types.Tx) []*transfer {
 func groupUTXOs(utxos []*UTXO) map[string][]*UTXO {
 	groupUTXOs := make(map[string][]*UTXO)
 	for _, utxo := range utxos {
-		program := hex.EncodeToString(utxo.program)
+		program := hex.EncodeToString(utxo.Program)
 		groupUTXOs[program] = append(groupUTXOs[program], utxo)
 	}
 	return groupUTXOs
@@ -102,17 +104,21 @@ func groupUTXOs(utxos []*UTXO) map[string][]*UTXO {
 func parseContractUTXOs(tx *types.Tx) ([]*UTXO, []*UTXO) {
 	var inUTXOs, outUTXOs []*UTXO
 	for i, input := range tx.Inputs {
-		if segwit.IsP2WSHScript(input.ControlProgram()) {
+		if isContract(input.ControlProgram()) {
 			inUTXOs = append(inUTXOs, inputToUTXO(tx, i))
 		}
 	}
 
 	for i, output := range tx.Outputs {
-		if segwit.IsP2WSHScript(output.ControlProgram) {
+		if isContract(output.ControlProgram) {
 			outUTXOs = append(outUTXOs, outputToUTXO(tx, i))
 		}
 	}
 	return inUTXOs, outUTXOs
+}
+
+func isContract(program []byte) bool {
+	return !(segwit.IsP2WPKHScript(program) || segwit.IsP2WSHScript(program) || segwit.IsStraightforward(program))
 }
 
 func (t *tracer) saveInstances(instances []*Instance) {

@@ -51,6 +51,7 @@ type Node struct {
 	notificationMgr *websocket.WSNotificationManager
 	api             *api.API
 	chain           *protocol.Chain
+	traceService    *contract.TraceService
 	blockProposer   *blockproposer.BlockProposer
 	miningEnable    bool
 }
@@ -79,7 +80,7 @@ func NewNode(config *cfg.Config) *Node {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
 	}
 
-	startTraceUpdater(chain, config)
+	traceService := startTraceUpdater(chain, config)
 
 	var accounts *account.Manager
 	var assets *asset.Registry
@@ -133,6 +134,7 @@ func NewNode(config *cfg.Config) *Node {
 		accessTokens:    accessTokens,
 		wallet:          wallet,
 		chain:           chain,
+		traceService:    traceService,
 		miningEnable:    config.Mining,
 		notificationMgr: notificationMgr,
 	}
@@ -142,12 +144,13 @@ func NewNode(config *cfg.Config) *Node {
 	return node
 }
 
-func startTraceUpdater(chain *protocol.Chain, cfg *cfg.Config) {
+func startTraceUpdater(chain *protocol.Chain, cfg *cfg.Config) *contract.TraceService {
 	db := dbm.NewDB("trace", cfg.DBBackend, cfg.DBDir())
 	store := contract.NewTraceStore(db)
 	tracerService := contract.NewTraceService(contract.NewInfrastructure(chain, store))
 	traceUpdater := contract.NewTraceUpdater(tracerService, chain)
 	go traceUpdater.Sync()
+	return tracerService
 }
 
 func initNodeConfig(config *cfg.Config) error {
@@ -196,7 +199,7 @@ func launchWebBrowser(port string) {
 }
 
 func (n *Node) initAndstartAPIServer() {
-	n.api = api.NewAPI(n.syncManager, n.wallet, n.blockProposer, n.chain, n.config, n.accessTokens, n.eventDispatcher, n.notificationMgr)
+	n.api = api.NewAPI(n.syncManager, n.wallet, n.blockProposer, n.chain, n.traceService, n.config, n.accessTokens, n.eventDispatcher, n.notificationMgr)
 
 	listenAddr := env.String("LISTEN", n.config.ApiAddress)
 	env.Parse()

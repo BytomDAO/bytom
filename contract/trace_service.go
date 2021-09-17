@@ -23,7 +23,7 @@ type TraceService struct {
 	tracer           *tracer
 	infra            *Infrastructure
 	scheduler        *traceScheduler
-	unconfirmedIndex map[bc.Hash]*treeNode
+	unconfirmedIndex map[bc.Hash]*TreeNode
 	bestHeight       uint64
 	bestHash         bc.Hash
 }
@@ -37,7 +37,7 @@ func NewTraceService(infra *Infrastructure) *TraceService {
 	chainStatus := infra.Repository.GetChainStatus()
 	if chainStatus == nil {
 		chainStatus.BlockHeight, chainStatus.BlockHash = infra.Chain.BestChain()
-		if err := infra.Repository.SaveChainStatus(chainStatus);  err != nil {
+		if err := infra.Repository.SaveChainStatus(chainStatus); err != nil {
 			logrus.WithField("err", err).Fatal("init chain status for trace service")
 		}
 	}
@@ -49,7 +49,7 @@ func NewTraceService(infra *Infrastructure) *TraceService {
 		infra:            infra,
 		tracer:           newTracer(inSyncInstances),
 		scheduler:        scheduler,
-		unconfirmedIndex: make(map[bc.Hash]*treeNode),
+		unconfirmedIndex: make(map[bc.Hash]*TreeNode),
 		bestHeight:       chainStatus.BlockHeight,
 		bestHash:         chainStatus.BlockHash,
 	}
@@ -111,14 +111,14 @@ func (t *TraceService) AddUnconfirmedTx(tx *types.Tx) {
 			return
 		}
 
-		treeNode := &treeNode{TxHash: tx.ID, UTXOs: outUTXOs}
-		if inst := t.tracer.table.getByUTXO(inUTXOs[0].hash); inst != nil {
+		treeNode := &TreeNode{TxHash: tx.ID, UTXOs: outUTXOs}
+		if inst := t.tracer.table.getByUTXO(inUTXOs[0].Hash); inst != nil {
 			inst.Unconfirmed = append(inst.Unconfirmed, treeNode)
 			t.addToUnconfirmedIndex(treeNode, outUTXOs)
 			return
 		}
 
-		if parent, ok := t.unconfirmedIndex[inUTXOs[0].hash]; ok {
+		if parent, ok := t.unconfirmedIndex[inUTXOs[0].Hash]; ok {
 			parent.Children = append(parent.Children, treeNode)
 			t.addToUnconfirmedIndex(treeNode, outUTXOs)
 		}
@@ -147,7 +147,7 @@ func (t *TraceService) CreateInstance(txHash, blockHash bc.Hash) ([]string, erro
 
 	var traceIDs []string
 	for _, transfer := range transfers {
-		inst := newInstance(transfer.inUTXOs, transfer.outUTXOs)
+		inst := newInstance(transfer.inUTXOs, transfer.outUTXOs, txHash, block)
 		traceIDs = append(traceIDs, inst.TraceID)
 		if err := t.addNewTraceJob(inst, block); err != nil {
 			return nil, err
@@ -177,6 +177,10 @@ func (t *TraceService) takeOverInstances(instances []*Instance, blockHash bc.Has
 		return false
 	}
 
+	for _, inst := range instances {
+		inst.Status = InSync
+	}
+
 	if err := t.infra.Repository.SaveInstances(instances); err != nil {
 		logrus.WithField("err", err).Error("save instances when take over instances")
 		return false
@@ -192,8 +196,6 @@ func (t *TraceService) addNewTraceJob(inst *Instance, block *types.Block) error 
 	}
 
 	if inst.Status != Finalized {
-		inst.ScannedHash = block.Hash()
-		inst.ScannedHeight = block.Height
 		if err := t.scheduler.addNewJob(inst); err != nil {
 			return err
 		}
@@ -201,9 +203,9 @@ func (t *TraceService) addNewTraceJob(inst *Instance, block *types.Block) error 
 	return nil
 }
 
-func (t *TraceService) addToUnconfirmedIndex(treeNode *treeNode, utxos []*UTXO) {
+func (t *TraceService) addToUnconfirmedIndex(treeNode *TreeNode, utxos []*UTXO) {
 	for _, utxo := range utxos {
-		t.unconfirmedIndex[utxo.hash] = treeNode
+		t.unconfirmedIndex[utxo.Hash] = treeNode
 	}
 }
 

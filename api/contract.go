@@ -8,6 +8,7 @@ import (
 	"github.com/bytom/bytom/crypto/sha3pool"
 	chainjson "github.com/bytom/bytom/encoding/json"
 	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/vm/vmutil"
 )
 
@@ -104,4 +105,53 @@ func (a *API) listContracts(_ context.Context) Response {
 	}
 
 	return NewSuccessResponse(cs)
+}
+
+type ContractInstance struct {
+	UTXOs       []*contract.UTXO     `json:"utxos"`
+	TxHash      *bc.Hash             `json:"tx_hash"`
+	Status      contract.Status      `json:"status"`
+	Unconfirmed []*contract.TreeNode `json:"unconfirmed"`
+}
+
+func (a *API) getContractInstance(_ context.Context, ins struct {
+	TraceID string `json:"trace_id"`
+}) Response {
+	instance, err := a.contractTracer.GetInstance(ins.TraceID)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	return NewSuccessResponse(&ContractInstance{
+		UTXOs:       instance.UTXOs,
+		TxHash:      instance.TxHash,
+		Status:      instance.Status,
+		Unconfirmed: instance.Unconfirmed,
+	})
+}
+
+func (a *API) createContractInstance(_ context.Context, ins struct {
+	TxHash    chainjson.HexBytes `json:"tx_hash"`
+	BlockHash chainjson.HexBytes `json:"block_hash"`
+}) Response {
+	var txHash, blockHash [32]byte
+	copy(txHash[:], ins.TxHash)
+	copy(blockHash[:], ins.BlockHash)
+
+	traceIDs, err := a.contractTracer.CreateInstance(bc.NewHash(txHash), bc.NewHash(blockHash))
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	return NewSuccessResponse(traceIDs)
+}
+
+func (a *API) removeContractInstance(_ context.Context, ins struct {
+	TraceID string `json:"trace_id"`
+}) Response {
+	if err := a.contractTracer.RemoveInstance(ins.TraceID); err != nil {
+		return NewErrorResponse(err)
+	}
+
+	return NewSuccessResponse(nil)
 }
