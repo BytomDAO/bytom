@@ -2,7 +2,6 @@ package contract
 
 import (
 	"errors"
-	"fmt"
 	"math"
 	"sync"
 	"time"
@@ -58,10 +57,6 @@ func (t *traceScheduler) processLoop() {
 		t.tracer = newTracer(jobs[beginHash])
 
 		for height, blockHash := beginHeight, beginHash; ; height++ {
-			if height == 329 {
-				fmt.Println(height)
-			}
-
 			if bestHeight := t.tracerService.BestHeight(); height == bestHeight {
 				if err := t.finishJobs(jobs, blockHash); err != nil {
 					log.WithField("err", err).Error("finish jobs")
