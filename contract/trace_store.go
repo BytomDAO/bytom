@@ -2,6 +2,7 @@ package contract
 
 import (
 	"encoding/json"
+	"fmt"
 
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/protocol/bc"
@@ -51,12 +52,13 @@ func (t *TraceStore) GetInstance(traceID string) (*Instance, error) {
 
 // LoadInstances used to load all instances in db
 func (t *TraceStore) LoadInstances() ([]*Instance, error) {
-	iter := t.db.Iterator()
+	iter := t.db.IteratorPrefix(instancePrefixKey)
 	defer iter.Release()
 
 	var instances []*Instance
 	for iter.Next() {
 		instance := &Instance{}
+		fmt.Println(string(iter.Value()))
 		if err := json.Unmarshal(iter.Value(), instance); err != nil {
 			return nil, err
 		}

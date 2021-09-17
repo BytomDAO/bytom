@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bytom/bytom/contract"
 	"github.com/kr/secureheader"
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
@@ -52,12 +53,12 @@ type Response struct {
 	Data        interface{} `json:"data,omitempty"`
 }
 
-//NewSuccessResponse success response
+// NewSuccessResponse success response
 func NewSuccessResponse(data interface{}) Response {
 	return Response{Status: SUCCESS, Data: data}
 }
 
-//FormatErrResp format error response
+// FormatErrResp format error response
 func FormatErrResp(err error) (response Response) {
 	response = Response{Status: FAIL}
 	root := errors.Root(err)
@@ -82,7 +83,7 @@ func FormatErrResp(err error) (response Response) {
 	return response
 }
 
-//NewErrorResponse error response
+// NewErrorResponse error response
 func NewErrorResponse(err error) Response {
 	response := FormatErrResp(err)
 	return response
@@ -109,6 +110,7 @@ type API struct {
 	wallet          *wallet.Wallet
 	accessTokens    *accesstoken.CredentialStore
 	chain           *protocol.Chain
+	contractTracer  *contract.TraceService
 	server          *http.Server
 	handler         http.Handler
 	blockProposer   *blockproposer.BlockProposer
@@ -178,11 +180,12 @@ type NetSync interface {
 }
 
 // NewAPI create and initialize the API
-func NewAPI(sync NetSync, wallet *wallet.Wallet, blockProposer *blockproposer.BlockProposer, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, dispatcher *event.Dispatcher, notificationMgr *websocket.WSNotificationManager) *API {
+func NewAPI(sync NetSync, wallet *wallet.Wallet, blockProposer *blockproposer.BlockProposer, chain *protocol.Chain, traceService *contract.TraceService, config *cfg.Config, token *accesstoken.CredentialStore, dispatcher *event.Dispatcher, notificationMgr *websocket.WSNotificationManager) *API {
 	api := &API{
 		sync:            sync,
 		wallet:          wallet,
 		chain:           chain,
+		contractTracer:  traceService,
 		accessTokens:    token,
 		blockProposer:   blockProposer,
 		eventDispatcher: dispatcher,
@@ -296,6 +299,10 @@ func (a *API) buildHandler() {
 
 	m.Handle("/get-merkle-proof", jsonHandler(a.getMerkleProof))
 	m.Handle("/get-vote-result", jsonHandler(a.getVoteResult))
+
+	m.Handle("/get-contract-instance", jsonHandler(a.getContractInstance))
+	m.Handle("/create-contract-instance", jsonHandler(a.createContractInstance))
+	m.Handle("/remove-contract-instance", jsonHandler(a.removeContractInstance))
 
 	m.HandleFunc("/websocket-subscribe", a.websocketHandler)
 
