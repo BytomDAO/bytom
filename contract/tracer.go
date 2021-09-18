@@ -4,33 +4,38 @@ import (
 	"encoding/hex"
 
 	"github.com/bytom/bytom/consensus/segwit"
+	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 )
 
 type tracer struct {
-	table *instanceIndex
+	index *instanceIndex
 }
 
 func newTracer(instances []*Instance) *tracer {
-	table := newInstanceIndex()
+	index := newInstanceIndex()
 	for _, inst := range instances {
-		table.save(inst)
+		index.save(inst)
 	}
-	return &tracer{table: table}
+	return &tracer{index: index}
+}
+
+func (t *tracer) getInstance(traceID string) *Instance {
+	return t.index.getByID(traceID)
 }
 
 func (t *tracer) allInstances() []*Instance {
-	return t.table.getAll()
+	return t.index.getAll()
 }
 
 func (t *tracer) addInstances(instances []*Instance) {
 	for _, inst := range instances {
-		t.table.save(inst)
+		t.index.save(inst)
 	}
 }
 
 func (t *tracer) removeInstance(traceID string) {
-	t.table.remove(traceID)
+	t.index.remove(traceID)
 }
 
 func (t *tracer) applyBlock(block *types.Block) []*Instance {
@@ -42,8 +47,8 @@ func (t *tracer) applyBlock(block *types.Block) []*Instance {
 				continue
 			}
 
-			if inst := t.table.getByUTXO(transfer.inUTXOs[0].Hash); inst != nil {
-				newInst := inst.transferTo(transfer.outUTXOs, tx.ID)
+			if inst := t.index.getByUTXO(transfer.inUTXOs[0].Hash); inst != nil {
+				newInst := inst.transferTo(transfer, block.Height)
 				newInstances = append(newInstances, newInst)
 			}
 		}
@@ -59,8 +64,8 @@ func (t *tracer) detachBlock(block *types.Block) []*Instance {
 		transfers := parseTransfers(tx)
 		for _, transfer := range transfers {
 			utxos := append(transfer.outUTXOs, transfer.inUTXOs...)
-			if inst := t.table.getByUTXO(utxos[0].Hash); inst != nil {
-				newInst := inst.rollbackTo(transfer.inUTXOs)
+			if inst := t.index.getByUTXO(utxos[0].Hash); inst != nil {
+				newInst := inst.rollbackTo(transfer)
 				newInstances = append(newInstances, newInst)
 			}
 		}
@@ -70,6 +75,7 @@ func (t *tracer) detachBlock(block *types.Block) []*Instance {
 }
 
 type transfer struct {
+	txHash   bc.Hash
 	inUTXOs  []*UTXO
 	outUTXOs []*UTXO
 }
@@ -82,11 +88,11 @@ func parseTransfers(tx *types.Tx) []*transfer {
 	var transfers []*transfer
 	for program, utxos := range groupInUTXOs {
 		outUTXOs := groupOutUTXOs[program]
-		transfers = append(transfers, &transfer{inUTXOs: utxos, outUTXOs: outUTXOs})
+		transfers = append(transfers, &transfer{txHash: tx.ID, inUTXOs: utxos, outUTXOs: outUTXOs})
 	}
 	for program, utxos := range groupOutUTXOs {
 		if _, ok := groupInUTXOs[program]; !ok {
-			transfers = append(transfers, &transfer{outUTXOs: utxos})
+			transfers = append(transfers, &transfer{txHash: tx.ID, outUTXOs: utxos})
 		}
 	}
 	return transfers
@@ -123,6 +129,6 @@ func isContract(program []byte) bool {
 
 func (t *tracer) saveInstances(instances []*Instance) {
 	for _, inst := range instances {
-		t.table.save(inst)
+		t.index.save(inst)
 	}
 }

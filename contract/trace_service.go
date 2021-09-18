@@ -24,6 +24,7 @@ type TraceService struct {
 	infra            *Infrastructure
 	scheduler        *traceScheduler
 	unconfirmedIndex map[bc.Hash]*TreeNode
+	endedInstances   map[string]bool
 	bestHeight       uint64
 	bestHash         bc.Hash
 }
@@ -43,13 +44,14 @@ func NewTraceService(infra *Infrastructure) *TraceService {
 	}
 
 	scheduler := newTraceScheduler(infra)
-	inSyncInstances := dispatchInstances(allInstances, scheduler)
+	inSyncInstances := dispatchInstances(allInstances, scheduler, infra.Chain.FinalizedHeight())
 
 	service := &TraceService{
 		infra:            infra,
 		tracer:           newTracer(inSyncInstances),
 		scheduler:        scheduler,
 		unconfirmedIndex: make(map[bc.Hash]*TreeNode),
+		endedInstances:   make(map[string]bool),
 		bestHeight:       chainStatus.BlockHeight,
 		bestHash:         chainStatus.BlockHash,
 	}
@@ -57,11 +59,15 @@ func NewTraceService(infra *Infrastructure) *TraceService {
 	return service
 }
 
-func dispatchInstances(instances []*Instance, scheduler *traceScheduler) []*Instance {
+func dispatchInstances(instances []*Instance, scheduler *traceScheduler, finalizedHeight uint64) []*Instance {
 	var result []*Instance
 	for _, inst := range instances {
 		if inst.Status == InSync {
 			result = append(result, inst)
+		} else if inst.Status == Ended {
+			if inst.EndedHeight < finalizedHeight {
+				result = append(result, inst)
+			}
 		} else if inst.Status == Lagging {
 			if err := scheduler.addNewJob(inst); err != nil {
 				logrus.WithField("err", err).Fatal("add new job when init tracer")
@@ -88,6 +94,7 @@ func (t *TraceService) ApplyBlock(block *types.Block) error {
 	defer t.Unlock()
 
 	newInstances := t.tracer.applyBlock(block)
+	t.processEndedInstances(newInstances)
 	t.bestHeight++
 	t.bestHash = block.Hash()
 	return t.infra.Repository.SaveInstancesWithStatus(newInstances, t.bestHeight, t.bestHash)
@@ -98,6 +105,7 @@ func (t *TraceService) DetachBlock(block *types.Block) error {
 	defer t.Unlock()
 
 	newInstances := t.tracer.detachBlock(block)
+	t.processEndedInstances(nil)
 	t.bestHeight--
 	t.bestHash = block.PreviousBlockHash
 	return t.infra.Repository.SaveInstancesWithStatus(newInstances, t.bestHeight, t.bestHash)
@@ -112,7 +120,7 @@ func (t *TraceService) AddUnconfirmedTx(tx *types.Tx) {
 		}
 
 		treeNode := &TreeNode{TxHash: tx.ID, UTXOs: outUTXOs}
-		if inst := t.tracer.table.getByUTXO(inUTXOs[0].Hash); inst != nil {
+		if inst := t.tracer.index.getByUTXO(inUTXOs[0].Hash); inst != nil {
 			inst.Unconfirmed = append(inst.Unconfirmed, treeNode)
 			t.addToUnconfirmedIndex(treeNode, outUTXOs)
 			return
@@ -147,9 +155,9 @@ func (t *TraceService) CreateInstance(txHash, blockHash bc.Hash) ([]string, erro
 
 	var traceIDs []string
 	for _, transfer := range transfers {
-		inst := newInstance(transfer.inUTXOs, transfer.outUTXOs, txHash, block)
+		inst := newInstance(transfer, block)
 		traceIDs = append(traceIDs, inst.TraceID)
-		if err := t.addNewTraceJob(inst, block); err != nil {
+		if err := t.addNewTraceJob(inst); err != nil {
 			return nil, err
 		}
 	}
@@ -178,7 +186,9 @@ func (t *TraceService) takeOverInstances(instances []*Instance, blockHash bc.Has
 	}
 
 	for _, inst := range instances {
-		inst.Status = InSync
+		if inst.Status != Ended {
+			inst.Status = InSync
+		}
 	}
 
 	if err := t.infra.Repository.SaveInstances(instances); err != nil {
@@ -187,15 +197,35 @@ func (t *TraceService) takeOverInstances(instances []*Instance, blockHash bc.Has
 	}
 
 	t.tracer.addInstances(instances)
+	t.processEndedInstances(instances)
 	return true
 }
 
-func (t *TraceService) addNewTraceJob(inst *Instance, block *types.Block) error {
+func (t *TraceService) processEndedInstances(instances []*Instance) {
+	for _, inst := range instances {
+		if inst.Status == Ended {
+			t.endedInstances[inst.TraceID] = true
+		}
+	}
+
+	finalizedHeight := t.infra.Chain.FinalizedHeight()
+	for traceID := range t.endedInstances {
+		inst := t.tracer.getInstance(traceID)
+		if inst.Status != Ended {
+			delete(t.endedInstances, traceID)
+		} else if finalizedHeight >= inst.EndedHeight {
+			delete(t.endedInstances, traceID)
+			t.tracer.removeInstance(traceID)
+		}
+	}
+}
+
+func (t *TraceService) addNewTraceJob(inst *Instance) error {
 	if err := t.infra.Repository.SaveInstances([]*Instance{inst}); err != nil {
 		return err
 	}
 
-	if inst.Status != Finalized {
+	if inst.Status != Ended {
 		if err := t.scheduler.addNewJob(inst); err != nil {
 			return err
 		}

@@ -18,7 +18,10 @@ type traceScheduler struct {
 	instances     *sync.Map
 	tracerService *TraceService
 	infra         *Infrastructure
+
 	tracer        *tracer
+	currentHeight uint64
+	currentHash   bc.Hash
 }
 
 func newTraceScheduler(infra *Infrastructure) *traceScheduler {
@@ -56,23 +59,22 @@ func (t *traceScheduler) processLoop() {
 
 		t.tracer = newTracer(jobs[beginHash])
 
-		for height, blockHash := beginHeight, beginHash; ; height++ {
-			if bestHeight := t.tracerService.BestHeight(); height == bestHeight {
-				if err := t.finishJobs(jobs, blockHash); err != nil {
+		for t.currentHeight, t.currentHash = beginHeight, beginHash; ; {
+			if bestHeight := t.tracerService.BestHeight(); t.currentHeight == bestHeight {
+				if err := t.finishJobs(jobs); err != nil {
 					log.WithField("err", err).Error("finish jobs")
 					break
 				}
 			}
 
-			if ok, err := t.tryAttach(height+1, &blockHash, jobs); err != nil {
+			if ok, err := t.tryAttach(jobs); err != nil {
 				log.WithField("err", err).Error("try attach on trace scheduler")
 				break
 			} else if !ok {
-				if err := t.detach(&blockHash, jobs); err != nil {
+				if err := t.detach(jobs); err != nil {
 					log.WithField("err", err).Error("detach on trace scheduler")
 					break
 				}
-				height -= 2
 			}
 		}
 	}
@@ -93,18 +95,19 @@ func (t *traceScheduler) prepareJobs() (map[bc.Hash][]*Instance, uint64, bc.Hash
 	return hashToJobs, beginHeight, beginHash
 }
 
-func (t *traceScheduler) tryAttach(height uint64, blockHash *bc.Hash, jobs map[bc.Hash][]*Instance) (bool, error) {
-	block, err := t.infra.Chain.GetBlockByHeight(height)
+func (t *traceScheduler) tryAttach(jobs map[bc.Hash][]*Instance) (bool, error) {
+	block, err := t.infra.Chain.GetBlockByHeight(t.currentHeight+1)
 	if err != nil {
 		return false, err
 	}
 
-	if block.PreviousBlockHash != *blockHash {
+	if block.PreviousBlockHash != t.currentHash {
 		return false, nil
 	}
 
 	t.tracer.applyBlock(block)
-	*blockHash = block.Hash()
+	t.currentHeight++
+	t.currentHash = block.Hash()
 
 	if instances, ok := jobs[block.Hash()]; ok {
 		t.tracer.addInstances(instances)
@@ -112,8 +115,8 @@ func (t *traceScheduler) tryAttach(height uint64, blockHash *bc.Hash, jobs map[b
 	return true, nil
 }
 
-func (t *traceScheduler) detach(blockHash *bc.Hash, jobs map[bc.Hash][]*Instance) error {
-	block, err := t.infra.Chain.GetBlockByHash(blockHash)
+func (t *traceScheduler) detach(jobs map[bc.Hash][]*Instance) error {
+	block, err := t.infra.Chain.GetBlockByHash(&t.currentHash)
 	if err != nil {
 		return err
 	}
@@ -125,11 +128,12 @@ func (t *traceScheduler) detach(blockHash *bc.Hash, jobs map[bc.Hash][]*Instance
 	}
 
 	t.tracer.detachBlock(block)
-	*blockHash = block.PreviousBlockHash
+	t.currentHeight--
+	t.currentHash = block.PreviousBlockHash
 	return nil
 }
 
-func (t *traceScheduler) finishJobs(jobs map[bc.Hash][]*Instance, scannedHash bc.Hash) error {
+func (t *traceScheduler) finishJobs(jobs map[bc.Hash][]*Instance) error {
 	inSyncInstances := t.tracer.allInstances()
 	inSyncMap := make(map[string]bool)
 	for _, inst := range inSyncInstances {
@@ -152,7 +156,7 @@ func (t *traceScheduler) finishJobs(jobs map[bc.Hash][]*Instance, scannedHash bc
 
 	t.releaseInstances(offChainInstances)
 
-	if ok := t.tracerService.takeOverInstances(inSyncInstances, scannedHash); ok {
+	if ok := t.tracerService.takeOverInstances(inSyncInstances, t.currentHash); ok {
 		t.releaseInstances(inSyncInstances)
 	}
 	return nil
