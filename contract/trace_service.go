@@ -186,7 +186,9 @@ func (t *TraceService) takeOverInstances(instances []*Instance, blockHash bc.Has
 	}
 
 	for _, inst := range instances {
-		inst.Status = InSync
+		if inst.Status != Ended {
+			inst.Status = InSync
+		}
 	}
 
 	if err := t.infra.Repository.SaveInstances(instances); err != nil {
