@@ -145,6 +145,11 @@ func (c *Chain) BestChain() (uint64, bc.Hash) {
 	return c.bestBlockHeader.Height, c.bestBlockHeader.Hash()
 }
 
+func (c *Chain) FinalizedHeight() uint64 {
+	finalizedHeight, _ := c.casper.LastFinalized()
+	return finalizedHeight
+}
+
 // AllValidators return all validators has vote num
 func (c *Chain) AllValidators(blockHash *bc.Hash) ([]*state.Validator, error) {
 	parentCheckpoint, err := c.casper.ParentCheckpoint(blockHash)

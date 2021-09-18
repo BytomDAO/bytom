@@ -11,7 +11,7 @@ type Status uint8
 const (
 	Lagging Status = iota + 1
 	InSync
-	Finalized
+	Ended
 	OffChain
 )
 
@@ -26,48 +26,50 @@ type Instance struct {
 	UTXOs         []*UTXO  `json:"utxos"`
 	TxHash        *bc.Hash `json:"tx_hash"`
 	Status        Status   `json:"status"`
+	EndedHeight   uint64   `json:"ended_height"`
 	ScannedHash   bc.Hash  `json:"scanned_hash"`
 	ScannedHeight uint64   `json:"scanned_height"`
 	Unconfirmed   []*TreeNode
 }
 
-func newInstance(inUTXOs, outUTXOs []*UTXO, txHash bc.Hash, block *types.Block) *Instance {
+func newInstance(t *transfer, block *types.Block) *Instance {
 	inst := &Instance{
 		TraceID:       uuid.New().String(),
-		TxHash:        &txHash,
-		UTXOs:         outUTXOs,
+		TxHash:        &t.txHash,
+		UTXOs:         t.outUTXOs,
+		Status:        Lagging,
 		ScannedHeight: block.Height,
 		ScannedHash:   block.Hash(),
 	}
-	inst.Status = Lagging
-	if len(outUTXOs) == 0 {
-		inst.Status = Finalized
-		inst.UTXOs = inUTXOs
+	if len(t.outUTXOs) == 0 {
+		inst.Status = Ended
+		inst.UTXOs = t.inUTXOs
 	}
 	return inst
 }
 
-func (i *Instance) transferTo(newUTXOs []*UTXO, txHash bc.Hash) *Instance {
+func (i *Instance) transferTo(t *transfer, blockHeight uint64) *Instance {
 	inst := &Instance{
 		TraceID:     i.TraceID,
 		Status:      i.Status,
 		Unconfirmed: i.Unconfirmed,
-		UTXOs:       newUTXOs,
-		TxHash:      &txHash,
+		UTXOs:       t.outUTXOs,
+		TxHash:      &t.txHash,
 	}
-	if len(newUTXOs) == 0 {
-		inst.Status = Finalized
-		inst.UTXOs = i.UTXOs
+	if len(t.outUTXOs) == 0 {
+		inst.Status = Ended
+		inst.EndedHeight = blockHeight
+		inst.UTXOs = t.inUTXOs
 	}
-	inst.confirmTx(txHash)
+	inst.confirmTx(t.txHash)
 	return inst
 }
 
-func (i *Instance) rollbackTo(newUTXOs []*UTXO) *Instance {
+func (i *Instance) rollbackTo(t *transfer) *Instance {
 	return &Instance{
 		TraceID:     i.TraceID,
 		Status:      InSync,
-		UTXOs:       newUTXOs,
+		UTXOs:       t.inUTXOs,
 		TxHash:      nil,
 		Unconfirmed: nil,
 	}
@@ -103,8 +105,8 @@ func (i *instanceIndex) getAll() []*Instance {
 	return instances
 }
 
-func (i *instanceIndex) getByID(id string) *Instance {
-	return i.traceIdToInst[id]
+func (i *instanceIndex) getByID(traceID string) *Instance {
+	return i.traceIdToInst[traceID]
 }
 
 func (i *instanceIndex) getByUTXO(utxoHash bc.Hash) *Instance {

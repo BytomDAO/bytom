@@ -16,6 +16,7 @@ func NewInfrastructure(chain ChainService, repository Repository) *Infrastructur
 
 type ChainService interface {
 	BestChain() (uint64, bc.Hash)
+	FinalizedHeight() uint64
 	GetBlockByHash(*bc.Hash) (*types.Block, error)
 	GetBlockByHeight(uint64) (*types.Block, error)
 	BlockWaiter(height uint64) <-chan struct{}
