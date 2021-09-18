@@ -178,8 +178,8 @@ func (t *TraceService) GetInstance(traceID string) (*Instance, error) {
 }
 
 func (t *TraceService) takeOverInstances(instances []*Instance, blockHash bc.Hash) bool {
-	t.RLock()
-	defer t.RUnlock()
+	t.Lock()
+	defer t.Unlock()
 
 	if blockHash != t.bestHash {
 		return false
