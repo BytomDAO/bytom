@@ -120,6 +120,10 @@ func NewContract(platformScript []byte, marginFold uint64) ([]byte, error) {
 
 func NewOffer(nftContract []byte) ([]byte, error) {
 	builder := vmutil.NewBuilder()
+	builder.AddJumpIf(0)
+	builder.AddUint64(1)
+	builder.AddJump(1)
+	builder.SetJumpTarget(0)
 	builder.AddUint64(0)
 	builder.AddUint64(1)
 	cpAltStack(builder, 3)
@@ -133,6 +137,7 @@ func NewOffer(nftContract []byte) ([]byte, error) {
 	builder.AddUint64(1)
 	builder.AddData(nftContract)
 	builder.AddOp(vm.OP_CHECKOUTPUT)
+	builder.SetJumpTarget(1)
 	return builder.Build()
 }
 

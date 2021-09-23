@@ -236,7 +236,7 @@ func TestOfferBuy(t *testing.T) {
 		Inputs: []*types.TxInput{
 			types.NewSpendInput(arguments, utxoSourceID, nftAsset, 1, 0, contract, oldStateData),
 			types.NewSpendInput(arguments, utxoSourceID, ETH, 10000000000, 1, contract, oldStateData),
-			types.NewSpendInput(nil, utxoSourceID, ETH, 135000000000, 2, offer, newStateData),
+			types.NewSpendInput([][]byte{vm.Uint64Bytes(1)}, utxoSourceID, ETH, 135000000000, 2, offer, newStateData),
 			types.NewSpendInput(nil, utxoSourceID, *consensus.BTMAssetID, 100000000, 1, anyCanSpendScript, nil),
 		},
 		Outputs: []*types.TxOutput{
@@ -245,6 +245,48 @@ func TestOfferBuy(t *testing.T) {
 			types.NewOriginalTxOutput(ETH, 12000000000, createrScript, oldStateData),
 			types.NewOriginalTxOutput(ETH, 1200000000, platformScript, oldStateData),
 			types.NewOriginalTxOutput(ETH, 116800000000, ownerScirpt, oldStateData),
+		},
+	})
+
+	_, err = validation.ValidateTx(tx.Tx, &bc.Block{BlockHeader: &bc.BlockHeader{}}, func(prog []byte) ([]byte, error) { return nil, nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestCancelOffer(t *testing.T) {
+	contract, err := NewContract(platformScript, marginFold)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	offer, err := NewOffer(contract)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	newStateData := [][]byte{
+		createrScript,
+		vm.Uint64Bytes(taxRate),
+		nftAsset.Bytes(),
+		buyerScirpt,
+		ETH.Bytes(),
+		vm.Uint64Bytes(15000000000),
+	}
+
+	arguments := [][]byte{
+		vm.Uint64Bytes(0),
+	}
+
+	tx := types.NewTx(types.TxData{
+		Version:        1,
+		SerializedSize: 10000,
+		Inputs: []*types.TxInput{
+			types.NewSpendInput(arguments, utxoSourceID, ETH, 135000000000, 2, offer, newStateData),
+			types.NewSpendInput(nil, utxoSourceID, *consensus.BTMAssetID, 100000000, 1, anyCanSpendScript, nil),
+		},
+		Outputs: []*types.TxOutput{
+			types.NewOriginalTxOutput(ETH, 135000000000, ownerScirpt, newStateData),
 		},
 	})
 
