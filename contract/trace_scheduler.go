@@ -53,27 +53,22 @@ func (t *traceScheduler) processLoop() {
 
 	for range ticker.C {
 		jobs, beginHeight, beginHash := t.prepareJobs()
-		if len(jobs) == 0 {
-			continue
-		}
-
 		t.tracer = newTracer(jobs[beginHash])
 
-		for t.currentHeight, t.currentHash = beginHeight, beginHash; ; {
+		for t.currentHeight, t.currentHash = beginHeight, beginHash; len(jobs) != 0 ; {
 			if bestHeight := t.tracerService.BestHeight(); t.currentHeight == bestHeight {
-				if err := t.finishJobs(jobs); err != nil {
+				if ok, err := t.finishJobs(jobs); err != nil {
 					log.WithField("err", err).Error("finish jobs")
+				} else if ok {
 					break
 				}
 			}
 
 			if ok, err := t.tryAttach(jobs); err != nil {
 				log.WithField("err", err).Error("try attach on trace scheduler")
-				break
 			} else if !ok {
 				if err := t.detach(jobs); err != nil {
 					log.WithField("err", err).Error("detach on trace scheduler")
-					break
 				}
 			}
 		}
@@ -96,6 +91,10 @@ func (t *traceScheduler) prepareJobs() (map[bc.Hash][]*Instance, uint64, bc.Hash
 }
 
 func (t *traceScheduler) tryAttach(jobs map[bc.Hash][]*Instance) (bool, error) {
+	if t.currentHash == t.tracerService.BestHash() {
+		return true, nil
+	}
+
 	block, err := t.infra.Chain.GetBlockByHeight(t.currentHeight+1)
 	if err != nil {
 		return false, err
@@ -133,7 +132,7 @@ func (t *traceScheduler) detach(jobs map[bc.Hash][]*Instance) error {
 	return nil
 }
 
-func (t *traceScheduler) finishJobs(jobs map[bc.Hash][]*Instance) error {
+func (t *traceScheduler) finishJobs(jobs map[bc.Hash][]*Instance) (bool, error) {
 	inSyncInstances := t.tracer.allInstances()
 	inSyncMap := make(map[string]bool)
 	for _, inst := range inSyncInstances {
@@ -151,15 +150,19 @@ func (t *traceScheduler) finishJobs(jobs map[bc.Hash][]*Instance) error {
 	}
 
 	if err := t.infra.Repository.SaveInstances(offChainInstances); err != nil {
-		return err
+		return false, err
 	}
 
 	t.releaseInstances(offChainInstances)
 
-	if ok := t.tracerService.takeOverInstances(inSyncInstances, t.currentHash); ok {
-		t.releaseInstances(inSyncInstances)
+	if len(inSyncInstances) != 0 {
+		if ok := t.tracerService.takeOverInstances(inSyncInstances, t.currentHash); ok {
+			t.releaseInstances(inSyncInstances)
+			return true, nil
+		}
+		return false, nil
 	}
-	return nil
+	return true, nil
 }
 
 func (t *traceScheduler) releaseInstances(instances []*Instance) {

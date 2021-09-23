@@ -121,11 +121,7 @@ func (i *instanceIndex) add(instance *Instance) {
 }
 
 func (i *instanceIndex) save(newInst *Instance) {
-	if old, ok := i.traceIdToInst[newInst.TraceID]; ok {
-		for _, utxo := range old.UTXOs {
-			delete(i.utxoHashToInst, utxo.Hash)
-		}
-	}
+	i.remove(newInst.TraceID)
 	i.add(newInst)
 }
 
