@@ -93,8 +93,7 @@ func NewContract(platformScript []byte, marginFold uint64) ([]byte, error) {
 
 	builder.SetJumpTarget(0)
 	// alt stack 	[creater, taxRate, nftAsset, owner, marginAsset, marginAmount]
-	// data statck	[newMarginAsset, newMarginAmount]
-	swapAltStack(builder, 1, 1)
+	// data statck	[newMarginAmount]
 	swapAltStack(builder, 0, 0)
 	// alt stack 	[creater, taxRate, nftAsset, owner, newMarginAsset, newMarginAmount]
 	// data statck	[]

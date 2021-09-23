@@ -26,7 +26,7 @@ var (
 	buyerScirpt  = []byte("buyerScirpt")
 )
 
-// 从2个BTC的押金换成50个ETH的
+// 从2个BTC的押金换成3个BTC的
 func TestEditMargin(t *testing.T) {
 	contract, err := NewContract(platformScript, marginFold)
 	if err != nil {
@@ -47,13 +47,12 @@ func TestEditMargin(t *testing.T) {
 		vm.Uint64Bytes(taxRate),
 		nftAsset.Bytes(),
 		ownerScirpt,
-		ETH.Bytes(),
-		vm.Uint64Bytes(50000000000),
+		BTC.Bytes(),
+		vm.Uint64Bytes(300000000),
 	}
 
 	arguments := [][]byte{
-		ETH.Bytes(),
-		vm.Uint64Bytes(50000000000),
+		vm.Uint64Bytes(300000000),
 		vm.Uint64Bytes(1),
 	}
 
@@ -63,13 +62,12 @@ func TestEditMargin(t *testing.T) {
 		Inputs: []*types.TxInput{
 			types.NewSpendInput(arguments, utxoSourceID, nftAsset, 1, 0, contract, oldStateData),
 			types.NewSpendInput(arguments, utxoSourceID, BTC, 200000000, 1, contract, oldStateData),
-			types.NewSpendInput(nil, utxoSourceID, ETH, 50000000000, 2, anyCanSpendScript, nil),
+			types.NewSpendInput(nil, utxoSourceID, BTC, 100000000, 2, anyCanSpendScript, nil),
 			types.NewSpendInput(nil, utxoSourceID, *consensus.BTMAssetID, 100000000, 1, anyCanSpendScript, nil),
 		},
 		Outputs: []*types.TxOutput{
 			types.NewOriginalTxOutput(nftAsset, 1, contract, newStateData),
-			types.NewOriginalTxOutput(ETH, 50000000000, contract, newStateData),
-			types.NewOriginalTxOutput(BTC, 200000000, ownerScirpt, newStateData),
+			types.NewOriginalTxOutput(BTC, 300000000, contract, newStateData),
 		},
 	})
 
