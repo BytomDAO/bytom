@@ -110,7 +110,7 @@ func groupUTXOs(utxos []*UTXO) map[string][]*UTXO {
 func parseContractUTXOs(tx *types.Tx) ([]*UTXO, []*UTXO) {
 	var inUTXOs, outUTXOs []*UTXO
 	for i, input := range tx.Inputs {
-		if isContract(input.ControlProgram()) {
+		if isContract(input.ControlProgram()) && input.InputType() == types.SpendInputType {
 			inUTXOs = append(inUTXOs, inputToUTXO(tx, i))
 		}
 	}
