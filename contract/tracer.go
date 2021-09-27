@@ -6,6 +6,7 @@ import (
 	"github.com/bytom/bytom/consensus/segwit"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/protocol/vm/vmutil"
 )
 
 type tracer struct {
@@ -116,7 +117,7 @@ func parseContractUTXOs(tx *types.Tx) ([]*UTXO, []*UTXO) {
 	}
 
 	for i, output := range tx.Outputs {
-		if isContract(output.ControlProgram) {
+		if isContract(output.ControlProgram) && output.OutputType() == types.OriginalOutputType {
 			outUTXOs = append(outUTXOs, outputToUTXO(tx, i))
 		}
 	}
@@ -124,7 +125,7 @@ func parseContractUTXOs(tx *types.Tx) ([]*UTXO, []*UTXO) {
 }
 
 func isContract(program []byte) bool {
-	return !(segwit.IsP2WPKHScript(program) || segwit.IsP2WSHScript(program) || segwit.IsStraightforward(program))
+	return !(segwit.IsP2WScript(program) || vmutil.IsUnspendable(program))
 }
 
 func (t *tracer) saveInstances(instances []*Instance) {
