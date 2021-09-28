@@ -55,8 +55,8 @@ func (t *traceScheduler) processLoop() {
 		jobs, beginHeight, beginHash := t.prepareJobs()
 		t.tracer = newTracer(jobs[beginHash])
 
-		for t.currentHeight, t.currentHash = beginHeight, beginHash; len(jobs) != 0 ; {
-			if bestHeight := t.tracerService.BestHeight(); t.currentHeight == bestHeight {
+		for t.currentHeight, t.currentHash = beginHeight, beginHash; len(jobs) != 0 && t.currentHeight < t.tracerService.BestHeight(); {
+			if t.currentHeight == t.tracerService.BestHeight() {
 				if ok, err := t.finishJobs(jobs); err != nil {
 					log.WithField("err", err).Error("finish jobs")
 				} else if ok {
