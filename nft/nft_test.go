@@ -13,7 +13,7 @@ import (
 
 var (
 	marginFold        = uint64(10)
-	taxRate           = uint64(10)
+	taxRate           = uint64(1000)
 	anyCanSpendScript = testutil.MustDecodeHexString("51")
 	platformScript    = []byte("platformScript")
 	createrScript     = []byte("createrScript")

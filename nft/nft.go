@@ -30,7 +30,7 @@ func NewContract(platformScript []byte, marginFold uint64) ([]byte, error) {
 	// data statck	[marginAsset, buyer, newMarginAmount, platformFee, payAmount, payAmount]
 	cpAltStack(builder, 4)
 	builder.AddOp(vm.OP_MUL)
-	builder.AddUint64(100)
+	builder.AddUint64(10000)
 	builder.AddOp(vm.OP_DIV)
 	// alt stack	[creater, taxRate, nftAsset, owner, marginAsset, marginAmount]
 	// data statck	[marginAsset, buyer, newMarginAmount, platformFee, payAmount, createrTax]
