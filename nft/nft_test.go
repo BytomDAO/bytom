@@ -77,8 +77,8 @@ func TestEditMargin(t *testing.T) {
 	}
 }
 
-// 10个ETH质押被120个ETH买走, 然后被质押15个ETH
-func TestBuy(t *testing.T) {
+// 10个ETH质押被买走, 然后被质押15个ETH
+func TestRegularBuy(t *testing.T) {
 	contract, err := NewContract(platformScript, marginFold)
 	if err != nil {
 		t.Fatal(err)
@@ -105,7 +105,6 @@ func TestBuy(t *testing.T) {
 	arguments := [][]byte{
 		ETH.Bytes(),
 		buyerScirpt,
-		vm.Uint64Bytes(120000000000),
 		vm.Uint64Bytes(15000000000),
 		vm.Uint64Bytes(0),
 	}
@@ -116,15 +115,15 @@ func TestBuy(t *testing.T) {
 		Inputs: []*types.TxInput{
 			types.NewSpendInput(arguments, utxoSourceID, nftAsset, 1, 0, contract, oldStateData),
 			types.NewSpendInput(arguments, utxoSourceID, ETH, 10000000000, 1, contract, oldStateData),
-			types.NewSpendInput(nil, utxoSourceID, ETH, 135000000000, 2, anyCanSpendScript, nil),
+			types.NewSpendInput(nil, utxoSourceID, ETH, 115000000000, 2, anyCanSpendScript, nil),
 			types.NewSpendInput(nil, utxoSourceID, *consensus.BTMAssetID, 100000000, 1, anyCanSpendScript, nil),
 		},
 		Outputs: []*types.TxOutput{
 			types.NewOriginalTxOutput(nftAsset, 1, contract, newStateData),
 			types.NewOriginalTxOutput(ETH, 15000000000, contract, newStateData),
-			types.NewOriginalTxOutput(ETH, 12000000000, createrScript, oldStateData),
-			types.NewOriginalTxOutput(ETH, 1200000000, platformScript, oldStateData),
-			types.NewOriginalTxOutput(ETH, 116800000000, ownerScirpt, oldStateData),
+			types.NewOriginalTxOutput(ETH, 10000000000, createrScript, oldStateData),
+			types.NewOriginalTxOutput(ETH, 1000000000, platformScript, oldStateData),
+			types.NewOriginalTxOutput(ETH, 99000000000, ownerScirpt, oldStateData),
 		},
 	})
 
@@ -134,7 +133,7 @@ func TestBuy(t *testing.T) {
 	}
 }
 
-// 10个ETH质押被120个ETH买走, 然后被质押2个BTC
+// 10个ETH质押被买走, 然后被质押2个BTC
 func TestBuySwapMargin(t *testing.T) {
 	contract, err := NewContract(platformScript, marginFold)
 	if err != nil {
@@ -162,7 +161,6 @@ func TestBuySwapMargin(t *testing.T) {
 	arguments := [][]byte{
 		BTC.Bytes(),
 		buyerScirpt,
-		vm.Uint64Bytes(120000000000),
 		vm.Uint64Bytes(200000000),
 		vm.Uint64Bytes(0),
 	}
@@ -173,16 +171,16 @@ func TestBuySwapMargin(t *testing.T) {
 		Inputs: []*types.TxInput{
 			types.NewSpendInput(arguments, utxoSourceID, nftAsset, 1, 0, contract, oldStateData),
 			types.NewSpendInput(arguments, utxoSourceID, ETH, 10000000000, 1, contract, oldStateData),
-			types.NewSpendInput(nil, utxoSourceID, ETH, 120000000000, 2, anyCanSpendScript, nil),
+			types.NewSpendInput(nil, utxoSourceID, ETH, 100000000000, 2, anyCanSpendScript, nil),
 			types.NewSpendInput(nil, utxoSourceID, BTC, 200000000, 3, anyCanSpendScript, nil),
 			types.NewSpendInput(nil, utxoSourceID, *consensus.BTMAssetID, 100000000, 1, anyCanSpendScript, nil),
 		},
 		Outputs: []*types.TxOutput{
 			types.NewOriginalTxOutput(nftAsset, 1, contract, newStateData),
 			types.NewOriginalTxOutput(BTC, 200000000, contract, newStateData),
-			types.NewOriginalTxOutput(ETH, 12000000000, createrScript, oldStateData),
-			types.NewOriginalTxOutput(ETH, 1200000000, platformScript, oldStateData),
-			types.NewOriginalTxOutput(ETH, 116800000000, ownerScirpt, oldStateData),
+			types.NewOriginalTxOutput(ETH, 10000000000, createrScript, oldStateData),
+			types.NewOriginalTxOutput(ETH, 1000000000, platformScript, oldStateData),
+			types.NewOriginalTxOutput(ETH, 99000000000, ownerScirpt, oldStateData),
 		},
 	})
 
@@ -192,7 +190,7 @@ func TestBuySwapMargin(t *testing.T) {
 	}
 }
 
-// 10个ETH质押被120个ETH买走, 然后被质押15个ETH
+// 10个ETH质押被买走, 然后被质押15个ETH
 func TestOfferBuy(t *testing.T) {
 	contract, err := NewContract(platformScript, marginFold)
 	if err != nil {
@@ -225,7 +223,6 @@ func TestOfferBuy(t *testing.T) {
 	arguments := [][]byte{
 		ETH.Bytes(),
 		buyerScirpt,
-		vm.Uint64Bytes(120000000000),
 		vm.Uint64Bytes(15000000000),
 		vm.Uint64Bytes(0),
 	}
@@ -236,15 +233,15 @@ func TestOfferBuy(t *testing.T) {
 		Inputs: []*types.TxInput{
 			types.NewSpendInput(arguments, utxoSourceID, nftAsset, 1, 0, contract, oldStateData),
 			types.NewSpendInput(arguments, utxoSourceID, ETH, 10000000000, 1, contract, oldStateData),
-			types.NewSpendInput([][]byte{vm.Uint64Bytes(1)}, utxoSourceID, ETH, 135000000000, 2, offer, newStateData),
+			types.NewSpendInput([][]byte{vm.Uint64Bytes(1)}, utxoSourceID, ETH, 115000000000, 2, offer, newStateData),
 			types.NewSpendInput(nil, utxoSourceID, *consensus.BTMAssetID, 100000000, 1, anyCanSpendScript, nil),
 		},
 		Outputs: []*types.TxOutput{
 			types.NewOriginalTxOutput(nftAsset, 1, contract, newStateData),
 			types.NewOriginalTxOutput(ETH, 15000000000, contract, newStateData),
-			types.NewOriginalTxOutput(ETH, 12000000000, createrScript, oldStateData),
-			types.NewOriginalTxOutput(ETH, 1200000000, platformScript, oldStateData),
-			types.NewOriginalTxOutput(ETH, 116800000000, ownerScirpt, oldStateData),
+			types.NewOriginalTxOutput(ETH, 10000000000, createrScript, oldStateData),
+			types.NewOriginalTxOutput(ETH, 1000000000, platformScript, oldStateData),
+			types.NewOriginalTxOutput(ETH, 99000000000, ownerScirpt, oldStateData),
 		},
 	})
 

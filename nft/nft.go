@@ -7,7 +7,7 @@ import (
 
 /*
 	init alt stack 	[creater, taxRate, nftAsset, owner, marginAsset, marginAmount]
-	buy data stack 	[buyer, payAmount, marginAmount, selecter]
+	buy data stack 	[buyer, marginAmount, selecter]
 	edit data stack	[newMarginAsset, newMarginAmount, selecter]
 */
 
@@ -17,8 +17,12 @@ func NewContract(platformScript []byte, marginFold uint64) ([]byte, error) {
 	// data statck	[...... selecter]
 	builder.AddJumpIf(0)
 	// alt stack	[creater, taxRate, nftAsset, owner, marginAsset, marginAmount]
-	// data statck	[marginAsset, buyer, payAmount, marginAmount]
-	builder.AddOp(vm.OP_SWAP)
+	// data statck	[marginAsset, buyer, newMarginAmount]
+	cpAltStack(builder, 0)
+	builder.AddUint64(marginFold)
+	builder.AddOp(vm.OP_MUL)
+	// alt stack	[creater, taxRate, nftAsset, owner, marginAsset, marginAmount]
+	// data statck	[marginAsset, buyer, newMarginAmount, payAmount=marginAmount*marginFold]
 	builder.AddOp(vm.OP_DUP)
 	builder.AddUint64(100)
 	builder.AddOp(vm.OP_DIV)
@@ -61,14 +65,6 @@ func NewContract(platformScript []byte, marginFold uint64) ([]byte, error) {
 	builder.AddOp(vm.OP_SUB)
 	// alt stack	[creater, taxRate, nftAsset, owner, marginAsset, marginAmount]
 	// data statck	[marginAsset, buyer, newMarginAmount, ownerGot]
-	builder.AddOp(vm.OP_DUP)
-	cpAltStack(builder, 0)
-	builder.AddUint64(marginFold)
-	builder.AddOp(vm.OP_MUL)
-	// alt stack	[creater, taxRate, nftAsset, owner, marginAsset, marginAmount]
-	// data statck	[marginAsset, buyer, newMarginAmount, ownerGot, ownerGot, marginAmount*marginFold]
-	builder.AddOp(vm.OP_GREATERTHANOREQUAL)
-	builder.AddOp(vm.OP_VERIFY)
 	cpAltStack(builder, 0)
 	builder.AddOp(vm.OP_ADD)
 	// alt stack	[creater, taxRate, nftAsset, owner, marginAsset, marginAmount]
