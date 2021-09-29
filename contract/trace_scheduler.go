@@ -61,17 +61,17 @@ func (t *traceScheduler) processLoop() {
 		for t.currentHeight, t.currentHash = beginHeight, beginHash; len(jobs) != 0; {
 			if t.currentHeight == t.tracerService.BestHeight() {
 				if ok, err := t.finishJobs(jobs); err != nil {
-					log.WithField("err", err).Error("finish jobs")
+					log.WithFields(log.Fields{"module": logModule, "err": err}).Error("finish jobs")
 				} else if ok {
 					break
 				}
 			}
 
 			if ok, err := t.tryAttach(jobs); err != nil {
-				log.WithField("err", err).Error("try attach on trace scheduler")
+				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("try attach on trace scheduler")
 			} else if !ok {
 				if err := t.detach(jobs); err != nil {
-					log.WithField("err", err).Error("detach on trace scheduler")
+					log.WithFields(log.Fields{"module": logModule, "err": err}).Error("detach on trace scheduler")
 				}
 			}
 		}

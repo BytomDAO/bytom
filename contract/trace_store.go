@@ -3,9 +3,10 @@ package contract
 import (
 	"encoding/json"
 
+	log "github.com/sirupsen/logrus"
+
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/protocol/bc"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -109,7 +110,7 @@ func (t *TraceStore) GetChainStatus() *ChainStatus {
 
 	chainStatus := &ChainStatus{}
 	if err := json.Unmarshal(data, chainStatus); err != nil {
-		logrus.WithField("err", err).Fatal("get chain status from trace store")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Fatal("get chain status from trace store")
 	}
 
 	return chainStatus

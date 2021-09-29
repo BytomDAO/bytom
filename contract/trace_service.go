@@ -4,7 +4,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
@@ -32,7 +32,7 @@ type TraceService struct {
 func NewTraceService(infra *Infrastructure) *TraceService {
 	allInstances, err := infra.Repository.LoadInstances()
 	if err != nil {
-		logrus.WithField("err", err).Fatal("load instances from db")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Fatal("load instances from db")
 	}
 
 	chainStatus := infra.Repository.GetChainStatus()
@@ -40,7 +40,7 @@ func NewTraceService(infra *Infrastructure) *TraceService {
 		bestHeight, bestHash := infra.Chain.BestChain()
 		chainStatus = &ChainStatus{BlockHeight: bestHeight, BlockHash: bestHash}
 		if err := infra.Repository.SaveChainStatus(chainStatus); err != nil {
-			logrus.WithField("err", err).Fatal("init chain status for trace service")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Fatal("init chain status for trace service")
 		}
 	}
 
@@ -71,7 +71,7 @@ func dispatchInstances(instances []*Instance, scheduler *traceScheduler, finaliz
 			}
 		} else if inst.Status == Lagging {
 			if err := scheduler.addNewJob(inst); err != nil {
-				logrus.WithField("err", err).Fatal("add new job when init tracer")
+				log.WithFields(log.Fields{"module": logModule, "err": err}).Fatal("add new job when init tracer")
 			}
 		}
 	}
@@ -193,7 +193,7 @@ func (t *TraceService) takeOverInstances(instances []*Instance, blockHash bc.Has
 	}
 
 	if err := t.infra.Repository.SaveInstances(instances); err != nil {
-		logrus.WithField("err", err).Error("save instances when take over instances")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("save instances when take over instances")
 		return false
 	}
 
