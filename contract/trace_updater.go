@@ -30,17 +30,17 @@ func (t *TraceUpdater) Sync() {
 			block, err := t.chain.GetBlockByHash(&bestHash)
 			if err != nil {
 				log.WithFields(log.Fields{"module": logModule, "err": err, "block_hash": bestHash.String()}).Errorf("trace updater get block")
-				return
+				break
 			}
 
 			if err := t.DetachBlock(block); err != nil {
 				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("trace updater detach block")
-				return
+				break
 			}
 		} else {
 			if err := t.ApplyBlock(block); err != nil {
 				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("trace updater attach block")
-				return
+				break
 			}
 		}
 	}
