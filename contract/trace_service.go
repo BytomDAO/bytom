@@ -37,7 +37,8 @@ func NewTraceService(infra *Infrastructure) *TraceService {
 
 	chainStatus := infra.Repository.GetChainStatus()
 	if chainStatus == nil {
-		chainStatus.BlockHeight, chainStatus.BlockHash = infra.Chain.BestChain()
+		bestHeight, bestHash := infra.Chain.BestChain()
+		chainStatus = &ChainStatus{BlockHeight: bestHeight, BlockHash: bestHash}
 		if err := infra.Repository.SaveChainStatus(chainStatus); err != nil {
 			logrus.WithField("err", err).Fatal("init chain status for trace service")
 		}

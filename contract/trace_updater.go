@@ -37,11 +37,11 @@ func (t *TraceUpdater) Sync() {
 				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("trace updater detach block")
 				return
 			}
-		}
-
-		if err := t.ApplyBlock(block); err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("trace updater attach block")
-			return
+		} else {
+			if err := t.ApplyBlock(block); err != nil {
+				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("trace updater attach block")
+				return
+			}
 		}
 	}
 }
