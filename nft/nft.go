@@ -89,8 +89,19 @@ func NewContract(platformScript []byte, marginFold uint64) ([]byte, error) {
 
 	builder.SetJumpTarget(0)
 	// alt stack 	[creater, taxRate, nftAsset, owner, marginAsset, marginAmount]
-	// data statck	[newMarginAmount]
+	// data statck	[ownerSig, newMarginAmount]
 	swapAltStack(builder, 0, 0)
+	// alt stack 	[creater, taxRate, nftAsset, owner, newMarginAsset, newMarginAmount]
+	// data statck	[ownerSig]
+	cpAltStack(builder, 2)
+	// alt stack 	[creater, taxRate, nftAsset, owner, newMarginAsset, newMarginAmount]
+	// data statck	[ownerSig, owner]
+	builder.AddOp(vm.OP_TXSIGHASH)
+	builder.AddOp(vm.OP_SWAP)
+	// alt stack 	[creater, taxRate, nftAsset, owner, newMarginAsset, newMarginAmount]
+	// data statck	[ownerSig, txSigHash, owner]
+	builder.AddOp(vm.OP_CHECKSIG)
+	builder.AddOp(vm.OP_VERIFY)
 	// alt stack 	[creater, taxRate, nftAsset, owner, newMarginAsset, newMarginAmount]
 	// data statck	[]
 	builder.SetJumpTarget(1)
@@ -119,6 +130,14 @@ func NewOffer(nftContract []byte) ([]byte, error) {
 	builder.AddJumpIf(0)
 	builder.AddUint64(1)
 	builder.AddJump(1)
+
+	// need check sig for cancel func
+	cpAltStack(builder, 2)
+	builder.AddOp(vm.OP_TXSIGHASH)
+	builder.AddOp(vm.OP_SWAP)
+	builder.AddOp(vm.OP_CHECKSIG)
+	builder.AddOp(vm.OP_VERIFY)
+
 	builder.SetJumpTarget(0)
 	builder.AddUint64(0)
 	builder.AddUint64(1)
@@ -134,6 +153,7 @@ func NewOffer(nftContract []byte) ([]byte, error) {
 	builder.AddData(nftContract)
 	builder.AddOp(vm.OP_CHECKOUTPUT)
 	builder.SetJumpTarget(1)
+
 	return builder.Build()
 }
 
