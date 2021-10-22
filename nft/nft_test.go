@@ -22,8 +22,9 @@ var (
 	ETH               = testutil.MustDecodeAsset("78de44ffa1bce37b757c9eae8925b5f199dc4621b412ef0f3f46168865284a93")
 
 	utxoSourceID = testutil.MustDecodeHash("762ec536ea64f71feac5fd4000a4807fc8e9d08d757889bd0206a02b79f9db8e")
-	ownerScirpt  = testutil.MustDecodeHexString("0100000000000000000000000000000000000000000000000000000000000000") //[]byte("ownerScirpt")
-	buyerScirpt  = testutil.MustDecodeHexString("0100000000000000000000000000000000000000000000000000000000000000") //[]byte("buyerScirpt")
+	ownerScirpt  = []byte("ownerScirpt")
+	buyerScirpt  = []byte("buyerScirpt")
+	publicKey    = testutil.MustDecodeHexString("0100000000000000000000000000000000000000000000000000000000000000")
 )
 
 // 从2个BTC的押金换成3个BTC的
@@ -40,6 +41,7 @@ func TestEditMargin(t *testing.T) {
 		ownerScirpt,
 		BTC.Bytes(),
 		vm.Uint64Bytes(200000000),
+		publicKey,
 	}
 
 	newStateData := [][]byte{
@@ -49,10 +51,11 @@ func TestEditMargin(t *testing.T) {
 		ownerScirpt,
 		BTC.Bytes(),
 		vm.Uint64Bytes(300000000),
+		publicKey,
 	}
 
 	arguments := [][]byte{
-		testutil.MustDecodeHexString("6c25b3220df660b06bf17ca881e6a31811fc4f33f78e5c0597a1e29b5d0030d9494bff417a237b907eac5cdce1dc0dfe1f258103dee32fcc84a2dd5e8c614209"),
+		testutil.MustDecodeHexString("b90890b349b0cc0d4e86d21efccc517fdf1bcd0038bbbdf518433905e10ec81130906c816298381a6cedacd037b3084b503c146f7cf710fc759c367da1552a09"),
 		vm.Uint64Bytes(300000000),
 		vm.Uint64Bytes(1),
 	}
@@ -92,6 +95,7 @@ func TestRegularBuy(t *testing.T) {
 		ownerScirpt,
 		ETH.Bytes(),
 		vm.Uint64Bytes(10000000000),
+		publicKey,
 	}
 
 	newStateData := [][]byte{
@@ -101,6 +105,7 @@ func TestRegularBuy(t *testing.T) {
 		buyerScirpt,
 		ETH.Bytes(),
 		vm.Uint64Bytes(15000000000),
+		publicKey,
 	}
 
 	arguments := [][]byte{
@@ -148,6 +153,7 @@ func TestBuySwapMargin(t *testing.T) {
 		ownerScirpt,
 		ETH.Bytes(),
 		vm.Uint64Bytes(10000000000),
+		publicKey,
 	}
 
 	newStateData := [][]byte{
@@ -157,6 +163,7 @@ func TestBuySwapMargin(t *testing.T) {
 		buyerScirpt,
 		BTC.Bytes(),
 		vm.Uint64Bytes(200000000),
+		publicKey,
 	}
 
 	arguments := [][]byte{
@@ -210,6 +217,7 @@ func TestOfferBuy(t *testing.T) {
 		ownerScirpt,
 		ETH.Bytes(),
 		vm.Uint64Bytes(10000000000),
+		publicKey,
 	}
 
 	newStateData := [][]byte{
@@ -219,6 +227,7 @@ func TestOfferBuy(t *testing.T) {
 		buyerScirpt,
 		ETH.Bytes(),
 		vm.Uint64Bytes(15000000000),
+		publicKey,
 	}
 
 	arguments := [][]byte{
@@ -270,10 +279,11 @@ func TestCancelOffer(t *testing.T) {
 		buyerScirpt,
 		ETH.Bytes(),
 		vm.Uint64Bytes(15000000000),
+		publicKey,
 	}
 
 	arguments := [][]byte{
-		testutil.MustDecodeHexString("2dbbae17e2aed7639ba212f46fd28b9ccb122c1a24ebd1a48e2dddcaf675252e9adb7c8fe504fa4aad4d054d87701d93d67c5e62bee9ccdc442a39a207dcd106"),
+		testutil.MustDecodeHexString("5409d2b5395f3516843e60118259be4ef1bea1e77e82b959a82fe5a98ce1a0eccbbbdbbd0156c392e7aacdbfbdec1d827b62813a17535a474c018151b25ca40d"),
 		vm.Uint64Bytes(0),
 	}
 
