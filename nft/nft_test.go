@@ -288,8 +288,13 @@ func TestCancelOffer(t *testing.T) {
 		vm.Uint64Bytes(15000000000),
 	}
 
-	arguments := [][]byte{
-		testutil.MustDecodeHexString("413c6f447ce86ef2061eb9b481586a78a07604398d39866d206a1595901159170267e65baf7261bcf62244c21bd407490d617511a321bdd25e70ca799c07dd04"),
+	arguments1 := [][]byte{
+		testutil.MustDecodeHexString("dda495953ff63af7775bfd8ad1b8b54900849a202668d35454beb6d33ae18057abbfc2a8f5691876083a364f713f54ea4b71cb9d0436d7b1c9ef194ee42e2304"),
+		vm.Uint64Bytes(0),
+	}
+
+	arguments2 := [][]byte{
+		testutil.MustDecodeHexString("2efd75e44777be73300210569bb4002e8942064718092a958658150f54f6a002806123a20960bbb5ce4d85cbff7827ca994344d360119041d266e3a56ddde904"),
 		vm.Uint64Bytes(0),
 	}
 
@@ -297,11 +302,13 @@ func TestCancelOffer(t *testing.T) {
 		Version:        1,
 		SerializedSize: 10000,
 		Inputs: []*types.TxInput{
-			types.NewSpendInput(arguments, utxoSourceID, ETH, 135000000000, 2, offer, newStateData),
+			types.NewSpendInput(arguments1, utxoSourceID, ETH, 135000000000, 2, offer, newStateData),
+			types.NewSpendInput(arguments2, utxoSourceID, BTC, 135000000000, 1, offer, newStateData),
 			types.NewSpendInput(nil, utxoSourceID, *consensus.BTMAssetID, 100000000, 1, anyCanSpendScript, nil),
 		},
 		Outputs: []*types.TxOutput{
 			types.NewOriginalTxOutput(ETH, 135000000000, ownerScirpt, newStateData),
+			types.NewOriginalTxOutput(BTC, 135000000000, ownerScirpt, newStateData),
 		},
 	})
 
