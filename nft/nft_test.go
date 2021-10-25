@@ -22,8 +22,8 @@ var (
 	ETH               = testutil.MustDecodeAsset("78de44ffa1bce37b757c9eae8925b5f199dc4621b412ef0f3f46168865284a93")
 
 	utxoSourceID = testutil.MustDecodeHash("762ec536ea64f71feac5fd4000a4807fc8e9d08d757889bd0206a02b79f9db8e")
-	ownerScirpt  = testutil.MustDecodeHexString("0100000000000000000000000000000000000000000000000000000000000000") //[]byte("ownerScirpt")
-	buyerScirpt  = testutil.MustDecodeHexString("0100000000000000000000000000000000000000000000000000000000000000") //[]byte("buyerScirpt")
+	ownerScirpt  = []byte("ownerScirpt")
+	buyerScirpt  = []byte("buyerScirpt")
 )
 
 // 从2个BTC的押金换成3个BTC的
@@ -52,7 +52,6 @@ func TestEditMargin(t *testing.T) {
 	}
 
 	arguments := [][]byte{
-		testutil.MustDecodeHexString("6c25b3220df660b06bf17ca881e6a31811fc4f33f78e5c0597a1e29b5d0030d9494bff417a237b907eac5cdce1dc0dfe1f258103dee32fcc84a2dd5e8c614209"),
 		vm.Uint64Bytes(300000000),
 		vm.Uint64Bytes(1),
 	}
@@ -273,7 +272,6 @@ func TestCancelOffer(t *testing.T) {
 	}
 
 	arguments := [][]byte{
-		testutil.MustDecodeHexString("2dbbae17e2aed7639ba212f46fd28b9ccb122c1a24ebd1a48e2dddcaf675252e9adb7c8fe504fa4aad4d054d87701d93d67c5e62bee9ccdc442a39a207dcd106"),
 		vm.Uint64Bytes(0),
 	}
 
