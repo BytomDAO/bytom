@@ -24,6 +24,7 @@ var (
 	utxoSourceID = testutil.MustDecodeHash("762ec536ea64f71feac5fd4000a4807fc8e9d08d757889bd0206a02b79f9db8e")
 	ownerScirpt  = []byte("ownerScirpt")
 	buyerScirpt  = []byte("buyerScirpt")
+	publicKey    = testutil.MustDecodeHexString("7642ba797fd89d1f98a8559b4ca74123697dd4dee882955acd0da9010a80d64e")
 )
 
 // 从2个BTC的押金换成3个BTC的
@@ -34,6 +35,7 @@ func TestEditMargin(t *testing.T) {
 	}
 
 	oldStateData := [][]byte{
+		publicKey,
 		createrScript,
 		vm.Uint64Bytes(taxRate),
 		nftAsset.Bytes(),
@@ -43,6 +45,7 @@ func TestEditMargin(t *testing.T) {
 	}
 
 	newStateData := [][]byte{
+		publicKey,
 		createrScript,
 		vm.Uint64Bytes(taxRate),
 		nftAsset.Bytes(),
@@ -51,7 +54,14 @@ func TestEditMargin(t *testing.T) {
 		vm.Uint64Bytes(300000000),
 	}
 
-	arguments := [][]byte{
+	arguments1 := [][]byte{
+		testutil.MustDecodeHexString("74202524d9fdf913c2b176f9c81c3f7d433440d944f12a87f9d78f3294b30e1d8a388716887ca20c012064059054e1c036e15d2da65441ff93bcb4593e374e09"),
+		vm.Uint64Bytes(300000000),
+		vm.Uint64Bytes(1),
+	}
+
+	arguments2 := [][]byte{
+		testutil.MustDecodeHexString("bcdda03bd6b1f5605c51e58cb1230c76fdc06b837118741a586275c6653979cd632f796741d79c652a06c23f73a0e2f7d9086ea39b4e9d9793e8835b5e013d07"),
 		vm.Uint64Bytes(300000000),
 		vm.Uint64Bytes(1),
 	}
@@ -60,8 +70,8 @@ func TestEditMargin(t *testing.T) {
 		Version:        1,
 		SerializedSize: 10000,
 		Inputs: []*types.TxInput{
-			types.NewSpendInput(arguments, utxoSourceID, nftAsset, 1, 0, contract, oldStateData),
-			types.NewSpendInput(arguments, utxoSourceID, BTC, 200000000, 1, contract, oldStateData),
+			types.NewSpendInput(arguments1, utxoSourceID, nftAsset, 1, 0, contract, oldStateData),
+			types.NewSpendInput(arguments2, utxoSourceID, BTC, 200000000, 1, contract, oldStateData),
 			types.NewSpendInput(nil, utxoSourceID, BTC, 100000000, 2, anyCanSpendScript, nil),
 			types.NewSpendInput(nil, utxoSourceID, *consensus.BTMAssetID, 100000000, 1, anyCanSpendScript, nil),
 		},
@@ -85,6 +95,7 @@ func TestRegularBuy(t *testing.T) {
 	}
 
 	oldStateData := [][]byte{
+		publicKey,
 		createrScript,
 		vm.Uint64Bytes(taxRate),
 		nftAsset.Bytes(),
@@ -94,6 +105,7 @@ func TestRegularBuy(t *testing.T) {
 	}
 
 	newStateData := [][]byte{
+		publicKey,
 		createrScript,
 		vm.Uint64Bytes(taxRate),
 		nftAsset.Bytes(),
@@ -141,6 +153,7 @@ func TestBuySwapMargin(t *testing.T) {
 	}
 
 	oldStateData := [][]byte{
+		publicKey,
 		createrScript,
 		vm.Uint64Bytes(taxRate),
 		nftAsset.Bytes(),
@@ -150,6 +163,7 @@ func TestBuySwapMargin(t *testing.T) {
 	}
 
 	newStateData := [][]byte{
+		publicKey,
 		createrScript,
 		vm.Uint64Bytes(taxRate),
 		nftAsset.Bytes(),
@@ -203,6 +217,7 @@ func TestOfferBuy(t *testing.T) {
 	}
 
 	oldStateData := [][]byte{
+		publicKey,
 		createrScript,
 		vm.Uint64Bytes(taxRate),
 		nftAsset.Bytes(),
@@ -212,6 +227,7 @@ func TestOfferBuy(t *testing.T) {
 	}
 
 	newStateData := [][]byte{
+		publicKey,
 		createrScript,
 		vm.Uint64Bytes(taxRate),
 		nftAsset.Bytes(),
@@ -263,6 +279,7 @@ func TestCancelOffer(t *testing.T) {
 	}
 
 	newStateData := [][]byte{
+		publicKey,
 		createrScript,
 		vm.Uint64Bytes(taxRate),
 		nftAsset.Bytes(),
@@ -272,6 +289,7 @@ func TestCancelOffer(t *testing.T) {
 	}
 
 	arguments := [][]byte{
+		testutil.MustDecodeHexString("413c6f447ce86ef2061eb9b481586a78a07604398d39866d206a1595901159170267e65baf7261bcf62244c21bd407490d617511a321bdd25e70ca799c07dd04"),
 		vm.Uint64Bytes(0),
 	}
 
