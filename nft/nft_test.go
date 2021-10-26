@@ -28,7 +28,7 @@ var (
 )
 
 // 从2个BTC的押金换成3个BTC的
-func TestEditMargin(t *testing.T) {
+func TestAddMargin(t *testing.T) {
 	contract, err := NewContract(platformScript, marginFold)
 	if err != nil {
 		t.Fatal(err)
@@ -55,13 +55,13 @@ func TestEditMargin(t *testing.T) {
 	}
 
 	arguments1 := [][]byte{
-		testutil.MustDecodeHexString("74202524d9fdf913c2b176f9c81c3f7d433440d944f12a87f9d78f3294b30e1d8a388716887ca20c012064059054e1c036e15d2da65441ff93bcb4593e374e09"),
+		testutil.MustDecodeHexString("a56a34053c2d0aeea5d590df4aa7f0694da5faf7f5e4d8848087de6de1d273fcefd5c04ed9ec4d95e40747bc8d145c12d01a6b09a3284c27b66d714d0a3fc203"),
 		vm.Uint64Bytes(300000000),
 		vm.Uint64Bytes(1),
 	}
 
 	arguments2 := [][]byte{
-		testutil.MustDecodeHexString("bcdda03bd6b1f5605c51e58cb1230c76fdc06b837118741a586275c6653979cd632f796741d79c652a06c23f73a0e2f7d9086ea39b4e9d9793e8835b5e013d07"),
+		testutil.MustDecodeHexString("5a4c7a9dd7eec3e230b4f09f44f786d5864374c8208cb88cf00139c6f3bd65596c573bd486f98f7934dac24a8c35da028cc90a6a8df4a5c982f0e9a225fbc603"),
 		vm.Uint64Bytes(300000000),
 		vm.Uint64Bytes(1),
 	}
@@ -78,6 +78,65 @@ func TestEditMargin(t *testing.T) {
 		Outputs: []*types.TxOutput{
 			types.NewOriginalTxOutput(nftAsset, 1, contract, newStateData),
 			types.NewOriginalTxOutput(BTC, 300000000, contract, newStateData),
+		},
+	})
+
+	_, err = validation.ValidateTx(tx.Tx, &bc.Block{BlockHeader: &bc.BlockHeader{}}, func(prog []byte) ([]byte, error) { return nil, nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSubMargin(t *testing.T) {
+	contract, err := NewContract(platformScript, marginFold)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	oldStateData := [][]byte{
+		publicKey,
+		createrScript,
+		vm.Uint64Bytes(taxRate),
+		nftAsset.Bytes(),
+		ownerScirpt,
+		BTC.Bytes(),
+		vm.Uint64Bytes(300000000),
+	}
+
+	newStateData := [][]byte{
+		publicKey,
+		createrScript,
+		vm.Uint64Bytes(taxRate),
+		nftAsset.Bytes(),
+		ownerScirpt,
+		BTC.Bytes(),
+		vm.Uint64Bytes(200000000),
+	}
+
+	arguments1 := [][]byte{
+		testutil.MustDecodeHexString("02b8224c5aa208101fee786a13a1db435255107eca68ff9ca436f668fc85e984351be3bef911fab3fa30f65db1f7c87c98a8bfa1392709dc5fae65316e4f4e05"),
+		vm.Uint64Bytes(200000000),
+		vm.Uint64Bytes(1),
+	}
+
+	arguments2 := [][]byte{
+		testutil.MustDecodeHexString("475a68712f1d5eac547221921f7e6ff4d2d1414ef0c9a0483f6eb0dac604fd330f34029886a3fba1f5e9dabcedc5ee0c062187a365cd9b81099f462a1aa02c06"),
+		vm.Uint64Bytes(200000000),
+		vm.Uint64Bytes(1),
+	}
+
+	tx := types.NewTx(types.TxData{
+		Version:        1,
+		SerializedSize: 10000,
+		Inputs: []*types.TxInput{
+			types.NewSpendInput(arguments1, utxoSourceID, nftAsset, 1, 0, contract, oldStateData),
+			types.NewSpendInput(arguments2, utxoSourceID, BTC, 300000000, 1, contract, oldStateData),
+			types.NewSpendInput(nil, utxoSourceID, *consensus.BTMAssetID, 100000000, 1, anyCanSpendScript, nil),
+		},
+		Outputs: []*types.TxOutput{
+			types.NewOriginalTxOutput(nftAsset, 1, contract, newStateData),
+			types.NewOriginalTxOutput(BTC, 200000000, contract, newStateData),
+			types.NewOriginalTxOutput(BTC, 100000000, ownerScirpt, oldStateData),
 		},
 	})
 
@@ -289,12 +348,12 @@ func TestCancelOffer(t *testing.T) {
 	}
 
 	arguments1 := [][]byte{
-		testutil.MustDecodeHexString("dda495953ff63af7775bfd8ad1b8b54900849a202668d35454beb6d33ae18057abbfc2a8f5691876083a364f713f54ea4b71cb9d0436d7b1c9ef194ee42e2304"),
+		testutil.MustDecodeHexString("471cf24e018b549d5740cc2dca0d34ed33f5706c3d660ec8bbc21393731d0da51814b305009f5300a0a863a0c4c7ca3d8cc5d38cc5e0ec11e7eeec5161496d02"),
 		vm.Uint64Bytes(0),
 	}
 
 	arguments2 := [][]byte{
-		testutil.MustDecodeHexString("2efd75e44777be73300210569bb4002e8942064718092a958658150f54f6a002806123a20960bbb5ce4d85cbff7827ca994344d360119041d266e3a56ddde904"),
+		testutil.MustDecodeHexString("3318b9ea0e808db8925f60ffba42c68106263fa2189d7dde68ef1c6d0c0d0d5efd24aa7b0d3e960e81880dd35828341a17585c41ad4bd9de569c765aba39ca02"),
 		vm.Uint64Bytes(0),
 	}
 

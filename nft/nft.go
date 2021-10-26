@@ -7,7 +7,7 @@ import (
 
 /*
 	init alt stack 	[publicKey, creater, taxRate, nftAsset, owner, marginAsset, marginAmount]
-	buy data stack 	[buyer, marginAmount, selecter]
+	buy data stack 	[marginAsset, buyer, newMarginAmount, selecter]
 	edit data stack	[signature, newMarginAsset, newMarginAmount, selecter]
 */
 
@@ -15,6 +15,11 @@ func NewContract(platformScript []byte, marginFold uint64) ([]byte, error) {
 	builder := vmutil.NewBuilder()
 	// alt stack	[publicKey, creater, taxRate, nftAsset, owner, marginAsset, marginAmount]
 	// data statck	[...... selecter]
+	builder.AddOp(vm.OP_DUP)
+	builder.AddUint64(2)
+	builder.AddOp(vm.OP_EQUAL)
+	builder.AddJumpIf(2)
+
 	builder.AddJumpIf(0)
 	// alt stack	[publicKey, creater, taxRate, nftAsset, owner, marginAsset, marginAmount]
 	// data statck	[marginAsset, buyer, newMarginAmount]
@@ -45,7 +50,7 @@ func NewContract(platformScript []byte, marginFold uint64) ([]byte, error) {
 	builder.AddUint64(1)
 	cpAltStack(builder, 5)
 	// alt stack	[publicKey, creater, taxRate, nftAsset, owner, marginAsset, marginAmount]
-	// data statck	[marginAsset, buyer, newMarginAmount, platformFee, payAmount, createrTax, 2, createrTax, marginAsset, 1, PROGRAM]
+	// data statck	[marginAsset, buyer, newMarginAmount, platformFee, payAmount, createrTax, 2, createrTax, marginAsset, 1, creater]
 	builder.AddOp(vm.OP_CHECKOUTPUT)
 	builder.AddOp(vm.OP_VERIFY)
 	builder.AddOp(vm.OP_SUB)
@@ -86,6 +91,23 @@ func NewContract(platformScript []byte, marginFold uint64) ([]byte, error) {
 	// data statck	[marginAsset]
 	swapAltStack(builder, 0, 1)
 	builder.AddJump(1)
+
+	builder.SetJumpTarget(2)
+	// alt stack 	[publicKey, creater, taxRate, nftAsset, owner, marginAsset, marginAmount]
+	// data statck	[ownerSignature, newMarginAmount]
+	builder.AddOp(vm.OP_DUP)
+	cpAltStack(builder, 0)
+	builder.AddOp(vm.OP_DUP)
+	builder.AddOp(vm.OP_SUB)
+	builder.AddUint64(2)
+	builder.AddOp(vm.OP_SWAP)
+	cpAltStack(builder, 1)
+	builder.AddUint64(1)
+	cpAltStack(builder, 2)
+	// alt stack	[publicKey, creater, taxRate, nftAsset, owner, marginAsset, marginAmount]
+	// data statck	[ownerSignature, newMarginAmount, 2, marginAmount-newMarginAmount, marginAsset, 1, owner]
+	builder.AddOp(vm.OP_CHECKOUTPUT)
+	builder.AddOp(vm.OP_VERIFY)
 
 	builder.SetJumpTarget(0)
 	// alt stack 	[publicKey, creater, taxRate, nftAsset, owner, marginAsset, marginAmount]
