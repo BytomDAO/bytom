@@ -19,6 +19,7 @@ type BlockHeader struct {
 	PreviousBlockHash bc.Hash // The hash of the previous block.
 	Timestamp         uint64  // The time of the block in seconds.
 	BlockWitness
+	SupLinks
 	BlockCommitment
 }
 
