@@ -35,15 +35,7 @@ func NewTraceService(infra *Infrastructure) *TraceService {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Fatal("load instances from db")
 	}
 
-	chainStatus := infra.Repository.GetChainStatus()
-	if chainStatus == nil {
-		bestHeight, bestHash := infra.Chain.BestChain()
-		chainStatus = &ChainStatus{BlockHeight: bestHeight, BlockHash: bestHash}
-		if err := infra.Repository.SaveChainStatus(chainStatus); err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Fatal("init chain status for trace service")
-		}
-	}
-
+	chainStatus := initChainStatus(infra)
 	scheduler := newTraceScheduler(infra)
 	inSyncInstances := dispatchInstances(allInstances, scheduler, infra.Chain.FinalizedHeight())
 
@@ -58,6 +50,18 @@ func NewTraceService(infra *Infrastructure) *TraceService {
 	}
 	scheduler.start(service)
 	return service
+}
+
+func initChainStatus(infra *Infrastructure) *ChainStatus {
+	chainStatus := infra.Repository.GetChainStatus()
+	if chainStatus == nil {
+		bestHeight, bestHash := infra.Chain.BestChain()
+		chainStatus = &ChainStatus{BlockHeight: bestHeight, BlockHash: bestHash}
+		if err := infra.Repository.SaveChainStatus(chainStatus); err != nil {
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Fatal("init chain status for trace service")
+		}
+	}
+	return chainStatus
 }
 
 func dispatchInstances(instances []*Instance, scheduler *traceScheduler, finalizedHeight uint64) []*Instance {
