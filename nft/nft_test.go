@@ -21,10 +21,11 @@ var (
 	BTC               = testutil.MustDecodeAsset("bda946b3110fa46fd94346ce3f05f0760f1b9de72e238835bc4d19f9d64f1742")
 	ETH               = testutil.MustDecodeAsset("78de44ffa1bce37b757c9eae8925b5f199dc4621b412ef0f3f46168865284a93")
 
-	utxoSourceID = testutil.MustDecodeHash("762ec536ea64f71feac5fd4000a4807fc8e9d08d757889bd0206a02b79f9db8e")
-	ownerScirpt  = []byte("ownerScirpt")
-	buyerScirpt  = []byte("buyerScirpt")
-	publicKey    = testutil.MustDecodeHexString("7642ba797fd89d1f98a8559b4ca74123697dd4dee882955acd0da9010a80d64e")
+	utxoSourceID   = testutil.MustDecodeHash("762ec536ea64f71feac5fd4000a4807fc8e9d08d757889bd0206a02b79f9db8e")
+	ownerScirpt    = []byte("ownerScirpt")
+	buyerScirpt    = []byte("buyerScirpt")
+	ownerPublicKey = testutil.MustDecodeHexString("7642ba797fd89d1f98a8559b4ca74123697dd4dee882955acd0da9010a80d64e")
+	buyerPublicKey = testutil.MustDecodeHexString("a0a5b2a1148cc8eb4fbdb739574164ecd6be15f4da31b54b846de5c5c83815b3")
 )
 
 // 从2个BTC的押金换成3个BTC的
@@ -35,7 +36,7 @@ func TestAddMargin(t *testing.T) {
 	}
 
 	oldStateData := [][]byte{
-		publicKey,
+		ownerPublicKey,
 		createrScript,
 		vm.Uint64Bytes(taxRate),
 		nftAsset.Bytes(),
@@ -45,7 +46,7 @@ func TestAddMargin(t *testing.T) {
 	}
 
 	newStateData := [][]byte{
-		publicKey,
+		ownerPublicKey,
 		createrScript,
 		vm.Uint64Bytes(taxRate),
 		nftAsset.Bytes(),
@@ -55,13 +56,13 @@ func TestAddMargin(t *testing.T) {
 	}
 
 	arguments1 := [][]byte{
-		testutil.MustDecodeHexString("a56a34053c2d0aeea5d590df4aa7f0694da5faf7f5e4d8848087de6de1d273fcefd5c04ed9ec4d95e40747bc8d145c12d01a6b09a3284c27b66d714d0a3fc203"),
+		testutil.MustDecodeHexString("d51a48a7b5918de3cbf97de1a047af34fcb144c0308558a6ed5c4a12f4f338b9ccef23cd51937116412059569ba966cdc3c19fd58caa8aca4c2b9323e15cc90d"),
 		vm.Uint64Bytes(300000000),
 		vm.Uint64Bytes(1),
 	}
 
 	arguments2 := [][]byte{
-		testutil.MustDecodeHexString("5a4c7a9dd7eec3e230b4f09f44f786d5864374c8208cb88cf00139c6f3bd65596c573bd486f98f7934dac24a8c35da028cc90a6a8df4a5c982f0e9a225fbc603"),
+		testutil.MustDecodeHexString("62fb14d988c57692a8860c25915e2fc7dbf4143388ede4200e79cc6dbf8751274cc0192d914137b9bb9f36b89d5e5f5909d041699f3d5fc1b27348e106a1520e"),
 		vm.Uint64Bytes(300000000),
 		vm.Uint64Bytes(1),
 	}
@@ -94,7 +95,7 @@ func TestSubMargin(t *testing.T) {
 	}
 
 	oldStateData := [][]byte{
-		publicKey,
+		ownerPublicKey,
 		createrScript,
 		vm.Uint64Bytes(taxRate),
 		nftAsset.Bytes(),
@@ -104,7 +105,7 @@ func TestSubMargin(t *testing.T) {
 	}
 
 	newStateData := [][]byte{
-		publicKey,
+		ownerPublicKey,
 		createrScript,
 		vm.Uint64Bytes(taxRate),
 		nftAsset.Bytes(),
@@ -114,13 +115,13 @@ func TestSubMargin(t *testing.T) {
 	}
 
 	arguments1 := [][]byte{
-		testutil.MustDecodeHexString("02b8224c5aa208101fee786a13a1db435255107eca68ff9ca436f668fc85e984351be3bef911fab3fa30f65db1f7c87c98a8bfa1392709dc5fae65316e4f4e05"),
+		testutil.MustDecodeHexString("ba9772c480c349dc237f15e9606963224d7d1211072a79b4c34a045d19bb95a2bc20fba10f70097775a5b4e2a5c9f016ca96713fa19bdc5dfc0b4d21a9c3d407"),
 		vm.Uint64Bytes(200000000),
 		vm.Uint64Bytes(1),
 	}
 
 	arguments2 := [][]byte{
-		testutil.MustDecodeHexString("475a68712f1d5eac547221921f7e6ff4d2d1414ef0c9a0483f6eb0dac604fd330f34029886a3fba1f5e9dabcedc5ee0c062187a365cd9b81099f462a1aa02c06"),
+		testutil.MustDecodeHexString("d7d82e40d5a6022aa2b7eb602ded566fa748e9549bd73146d7c2251401805f113ed2f5d76a5208ebfae989e5c7da37e976d59564bf05f9682b5057e163121407"),
 		vm.Uint64Bytes(200000000),
 		vm.Uint64Bytes(1),
 	}
@@ -154,7 +155,7 @@ func TestRegularBuy(t *testing.T) {
 	}
 
 	oldStateData := [][]byte{
-		publicKey,
+		ownerPublicKey,
 		createrScript,
 		vm.Uint64Bytes(taxRate),
 		nftAsset.Bytes(),
@@ -164,7 +165,7 @@ func TestRegularBuy(t *testing.T) {
 	}
 
 	newStateData := [][]byte{
-		publicKey,
+		buyerPublicKey,
 		createrScript,
 		vm.Uint64Bytes(taxRate),
 		nftAsset.Bytes(),
@@ -174,6 +175,7 @@ func TestRegularBuy(t *testing.T) {
 	}
 
 	arguments := [][]byte{
+		buyerPublicKey,
 		ETH.Bytes(),
 		buyerScirpt,
 		vm.Uint64Bytes(15000000000),
@@ -212,7 +214,7 @@ func TestBuySwapMargin(t *testing.T) {
 	}
 
 	oldStateData := [][]byte{
-		publicKey,
+		ownerPublicKey,
 		createrScript,
 		vm.Uint64Bytes(taxRate),
 		nftAsset.Bytes(),
@@ -222,7 +224,7 @@ func TestBuySwapMargin(t *testing.T) {
 	}
 
 	newStateData := [][]byte{
-		publicKey,
+		buyerPublicKey,
 		createrScript,
 		vm.Uint64Bytes(taxRate),
 		nftAsset.Bytes(),
@@ -232,6 +234,7 @@ func TestBuySwapMargin(t *testing.T) {
 	}
 
 	arguments := [][]byte{
+		buyerPublicKey,
 		BTC.Bytes(),
 		buyerScirpt,
 		vm.Uint64Bytes(200000000),
@@ -276,7 +279,7 @@ func TestOfferBuy(t *testing.T) {
 	}
 
 	oldStateData := [][]byte{
-		publicKey,
+		ownerPublicKey,
 		createrScript,
 		vm.Uint64Bytes(taxRate),
 		nftAsset.Bytes(),
@@ -286,7 +289,7 @@ func TestOfferBuy(t *testing.T) {
 	}
 
 	newStateData := [][]byte{
-		publicKey,
+		buyerPublicKey,
 		createrScript,
 		vm.Uint64Bytes(taxRate),
 		nftAsset.Bytes(),
@@ -296,6 +299,7 @@ func TestOfferBuy(t *testing.T) {
 	}
 
 	arguments := [][]byte{
+		buyerPublicKey,
 		ETH.Bytes(),
 		buyerScirpt,
 		vm.Uint64Bytes(15000000000),
@@ -338,7 +342,7 @@ func TestCancelOffer(t *testing.T) {
 	}
 
 	newStateData := [][]byte{
-		publicKey,
+		ownerPublicKey,
 		createrScript,
 		vm.Uint64Bytes(taxRate),
 		nftAsset.Bytes(),
@@ -348,12 +352,12 @@ func TestCancelOffer(t *testing.T) {
 	}
 
 	arguments1 := [][]byte{
-		testutil.MustDecodeHexString("471cf24e018b549d5740cc2dca0d34ed33f5706c3d660ec8bbc21393731d0da51814b305009f5300a0a863a0c4c7ca3d8cc5d38cc5e0ec11e7eeec5161496d02"),
+		testutil.MustDecodeHexString("4afb322c65d4d966b20de6a9fb891a926bb04fb9dcdcced8bf58b0caffbc0ed7798d6874f25bc34cec2ffe5a017fa10701d8c81812d174a10bd3e7a1fc5cb300"),
 		vm.Uint64Bytes(0),
 	}
 
 	arguments2 := [][]byte{
-		testutil.MustDecodeHexString("3318b9ea0e808db8925f60ffba42c68106263fa2189d7dde68ef1c6d0c0d0d5efd24aa7b0d3e960e81880dd35828341a17585c41ad4bd9de569c765aba39ca02"),
+		testutil.MustDecodeHexString("4f7b9b4f15dfba12e80789619d33491a7537a68667f75b6889d40aa7138c9c497d3aaff3f7a7830cf155562ecd2d500bbcd453d323bcb0926d0e91ea09f42507"),
 		vm.Uint64Bytes(0),
 	}
 
