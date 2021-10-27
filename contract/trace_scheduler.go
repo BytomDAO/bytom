@@ -58,11 +58,11 @@ func (t *traceScheduler) processLoop() {
 		}
 		t.tracer = newTracer(jobs[beginHash])
 
-		for t.currentHeight, t.currentHash = beginHeight, beginHash; len(jobs) != 0; {
+		for t.currentHeight, t.currentHash = beginHeight, beginHash;; {
 			if t.currentHeight == t.tracerService.BestHeight() {
-				if ok, err := t.finishJobs(jobs); err != nil {
+				if err := t.finishJobs(jobs); err != nil {
 					log.WithFields(log.Fields{"module": logModule, "err": err}).Error("finish jobs")
-				} else if ok {
+				} else {
 					break
 				}
 			}
@@ -135,7 +135,7 @@ func (t *traceScheduler) detach(jobs map[bc.Hash][]*Instance) error {
 	return nil
 }
 
-func (t *traceScheduler) finishJobs(jobs map[bc.Hash][]*Instance) (bool, error) {
+func (t *traceScheduler) finishJobs(jobs map[bc.Hash][]*Instance) error {
 	inSyncInstances := t.tracer.allInstances()
 	inSyncMap := make(map[string]bool)
 	for _, inst := range inSyncInstances {
@@ -153,7 +153,7 @@ func (t *traceScheduler) finishJobs(jobs map[bc.Hash][]*Instance) (bool, error) 
 	}
 
 	if err := t.infra.Repository.SaveInstances(offChainInstances); err != nil {
-		return false, err
+		return err
 	}
 
 	t.releaseInstances(offChainInstances)
@@ -161,11 +161,9 @@ func (t *traceScheduler) finishJobs(jobs map[bc.Hash][]*Instance) (bool, error) 
 	if len(inSyncInstances) != 0 {
 		if ok := t.tracerService.takeOverInstances(inSyncInstances, t.currentHash); ok {
 			t.releaseInstances(inSyncInstances)
-			return true, nil
 		}
-		return false, nil
 	}
-	return true, nil
+	return nil
 }
 
 func (t *traceScheduler) releaseInstances(instances []*Instance) {

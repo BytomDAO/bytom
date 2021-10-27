@@ -45,6 +45,7 @@ type GetBlockResp struct {
 	Version                uint64     `json:"version"`
 	Height                 uint64     `json:"height"`
 	Validator              string     `json:"validator"`
+	SupLinks               types.SupLinks `json:"sup_links"`
 	PreviousBlockHash      *bc.Hash   `json:"previous_block_hash"`
 	Timestamp              uint64     `json:"timestamp"`
 	TransactionsMerkleRoot *bc.Hash   `json:"transaction_merkle_root"`
@@ -79,6 +80,7 @@ func (a *API) getBlock(ins BlockReq) Response {
 		Size:                   uint64(len(rawBlock)),
 		Version:                block.Version,
 		Height:                 block.Height,
+		SupLinks:               block.SupLinks,
 		Validator:              validatorPubKey,
 		PreviousBlockHash:      &block.PreviousBlockHash,
 		Timestamp:              block.Timestamp,
