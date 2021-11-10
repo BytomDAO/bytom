@@ -1,11 +1,12 @@
-// +build !gm
+// +build gm
 
 package types
 
 import (
 	"io"
 
-	"github.com/bytom/bytom/crypto/sha3pool"
+	"github.com/tjfoc/gmsm/sm3"
+
 	"github.com/bytom/bytom/encoding/blockchain"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
@@ -43,10 +44,11 @@ func NewIssuanceInput(nonce []byte, amount uint64, issuanceProgram []byte, argum
 
 // AssetDefinitionHash return the hash of the issuance asset definition.
 func (ii *IssuanceInput) AssetDefinitionHash() (defhash bc.Hash) {
-	sha := sha3pool.Get256()
-	defer sha3pool.Put256(sha)
-	sha.Write(ii.AssetDefinition)
-	defhash.ReadFrom(sha)
+	hasher := sm3.New()
+	hasher.Write(ii.AssetDefinition)
+	var b32 [32]byte
+	copy(b32[:], hasher.Sum(nil))
+	defhash = bc.NewHash(b32)
 	return defhash
 }
 
@@ -64,10 +66,11 @@ func (ii *IssuanceInput) InputType() uint8 { return IssuanceInputType }
 
 // NonceHash return the hash of the issuance asset definition.
 func (ii *IssuanceInput) NonceHash() (hash bc.Hash) {
-	sha := sha3pool.Get256()
-	defer sha3pool.Put256(sha)
-	sha.Write(ii.Nonce)
-	hash.ReadFrom(sha)
+	h := sm3.New()
+	h.Write(ii.Nonce)
+	var b32 [32]byte
+	copy(b32[:], h.Sum(nil))
+	hash = bc.NewHash(b32)
 	return hash
 }
 
