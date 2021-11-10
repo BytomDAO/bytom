@@ -1,4 +1,4 @@
-// +build !gm
+// +build gm
 
 package bc
 
@@ -10,11 +10,11 @@ import (
 	"fmt"
 	"io"
 
-	"golang.org/x/crypto/sha3"
+	"github.com/bytom/bytom/crypto"
 )
 
 // EmptyStringHash represents a 256-bit hash.
-var EmptyStringHash = NewHash(sha3.Sum256(nil))
+var EmptyStringHash = NewHash(crypto.Sm3Sum256(nil))
 
 // NewHash convert the input byte array to hash
 func NewHash(b32 [32]byte) (h Hash) {
