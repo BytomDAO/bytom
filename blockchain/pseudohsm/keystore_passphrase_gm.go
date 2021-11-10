@@ -1,4 +1,4 @@
-// +build !gm
+// +build gm
 
 /*
 This key store behaves as KeyStorePlain with the difference that
@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 
 	"github.com/pborman/uuid"
+	"github.com/tjfoc/gmsm/sm4"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"
 
@@ -94,7 +95,7 @@ func EncryptKey(key *XKey, auth string, scryptN, scryptP int) ([]byte, error) {
 	encryptKey := derivedKey[:16]
 	keyBytes := key.XPrv[:]
 
-	iv := randentropy.GetEntropyCSPRNG(aes.BlockSize) // 16
+	iv := randentropy.GetEntropyCSPRNG(sm4.BlockSize) // 16
 	cipherText, err := aesCTRXOR(encryptKey, keyBytes, iv)
 	if err != nil {
 		return nil, err
