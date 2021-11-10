@@ -9,7 +9,6 @@ package pseudohsm
 
 import (
 	"bytes"
-	"crypto/aes"
 	"crypto/cipher"
 	"crypto/sha256"
 	"encoding/hex"
@@ -96,11 +95,11 @@ func EncryptKey(key *XKey, auth string, scryptN, scryptP int) ([]byte, error) {
 	keyBytes := key.XPrv[:]
 
 	iv := randentropy.GetEntropyCSPRNG(sm4.BlockSize) // 16
-	cipherText, err := aesCTRXOR(encryptKey, keyBytes, iv)
+	cipherText, err := sm4CTRXOR(encryptKey, keyBytes, iv)
 	if err != nil {
 		return nil, err
 	}
-	mac := crypto.Sha256(derivedKey[16:32], cipherText)
+	mac := crypto.Sm3(derivedKey[16:32], cipherText)
 	scryptParamsJSON := make(map[string]interface{}, 5)
 	scryptParamsJSON["n"] = scryptN
 	scryptParamsJSON["r"] = scryptR
@@ -112,7 +111,7 @@ func EncryptKey(key *XKey, auth string, scryptN, scryptP int) ([]byte, error) {
 		IV: hex.EncodeToString(iv),
 	}
 	cryptoStruct := cryptoJSON{
-		Cipher:       "aes-128-ctr",
+		Cipher:       "sm4-128-ctr",
 		CipherText:   hex.EncodeToString(cipherText),
 		CipherParams: cipherParamsJSON,
 		KDF:          "scrypt",
@@ -175,7 +174,7 @@ func decryptKey(keyProtected *encryptedKeyJSON, auth string) (keyBytes []byte, k
 		return nil, nil, fmt.Errorf("Key type not supported: %v", keyProtected.Type)
 	}
 
-	if keyProtected.Crypto.Cipher != "aes-128-ctr" {
+	if keyProtected.Crypto.Cipher != "sm4-128-ctr" {
 		return nil, nil, fmt.Errorf("Cipher not supported: %v", keyProtected.Crypto.Cipher)
 	}
 
@@ -200,13 +199,13 @@ func decryptKey(keyProtected *encryptedKeyJSON, auth string) (keyBytes []byte, k
 		return nil, nil, err
 	}
 
-	calculatedMAC := crypto.Sha256(derivedKey[16:32], cipherText)
+	calculatedMAC := crypto.Sm3(derivedKey[16:32], cipherText)
 
 	if !bytes.Equal(calculatedMAC, mac) {
 		return nil, nil, ErrDecrypt
 	}
 
-	plainText, err := aesCTRXOR(derivedKey[:16], cipherText, iv)
+	plainText, err := sm4CTRXOR(derivedKey[:16], cipherText, iv)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -251,24 +250,24 @@ func ensureInt(x interface{}) int {
 	return res
 }
 
-func aesCTRXOR(key, inText, iv []byte) ([]byte, error) {
-	// AES-128 is selected due to size of encryptKey.
-	aesBlock, err := aes.NewCipher(key)
+func sm4CTRXOR(key, inText, iv []byte) ([]byte, error) {
+	// SM4-128 is selected due to size of encryptKey.
+	sm4Block, err := sm4.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}
-	stream := cipher.NewCTR(aesBlock, iv)
+	stream := cipher.NewCTR(sm4Block, iv)
 	outText := make([]byte, len(inText))
 	stream.XORKeyStream(outText, inText)
 	return outText, err
 }
 
-func aesCBCDecrypt(key, cipherText, iv []byte) ([]byte, error) {
-	aesBlock, err := aes.NewCipher(key)
+func sm4CBCDecrypt(key, cipherText, iv []byte) ([]byte, error) {
+	sm4Block, err := sm4.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}
-	decrypter := cipher.NewCBCDecrypter(aesBlock, iv)
+	decrypter := cipher.NewCBCDecrypter(sm4Block, iv)
 	paddedPlaintext := make([]byte, len(cipherText))
 	decrypter.CryptBlocks(paddedPlaintext, cipherText)
 	plaintext := pkcs7Unpad(paddedPlaintext)
@@ -285,7 +284,7 @@ func pkcs7Unpad(in []byte) []byte {
 	}
 
 	padding := in[len(in)-1]
-	if int(padding) > len(in) || padding > aes.BlockSize {
+	if int(padding) > len(in) || padding > sm4.BlockSize {
 		return nil
 	} else if padding == 0 {
 		return nil
