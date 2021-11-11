@@ -1,4 +1,4 @@
-// +build !gm
+// +build gm
 
 package bc
 
@@ -7,7 +7,8 @@ import (
 	"errors"
 	"io"
 
-	"github.com/bytom/bytom/crypto/sha3pool"
+	"github.com/tjfoc/gmsm/sm3"
+
 	"github.com/bytom/bytom/encoding/blockchain"
 )
 
@@ -47,12 +48,11 @@ func (a *AssetID) IsZero() bool { return (*Hash)(a).IsZero() }
 
 // ComputeAssetID calculate the asset id from AssetDefinition
 func (ad *AssetDefinition) ComputeAssetID() (assetID AssetID) {
-	h := sha3pool.Get256()
-	defer sha3pool.Put256(h)
+	h := sm3.New()
 	writeForHash(h, *ad) // error is impossible
-	var b [32]byte
-	h.Read(b[:]) // error is impossible
-	return NewAssetID(b)
+	var b32 [32]byte
+	copy(b32[:], h.Sum(nil))
+	return NewAssetID(b32)
 }
 
 // ComputeAssetID implement the assetID calculate logic
