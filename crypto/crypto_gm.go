@@ -41,9 +41,3 @@ func Sm3(data ...[]byte) []byte {
 	}
 	return d.Sum(nil)
 }
-
-func Sm3Sum256(data []byte) (digest [32]byte) {
-	hash := Sm3(data)
-	copy(digest[:], hash)
-	return
-}
