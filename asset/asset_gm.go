@@ -1,4 +1,4 @@
-// +build !gm
+// +build gm
 
 package asset
 
@@ -10,12 +10,12 @@ import (
 	"sync"
 
 	"github.com/golang/groupcache/lru"
-	"golang.org/x/crypto/sha3"
 
 	"github.com/bytom/bytom/blockchain/signers"
 	"github.com/bytom/bytom/common"
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	sm3util "github.com/bytom/bytom/crypto/sm3"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	chainjson "github.com/bytom/bytom/encoding/json"
 	"github.com/bytom/bytom/errors"
@@ -167,7 +167,7 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 		}
 	}
 
-	defHash := bc.NewHash(sha3.Sum256(rawDefinition))
+	defHash := bc.NewHash(sm3util.Sum256(rawDefinition))
 	a := &Asset{
 		DefinitionMap:     definition,
 		RawDefinitionByte: rawDefinition,
