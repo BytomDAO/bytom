@@ -1,13 +1,14 @@
-// +build !gm
+// +build gm
 
 package validation
 
 import (
 	"bytes"
 
+	"github.com/tjfoc/gmsm/sm3"
+
 	"github.com/bytom/bytom/consensus/bcrp"
 	"github.com/bytom/bytom/consensus/segwit"
-	"github.com/bytom/bytom/crypto/sha3pool"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/vm"
@@ -47,15 +48,10 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, state
 	var txSigHash *[]byte
 	txSigHashFn := func() []byte {
 		if txSigHash == nil {
-			hasher := sha3pool.Get256()
-			defer sha3pool.Put256(hasher)
-
+			hasher := sm3.New()
 			entryID.WriteTo(hasher)
 			tx.ID.WriteTo(hasher)
-
-			var hash bc.Hash
-			hash.ReadFrom(hasher)
-			hashBytes := hash.Bytes()
+			hashBytes := hasher.Sum(nil)
 			txSigHash = &hashBytes
 		}
 		return *txSigHash

@@ -1,15 +1,16 @@
-// +build !gm
+// +build gm
 
 package vm
 
 import (
-	"crypto/ed25519"
 	"crypto/sha256"
 	"hash"
 
+	"github.com/tjfoc/gmsm/sm3"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bytom/bytom/crypto"
+	sm2util "github.com/bytom/bytom/crypto/sm2"
 	"github.com/bytom/bytom/math/checked"
 )
 
@@ -67,10 +68,13 @@ func opCheckSig(vm *virtualMachine) error {
 		return ErrBadValue
 	}
 
-	if len(pubkeyBytes) != ed25519.PublicKeySize {
+	if len(pubkeyBytes) != sm2util.PubKeySize {
 		return vm.pushBool(false, true)
 	}
-	return vm.pushBool(ed25519.Verify(ed25519.PublicKey(pubkeyBytes), msg, sig), true)
+	if len(sig) != sm2util.SignatureSize {
+		return vm.pushBool(false, true)
+	}
+	return vm.pushBool(sm2util.VerifyCompressedPubkey(pubkeyBytes, msg, sig), true)
 }
 
 func opCheckMultiSig(vm *virtualMachine) error {
@@ -134,16 +138,16 @@ func opCheckMultiSig(vm *virtualMachine) error {
 		sigs = append(sigs, sig)
 	}
 
-	pubkeys := make([]ed25519.PublicKey, 0, numPubkeys)
+	pubkeys := make([]sm2util.PubKey, 0, numPubkeys)
 	for _, p := range pubkeyByteses {
-		if len(p) != ed25519.PublicKeySize {
+		if len(p) != sm2util.PubKeySize {
 			return vm.pushBool(false, true)
 		}
-		pubkeys = append(pubkeys, ed25519.PublicKey(p))
+		pubkeys = append(pubkeys, p)
 	}
 
 	for len(sigs) > 0 && len(pubkeys) > 0 {
-		if ed25519.Verify(pubkeys[0], msg, sigs[0]) {
+		if sm2util.VerifyCompressedPubkey(pubkeys[0], msg, sigs[0]) {
 			sigs = sigs[1:]
 		}
 		pubkeys = pubkeys[1:]
@@ -176,4 +180,102 @@ func opHash160(vm *virtualMachine) error {
 	}
 
 	return vm.pushDataStack(crypto.Ripemd160(data), false)
+}
+
+func opSm3(vm *virtualMachine) error {
+	return doHash(vm, sm3.New)
+}
+
+func opCheckSigSm2(vm *virtualMachine) error {
+	if err := vm.applyCost(1024); err != nil {
+		return err
+	}
+	publicKey, err := vm.pop(true)
+	if err != nil {
+		return err
+	}
+	msg, err := vm.pop(true)
+	if err != nil {
+		return err
+	}
+	sig, err := vm.pop(true)
+	if err != nil {
+		return err
+	}
+
+	if len(msg) != 32 || len(sig) != sm2util.SignatureSize {
+		return ErrBadValue
+	}
+	if len(publicKey) != sm2util.PubKeySize {
+		return vm.pushBool(false, true)
+	}
+
+	return vm.pushBool(sm2util.VerifyCompressedPubkey(publicKey, msg, sig), true)
+}
+
+func opCheckMultiSigSm2(vm *virtualMachine) error {
+	numPubkeysBigInt, err := vm.popBigInt(true)
+	if err != nil {
+		return err
+	}
+	numPubkeys, err := bigIntInt64(numPubkeysBigInt)
+	if err != nil {
+		return err
+	}
+	pubCost, ok := checked.MulInt64(numPubkeys, 1024)
+	if numPubkeys < 0 || !ok {
+		return ErrBadValue
+	}
+	if err = vm.applyCost(pubCost); err != nil {
+		return err
+	}
+
+	numSigsBigInt, err := vm.popBigInt(true)
+	if err != nil {
+		return err
+	}
+	numSigs, err := bigIntInt64(numSigsBigInt)
+	if err != nil {
+		return err
+	}
+	if numSigs < 0 || numSigs > numPubkeys || (numPubkeys > 0 && numSigs == 0) {
+		return ErrBadValue
+	}
+	pubkeyByteses := make([][]byte, 0, numPubkeys)
+	for i := int64(0); i < numPubkeys; i++ {
+		pubkeyBytes, err := vm.pop(true)
+		if err != nil {
+			return err
+		}
+		if len(pubkeyBytes) != 33 {
+			return vm.pushBool(false, true)
+		}
+		pubkeyByteses = append(pubkeyByteses, pubkeyBytes)
+	}
+	msg, err := vm.pop(true)
+	if err != nil {
+		return err
+	}
+	if len(msg) != 32 {
+		return ErrBadValue
+	}
+	sigs := make([][]byte, 0, numSigs)
+	for i := int64(0); i < numSigs; i++ {
+		sig, err := vm.pop(true)
+		if err != nil {
+			return err
+		}
+		if len(sig) != 64 {
+			return ErrBadValue
+		}
+		sigs = append(sigs, sig)
+	}
+
+	for len(sigs) > 0 && len(pubkeyByteses) > 0 {
+		if sm2util.VerifyCompressedPubkey(pubkeyByteses[0], msg, sigs[0]) {
+			sigs = sigs[1:]
+		}
+		pubkeyByteses = pubkeyByteses[1:]
+	}
+	return vm.pushBool(len(sigs) == 0, true)
 }

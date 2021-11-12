@@ -1,4 +1,4 @@
-// +build !gm
+// +build gm
 
 package types
 
@@ -7,9 +7,9 @@ import (
 	"io"
 	"math"
 
+	"github.com/tjfoc/gmsm/sm3"
 	"gopkg.in/fatih/set.v0"
 
-	"github.com/bytom/bytom/crypto/sha3pool"
 	"github.com/bytom/bytom/protocol/bc"
 )
 
@@ -62,21 +62,23 @@ func merkleRoot(nodes []merkleNode) (root bc.Hash, err error) {
 }
 
 func interiorMerkleHash(left merkleNode, right merkleNode) (hash bc.Hash) {
-	h := sha3pool.Get256()
-	defer sha3pool.Put256(h)
-	h.Write(interiorPrefix)
-	left.WriteTo(h)
-	right.WriteTo(h)
-	hash.ReadFrom(h)
+	hasher := sm3.New()
+	hasher.Write(interiorPrefix)
+	left.WriteTo(hasher)
+	right.WriteTo(hasher)
+	var b32 [32]byte
+	copy(b32[:], hasher.Sum(nil))
+	hash = bc.NewHash(b32)
 	return hash
 }
 
 func leafMerkleHash(node merkleNode) (hash bc.Hash) {
-	h := sha3pool.Get256()
-	defer sha3pool.Put256(h)
-	h.Write(leafPrefix)
-	node.WriteTo(h)
-	hash.ReadFrom(h)
+	hasher := sm3.New()
+	hasher.Write(leafPrefix)
+	node.WriteTo(hasher)
+	var b32 [32]byte
+	copy(b32[:], hasher.Sum(nil))
+	hash = bc.NewHash(b32)
 	return hash
 }
 

@@ -1,11 +1,11 @@
-// +build !gm
-
 package crypto
 
 import (
-	"github.com/bytom/bytom/common"
+	"github.com/tjfoc/gmsm/sm3"
 	"golang.org/x/crypto/ripemd160"
 	"golang.org/x/crypto/sha3"
+
+	"github.com/bytom/bytom/common"
 )
 
 func Sha256(data ...[]byte) []byte {
@@ -30,4 +30,12 @@ func Ripemd160(data []byte) []byte {
 	ripemd.Write(data)
 
 	return ripemd.Sum(nil)
+}
+
+func Sm3(data ...[]byte) []byte {
+	d := sm3.New()
+	for _, b := range data {
+		d.Write(b)
+	}
+	return d.Sum(nil)
 }

@@ -1,4 +1,4 @@
-// +build !gm
+// +build gm
 
 package wallet
 
@@ -16,7 +16,7 @@ import (
 	"github.com/bytom/bytom/common"
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/consensus/segwit"
-	"github.com/bytom/bytom/crypto/sha3pool"
+	sm3util "github.com/bytom/bytom/crypto/sm3"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
@@ -118,7 +118,7 @@ func getAccountFromACP(program []byte, walletDB dbm.DB) (*account.Account, error
 	accountCP := account.CtrlProgram{}
 	localAccount := account.Account{}
 
-	sha3pool.Sum256(hash[:], program)
+	sm3util.Sum(hash[:], program)
 
 	rawProgram := walletDB.Get(account.ContractKey(hash))
 	if rawProgram == nil {

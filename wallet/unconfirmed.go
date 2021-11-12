@@ -1,4 +1,4 @@
-// +build !gm
+// +build gm
 
 package wallet
 
@@ -12,7 +12,7 @@ import (
 
 	"github.com/bytom/bytom/account"
 	"github.com/bytom/bytom/blockchain/query"
-	"github.com/bytom/bytom/crypto/sha3pool"
+	sm3util "github.com/bytom/bytom/crypto/sm3"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc/types"
 )
@@ -115,7 +115,7 @@ func (w *Wallet) buildAnnotatedUnconfirmedTx(tx *types.Tx) *query.AnnotatedTx {
 func (w *Wallet) checkRelatedTransaction(tx *types.Tx) bool {
 	for _, v := range tx.Outputs {
 		var hash [32]byte
-		sha3pool.Sum256(hash[:], v.ControlProgram)
+		sm3util.Sum(hash[:], v.ControlProgram)
 		if bytes := w.DB.Get(account.ContractKey(hash)); bytes != nil {
 			return true
 		}

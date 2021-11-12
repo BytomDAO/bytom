@@ -1,5 +1,3 @@
-// +build gm
-
 package sm3
 
 import (

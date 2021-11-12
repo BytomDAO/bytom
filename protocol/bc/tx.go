@@ -1,10 +1,10 @@
-// +build !gm
+// +build gm
 
 package bc
 
 import (
-	"github.com/bytom/bytom/crypto/sha3pool"
 	"github.com/bytom/bytom/errors"
+	"github.com/tjfoc/gmsm/sm3"
 )
 
 // Convenience routines for accessing entries of specific types by ID.
@@ -25,12 +25,12 @@ type Tx struct {
 
 // SigHash ...
 func (tx *Tx) SigHash(n uint32) (hash Hash) {
-	hasher := sha3pool.Get256()
-	defer sha3pool.Put256(hasher)
-
+	hasher := sm3.New()
 	tx.InputIDs[n].WriteTo(hasher)
 	tx.ID.WriteTo(hasher)
-	hash.ReadFrom(hasher)
+	var b32 [32]byte
+	copy(b32[:], hasher.Sum(nil))
+	hash = NewHash(b32)
 	return hash
 }
 

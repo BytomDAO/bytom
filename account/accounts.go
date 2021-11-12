@@ -1,5 +1,3 @@
-// +build !gm
-
 // Package account stores and tracks accounts within a Bytom Core.
 package account
 
@@ -19,7 +17,7 @@ import (
 	"github.com/bytom/bytom/consensus/segwit"
 	"github.com/bytom/bytom/crypto"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/bytom/crypto/sha3pool"
+	sm3util "github.com/bytom/bytom/crypto/sm3"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol"
@@ -296,7 +294,7 @@ func (m *Manager) deleteAccountControlPrograms(accountID string) error {
 	var hash common.Hash
 	for _, cp := range cps {
 		if cp.AccountID == accountID {
-			sha3pool.Sum256(hash[:], cp.ControlProgram)
+			sm3util.Sum(hash[:], cp.ControlProgram)
 			m.db.Delete(ContractKey(hash))
 		}
 	}
@@ -489,7 +487,7 @@ func (m *Manager) GetLocalCtrlProgramByAddress(address string) (*CtrlProgram, er
 	}
 
 	var hash [32]byte
-	sha3pool.Sum256(hash[:], program)
+	sm3util.Sum(hash[:], program)
 	rawProgram := m.db.Get(ContractKey(hash))
 	if rawProgram == nil {
 		return nil, ErrFindCtrlProgram
@@ -532,7 +530,7 @@ func (m *Manager) SetMiningAddress(miningAddress string) (string, error) {
 // IsLocalControlProgram check is the input control program belong to local
 func (m *Manager) IsLocalControlProgram(prog []byte) bool {
 	var hash common.Hash
-	sha3pool.Sum256(hash[:], prog)
+	sm3util.Sum(hash[:], prog)
 	bytes := m.db.Get(ContractKey(hash))
 	return bytes != nil
 }
@@ -637,7 +635,7 @@ func createP2SH(account *Account, path [][]byte) (*CtrlProgram, error) {
 	if err != nil {
 		return nil, err
 	}
-	scriptHash := crypto.Sha256(signScript)
+	scriptHash := crypto.Sm3(signScript)
 
 	address, err := common.NewAddressWitnessScriptHash(scriptHash, &consensus.ActiveNetParams)
 	if err != nil {
@@ -664,7 +662,7 @@ func GetAccountIndexKey(xpubs []chainkd.XPub) []byte {
 	for _, xpub := range cpy {
 		xPubs = append(xPubs, xpub[:]...)
 	}
-	sha3pool.Sum256(hash[:], xPubs)
+	sm3util.Sum(hash[:], xPubs)
 	return append(accountIndexPrefix, hash[:]...)
 }
 
@@ -702,7 +700,7 @@ func (m *Manager) getProgramByAddress(address string) ([]byte, error) {
 func (m *Manager) saveControlProgram(prog *CtrlProgram, updateIndex bool) error {
 	var hash common.Hash
 
-	sha3pool.Sum256(hash[:], prog.ControlProgram)
+	sm3util.Sum(hash[:], prog.ControlProgram)
 	acct, err := m.GetAccountByProgram(prog)
 	if err != nil {
 		return err
