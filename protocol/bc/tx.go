@@ -1,10 +1,9 @@
-// +build gm
-
 package bc
 
 import (
-	"github.com/bytom/bytom/errors"
 	"github.com/tjfoc/gmsm/sm3"
+
+	"github.com/bytom/bytom/errors"
 )
 
 // Convenience routines for accessing entries of specific types by ID.

@@ -1,5 +1,3 @@
-// +build gm
-
 package types
 
 import (

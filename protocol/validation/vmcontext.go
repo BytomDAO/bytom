@@ -1,5 +1,3 @@
-// +build gm
-
 package validation
 
 import (

@@ -160,16 +160,10 @@ func (xprv XPrv) Sign(msg []byte) []byte {
 	priv.PublicKey.Curve = c
 	priv.PublicKey.X, priv.PublicKey.Y = c.ScalarBaseMult(k.Bytes())
 
-	r, s, err := sm2.Sm2Sign(priv, msg, nil, rand.Reader)
-	//r, s, err := sm2.Sign(priv, msg)
+	sig, err := priv.Sign(rand.Reader, msg, nil)
 	if err != nil {
 		panic(err)
 	}
-	R := r.Bytes()
-	S := s.Bytes()
-	sig := make([]byte, 64)
-	copy(sig[:32], R[:])
-	copy(sig[32:], S[:])
 
 	return sig
 }
