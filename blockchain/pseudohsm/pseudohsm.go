@@ -12,7 +12,7 @@ import (
 
 	"github.com/pborman/uuid"
 
-	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/bytom/crypto/sm2/chainkd"
 	"github.com/bytom/bytom/errors"
 	mnem "github.com/bytom/bytom/wallet/mnemonic"
 )

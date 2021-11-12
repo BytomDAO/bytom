@@ -4,7 +4,8 @@ package signers
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+
+	"github.com/bytom/bytom/crypto/sm2/chainkd"
 	"github.com/bytom/bytom/errors"
 )
 

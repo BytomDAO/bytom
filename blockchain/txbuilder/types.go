@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/bytom/crypto/sm2/chainkd"
 	chainjson "github.com/bytom/bytom/encoding/json"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"

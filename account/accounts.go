@@ -16,7 +16,7 @@ import (
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/consensus/segwit"
 	"github.com/bytom/bytom/crypto"
-	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/bytom/crypto/sm2/chainkd"
 	sm3util "github.com/bytom/bytom/crypto/sm3"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/errors"

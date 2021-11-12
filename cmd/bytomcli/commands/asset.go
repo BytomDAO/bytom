@@ -1,14 +1,14 @@
 package commands
 
 import (
+	"encoding/hex"
 	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 
-	"encoding/hex"
-	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/bytom/crypto/sm2/chainkd"
 	"github.com/bytom/bytom/util"
 )
 

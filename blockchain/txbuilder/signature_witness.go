@@ -6,7 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/bytom/crypto/sm2/chainkd"
 	sm3util "github.com/bytom/bytom/crypto/sm3"
 	chainjson "github.com/bytom/bytom/encoding/json"
 	"github.com/bytom/bytom/errors"

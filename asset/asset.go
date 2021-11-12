@@ -2,7 +2,6 @@ package asset
 
 import (
 	"context"
-	"crypto/ed25519"
 	"encoding/json"
 	"strings"
 	"sync"
@@ -12,7 +11,8 @@ import (
 	"github.com/bytom/bytom/blockchain/signers"
 	"github.com/bytom/bytom/common"
 	"github.com/bytom/bytom/consensus"
-	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	sm2util "github.com/bytom/bytom/crypto/sm2"
+	"github.com/bytom/bytom/crypto/sm2/chainkd"
 	sm3util "github.com/bytom/bytom/crypto/sm3"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	chainjson "github.com/bytom/bytom/encoding/json"
@@ -363,7 +363,7 @@ func serializeAssetDef(def map[string]interface{}) ([]byte, error) {
 	return json.MarshalIndent(def, "", "  ")
 }
 
-func multisigIssuanceProgram(pubkeys []ed25519.PublicKey, nrequired int, blockHeight uint64) (program []byte, vmversion uint64, err error) {
+func multisigIssuanceProgram(pubkeys []sm2util.PubKey, nrequired int, blockHeight uint64) (program []byte, vmversion uint64, err error) {
 	issuanceProg, err := vmutil.P2SPMultiSigProgramWithHeight(pubkeys, nrequired, blockHeight)
 	if err != nil {
 		return nil, 0, err

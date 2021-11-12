@@ -21,8 +21,8 @@ import (
 	"golang.org/x/crypto/scrypt"
 
 	"github.com/bytom/bytom/crypto"
-	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/crypto/randentropy"
+	"github.com/bytom/bytom/crypto/sm2/chainkd"
 )
 
 const (

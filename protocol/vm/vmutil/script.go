@@ -1,9 +1,8 @@
 package vmutil
 
 import (
-	"crypto/ed25519"
-
 	"github.com/bytom/bytom/consensus/bcrp"
+	sm2util "github.com/bytom/bytom/crypto/sm2"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/vm"
 )
@@ -19,7 +18,7 @@ func IsUnspendable(prog []byte) bool {
 	return len(prog) > 0 && prog[0] == byte(vm.OP_FAIL)
 }
 
-func (b *Builder) addP2SPMultiSig(pubkeys []ed25519.PublicKey, nrequired int) error {
+func (b *Builder) addP2SPMultiSig(pubkeys []sm2util.PubKey, nrequired int) error {
 	if err := checkMultiSigParams(int64(nrequired), int64(len(pubkeys))); err != nil {
 		return err
 	}
@@ -115,7 +114,7 @@ func P2SHProgram(scriptHash []byte) ([]byte, error) {
 }
 
 // P2SPMultiSigProgram generates the script for control transaction output
-func P2SPMultiSigProgram(pubkeys []ed25519.PublicKey, nrequired int) ([]byte, error) {
+func P2SPMultiSigProgram(pubkeys []sm2util.PubKey, nrequired int) ([]byte, error) {
 	builder := NewBuilder()
 	if err := builder.addP2SPMultiSig(pubkeys, nrequired); err != nil {
 		return nil, err
@@ -124,7 +123,7 @@ func P2SPMultiSigProgram(pubkeys []ed25519.PublicKey, nrequired int) ([]byte, er
 }
 
 // P2SPMultiSigProgramWithHeight generates the script with block height for control transaction output
-func P2SPMultiSigProgramWithHeight(pubkeys []ed25519.PublicKey, nrequired int, blockHeight uint64) ([]byte, error) {
+func P2SPMultiSigProgramWithHeight(pubkeys []sm2util.PubKey, nrequired int, blockHeight uint64) ([]byte, error) {
 	builder := NewBuilder()
 	if blockHeight > 0 {
 		builder.AddUint64(blockHeight)

@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"crypto/ed25519"
 	"encoding/hex"
 	"strings"
 
@@ -10,7 +9,8 @@ import (
 	"github.com/bytom/bytom/common"
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/crypto"
-	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	sm2util "github.com/bytom/bytom/crypto/sm2"
+	"github.com/bytom/bytom/crypto/sm2/chainkd"
 	chainjson "github.com/bytom/bytom/encoding/json"
 )
 
@@ -79,7 +79,7 @@ func (a *API) verifyMessage(ctx context.Context, ins struct {
 		return NewSuccessResponse(VerifyMsgResp{VerifyResult: false})
 	}
 
-	if ed25519.Verify(ins.DerivedXPub.PublicKey(), ins.Message, sig) {
+	if sm2util.VerifyCompressedPubkey(ins.DerivedXPub.PublicKey(), ins.Message, sig) {
 		return NewSuccessResponse(VerifyMsgResp{VerifyResult: true})
 	}
 	return NewSuccessResponse(VerifyMsgResp{VerifyResult: false})
