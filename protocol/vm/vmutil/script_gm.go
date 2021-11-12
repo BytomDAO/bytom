@@ -1,4 +1,4 @@
-// +build !gm
+// +build gm
 
 package vmutil
 
@@ -106,7 +106,7 @@ func P2PKHSigProgram(pubkeyHash []byte) ([]byte, error) {
 func P2SHProgram(scriptHash []byte) ([]byte, error) {
 	builder := NewBuilder()
 	builder.AddOp(vm.OP_DUP)
-	builder.AddOp(vm.OP_SHA3)
+	builder.AddOp(vm.OP_SM3)
 	builder.AddData(scriptHash)
 	builder.AddOp(vm.OP_EQUALVERIFY)
 	builder.AddUint64(0)
