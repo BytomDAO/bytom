@@ -147,6 +147,64 @@ func TestSubMargin(t *testing.T) {
 	}
 }
 
+func TestTransferNft(t *testing.T) {
+	contract, err := NewTransfer()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	oldStateData := [][]byte{
+		ownerPublicKey,
+		createrScript,
+		vm.Uint64Bytes(taxRate),
+		nftAsset.Bytes(),
+		ownerScirpt,
+		BTC.Bytes(),
+		vm.Uint64Bytes(300000000),
+	}
+
+	newStateData := [][]byte{
+		buyerPublicKey,
+		createrScript,
+		vm.Uint64Bytes(taxRate),
+		nftAsset.Bytes(),
+		buyerScirpt,
+		BTC.Bytes(),
+		vm.Uint64Bytes(300000000),
+	}
+
+	arguments1 := [][]byte{
+		testutil.MustDecodeHexString("2f78dd3131fec66074654ab6f5c8d18bd9e07937b176c55b74b019d1a1956446cbbfc7fd1d13411f17e3e7e81a83301129bb9e355514a2487dee5635e4b86504"),
+		buyerPublicKey,
+		buyerScirpt,
+	}
+
+	arguments2 := [][]byte{
+		testutil.MustDecodeHexString("b64f6a98f6bc5b35ed8f88fab7faa3700a25e574fbbe696b438fdcc486a15eb4bdad05c4509c2835bd0ca1e8dd615fcb4ca79599e68f2adde1211ae014750f0f"),
+		buyerPublicKey,
+		buyerScirpt,
+	}
+
+	tx := types.NewTx(types.TxData{
+		Version:        1,
+		SerializedSize: 10000,
+		Inputs: []*types.TxInput{
+			types.NewSpendInput(arguments1, utxoSourceID, nftAsset, 1, 0, contract, oldStateData),
+			types.NewSpendInput(arguments2, utxoSourceID, BTC, 300000000, 1, contract, oldStateData),
+			types.NewSpendInput(nil, utxoSourceID, *consensus.BTMAssetID, 100000000, 1, anyCanSpendScript, nil),
+		},
+		Outputs: []*types.TxOutput{
+			types.NewOriginalTxOutput(nftAsset, 1, contract, newStateData),
+			types.NewOriginalTxOutput(BTC, 300000000, contract, newStateData),
+		},
+	})
+
+	_, err = validation.ValidateTx(tx.Tx, &bc.Block{BlockHeader: &bc.BlockHeader{}}, func(prog []byte) ([]byte, error) { return nil, nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 // 10个ETH质押被买走, 然后被质押15个ETH
 func TestRegularBuy(t *testing.T) {
 	contract, err := NewContract(platformScript, marginFold)

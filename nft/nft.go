@@ -179,6 +179,43 @@ func NewOffer(nftContract []byte) ([]byte, error) {
 	return builder.Build()
 }
 
+/*
+	init alt stack 	[publicKey, creater, taxRate, nftAsset, owner, marginAsset, marginAmount]
+	init data stack	[signature, buyerPublicKey, buyerScirpt]
+*/
+func NewTransfer() ([]byte, error) {
+	builder := vmutil.NewBuilder()
+
+	builder.AddUint64(2)
+	builder.AddOp(vm.OP_ROLL)
+	cpAltStack(builder, 6)
+	builder.AddOp(vm.OP_TXSIGHASH)
+	builder.AddOp(vm.OP_SWAP)
+	// alt stack 	[publicKey, creater, taxRate, nftAsset, owner, marginAsset, marginAmount]
+	// data stack	[buyerPublicKey, buyerScirpt, ownerSignature, txSigHash, publicKey]
+	builder.AddOp(vm.OP_CHECKSIG)
+	builder.AddOp(vm.OP_VERIFY)
+
+	swapAltStack(builder, 0, 2)
+	swapAltStack(builder, 0, 6)
+
+	builder.AddUint64(0)
+	builder.AddUint64(1)
+	cpAltStack(builder, 3)
+	builder.AddUint64(1)
+	builder.AddOp(vm.OP_PROGRAM)
+	builder.AddOp(vm.OP_CHECKOUTPUT)
+	builder.AddOp(vm.OP_VERIFY)
+
+	builder.AddUint64(1)
+	cpAltStack(builder, 0)
+	cpAltStack(builder, 1)
+	builder.AddUint64(1)
+	builder.AddOp(vm.OP_PROGRAM)
+	builder.AddOp(vm.OP_CHECKOUTPUT)
+	return builder.Build()
+}
+
 func swapAltStack(builder *vmutil.Builder, dataPos, AltPos uint64) {
 	for i := uint64(0); i <= AltPos; i++ {
 		builder.AddOp(vm.OP_FROMALTSTACK)
