@@ -56,13 +56,13 @@ func TestAddMargin(t *testing.T) {
 	}
 
 	arguments1 := [][]byte{
-		testutil.MustDecodeHexString("d51a48a7b5918de3cbf97de1a047af34fcb144c0308558a6ed5c4a12f4f338b9ccef23cd51937116412059569ba966cdc3c19fd58caa8aca4c2b9323e15cc90d"),
+		testutil.MustDecodeHexString("66d3b6d1422626213c39c2045bc8f5505333796c7c976e2152ca25f691248750fffc84b702d45fa17f8d74cc1beab2d782a664685dfcc95a291eaa1d5d05ad00"),
 		vm.Uint64Bytes(300000000),
 		vm.Uint64Bytes(1),
 	}
 
 	arguments2 := [][]byte{
-		testutil.MustDecodeHexString("62fb14d988c57692a8860c25915e2fc7dbf4143388ede4200e79cc6dbf8751274cc0192d914137b9bb9f36b89d5e5f5909d041699f3d5fc1b27348e106a1520e"),
+		testutil.MustDecodeHexString("89ad84d8fdf7dbe5a21aaf1048ff9cb342bdb97c2c79d1428fe45e9fc1c31d980d0b9c642790931d6998d79d5a278439e4621795dd8a85627cf6a4fff363e506"),
 		vm.Uint64Bytes(300000000),
 		vm.Uint64Bytes(1),
 	}
@@ -115,15 +115,15 @@ func TestSubMargin(t *testing.T) {
 	}
 
 	arguments1 := [][]byte{
-		testutil.MustDecodeHexString("ba9772c480c349dc237f15e9606963224d7d1211072a79b4c34a045d19bb95a2bc20fba10f70097775a5b4e2a5c9f016ca96713fa19bdc5dfc0b4d21a9c3d407"),
+		testutil.MustDecodeHexString("9b6d86c36c3e86a576e3d1512074e2a45c0768541b57afc4b36e1f54d924b5aeba4b5176dde01f9a7360a6d06bd9711c8be58a2b7ec5005217522438bff9520a"),
 		vm.Uint64Bytes(200000000),
-		vm.Uint64Bytes(1),
+		vm.Uint64Bytes(2),
 	}
 
 	arguments2 := [][]byte{
-		testutil.MustDecodeHexString("d7d82e40d5a6022aa2b7eb602ded566fa748e9549bd73146d7c2251401805f113ed2f5d76a5208ebfae989e5c7da37e976d59564bf05f9682b5057e163121407"),
+		testutil.MustDecodeHexString("ae5e2d806e49a418e7b952b132dcb95d26076302a44812ecd6076af26ac1377cc20bf66cdf6d560e944ffc62b27d3b589bff306bfce33e217f0f1d84ae07cd06"),
 		vm.Uint64Bytes(200000000),
-		vm.Uint64Bytes(1),
+		vm.Uint64Bytes(2),
 	}
 
 	tx := types.NewTx(types.TxData{
@@ -148,7 +148,7 @@ func TestSubMargin(t *testing.T) {
 }
 
 func TestTransferNft(t *testing.T) {
-	contract, err := NewTransfer()
+	contract, err := NewContract(platformScript, marginFold)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,15 +174,17 @@ func TestTransferNft(t *testing.T) {
 	}
 
 	arguments1 := [][]byte{
-		testutil.MustDecodeHexString("2f78dd3131fec66074654ab6f5c8d18bd9e07937b176c55b74b019d1a1956446cbbfc7fd1d13411f17e3e7e81a83301129bb9e355514a2487dee5635e4b86504"),
+		testutil.MustDecodeHexString("060e8b5e0090709f02d3c4ba7f83e8f38c0661154f3a5c58d267d315fc734ba4e6bccaa2aef2d10fbaa980808fd4dc89faaef9d64627e061518f613766737d09"),
 		buyerPublicKey,
 		buyerScirpt,
+		vm.Uint64Bytes(3),
 	}
 
 	arguments2 := [][]byte{
-		testutil.MustDecodeHexString("b64f6a98f6bc5b35ed8f88fab7faa3700a25e574fbbe696b438fdcc486a15eb4bdad05c4509c2835bd0ca1e8dd615fcb4ca79599e68f2adde1211ae014750f0f"),
+		testutil.MustDecodeHexString("e05d5dc410721c307a7287c2705482a065b93fdb4f0925389db25fe132f216b2eb504ceb844dd462bdc3468ab233972a1ae33394fcf66b374fcc4935281b5b06"),
 		buyerPublicKey,
 		buyerScirpt,
+		vm.Uint64Bytes(3),
 	}
 
 	tx := types.NewTx(types.TxData{
@@ -410,12 +412,12 @@ func TestCancelOffer(t *testing.T) {
 	}
 
 	arguments1 := [][]byte{
-		testutil.MustDecodeHexString("4afb322c65d4d966b20de6a9fb891a926bb04fb9dcdcced8bf58b0caffbc0ed7798d6874f25bc34cec2ffe5a017fa10701d8c81812d174a10bd3e7a1fc5cb300"),
+		testutil.MustDecodeHexString("56b45f220874f271d7b130372ee5d5f3c86a3dd253a3a5fc0dfe3497591589604760449defe9f6bc48bac09dcedee22c948f7adee65f37715edb4301f3e3760c"),
 		vm.Uint64Bytes(0),
 	}
 
 	arguments2 := [][]byte{
-		testutil.MustDecodeHexString("4f7b9b4f15dfba12e80789619d33491a7537a68667f75b6889d40aa7138c9c497d3aaff3f7a7830cf155562ecd2d500bbcd453d323bcb0926d0e91ea09f42507"),
+		testutil.MustDecodeHexString("1f591206a9a427e3ffe0c9f03cc971b60bc43511a0fff3a5d200a14fa9ef13c31c0219cc13e78f8b0b72adfdc1da3fc1e08483273f2de7f1210bb2f3f6d7dc00"),
 		vm.Uint64Bytes(0),
 	}
 

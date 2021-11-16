@@ -13,8 +13,51 @@ import (
 
 func NewContract(platformScript []byte, marginFold uint64) ([]byte, error) {
 	builder := vmutil.NewBuilder()
+	/*
+	   For transfer nft:
+	   init alt stack 	[publicKey, creater, taxRate, nftAsset, owner, marginAsset, marginAmount]
+	   init data stack	[signature, buyerPublicKey, buyerScirpt, selecter]
+	*/
+	builder.AddOp(vm.OP_DUP)
+	builder.AddUint64(3)
+	builder.AddOp(vm.OP_EQUAL)
+	builder.AddJumpIf(3)
+	builder.AddJump(4)
+
+	builder.SetJumpTarget(3)
+	builder.AddOp(vm.OP_DROP)
+
+	builder.AddUint64(2)
+	builder.AddOp(vm.OP_ROLL)
+	cpAltStack(builder, 6)
+	builder.AddOp(vm.OP_TXSIGHASH)
+	builder.AddOp(vm.OP_SWAP)
+	// alt stack 	[publicKey, creater, taxRate, nftAsset, owner, marginAsset, marginAmount]
+	// data stack	[buyerPublicKey, buyerScirpt, ownerSignature, txSigHash, publicKey]
+	builder.AddOp(vm.OP_CHECKSIG)
+	builder.AddOp(vm.OP_VERIFY)
+
+	swapAltStack(builder, 0, 2)
+	swapAltStack(builder, 0, 6)
+
+	builder.AddUint64(0)
+	builder.AddUint64(1)
+	cpAltStack(builder, 3)
+	builder.AddUint64(1)
+	builder.AddOp(vm.OP_PROGRAM)
+	builder.AddOp(vm.OP_CHECKOUTPUT)
+	builder.AddOp(vm.OP_VERIFY)
+
+	builder.AddUint64(1)
+	cpAltStack(builder, 0)
+	cpAltStack(builder, 1)
+	builder.AddUint64(1)
+	builder.AddOp(vm.OP_PROGRAM)
+	builder.AddOp(vm.OP_CHECKOUTPUT)
+	builder.AddJump(5)
 	// alt stack	[publicKey, creater, taxRate, nftAsset, owner, marginAsset, marginAmount]
 	// data statck	[...... selecter]
+	builder.SetJumpTarget(4)
 	builder.AddOp(vm.OP_DUP)
 	builder.AddUint64(2)
 	builder.AddOp(vm.OP_EQUAL)
@@ -98,9 +141,10 @@ func NewContract(platformScript []byte, marginFold uint64) ([]byte, error) {
 	builder.SetJumpTarget(2)
 	// alt stack 	[publicKey, creater, taxRate, nftAsset, owner, marginAsset, marginAmount]
 	// data statck	[ownerSignature, newMarginAmount]
+	builder.AddOp(vm.OP_DROP)
 	builder.AddOp(vm.OP_DUP)
 	cpAltStack(builder, 0)
-	builder.AddOp(vm.OP_DUP)
+	builder.AddOp(vm.OP_SWAP)
 	builder.AddOp(vm.OP_SUB)
 	builder.AddUint64(2)
 	builder.AddOp(vm.OP_SWAP)
@@ -146,6 +190,7 @@ func NewContract(platformScript []byte, marginFold uint64) ([]byte, error) {
 	// alt stack 	[publicKey, creater, taxRate, nftAsset, owner, newMarginAsset, newMarginAmount]
 	// data statck	[1, newMarginAmount, newMarginAsset, 1, PROGRAM]
 	builder.AddOp(vm.OP_CHECKOUTPUT)
+	builder.SetJumpTarget(5)
 	return builder.Build()
 }
 
@@ -176,43 +221,6 @@ func NewOffer(nftContract []byte) ([]byte, error) {
 	builder.AddData(nftContract)
 	builder.AddOp(vm.OP_CHECKOUTPUT)
 	builder.SetJumpTarget(1)
-	return builder.Build()
-}
-
-/*
-	init alt stack 	[publicKey, creater, taxRate, nftAsset, owner, marginAsset, marginAmount]
-	init data stack	[signature, buyerPublicKey, buyerScirpt]
-*/
-func NewTransfer() ([]byte, error) {
-	builder := vmutil.NewBuilder()
-
-	builder.AddUint64(2)
-	builder.AddOp(vm.OP_ROLL)
-	cpAltStack(builder, 6)
-	builder.AddOp(vm.OP_TXSIGHASH)
-	builder.AddOp(vm.OP_SWAP)
-	// alt stack 	[publicKey, creater, taxRate, nftAsset, owner, marginAsset, marginAmount]
-	// data stack	[buyerPublicKey, buyerScirpt, ownerSignature, txSigHash, publicKey]
-	builder.AddOp(vm.OP_CHECKSIG)
-	builder.AddOp(vm.OP_VERIFY)
-
-	swapAltStack(builder, 0, 2)
-	swapAltStack(builder, 0, 6)
-
-	builder.AddUint64(0)
-	builder.AddUint64(1)
-	cpAltStack(builder, 3)
-	builder.AddUint64(1)
-	builder.AddOp(vm.OP_PROGRAM)
-	builder.AddOp(vm.OP_CHECKOUTPUT)
-	builder.AddOp(vm.OP_VERIFY)
-
-	builder.AddUint64(1)
-	cpAltStack(builder, 0)
-	cpAltStack(builder, 1)
-	builder.AddUint64(1)
-	builder.AddOp(vm.OP_PROGRAM)
-	builder.AddOp(vm.OP_CHECKOUTPUT)
 	return builder.Build()
 }
 
