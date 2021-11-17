@@ -12,7 +12,7 @@ import (
 	"github.com/bytom/bytom/blockchain/pseudohsm"
 	"github.com/bytom/bytom/blockchain/signers"
 	"github.com/bytom/bytom/contract"
-	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/bytom/crypto/sm2/chainkd"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/event"
 	"github.com/bytom/bytom/protocol"

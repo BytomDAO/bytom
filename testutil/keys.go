@@ -1,16 +1,15 @@
 package testutil
 
 import (
-	"crypto/ed25519"
-
-	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	sm2util "github.com/bytom/bytom/crypto/sm2"
+	"github.com/bytom/bytom/crypto/sm2/chainkd"
 )
 
 var (
 	TestXPub chainkd.XPub
 	TestXPrv chainkd.XPrv
-	TestPub  ed25519.PublicKey
-	TestPubs []ed25519.PublicKey
+	TestPub  sm2util.PubKey
+	TestPubs []sm2util.PubKey
 )
 
 type zeroReader struct{}
@@ -29,5 +28,5 @@ func init() {
 		panic(err)
 	}
 	TestPub = TestXPub.PublicKey()
-	TestPubs = []ed25519.PublicKey{TestPub}
+	TestPubs = []sm2util.PubKey{TestPub}
 }

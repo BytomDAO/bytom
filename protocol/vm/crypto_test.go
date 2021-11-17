@@ -84,6 +84,91 @@ func TestCheckSig(t *testing.T) {
 	}
 }
 
+func TestCheckSigSm2(t *testing.T) {
+	cases := []struct {
+		srcProg string
+		desProg string
+		ok, err bool
+	}{
+		{
+			// This one's OK
+			srcProg: "0xf5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa 0xf0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640 0x0109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020 CHECKSIGSM2",
+			desProg: "40f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa20f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640210109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020b1",
+			ok:      true,
+			err:     false,
+		},
+		{
+			// This one has a wrong-length publicKey
+			srcProg: "0xf5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa 0xf0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640 0x0109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f350 CHECKSIGSM2",
+			desProg: "40f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa20f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640200109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f350b1",
+			ok:      false,
+			err:     false,
+		},
+		{
+			// This one has a wrong-length hash
+			srcProg: "0xf5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa 0xf0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d286 0x0109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020 CHECKSIGSM2",
+			desProg: "40f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa1ff0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d286210109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020b1",
+			ok:      false,
+			err:     false,
+		},
+		{
+			// This one has a wrong-length signature
+			srcProg: "0xf5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1 0xf0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640 0x0109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020 CHECKSIGSM2",
+			desProg: "3ff5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc120f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640210109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020b1",
+			ok:      false,
+			err:     false,
+		},
+		{
+			// This one's OK.
+			srcProg: "0xf5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa 0xf0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640 0x0109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020 1 1 CHECKMULTISIGSM2",
+			desProg: "40f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa20f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640210109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f350205151b2",
+			ok:      true,
+			err:     false,
+		},
+		{
+			// This one has a wrong-length publicKey
+			srcProg: "0xf5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa 0xf0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640 0x0109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f350 1 1 CHECKMULTISIGSM2",
+			desProg: "40f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa20f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640200109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f3505151b2",
+			ok:      false,
+			err:     false,
+		},
+		{
+			// This one has a wrong-length hash
+			srcProg: "0xf5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa 0xf0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d286 0x0109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020 1 1 CHECKMULTISIGSM2",
+			desProg: "40f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa1ff0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d286210109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f350205151b2",
+			ok:      false,
+			err:     true,
+		},
+		{
+			// This one has a wrong-length signature
+			srcProg: "0xf5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1 0xf0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640 0x0109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020 1 1 CHECKMULTISIGSM2",
+			desProg: "3ff5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc120f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640210109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f350205151b2",
+			ok:      false,
+			err:     false,
+		},
+	}
+
+	for i, c := range cases {
+		prog := testutil.MustDecodeHexString(c.desProg)
+		vm := &virtualMachine{
+			program:  prog,
+			runLimit: 50000,
+		}
+		err := vm.run()
+		if c.err {
+			if err == nil {
+				t.Errorf("case %d: expected error, got ok result", i)
+			}
+		} else if c.ok {
+			if err != nil {
+				t.Errorf("case %d: expected ok result, got error %s", i, err)
+			}
+		} else if !vm.falseResult() {
+			t.Errorf("case %d: expected false VM result, got error %s", i, err)
+		}
+	}
+}
+
 func TestCryptoOps(t *testing.T) {
 	type testStruct struct {
 		op      Op
@@ -144,6 +229,32 @@ func TestCryptoOps(t *testing.T) {
 			}},
 		},
 	}, {
+		op: OP_SM3,
+		startVM: &virtualMachine{
+			runLimit:  50000,
+			dataStack: [][]byte{{1}},
+		},
+		wantVM: &virtualMachine{
+			runLimit: 49905,
+			dataStack: [][]byte{{
+				121, 155, 113, 154, 192, 49, 252, 137, 198, 216, 146, 90, 72, 125, 173, 7,
+				48, 143, 131, 123, 122, 183, 187, 199, 206, 189, 58, 65, 24, 253, 47, 56,
+			}},
+		},
+	}, {
+		op: OP_SM3,
+		startVM: &virtualMachine{
+			runLimit:  50000,
+			dataStack: [][]byte{make([]byte, 65)},
+		},
+		wantVM: &virtualMachine{
+			runLimit: 49968,
+			dataStack: [][]byte{{
+				177, 247, 110, 45, 29, 65, 214, 241, 187, 59, 9, 192, 155, 130, 25, 218,
+				251, 173, 112, 13, 242, 72, 34, 32, 200, 146, 190, 65, 68, 90, 34, 255,
+			}},
+		},
+	}, {
 		op: OP_HASH160,
 		startVM: &virtualMachine{
 			runLimit:  50000,
@@ -172,14 +283,14 @@ func TestCryptoOps(t *testing.T) {
 		startVM: &virtualMachine{
 			runLimit: 50000,
 			dataStack: [][]byte{
-				mustDecodeHex("af5abdf4bbb34f4a089efc298234f84fd909def662a8df03b4d7d40372728851" +
-					"fbd3bf59920af5a7c361a4851967714271d1727e3be417a60053c30969d8860c"),
-				mustDecodeHex("916f0027a575074ce72a331777c3478d6513f786a591bd892da1a577bf2335f9"),
-				mustDecodeHex("ab3220d065dc875c6a5b4ecc39809b5f24eb0a605e9eef5190457edbf1e3b866"),
+				mustDecodeHex("f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3" +
+					"b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
+				mustDecodeHex("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640"),
+				mustDecodeHex("03" + "09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
 			},
 		},
 		wantVM: &virtualMachine{
-			deferredCost: -143,
+			deferredCost: -144,
 			runLimit:     48976,
 			dataStack:    [][]byte{{1}},
 		},
@@ -250,19 +361,122 @@ func TestCryptoOps(t *testing.T) {
 		},
 		wantErr: ErrRunLimitExceeded,
 	}, {
+		op: OP_CHECKSIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 50000,
+			dataStack: [][]byte{
+				mustDecodeHex("f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3" + "b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
+				mustDecodeHex("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640"),
+				mustDecodeHex("03" + "09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
+			},
+		},
+		wantVM: &virtualMachine{
+			deferredCost: -144,
+			runLimit:     48976,
+			dataStack:    [][]byte{{1}},
+		},
+	}, {
+		op: OP_CHECKSIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 50000,
+			dataStack: [][]byte{
+				mustDecodeHex("f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3" + "b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
+				mustDecodeHex("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640"),
+				mustDecodeHex("01" + "09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35021"),
+			},
+		},
+		wantVM: &virtualMachine{
+			deferredCost: -145,
+			runLimit:     48976,
+			dataStack:    [][]byte{{}},
+		},
+	}, {
+		op: OP_CHECKSIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 50000,
+			dataStack: [][]byte{
+				mustDecodeHex("f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3" + "b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
+				mustDecodeHex("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28641"),
+				mustDecodeHex("01" + "09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35021"),
+			},
+		},
+		wantVM: &virtualMachine{
+			deferredCost: -145,
+			runLimit:     48976,
+			dataStack:    [][]byte{{}},
+		},
+	}, {
+		op: OP_CHECKSIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 50000,
+			dataStack: [][]byte{
+				mustDecodeHex("f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b5" + "b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
+				mustDecodeHex("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640"),
+				mustDecodeHex("01" + "09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35021"),
+			},
+		},
+		wantVM: &virtualMachine{
+			deferredCost: -145,
+			runLimit:     48976,
+			dataStack:    [][]byte{{}},
+		},
+	}, {
+		op: OP_CHECKSIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 50000,
+			dataStack: [][]byte{
+				mustDecodeHex("badbad" + "b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
+				mustDecodeHex("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640"),
+				mustDecodeHex("01" + "09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35021"),
+			},
+		},
+		wantErr: ErrBadValue,
+	}, {
+		op: OP_CHECKSIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 50000,
+			dataStack: [][]byte{
+				mustDecodeHex("f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3" + "b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
+				mustDecodeHex("badbad"),
+				mustDecodeHex("01" + "09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35021"),
+			},
+		},
+		wantErr: ErrBadValue,
+	}, {
+		op: OP_CHECKSIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 50000,
+			dataStack: [][]byte{
+				mustDecodeHex("f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3" + "b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
+				mustDecodeHex("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640"),
+				mustDecodeHex("04" + "badbad"),
+			},
+		},
+		wantVM: &virtualMachine{
+			deferredCost: -116,
+			runLimit:     48976,
+			dataStack:    [][]byte{{}},
+		},
+	}, {
+		op: OP_CHECKSIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 0,
+		},
+		wantErr: ErrRunLimitExceeded,
+	}, {
 		op: OP_CHECKMULTISIG,
 		startVM: &virtualMachine{
 			runLimit: 50000,
 			dataStack: [][]byte{
-				mustDecodeHex("af5abdf4bbb34f4a089efc298234f84fd909def662a8df03b4d7d40372728851fbd3bf59920af5a7c361a4851967714271d1727e3be417a60053c30969d8860c"),
-				mustDecodeHex("916f0027a575074ce72a331777c3478d6513f786a591bd892da1a577bf2335f9"),
-				mustDecodeHex("ab3220d065dc875c6a5b4ecc39809b5f24eb0a605e9eef5190457edbf1e3b866"),
+				mustDecodeHex("f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3" + "b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
+				mustDecodeHex("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640"),
+				mustDecodeHex("03" + "09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
 				{1},
 				{1},
 			},
 		},
 		wantVM: &virtualMachine{
-			deferredCost: -161,
+			deferredCost: -162,
 			runLimit:     48976,
 			dataStack:    [][]byte{{1}},
 		},
@@ -389,6 +603,145 @@ func TestCryptoOps(t *testing.T) {
 		},
 		wantErr: ErrRunLimitExceeded,
 	}, {
+		op: OP_CHECKMULTISIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 50000,
+			dataStack: [][]byte{
+				mustDecodeHex("f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
+				mustDecodeHex("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640"),
+				mustDecodeHex("0309f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
+				{1},
+				{1},
+			},
+		},
+		wantVM: &virtualMachine{
+			deferredCost: -162,
+			runLimit:     48976,
+			dataStack:    [][]byte{{1}},
+		},
+	}, {
+		op: OP_CHECKMULTISIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 50000,
+			dataStack: [][]byte{
+				mustDecodeHex("5fa03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
+				mustDecodeHex("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640"),
+				mustDecodeHex("0109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
+				{1},
+				{1},
+			},
+		},
+		wantVM: &virtualMachine{
+			deferredCost: -163,
+			runLimit:     48976,
+			dataStack:    [][]byte{{}},
+		},
+	}, {
+		op: OP_CHECKMULTISIGSM2,
+		startVM: &virtualMachine{
+			runLimit:  50000,
+			dataStack: [][]byte{},
+		},
+		wantErr: ErrDataStackUnderflow,
+	}, {
+		op: OP_CHECKMULTISIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 50000,
+			dataStack: [][]byte{
+				{1},
+				{1},
+			},
+		},
+		wantErr: ErrDataStackUnderflow,
+	}, {
+		op: OP_CHECKMULTISIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 50000,
+			dataStack: [][]byte{
+				mustDecodeHex("0109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
+				{1},
+				{1},
+			},
+		},
+		wantErr: ErrDataStackUnderflow,
+	}, {
+		op: OP_CHECKMULTISIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 50000,
+			dataStack: [][]byte{
+				mustDecodeHex("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640"),
+				mustDecodeHex("0109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
+				{1},
+				{1},
+			},
+		},
+		wantErr: ErrDataStackUnderflow,
+	}, {
+		op: OP_CHECKMULTISIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 50000,
+			dataStack: [][]byte{
+				mustDecodeHex("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640"),
+				mustDecodeHex("badbad"),
+				mustDecodeHex("0109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
+				{1},
+				{1},
+			},
+		},
+		wantErr: ErrBadValue,
+	}, {
+		op: OP_CHECKMULTISIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 50000,
+			dataStack: [][]byte{
+				mustDecodeHex("baf5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
+				mustDecodeHex("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640"),
+				mustDecodeHex("0109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
+				{1},
+				{0},
+			},
+		},
+		wantErr: ErrBadValue,
+	}, {
+		op: OP_CHECKMULTISIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 50000,
+			dataStack: [][]byte{
+				mustDecodeHex("baf5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
+				mustDecodeHex("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640"),
+				mustDecodeHex("0109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
+				{0},
+				{1},
+			},
+		},
+		wantErr: ErrBadValue,
+	}, {
+		op: OP_CHECKMULTISIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 50000,
+			dataStack: [][]byte{
+				mustDecodeHex("baf5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
+				mustDecodeHex("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640"),
+				mustDecodeHex("0109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
+				{2},
+				{1},
+			},
+		},
+		wantErr: ErrBadValue,
+	}, {
+		op: OP_CHECKMULTISIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 0,
+			dataStack: [][]byte{
+				mustDecodeHex("baf5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
+				mustDecodeHex("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640"),
+				mustDecodeHex("0109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
+				{1},
+				{1},
+			},
+		},
+		wantErr: ErrRunLimitExceeded,
+	}, {
 		op: OP_TXSIGHASH,
 		startVM: &virtualMachine{
 			runLimit: 50000,
@@ -421,7 +774,7 @@ func TestCryptoOps(t *testing.T) {
 		wantErr: ErrRunLimitExceeded,
 	}}
 
-	hashOps := []Op{OP_SHA256, OP_SHA3}
+	hashOps := []Op{OP_SHA256, OP_SHA3, OP_SM3}
 	for _, op := range hashOps {
 		cases = append(cases, testStruct{
 			op: op,

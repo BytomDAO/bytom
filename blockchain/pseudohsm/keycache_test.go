@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/bytom/crypto/sm2/chainkd"
 	"github.com/cespare/cp"
 	"github.com/davecgh/go-spew/spew"
 )

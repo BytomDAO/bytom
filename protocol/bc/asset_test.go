@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"golang.org/x/crypto/sha3"
+	"github.com/bytom/bytom/crypto/sm3"
 )
 
 func TestComputeAssetID(t *testing.T) {
@@ -17,7 +17,7 @@ func TestComputeAssetID(t *testing.T) {
 	unhashed = append(unhashed, issuanceScript...)
 	unhashed = append(unhashed, EmptyStringHash.Bytes()...)
 
-	if want := NewAssetID(sha3.Sum256(unhashed)); assetID != want {
+	if want := NewAssetID(sm3.Sum256(unhashed)); assetID != want {
 		t.Errorf("asset id = %x want %x", assetID.Bytes(), want.Bytes())
 	}
 }
@@ -56,7 +56,7 @@ func TestComputeAssetIDReally(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		defHash := NewHash(sha3.Sum256(defBytes))
+		defHash := NewHash(sm3.Sum256(defBytes))
 		assetID := ComputeAssetID(progBytes, 1, &defHash)
 		if assetID.String() != c.wantAssetID {
 			t.Errorf("got asset id:%s, want asset id:%s", assetID.String(), c.wantAssetID)

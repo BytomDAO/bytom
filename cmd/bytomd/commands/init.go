@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	cfg "github.com/bytom/bytom/config"
-	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/bytom/crypto/sm2/chainkd"
 )
 
 var initFilesCmd = &cobra.Command{

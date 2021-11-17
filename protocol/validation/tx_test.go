@@ -7,7 +7,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 
 	"github.com/bytom/bytom/consensus"
-	"github.com/bytom/bytom/crypto/sha3pool"
+	sm3util "github.com/bytom/bytom/crypto/sm3"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
@@ -1164,7 +1164,7 @@ func rootErr(e error) error {
 
 func hashData(data []byte) bc.Hash {
 	var b32 [32]byte
-	sha3pool.Sum256(b32[:], data)
+	sm3util.Sum(b32[:], data)
 	return bc.NewHash(b32)
 }
 
