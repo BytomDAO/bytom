@@ -12,7 +12,7 @@ import (
 	"github.com/bytom/bytom/blockchain/query"
 	"github.com/bytom/bytom/blockchain/signers"
 	"github.com/bytom/bytom/consensus"
-	sm2util "github.com/bytom/bytom/crypto/sm2"
+	"github.com/bytom/bytom/crypto/sm2"
 	"github.com/bytom/bytom/crypto/sm2/chainkd"
 	chainjson "github.com/bytom/bytom/encoding/json"
 	"github.com/bytom/bytom/errors"
@@ -331,7 +331,7 @@ type AccountPubkey struct {
 	PubKeyInfos []PubKeyInfo `json:"pubkey_infos"`
 }
 
-func getPubkey(account *account.Account, change bool, index uint64) (*sm2util.PubKey, []chainjson.HexBytes, error) {
+func getPubkey(account *account.Account, change bool, index uint64) (*sm2.PubKey, []chainjson.HexBytes, error) {
 	rawPath, err := signers.Path(account.Signer, signers.AccountKeySpace, change, index)
 	if err != nil {
 		return nil, nil, err

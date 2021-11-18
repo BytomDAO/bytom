@@ -11,7 +11,7 @@ import (
 	"github.com/bytom/bytom/account"
 	"github.com/bytom/bytom/blockchain/signers"
 	"github.com/bytom/bytom/crypto/sm2/chainkd"
-	sm3util "github.com/bytom/bytom/crypto/sm3"
+	"github.com/bytom/bytom/crypto/sm3"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
@@ -295,7 +295,7 @@ func (m *recoveryManager) extendScanAccounts() error {
 
 func getCPHash(cp []byte) bc.Hash {
 	var h [32]byte
-	sm3util.Sum(h[:], cp)
+	sm3.Sum(h[:], cp)
 	return bc.NewHash(h)
 }
 

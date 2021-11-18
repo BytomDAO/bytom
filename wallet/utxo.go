@@ -8,7 +8,7 @@ import (
 	"github.com/bytom/bytom/account"
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/consensus/segwit"
-	sm3util "github.com/bytom/bytom/crypto/sm3"
+	"github.com/bytom/bytom/crypto/sm3"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
@@ -108,7 +108,7 @@ func (w *Wallet) filterAccountUtxo(utxos []*account.UTXO) []*account.UTXO {
 		}
 
 		var hash [32]byte
-		sm3util.Sum(hash[:], []byte(s))
+		sm3.Sum(hash[:], []byte(s))
 		data := w.DB.Get(account.ContractKey(hash))
 		if data == nil {
 			continue

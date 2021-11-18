@@ -3,8 +3,7 @@ package types
 import (
 	"io"
 
-	"github.com/tjfoc/gmsm/sm3"
-
+	"github.com/bytom/bytom/crypto/sm3"
 	"github.com/bytom/bytom/encoding/blockchain"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"

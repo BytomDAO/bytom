@@ -34,7 +34,7 @@ func TestEntryID(t *testing.T) {
 	}{
 		{
 			entry:         NewIssuance(&Hash{V0: 0, V1: 1, V2: 2, V3: 3}, &AssetAmount{&AssetID{V0: 1, V1: 2, V2: 3, V3: 4}, 100}, 1),
-			expectEntryID: "3012b9b6da3962bb2388cdf5db7f3b93a2b696fcc70e79bc5da1238a6d66ae73",
+			expectEntryID: "2d763694701dee0025d330541e213ab4f9fe652b731a93b7008737a6b869c9f5",
 		},
 		{
 			entry: NewMux(
@@ -47,7 +47,7 @@ func TestEntryID(t *testing.T) {
 				},
 				&Program{VmVersion: 1, Code: []byte{1, 2, 3, 4}},
 			),
-			expectEntryID: "16c4265a8a90916434c2a904a90132c198c7ebf8512aa1ba4485455b0beff388",
+			expectEntryID: "5fca548b9f57d40b852cefb0f0fe07e2945ef85a1275073230222c4b35532abf",
 		},
 		{
 			entry: NewOriginalOutput(
@@ -60,7 +60,7 @@ func TestEntryID(t *testing.T) {
 				[][]byte{{3, 4}},
 				1,
 			),
-			expectEntryID: "63fbfda2cf0acc573f2a514ddff8ee64c33e713aebe4c85670507545c38841b2",
+			expectEntryID: "98cb887c67b5b7454092a2eaa975cb1a50a496c978b0e2ebe1f0dfe22028ed01",
 		},
 		{
 			entry: NewRetirement(
@@ -71,15 +71,15 @@ func TestEntryID(t *testing.T) {
 				},
 				1,
 			),
-			expectEntryID: "538c367f7b6e1e9bf205ed0a29def84a1467c477b19812a6934e831c78c4da62",
+			expectEntryID: "1d3eaa538cc44105d6a640c7e72a2bfd5c9fce291a29bf424e54a6fd2c41ea89",
 		},
 		{
 			entry:         NewSpend(&Hash{V0: 0, V1: 1, V2: 2, V3: 3}, 1),
-			expectEntryID: "2761dbb13967af8944620c134e0f336bbbb26f61eb4ecd154bc034ad6155b9e8",
+			expectEntryID: "f2662c32ffa5f0a92919e6eca3a5829efcc1916b63139baaf4fd7d4184ea03c7",
 		},
 		{
 			entry:         NewTxHeader(1, 100, 1000, []*Hash{&Hash{V0: 4, V1: 5, V2: 6, V3: 7}}),
-			expectEntryID: "ba592aa0841bd4649d9a04309e2e8497ac6f295a847cadd9de6b6f9c2d806663",
+			expectEntryID: "873773522863f0bd3d65feebfc7cb09f8e171208b1449e0c6df8a389b865eaa2",
 		},
 	}
 

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	cfg "github.com/bytom/bytom/config"
-	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/bytom/crypto/sm2/chainkd"
 	conn "github.com/bytom/bytom/p2p/connection"
 	"github.com/bytom/bytom/version"
 )

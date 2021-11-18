@@ -54,7 +54,6 @@ require (
 	github.com/tendermint/go-crypto v0.2.0
 	github.com/tendermint/go-wire v0.16.0
 	github.com/tendermint/tmlibs v0.9.0
-	github.com/tjfoc/gmsm v1.4.1
 	github.com/toqueteos/webbrowser v1.2.0
 	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
 	golang.org/x/net v0.0.0-20210410081132-afb366fc7cd1 // indirect

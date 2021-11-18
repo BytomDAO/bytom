@@ -34,14 +34,14 @@ func TestBlock(t *testing.T) {
 				"01", // version
 				"01", // block height
 				"0000000000000000000000000000000000000000000000000000000000000000", // prev block hash
-				"00",   // timestamp
-				"20",   // commitment extensible field length
+				"00", // timestamp
+				"20", // commitment extensible field length
 				"0000000000000000000000000000000000000000000000000000000000000000", // transactions merkle root
 				"0100", // block witness
 				"0100", // sup links
 				"00",   // num transactions
 			}, ""),
-			hash: testutil.MustDecodeHash("42e74d130e5ab27e8a71b90e7de8c8e00ecfa77456070202ab8509f7b0ab49ae"),
+			hash: testutil.MustDecodeHash("987e69ca4165c00d796391c6f36bdf9f46dd57f753113949df14b3bf960ab7d0"),
 		},
 		{
 			block: &Block{
@@ -64,7 +64,7 @@ func TestBlock(t *testing.T) {
 							NewSpendInput([][]byte{[]byte("arguments3"), []byte("arguments4")}, testutil.MustDecodeHash("fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409"), *consensus.BTMAssetID, 254354, 3, []byte("spendProgram"), [][]byte{[]byte("stateData")}),
 						},
 						Outputs: []*TxOutput{
-							NewOriginalTxOutput(testutil.MustDecodeAsset("a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf"), 254354, []byte("true"), [][]byte{[]byte("stateData")}),
+							NewOriginalTxOutput(testutil.MustDecodeAsset("1bb6cd78d4dd0e175c9315cb386c3ff7411dbaf65888ef92e63e8e27120e60fb"), 254354, []byte("true"), [][]byte{[]byte("stateData")}),
 						},
 					}),
 					NewTx(TxData{
@@ -91,10 +91,10 @@ func TestBlock(t *testing.T) {
 				"0100", // block witness
 				"0100", // sup links
 				"02",   // num transactions
-				"07018e0502012a00056e6f6e6365a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf92c30f380f6173736574446566696e6974696f6e010f69737375616e636550726f6772616d020a617267756d656e7473310a617267756d656e747332015f015dfad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff92c30f03010c7370656e6450726f6772616d010973746174654461746117020a617267756d656e7473330a617267756d656e74733401010034a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf92c30f010474727565010973746174654461746100",
+				"07018e0502012a00056e6f6e63651bb6cd78d4dd0e175c9315cb386c3ff7411dbaf65888ef92e63e8e27120e60fb92c30f380f6173736574446566696e6974696f6e010f69737375616e636550726f6772616d020a617267756d656e7473310a617267756d656e747332015f015dfad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff92c30f03010c7370656e6450726f6772616d010973746174654461746117020a617267756d656e7473330a617267756d656e74733401010034a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf92c30f010474727565010973746174654461746100",
 				"07010001010b02096172626974726172790002010034ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff92c30f010474727565010973746174654461746100010035ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff92c30f010566616c7365010973746174654461746100",
 			}, ""),
-			hash: testutil.MustDecodeHash("6076fc8a96b08a4842f4bdc805606e9775ce6dbe4e371e88c70b75ea4283e942"),
+			hash: testutil.MustDecodeHash("4a798821b0ca889cf3e2877707953c96f0079027753fce9c8924a35655d9e17b"),
 		},
 	}
 

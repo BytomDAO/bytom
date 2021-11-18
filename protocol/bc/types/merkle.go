@@ -5,9 +5,9 @@ import (
 	"io"
 	"math"
 
-	"github.com/tjfoc/gmsm/sm3"
 	"gopkg.in/fatih/set.v0"
 
+	"github.com/bytom/bytom/crypto/sm3"
 	"github.com/bytom/bytom/protocol/bc"
 )
 

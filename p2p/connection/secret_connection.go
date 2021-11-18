@@ -2,9 +2,7 @@ package connection
 
 import (
 	"bytes"
-	"crypto/ed25519"
 	crand "crypto/rand"
-	"crypto/sha256"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -12,8 +10,10 @@ import (
 	"net"
 	"time"
 
+	"github.com/bytom/bytom/crypto/sm2"
+	"github.com/bytom/bytom/crypto/sm2/chainkd"
+	"github.com/bytom/bytom/crypto/sm3"
 	log "github.com/sirupsen/logrus"
-	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"golang.org/x/crypto/nacl/box"
 	"golang.org/x/crypto/nacl/secretbox"
 	"golang.org/x/crypto/ripemd160"
@@ -27,7 +27,7 @@ const (
 	dataMaxSize     = 1024
 	totalFrameSize  = dataMaxSize + dataLenSize
 	sealedFrameSize = totalFrameSize + secretbox.Overhead
-	authSigMsgSize  = 100 // fixed size (length prefixed) byte arrays
+	authSigMsgSize  = 101 // fixed size (length prefixed) byte arrays, ed25519=100 gm-sm2=101
 )
 
 type authSigMessage struct {
@@ -41,7 +41,7 @@ type SecretConnection struct {
 	recvBuffer []byte
 	recvNonce  *[24]byte
 	sendNonce  *[24]byte
-	remPubKey  ed25519.PublicKey
+	remPubKey  sm2.PubKey
 	shrSecret  *[32]byte // shared secret
 }
 
@@ -91,7 +91,7 @@ func MakeSecretConnection(conn io.ReadWriteCloser, locPrivKey chainkd.XPrv) (*Se
 	}
 
 	remPubKey, remSignature := authSigMsg.Key, authSigMsg.Sig
-	if !ed25519.Verify(remPubKey, challenge[:], remSignature) {
+	if !sm2.VerifyCompressedPubkey(remPubKey, challenge[:], remSignature) {
 		return nil, errors.New("Challenge verification failed")
 	}
 
@@ -131,7 +131,7 @@ func (sc *SecretConnection) Read(data []byte) (n int, err error) {
 }
 
 // RemotePubKey returns authenticated remote pubkey
-func (sc *SecretConnection) RemotePubKey() ed25519.PublicKey {
+func (sc *SecretConnection) RemotePubKey() sm2.PubKey {
 	return sc.remPubKey
 }
 
@@ -310,7 +310,7 @@ func sort32(foo, bar *[32]byte) (*[32]byte, *[32]byte) {
 
 // sha256
 func hash32(input []byte) (res *[32]byte) {
-	hasher := sha256.New()
+	hasher := sm3.New()
 	hasher.Write(input) // does not error
 	resSlice := hasher.Sum(nil)
 	res = new([32]byte)

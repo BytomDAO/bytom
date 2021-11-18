@@ -17,7 +17,7 @@ import (
 	"github.com/bytom/bytom/consensus/segwit"
 	"github.com/bytom/bytom/crypto"
 	"github.com/bytom/bytom/crypto/sm2/chainkd"
-	sm3util "github.com/bytom/bytom/crypto/sm3"
+	"github.com/bytom/bytom/crypto/sm3"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol"
@@ -294,7 +294,7 @@ func (m *Manager) deleteAccountControlPrograms(accountID string) error {
 	var hash common.Hash
 	for _, cp := range cps {
 		if cp.AccountID == accountID {
-			sm3util.Sum(hash[:], cp.ControlProgram)
+			sm3.Sum(hash[:], cp.ControlProgram)
 			m.db.Delete(ContractKey(hash))
 		}
 	}
@@ -487,7 +487,7 @@ func (m *Manager) GetLocalCtrlProgramByAddress(address string) (*CtrlProgram, er
 	}
 
 	var hash [32]byte
-	sm3util.Sum(hash[:], program)
+	sm3.Sum(hash[:], program)
 	rawProgram := m.db.Get(ContractKey(hash))
 	if rawProgram == nil {
 		return nil, ErrFindCtrlProgram
@@ -530,7 +530,7 @@ func (m *Manager) SetMiningAddress(miningAddress string) (string, error) {
 // IsLocalControlProgram check is the input control program belong to local
 func (m *Manager) IsLocalControlProgram(prog []byte) bool {
 	var hash common.Hash
-	sm3util.Sum(hash[:], prog)
+	sm3.Sum(hash[:], prog)
 	bytes := m.db.Get(ContractKey(hash))
 	return bytes != nil
 }
@@ -662,7 +662,7 @@ func GetAccountIndexKey(xpubs []chainkd.XPub) []byte {
 	for _, xpub := range cpy {
 		xPubs = append(xPubs, xpub[:]...)
 	}
-	sm3util.Sum(hash[:], xPubs)
+	sm3.Sum(hash[:], xPubs)
 	return append(accountIndexPrefix, hash[:]...)
 }
 
@@ -700,7 +700,7 @@ func (m *Manager) getProgramByAddress(address string) ([]byte, error) {
 func (m *Manager) saveControlProgram(prog *CtrlProgram, updateIndex bool) error {
 	var hash common.Hash
 
-	sm3util.Sum(hash[:], prog.ControlProgram)
+	sm3.Sum(hash[:], prog.ControlProgram)
 	acct, err := m.GetAccountByProgram(prog)
 	if err != nil {
 		return err

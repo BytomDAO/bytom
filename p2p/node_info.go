@@ -1,7 +1,6 @@
 package p2p
 
 import (
-	"crypto/ed25519"
 	"encoding/hex"
 	"fmt"
 	"net"
@@ -9,6 +8,7 @@ import (
 
 	cfg "github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/crypto/sm2"
 	"github.com/bytom/bytom/version"
 )
 
@@ -27,7 +27,7 @@ type NodeInfo struct {
 	Other []string `json:"other"`
 }
 
-func NewNodeInfo(config *cfg.Config, pubkey ed25519.PublicKey, listenAddr string) *NodeInfo {
+func NewNodeInfo(config *cfg.Config, pubkey sm2.PubKey, listenAddr string) *NodeInfo {
 	other := []string{strconv.FormatUint(uint64(consensus.DefaultServices), 10)}
 	if config.NodeAlias != "" {
 		other = append(other, config.NodeAlias)

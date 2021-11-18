@@ -120,7 +120,7 @@ func TestBlockProposeMsg(t *testing.T) {
 		t.Errorf("block msg test err: got %s\nwant %s", spew.Sdump(gotBlock.BlockHeader), spew.Sdump(testBlock.BlockHeader))
 	}
 
-	wantString := "{block_height: 0, block_hash: 3ce98dfffbd0e10c318f167696603b23173b3ec86e7868c8fa65be76edefc67e}"
+	wantString := "{block_height: 0, block_hash: 10dad6d538f85465f1a696ccd938e6b7903f63da8a598fa928b24ac404609eca}"
 	if blockMsg.String() != wantString {
 		t.Errorf("block msg test err. got:%s want:%s", blockMsg.String(), wantString)
 	}

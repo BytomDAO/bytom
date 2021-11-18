@@ -7,12 +7,15 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/tjfoc/gmsm/sm2"
-
-	sm2util "github.com/bytom/bytom/crypto/sm2"
+	"github.com/bytom/bytom/crypto/sm2"
 )
 
 // Utility functions
+
+func NewXPrv(r io.Reader) (xprv XPrv, err error) {
+	xprv, _, err = NewXKeys(r)
+	return xprv, err
+}
 
 // NewXKeys create new xprivite and xpublickey
 func NewXKeys(r io.Reader) (xprv XPrv, xpub XPub, err error) {
@@ -43,8 +46,8 @@ func NewXKeys(r io.Reader) (xprv XPrv, xpub XPub, err error) {
 	return xprv, xpub, nil
 }
 
-func XPubKeys(xpubs []XPub) []sm2util.PubKey {
-	res := make([]sm2util.PubKey, 0, len(xpubs))
+func XPubKeys(xpubs []XPub) []sm2.PubKey {
+	res := make([]sm2.PubKey, 0, len(xpubs))
 	for _, xpub := range xpubs {
 		res = append(res, xpub.PublicKey())
 	}

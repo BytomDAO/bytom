@@ -9,7 +9,7 @@ import (
 	"github.com/bytom/bytom/common"
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/crypto"
-	sm2util "github.com/bytom/bytom/crypto/sm2"
+	"github.com/bytom/bytom/crypto/sm2"
 	"github.com/bytom/bytom/crypto/sm2/chainkd"
 	chainjson "github.com/bytom/bytom/encoding/json"
 )
@@ -79,7 +79,7 @@ func (a *API) verifyMessage(ctx context.Context, ins struct {
 		return NewSuccessResponse(VerifyMsgResp{VerifyResult: false})
 	}
 
-	if sm2util.VerifyCompressedPubkey(ins.DerivedXPub.PublicKey(), ins.Message, sig) {
+	if sm2.VerifyCompressedPubkey(ins.DerivedXPub.PublicKey(), ins.Message, sig) {
 		return NewSuccessResponse(VerifyMsgResp{VerifyResult: true})
 	}
 	return NewSuccessResponse(VerifyMsgResp{VerifyResult: false})

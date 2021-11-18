@@ -1,11 +1,11 @@
 package crypto
 
 import (
-	"github.com/tjfoc/gmsm/sm3"
 	"golang.org/x/crypto/ripemd160"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bytom/bytom/common"
+	"github.com/bytom/bytom/crypto/sm3"
 )
 
 func Sha256(data ...[]byte) []byte {

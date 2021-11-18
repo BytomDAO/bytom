@@ -11,9 +11,9 @@ import (
 	"github.com/bytom/bytom/blockchain/signers"
 	"github.com/bytom/bytom/common"
 	"github.com/bytom/bytom/consensus"
-	sm2util "github.com/bytom/bytom/crypto/sm2"
+	"github.com/bytom/bytom/crypto/sm2"
 	"github.com/bytom/bytom/crypto/sm2/chainkd"
-	sm3util "github.com/bytom/bytom/crypto/sm3"
+	"github.com/bytom/bytom/crypto/sm3"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	chainjson "github.com/bytom/bytom/encoding/json"
 	"github.com/bytom/bytom/errors"
@@ -165,7 +165,7 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 		}
 	}
 
-	defHash := bc.NewHash(sm3util.Sum256(rawDefinition))
+	defHash := bc.NewHash(sm3.Sum256(rawDefinition))
 	a := &Asset{
 		DefinitionMap:     definition,
 		RawDefinitionByte: rawDefinition,
@@ -363,7 +363,7 @@ func serializeAssetDef(def map[string]interface{}) ([]byte, error) {
 	return json.MarshalIndent(def, "", "  ")
 }
 
-func multisigIssuanceProgram(pubkeys []sm2util.PubKey, nrequired int, blockHeight uint64) (program []byte, vmversion uint64, err error) {
+func multisigIssuanceProgram(pubkeys []sm2.PubKey, nrequired int, blockHeight uint64) (program []byte, vmversion uint64, err error) {
 	issuanceProg, err := vmutil.P2SPMultiSigProgramWithHeight(pubkeys, nrequired, blockHeight)
 	if err != nil {
 		return nil, 0, err

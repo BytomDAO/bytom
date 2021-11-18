@@ -1,7 +1,6 @@
 package p2p
 
 import (
-	"crypto/ed25519"
 	"encoding/hex"
 	"fmt"
 	"net"
@@ -18,7 +17,8 @@ import (
 
 	cfg "github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/consensus"
-	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/bytom/crypto/sm2"
+	"github.com/bytom/bytom/crypto/sm2/chainkd"
 	"github.com/bytom/bytom/p2p/connection"
 )
 
@@ -208,7 +208,7 @@ func (p *Peer) IsLAN() bool {
 }
 
 // PubKey returns peer's public key.
-func (p *Peer) PubKey() ed25519.PublicKey {
+func (p *Peer) PubKey() sm2.PubKey {
 	return p.conn.(*connection.SecretConnection).RemotePubKey()
 }
 

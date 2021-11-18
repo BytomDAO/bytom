@@ -3,8 +3,7 @@ package types
 import (
 	"io"
 
-	"golang.org/x/crypto/ed25519"
-
+	"github.com/bytom/bytom/crypto/sm2"
 	"github.com/bytom/bytom/encoding/blockchain"
 )
 
@@ -13,7 +12,7 @@ type BlockWitness []byte
 
 // Set write the sign data to BlockWitness
 func (bw *BlockWitness) Set(data []byte) {
-	witness := make([]byte, ed25519.SignatureSize)
+	witness := make([]byte, sm2.SignatureSize)
 	copy(witness, data)
 	*bw = witness
 }

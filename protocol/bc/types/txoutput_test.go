@@ -119,7 +119,7 @@ func TestComputeOutputID(t *testing.T) {
 				VMVersion:      1,
 				ControlProgram: testutil.MustDecodeHexString("0014cb9f2391bafe2bc1159b2c4c8a0f17ba1b4dd94e"),
 			},
-			wantOutputID: "b8f8664c4179a7fae694e7cafcb250403b0e12738ed5aae4610d45082a33d44a",
+			wantOutputID: "60dc9c6ee3e97812c632ba6c58ddbdbe289b44d2f3e24e157c5b96b7ff2496e7",
 		},
 		{
 			sc: &SpendCommitment{
@@ -129,7 +129,7 @@ func TestComputeOutputID(t *testing.T) {
 				VMVersion:      1,
 				ControlProgram: testutil.MustDecodeHexString("001418549d84daf53344d32563830c7cf979dc19d5c0"),
 			},
-			wantOutputID: "638fd48107ceb576ac7518310df01214ac75a8c667ac659ecfbc397fdf0c5a6f",
+			wantOutputID: "3665c42ea565373227bc763f344137b019dd2f64a96fde6ba04963dc0b4aa78b",
 		},
 	}
 

@@ -12,7 +12,7 @@ import (
 
 	cfg "github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/consensus"
-	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/bytom/crypto/sm2/chainkd"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/event"
 	"github.com/bytom/bytom/p2p/connection"
@@ -68,7 +68,7 @@ type Switch struct {
 	reactorsByCh map[byte]Reactor
 	peers        *PeerSet
 	dialing      *cmn.CMap
-	nodeInfo     *NodeInfo             // our node info
+	nodeInfo     *NodeInfo    // our node info
 	nodePrivKey  chainkd.XPrv // our node privkey
 	discv        discv
 	lanDiscv     lanDiscv

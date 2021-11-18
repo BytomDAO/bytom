@@ -36,7 +36,7 @@ func TestTransaction(t *testing.T) {
 				"00", // inputs count
 				"00", // outputs count
 			}, ""),
-			hash: testutil.MustDecodeHash("8e88b9cb4615128c7209dff695f68b8de5b38648bf3d44d2d0e6a674848539c9"),
+			hash: testutil.MustDecodeHash("e6f62659988c34379b89b68e6f410770943567d3ae8ff061ea636e59cd4b0b81"),
 		},
 		{
 			tx: NewTx(TxData{
@@ -61,7 +61,7 @@ func TestTransaction(t *testing.T) {
 				"00",         // input 0: issuance type flag
 				"05",         // input 0: nonce length
 				"6e6f6e6365", // input 0: nonce
-				"a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf", // input 0: assetID
+				"1bb6cd78d4dd0e175c9315cb386c3ff7411dbaf65888ef92e63e8e27120e60fb", // input 0: assetID
 				"92c30f",                         // input 0: amount
 				"38",                             // input 0: input witness length
 				"0f",                             // input 0: asset definition length
@@ -106,7 +106,7 @@ func TestTransaction(t *testing.T) {
 				"737461746544617461", // output 0: state data
 				"00",                 // output 0: witness length
 			}, ""),
-			hash: testutil.MustDecodeHash("509632e139a418be372cd4b73c8de7b8aa5215c47848bf76ed2488d0a5c0c55e"),
+			hash: testutil.MustDecodeHash("56810d1d33d4fd24e53c34c084cf10fd5e957b2885879dc4617497d2ef2a937d"),
 		},
 		{
 			tx: NewTx(TxData{
@@ -155,7 +155,7 @@ func TestTransaction(t *testing.T) {
 				"737461746544617461", // output 0: state data
 				"00",                 // output 1: witness length
 			}, ""),
-			hash: testutil.MustDecodeHash("4243fc12f6e8704c5e4318a2addc648d29fd1c03a8fe1246badafa5efd8b5339"),
+			hash: testutil.MustDecodeHash("5eba885fea9a0739eadee3ca8a568c8cdfd3df84c483dcf885c55ad96e3d43e9"),
 		},
 	}
 	for i, test := range cases {

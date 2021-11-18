@@ -7,7 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/crypto/sm2/chainkd"
-	sm3util "github.com/bytom/bytom/crypto/sm3"
+	"github.com/bytom/bytom/crypto/sm3"
 	chainjson "github.com/bytom/bytom/encoding/json"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/vm"
@@ -74,7 +74,7 @@ func (sw *SignatureWitness) sign(ctx context.Context, tpl *Template, index uint3
 		sw.Sigs = newSigs
 	}
 	var h [32]byte
-	sm3util.Sum(h[:], sw.Program)
+	sm3.Sum(h[:], sw.Program)
 	for i, keyID := range sw.Keys {
 		if len(sw.Sigs[i]) > 0 {
 			// Already have a signature for this key

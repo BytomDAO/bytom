@@ -13,7 +13,7 @@ import (
 	"github.com/bytom/bytom/asset"
 	"github.com/bytom/bytom/blockchain/query"
 	"github.com/bytom/bytom/consensus"
-	sm3util "github.com/bytom/bytom/crypto/sm3"
+	"github.com/bytom/bytom/crypto/sm3"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	chainjson "github.com/bytom/bytom/encoding/json"
 	"github.com/bytom/bytom/errors"
@@ -161,7 +161,7 @@ transactionLoop:
 	for pos, tx := range b.Transactions {
 		for _, v := range tx.Outputs {
 			var hash [32]byte
-			sm3util.Sum(hash[:], v.ControlProgram)
+			sm3.Sum(hash[:], v.ControlProgram)
 
 			if bytes := w.DB.Get(account.ContractKey(hash)); bytes != nil {
 				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, pos))

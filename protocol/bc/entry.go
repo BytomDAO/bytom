@@ -3,12 +3,12 @@ package bc
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/tjfoc/gmsm/sm3"
 	"io"
 	"reflect"
 
 	"github.com/golang/protobuf/proto"
 
+	"github.com/bytom/bytom/crypto/sm3"
 	"github.com/bytom/bytom/encoding/blockchain"
 	"github.com/bytom/bytom/errors"
 )

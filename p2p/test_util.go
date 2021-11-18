@@ -7,7 +7,7 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 
 	cfg "github.com/bytom/bytom/config"
-	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/bytom/crypto/sm2/chainkd"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/p2p/connection"
 	"github.com/bytom/bytom/p2p/discover/dht"

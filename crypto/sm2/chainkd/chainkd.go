@@ -2,13 +2,10 @@ package chainkd
 
 import (
 	"crypto/hmac"
-	"crypto/rand"
 	"crypto/sha512"
 	"math/big"
 
-	"github.com/tjfoc/gmsm/sm2"
-
-	sm2util "github.com/bytom/bytom/crypto/sm2"
+	"github.com/bytom/bytom/crypto/sm2"
 )
 
 type (
@@ -146,8 +143,8 @@ func (xpub XPub) Derive(path [][]byte) XPub {
 }
 
 // PublicKey extracts the sm2 public key from an xpub.
-func (xpub XPub) PublicKey() sm2util.PubKey {
-	return xpub[:33]
+func (xpub XPub) PublicKey() sm2.PubKey {
+	return sm2.PubKey(xpub[:33])
 }
 
 // Sign creates an sm2 signature using expanded private key
@@ -160,10 +157,15 @@ func (xprv XPrv) Sign(msg []byte) []byte {
 	priv.PublicKey.Curve = c
 	priv.PublicKey.X, priv.PublicKey.Y = c.ScalarBaseMult(k.Bytes())
 
-	sig, err := priv.Sign(rand.Reader, msg, nil)
+	r, s, err := sm2.Sign(priv, msg)
 	if err != nil {
 		panic(err)
 	}
+	R := r.Bytes()
+	S := s.Bytes()
+	sig := make([]byte, 64)
+	copy(sig[:32], R[:])
+	copy(sig[32:], S[:])
 
 	return sig
 }
@@ -172,5 +174,5 @@ func (xprv XPrv) Sign(msg []byte) []byte {
 // extracted from the first 33 bytes of the xpub.
 func (xpub XPub) Verify(msg []byte, sig []byte) bool {
 	// return ed25519.Verify(xpub.PublicKey(), msg, sig)
-	return sm2util.VerifyCompressedPubkey(xpub.PublicKey(), msg, sig)
+	return sm2.VerifyCompressedPubkey(xpub.PublicKey(), msg, sig)
 }

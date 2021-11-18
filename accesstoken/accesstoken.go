@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	sm3util "github.com/bytom/bytom/crypto/sm3"
+	"github.com/bytom/bytom/crypto/sm3"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/errors"
 )
@@ -71,7 +71,7 @@ func (cs *CredentialStore) Create(id, typ string) (*Token, error) {
 	}
 
 	hashedSecret := make([]byte, tokenSize)
-	sm3util.Sum(hashedSecret, secret)
+	sm3.Sum(hashedSecret, secret)
 
 	token := &Token{
 		ID:      id,

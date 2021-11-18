@@ -25,7 +25,7 @@ func TestSerializationIssuance(t *testing.T) {
 		"00",         // issuance type flag
 		"05",         // nonce length
 		"6e6f6e6365", // nonce
-		"a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf", // assetID
+		"1bb6cd78d4dd0e175c9315cb386c3ff7411dbaf65888ef92e63e8e27120e60fb", // assetID
 		"92c30f",                         // amount
 		"38",                             // input witness length
 		"0f",                             // asset definition length

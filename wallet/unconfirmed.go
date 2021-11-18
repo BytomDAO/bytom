@@ -10,7 +10,7 @@ import (
 
 	"github.com/bytom/bytom/account"
 	"github.com/bytom/bytom/blockchain/query"
-	sm3util "github.com/bytom/bytom/crypto/sm3"
+	"github.com/bytom/bytom/crypto/sm3"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc/types"
 )
@@ -113,7 +113,7 @@ func (w *Wallet) buildAnnotatedUnconfirmedTx(tx *types.Tx) *query.AnnotatedTx {
 func (w *Wallet) checkRelatedTransaction(tx *types.Tx) bool {
 	for _, v := range tx.Outputs {
 		var hash [32]byte
-		sm3util.Sum(hash[:], v.ControlProgram)
+		sm3.Sum(hash[:], v.ControlProgram)
 		if bytes := w.DB.Get(account.ContractKey(hash)); bytes != nil {
 			return true
 		}

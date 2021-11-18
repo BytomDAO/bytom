@@ -10,7 +10,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 
 	cfg "github.com/bytom/bytom/config"
-	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/bytom/crypto/sm2/chainkd"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/errors"
 	conn "github.com/bytom/bytom/p2p/connection"

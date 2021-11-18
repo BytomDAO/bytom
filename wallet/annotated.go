@@ -14,7 +14,7 @@ import (
 	"github.com/bytom/bytom/common"
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/consensus/segwit"
-	sm3util "github.com/bytom/bytom/crypto/sm3"
+	"github.com/bytom/bytom/crypto/sm3"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
@@ -116,7 +116,7 @@ func getAccountFromACP(program []byte, walletDB dbm.DB) (*account.Account, error
 	accountCP := account.CtrlProgram{}
 	localAccount := account.Account{}
 
-	sm3util.Sum(hash[:], program)
+	sm3.Sum(hash[:], program)
 
 	rawProgram := walletDB.Get(account.ContractKey(hash))
 	if rawProgram == nil {

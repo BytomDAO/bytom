@@ -1,8 +1,7 @@
 package bc
 
 import (
-	"github.com/tjfoc/gmsm/sm3"
-
+	"github.com/bytom/bytom/crypto/sm3"
 	"github.com/bytom/bytom/errors"
 )
 

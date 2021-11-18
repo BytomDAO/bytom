@@ -17,7 +17,7 @@ import (
 	"github.com/bytom/bytom/common"
 	cfg "github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/crypto"
-	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/bytom/crypto/sm2/chainkd"
 	"github.com/bytom/bytom/p2p/netutil"
 	"github.com/bytom/bytom/version"
 )

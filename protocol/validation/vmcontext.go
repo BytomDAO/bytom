@@ -3,10 +3,9 @@ package validation
 import (
 	"bytes"
 
-	"github.com/tjfoc/gmsm/sm3"
-
 	"github.com/bytom/bytom/consensus/bcrp"
 	"github.com/bytom/bytom/consensus/segwit"
+	"github.com/bytom/bytom/crypto/sm3"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/vm"

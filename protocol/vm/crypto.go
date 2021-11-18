@@ -2,13 +2,13 @@ package vm
 
 import (
 	"crypto/sha256"
+	"github.com/bytom/bytom/crypto/sm3"
 	"hash"
 
-	"github.com/tjfoc/gmsm/sm3"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bytom/bytom/crypto"
-	sm2util "github.com/bytom/bytom/crypto/sm2"
+	"github.com/bytom/bytom/crypto/sm2"
 	"github.com/bytom/bytom/math/checked"
 )
 
@@ -66,13 +66,13 @@ func opCheckSig(vm *virtualMachine) error {
 		return ErrBadValue
 	}
 
-	if len(pubkeyBytes) != sm2util.PubKeySize {
+	if len(pubkeyBytes) != sm2.PubKeySize {
 		return vm.pushBool(false, true)
 	}
-	if len(sig) != sm2util.SignatureSize {
+	if len(sig) != sm2.SignatureSize {
 		return vm.pushBool(false, true)
 	}
-	return vm.pushBool(sm2util.VerifyCompressedPubkey(pubkeyBytes, msg, sig), true)
+	return vm.pushBool(sm2.VerifyCompressedPubkey(pubkeyBytes, msg, sig), true)
 }
 
 func opCheckMultiSig(vm *virtualMachine) error {
@@ -136,16 +136,16 @@ func opCheckMultiSig(vm *virtualMachine) error {
 		sigs = append(sigs, sig)
 	}
 
-	pubkeys := make([]sm2util.PubKey, 0, numPubkeys)
+	pubkeys := make([]sm2.PubKey, 0, numPubkeys)
 	for _, p := range pubkeyByteses {
-		if len(p) != sm2util.PubKeySize {
+		if len(p) != sm2.PubKeySize {
 			return vm.pushBool(false, true)
 		}
 		pubkeys = append(pubkeys, p)
 	}
 
 	for len(sigs) > 0 && len(pubkeys) > 0 {
-		if sm2util.VerifyCompressedPubkey(pubkeys[0], msg, sigs[0]) {
+		if sm2.VerifyCompressedPubkey(pubkeys[0], msg, sigs[0]) {
 			sigs = sigs[1:]
 		}
 		pubkeys = pubkeys[1:]
@@ -201,14 +201,14 @@ func opCheckSigSm2(vm *virtualMachine) error {
 		return err
 	}
 
-	if len(msg) != 32 || len(sig) != sm2util.SignatureSize {
+	if len(msg) != 32 || len(sig) != sm2.SignatureSize {
 		return ErrBadValue
 	}
-	if len(publicKey) != sm2util.PubKeySize {
+	if len(publicKey) != sm2.PubKeySize {
 		return vm.pushBool(false, true)
 	}
 
-	return vm.pushBool(sm2util.VerifyCompressedPubkey(publicKey, msg, sig), true)
+	return vm.pushBool(sm2.VerifyCompressedPubkey(publicKey, msg, sig), true)
 }
 
 func opCheckMultiSigSm2(vm *virtualMachine) error {
@@ -270,7 +270,7 @@ func opCheckMultiSigSm2(vm *virtualMachine) error {
 	}
 
 	for len(sigs) > 0 && len(pubkeyByteses) > 0 {
-		if sm2util.VerifyCompressedPubkey(pubkeyByteses[0], msg, sigs[0]) {
+		if sm2.VerifyCompressedPubkey(pubkeyByteses[0], msg, sigs[0]) {
 			sigs = sigs[1:]
 		}
 		pubkeyByteses = pubkeyByteses[1:]
