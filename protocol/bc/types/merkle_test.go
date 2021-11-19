@@ -132,65 +132,6 @@ func TestMerkleRootRealTx(t *testing.T) {
 			"07",
 			"01",
 			"00",
-			"02",
-			"01",
-			"61", // input + state length
-			"01",
-			"5f", // output + state length
-			"4b5cb973f5bef4eadde4c89b92ee73312b940e84164da0594149554cc8a2adea",
-			"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-			"80c480c124",
-			"02",
-			"01",
-			"16",
-			"0014cb9f2391bafe2bc1159b2c4c8a0f17ba1b4dd94e",
-			"00", // state data
-			"63",
-			"02",
-			"40",
-			"d96b8f31519c5e34ef983bb7dfb92e807df7fc1ae5a4c08846d00d4f84ebd2f8634b9e0b0374eb2508d0f989520f622aef051862c26daba0e466944e3d55d00b",
-			"20",
-			"1381d35e235813ad1e62f9a602c82abee90565639cc4573568206b55bcd2aed9",
-			"01",
-			"30",
-			"00",
-			"08",
-			"ede605460cacbf10",
-			"7b38dc897329a288ea31031724f5c55bcafec80468a546955023380af2faad14",
-			"80d0dbc3f402b001467b0a202022646563696d616c73223a20382c0a2020226465736372697074696f6e223a207b7d2c0a2020226e616d65223a2022222c0a20202273796d626f6c223a2022220a7d0125ae2054a71277cc162eb3eb21b5bd9fe54402829a53b294deaed91692a2cd8a081f9c5151ad01403a54a3ca0210d005cc9bce490478b518c405ba72e0bc1d134b739f29a73e008345229f0e061c420aa3c56a48bc1c9bf592914252ab9100e69252deeac532430f",
-			"03",
-			"0100",
-			"3e", // state length
-			"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-			"80e0e8f011",
-			"01",
-			"16",
-			"00144ab5249140ca4630729030941f59f75e507bd4d5",
-			"00", // state data
-			"00",
-			"0100",
-			"3f", // state length
-			"7b38dc897329a288ea31031724f5c55bcafec80468a546955023380af2faad14",
-			"80d0dbc3f402",
-			"01",
-			"16",
-			"00145ade29df622cc68d0473aa1a20fb89690451c66e",
-			"00", // state data
-			"00",
-			"0100",
-			"3e", // state length
-			"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-			"80a2c0a012",
-			"01",
-			"16",
-			"00145ade29df622cc68d0473aa1a20fb89690451c66e",
-			"00", // state data
-			"00",
-		}, ""),
-		strings.Join([]string{
-			"07",
-			"01",
-			"00",
 			"01",
 			"01",
 			"6d",
@@ -346,7 +287,7 @@ func TestMerkleRootRealTx(t *testing.T) {
 			"00",
 		}, ""),
 	}
-	wantMerkleRoot := "a23ae3e435a7bdfb52cb92b58be6e658982fd883283caf9547f9df50d65881df"
+	wantMerkleRoot := "73b7e49b84f01023986cc849535d57dc55d320c762e0b8ee025e21b92f68593e"
 
 	var txs []*bc.Tx
 	for _, rawTx := range rawTxs {
@@ -575,7 +516,7 @@ func TestUglyValidateTxMerkleProof(t *testing.T) {
 				"504af455e328e7dd39bbc059529851946d54ee8b459b11b3aac4a0feeb474487",
 			},
 			root:         "aff81a46fe79204ef9007243f374d54104a59762b9f74d80d56b5291753db6fb",
-			expectResult: true,
+			expectResult: false,
 		},
 		// flags and hashes is correct, but relatedHashes has hash that does not exist
 		{
@@ -617,7 +558,7 @@ func TestUglyValidateTxMerkleProof(t *testing.T) {
 				"504af455e328e7dd39bbc059529851946d54ee8b459b11b3aac4a0feeb474487",
 			},
 			root:         "aff81a46fe79204ef9007243f374d54104a59762b9f74d80d56b5291753db6fb",
-			expectResult: true,
+			expectResult: false,
 		},
 	}
 
