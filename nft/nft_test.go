@@ -56,13 +56,13 @@ func TestAddMargin(t *testing.T) {
 	}
 
 	arguments1 := [][]byte{
-		testutil.MustDecodeHexString("66d3b6d1422626213c39c2045bc8f5505333796c7c976e2152ca25f691248750fffc84b702d45fa17f8d74cc1beab2d782a664685dfcc95a291eaa1d5d05ad00"),
+		testutil.MustDecodeHexString("6bdd6c340a50e65601b9e2b920109d6e58a0bc70ca709036a597afa3c5fd14ad191c48526c7f847f8158e5ceaf492b8eb1319ae7bcf81243e183a768a01f5a0f"),
 		vm.Uint64Bytes(300000000),
 		vm.Uint64Bytes(1),
 	}
 
 	arguments2 := [][]byte{
-		testutil.MustDecodeHexString("89ad84d8fdf7dbe5a21aaf1048ff9cb342bdb97c2c79d1428fe45e9fc1c31d980d0b9c642790931d6998d79d5a278439e4621795dd8a85627cf6a4fff363e506"),
+		testutil.MustDecodeHexString("ca291761eb8c82c4f871ce73771d24ec1a2be9f1cb3223d1bbc1d0e1c1a7715e15691133c4064e30cf099a64302edb014b92e5808b7b60bbceb2347a021b3904"),
 		vm.Uint64Bytes(300000000),
 		vm.Uint64Bytes(1),
 	}
@@ -115,13 +115,13 @@ func TestSubMargin(t *testing.T) {
 	}
 
 	arguments1 := [][]byte{
-		testutil.MustDecodeHexString("9b6d86c36c3e86a576e3d1512074e2a45c0768541b57afc4b36e1f54d924b5aeba4b5176dde01f9a7360a6d06bd9711c8be58a2b7ec5005217522438bff9520a"),
+		testutil.MustDecodeHexString("022e7125afb47f4ff9238cf9665b166c75012ddcfcfef20df76224604c566e085972c470f7731d820c8fbc12b0c9603a8a620df4b4db91f4a6fc2cb37b07eb03"),
 		vm.Uint64Bytes(200000000),
 		vm.Uint64Bytes(2),
 	}
 
 	arguments2 := [][]byte{
-		testutil.MustDecodeHexString("ae5e2d806e49a418e7b952b132dcb95d26076302a44812ecd6076af26ac1377cc20bf66cdf6d560e944ffc62b27d3b589bff306bfce33e217f0f1d84ae07cd06"),
+		testutil.MustDecodeHexString("3725d8a8e5c6f8618dbbf0999f2cdcb40587165d0c6ee48744852a814866ae46b65817415f5f6f1dfe221b43c2d119edb8ec2a7b0b726a3585ecf1f243b6c20f"),
 		vm.Uint64Bytes(200000000),
 		vm.Uint64Bytes(2),
 	}
@@ -174,14 +174,14 @@ func TestTransferNft(t *testing.T) {
 	}
 
 	arguments1 := [][]byte{
-		testutil.MustDecodeHexString("060e8b5e0090709f02d3c4ba7f83e8f38c0661154f3a5c58d267d315fc734ba4e6bccaa2aef2d10fbaa980808fd4dc89faaef9d64627e061518f613766737d09"),
+		testutil.MustDecodeHexString("8cf7f6ec37a98eca9fd70b79f80052e9446e0a14edcb1e4ebdcff8f579f40e3cfd3bc9ffe15dc97614ba3dc1ee3e03f78c481be97e0d4c25b0d1ace1f446a509"),
 		buyerPublicKey,
 		buyerScirpt,
 		vm.Uint64Bytes(3),
 	}
 
 	arguments2 := [][]byte{
-		testutil.MustDecodeHexString("e05d5dc410721c307a7287c2705482a065b93fdb4f0925389db25fe132f216b2eb504ceb844dd462bdc3468ab233972a1ae33394fcf66b374fcc4935281b5b06"),
+		testutil.MustDecodeHexString("2841414d808a5770ce154bc7f1b07ad7d7ea68c9f257bb5b824ec8d579d99d68f4fdcebdfdf9f4e6a553fba5ee9f54cefe4e6674d74022c671f38d96db93cf04"),
 		buyerPublicKey,
 		buyerScirpt,
 		vm.Uint64Bytes(3),
@@ -412,12 +412,12 @@ func TestCancelOffer(t *testing.T) {
 	}
 
 	arguments1 := [][]byte{
-		testutil.MustDecodeHexString("56b45f220874f271d7b130372ee5d5f3c86a3dd253a3a5fc0dfe3497591589604760449defe9f6bc48bac09dcedee22c948f7adee65f37715edb4301f3e3760c"),
+		testutil.MustDecodeHexString("8a92ed02239357c5c083937686c441f0d3b16f5cb62261c2c8fa63af62286dc4f9bc617cf8f2e16df9c1965e2b85e0b4c0f543d327c7e5a158e9bfed14ad4e00"),
 		vm.Uint64Bytes(0),
 	}
 
 	arguments2 := [][]byte{
-		testutil.MustDecodeHexString("1f591206a9a427e3ffe0c9f03cc971b60bc43511a0fff3a5d200a14fa9ef13c31c0219cc13e78f8b0b72adfdc1da3fc1e08483273f2de7f1210bb2f3f6d7dc00"),
+		testutil.MustDecodeHexString("b3ae5a0119ac3b3c73c568ac144628433ee4c99c0464c93a5190e8c629af14ac6b81ddd9400be917256e2fdd9d0cd61eb7a53e96f4aac370b8446e6d8cf85603"),
 		vm.Uint64Bytes(0),
 	}
 

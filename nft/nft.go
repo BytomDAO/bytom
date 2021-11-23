@@ -18,6 +18,19 @@ func NewContract(platformScript []byte, marginFold uint64) ([]byte, error) {
 	   init alt stack 	[publicKey, creater, taxRate, nftAsset, owner, marginAsset, marginAmount]
 	   init data stack	[signature, buyerPublicKey, buyerScirpt, selecter]
 	*/
+
+	// first check clause_selector for addMargin & subMargin
+	builder.AddOp(vm.OP_DUP)
+	builder.AddUint64(1)
+	builder.AddOp(vm.OP_EQUAL)
+	builder.AddUint64(2)
+	builder.AddOp(vm.OP_PICK)
+	cpAltStack(builder, 0)
+	builder.AddOp(vm.OP_LESSTHAN)
+	builder.AddOp(vm.OP_BOOLAND)
+	builder.AddOp(vm.OP_NOT)
+	builder.AddOp(vm.OP_VERIFY)
+
 	builder.AddOp(vm.OP_DUP)
 	builder.AddUint64(3)
 	builder.AddOp(vm.OP_EQUAL)
