@@ -275,10 +275,8 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 		return true, nil
 	}
 
-	//todo: 设置成在启动结点时设置的值, snapShoot
 	const endHeight = 704344
-	var snapShoot bool
-	if snapShoot && block.Height > endHeight {
+	if block.Height > endHeight {
 		log.Printf("block height<%d> arrive snap shoot set height <%d> \n", block.Height, endHeight)
 		os.Exit(1)
 	}
