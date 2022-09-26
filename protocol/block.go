@@ -2,6 +2,7 @@ package protocol
 
 import (
 	log "github.com/sirupsen/logrus"
+	"os"
 
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
@@ -272,6 +273,14 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	if _, err := c.store.GetBlockHeader(&block.PreviousBlockHash); err != nil {
 		c.orphanManage.Add(block)
 		return true, nil
+	}
+
+	//todo: 设置成在启动结点时设置的值, snapShoot
+	const endHeight = 704344
+	var snapShoot bool
+	if snapShoot && block.Height > endHeight {
+		log.Printf("block height<%d> arrive snap shoot set height <%d> \n", block.Height, endHeight)
+		os.Exit(1)
 	}
 
 	if err := c.saveBlock(block); err != nil {
