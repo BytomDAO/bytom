@@ -41,6 +41,31 @@ var (
 	ErrDustTx = errors.New("transaction is dust tx")
 )
 
+var BlockUtxo = map[string]bool{
+	"6f083763575172bba322b149696ebd178b521057671e701500fa9e2ad69828b1": true,
+	"e26a8bcfcfd973255e2f286e1e89144d4ff8ebd4c41fb62f83569cbe2b96bbd7": true,
+	"559371bfe33ec069924b44b766a72bb4ce6b9271abebb39ad256d9ca9f7cbc85": true,
+	"1765e0aaba219c06eec9ab3dfeaf663e86404ed7fe71abd15239786480b9917d": true,
+	"df74f0ec24cee92365b4627cb9c9684ebc21baaf70e1662d87abe08dd6d016c1": true,
+	"b9c5a9e7e9dbf543a4e7f80f34e2b0f4ba19f29f715d1553ae7e60f1059ef14e": true,
+	"2b60436ec77f7f28a5d4d0318286f29ec4217308837b8590990b332294ec7564": true,
+	"412b2bf4b10f6b88411e00b5f6610d36fbbd992eceb93d32199931caa3610b27": true,
+	"f109549a4ce3533229a0e94f84493f78f1d2103f88ce738e68951c5963b13682": true,
+	"e7dc81f508b25a55e287f0e57af73ee806008de7551415f654e4875dc310ed90": true,
+	"f2d5cb651bb9dcac9706daf0b544fef68bb4f07b90803038d6b86b434a98cd43": true,
+	"0b9db0db5331429c26c9b0c45d3cf55fd638a140fccfd719179e223ea1c4a7f3": true,
+	"df3d59e5ff9e90143e8fd15aa90c87679b03f7b6d30c48d82c3b5ca14fb85e30": true,
+	"a1c584000cfa6b8ccd411bace27330cf71350f855cd3be4c6e87ff31ef3885e7": true,
+	"768af8d34193b89a81dee4c10948ab2aef077f799e43c36d2a84d7bd5e185648": true,
+	"9c4149f8c316b17a4d47b7403e82c73178867cb7eb6b3b653380376572add1ed": true,
+	"fbb3b8e697db8b6a0ab8f75bd9be8bad10c60430186bed83a328d719e1967510": true,
+	"60346fa38983c95e40a17b9be953eafe66776a548bf64516916922b2d67496f3": true,
+	"a2dc7eaf1681bf926de8ed70c7239960de14eb989353072e71d2313088bdca92": true,
+	"dbc3d7b47a01f71f6f1ccd575e7630d777df82e0a3961e04f0d5af62c2e91e7f": true,
+	"e9cf21ac781e25e4013320407261dc697516b8873a40eba4de061d170fa4b28c": true,
+	"ae8d924b60806a9f668a059e62eef75de511e39f881c90cc58ad0e8847cd69b1": true,
+}
+
 type TxMsgEvent struct{ TxMsg *TxPoolMsg }
 
 // TxDesc store tx and related info for mining strategy
@@ -226,6 +251,13 @@ func (tp *TxPool) IsDust(tx *types.Tx) bool {
 func (tp *TxPool) processTransaction(tx *types.Tx, height, fee uint64) (bool, error) {
 	tp.mtx.Lock()
 	defer tp.mtx.Unlock()
+
+	for _, hash := range tx.SpentOutputIDs {
+		if BlockUtxo[hash.String()] {
+			log.WithFields(log.Fields{"module": logModule, "utxo": hash.String()}).Warn("black utxo")
+			return false, errors.New("black utxo")
+		}
+	}
 
 	txD := &TxDesc{
 		Tx:     tx,
