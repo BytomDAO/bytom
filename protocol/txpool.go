@@ -41,7 +41,7 @@ var (
 	ErrDustTx = errors.New("transaction is dust tx")
 )
 
-var BlockUtxo = map[string]bool{
+var blackUtxo = map[string]bool{
 	"6f083763575172bba322b149696ebd178b521057671e701500fa9e2ad69828b1": true,
 	"e26a8bcfcfd973255e2f286e1e89144d4ff8ebd4c41fb62f83569cbe2b96bbd7": true,
 	"559371bfe33ec069924b44b766a72bb4ce6b9271abebb39ad256d9ca9f7cbc85": true,
@@ -253,7 +253,7 @@ func (tp *TxPool) processTransaction(tx *types.Tx, height, fee uint64) (bool, er
 	defer tp.mtx.Unlock()
 
 	for _, hash := range tx.SpentOutputIDs {
-		if BlockUtxo[hash.String()] {
+		if blackUtxo[hash.String()] {
 			log.WithFields(log.Fields{"module": logModule, "utxo": hash.String()}).Warn("black utxo")
 			return false, errors.New("black utxo")
 		}
