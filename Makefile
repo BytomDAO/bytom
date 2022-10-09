@@ -4,6 +4,8 @@ ifeq ($(UNAME_S),Darwin)
 	GOOS := darwin
 else ifeq ($(UNAME_S),Linux)
 	GOOS := linux
+else ifeq ($(UNAME_S),Windows)
+	GOOS := windows
 else
 $(error "$$GOOS is not defined. If you are using Windows, try to re-make using 'GOOS=windows make ...' ")
 endif
