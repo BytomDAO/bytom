@@ -1,0 +1,161 @@
+name: Release
+
+on:
+  push:
+    # Publish `v1.2.3` tags as releases.
+    tags:
+      - v*
+
+jobs:
+  build:
+    name: Build Release
+    strategy:
+      matrix:
+        go-version: [1.16.x]
+        os: [ubuntu-18.04, macos-11, windows-2019]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - uses: actions/cache@v2
+        with:
+          # In order:
+          # * Module download cache
+          # * Build cache (Linux)
+          # * Build cache (Mac)
+          # * Build cache (Windows)
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+            ~/Library/Caches/go-build
+            %LocalAppData%\go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      # ==============================
+      #       Linux/Macos/Windows Build
+      # ==============================
+
+      - name: Build Binary for ${{matrix.os}}
+        run: make bytomd
+
+      # ==============================
+      #       Upload artifacts
+      # ==============================
+
+      - name: Upload Linux Build
+        uses: actions/upload-artifact@v2
+        if: matrix.os == 'ubuntu-18.04'
+        with:
+          name: linux
+          path: ./cmd/bytomd/bytomd
+
+      - name: Upload MacOS Build
+        uses: actions/upload-artifact@v2
+        if: matrix.os == 'macos-11'
+        with:
+          name: macos
+          path: ./cmd/bytomd/bytomd
+      
+      - name: Upload Windows Build
+        uses: actions/upload-artifact@v2
+        if: matrix.os == 'windows-2019'
+        with:
+          name: windows
+          path: ./cmd/bytomd/bytomd.exe
+
+  release:
+    name: Release
+    needs: build
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Set Env
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      # ==============================
+      #       Download artifacts
+      # ==============================
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: linux
+          path: ./linux
+      
+      - name: Download Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: macos
+          path: ./macos
+      
+      - name: Download Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: windows
+          path: ./windows
+
+      # ==============================
+      #       Create release
+      # ==============================
+      - name: Generate Change Log
+        id: changelog
+        run: |
+          chmod 755 ./.github/generate_change_log.sh
+          CHANGELOG=$(./.github/generate_change_log.sh ${{ env.RELEASE_VERSION}})
+          echo "CHANGELOG<<EOF" >> $GITHUB_ENV
+          echo "$CHANGELOG" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          body: |
+            ${{ env.CHANGELOG }}
+          draft: false
+          prerelease: false
+
+      # Check downloaded files
+      - run: ls
+
+      - name: Upload Release Asset - Linux
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./linux/bytomd
+          asset_name: bytomd_linux
+          asset_content_type: application/octet-stream
+      
+      - name: Upload Release Asset - MacOS
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./macos/bytomd
+          asset_name: bytomd_mac
+          asset_content_type: application/octet-stream
+      
+      - name: Upload Release Asset - Windows
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./windows/bytomd.exe
+          asset_name: bytomd_windows.exe
+          asset_content_type: application/octet-stream
