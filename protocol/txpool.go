@@ -41,10 +41,6 @@ var (
 	ErrDustTx = errors.New("transaction is dust tx")
 )
 
-var blackUtxo = map[string]bool{
-	"6f083763575172bba322b149696ebd178b521057671e701500fa9e2ad69828b1": true,
-}
-
 type TxMsgEvent struct{ TxMsg *TxPoolMsg }
 
 // TxDesc store tx and related info for mining strategy
@@ -230,13 +226,6 @@ func (tp *TxPool) IsDust(tx *types.Tx) bool {
 func (tp *TxPool) processTransaction(tx *types.Tx, height, fee uint64) (bool, error) {
 	tp.mtx.Lock()
 	defer tp.mtx.Unlock()
-
-	for _, hash := range tx.SpentOutputIDs {
-		if blackUtxo[hash.String()] {
-			log.WithFields(log.Fields{"module": logModule, "utxo": hash.String()}).Warn("black utxo")
-			return false, errors.New("black utxo")
-		}
-	}
 
 	txD := &TxDesc{
 		Tx:     tx,
