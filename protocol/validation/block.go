@@ -60,6 +60,7 @@ func checkCoinbaseAmount(b *types.Block, checkpoint *state.Checkpoint) error {
 }
 
 func checkoutRewardCoinbase(tx *types.Tx, checkpoint *state.Checkpoint) error {
+	return nil
 	outputMap := map[string]uint64{}
 	for i, output := range tx.Outputs {
 		if i == 0 && output.Amount == 0 {

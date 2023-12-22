@@ -8,6 +8,13 @@ import (
 )
 
 func (c *Checkpoint) validatorReward() uint64 {
+	if c.Height > 12283120 {
+		return 0
+	}
+	return c.validatorReward2()
+}
+
+func (c *Checkpoint) validatorReward2() uint64 {
 	if pledgeRate := c.pledgeRate(); pledgeRate <= consensus.RewardThreshold {
 		return uint64((pledgeRate + consensus.RewardThreshold) * float64(consensus.BlockReward))
 	}
